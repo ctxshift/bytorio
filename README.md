@@ -14,6 +14,8 @@ See [building and running Odin](docs/odin-development.md) for prerequisites, bui
 
 **The sprite RPG comparison is playable in both Luau and Odin.** Explore a village, accept a quest, fight a slime, and return a sunleaf. See [the RPG guide](docs/rpg-comparison.md) for builds, the comparison launcher, both game sources, and replay verification. Build both with `./tools/build-rpg.ps1`.
 
+An [experimental Luau Wasm executor](experiments/luau-executor/README.md) runs both cartridges through the same Odin native/browser player. Its [benchmark results](experiments/luau-executor/RESULTS.md) compare startup, execution, and memory. Build with `npm run build:unified` and measure with `npm run bench:unified`.
+
 - [Architecture](docs/architecture.md): accepted decisions, proposed machine profile, runtime boundaries, and open questions.
 - [Implementation plan](docs/implementation-plan.md): milestones, acceptance criteria, and validation.
 - [Odin development guide](docs/odin-development.md): build, run, controls, tests, and prototype limitations.

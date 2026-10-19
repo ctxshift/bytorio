@@ -76,27 +76,45 @@ run :: proc() -> int {
     game_path := fmt.tprintf("%sgame.wasm", base)
     capture := ""
     replay_path := ""
+    source_path := ""
+    benchmark_path := ""
+    unmetered := false
     smoke, check_only := false, false
     for i := 1; i < len(os.args); i += 1 {
         switch os.args[i] {
         case "--smoke": smoke = true
         case "--check": check_only = true
-        case "--game", "--capture", "--replay":
+        case "--benchmark-unmetered": unmetered = true
+        case "--game", "--capture", "--replay", "--source", "--benchmark":
             option := os.args[i]
             i += 1
             if i >= len(os.args) { return error("missing option argument") }
             if option == "--game" { game_path = os.args[i]
+            } else if option == "--source" { source_path = os.args[i]
+            } else if option == "--benchmark" { benchmark_path = os.args[i]; check_only = true
             } else if option == "--replay" { replay_path = os.args[i]; check_only = true
             } else { capture = os.args[i] }
-        case: return error("usage: player [--smoke] [--check] [--game file.wasm] [--capture output.bmp]")
+        case: return error("usage: player [--game file.wasm] [--source game.luau] [--smoke|--check|--replay inputs|--benchmark inputs [--benchmark-unmetered]] [--capture output.bmp]")
         }
     }
+    if unmetered && benchmark_path == "" { return error("unmetered execution is limited to the development benchmark") }
+    startup_start := clock_ms()
+    baseline_working,_ := process_memory()
     bytes, read_error := os.read_entire_file(game_path, context.allocator)
     if read_error != nil { return error("cannot read game module") }
     defer delete(bytes)
-    if !guest.load(&app.game, bytes) { return error(app.game.error) }
+    source: []u8
+    if source_path != "" {
+        source_error: os.Error
+        source, source_error = os.read_entire_file(source_path, context.allocator)
+        if source_error != nil { return error("cannot read Luau source") }
+        if len(source) == 0 { return error("Luau source is empty") }
+    }
+    defer delete(source)
+    if !guest.load(&app.game, bytes, source, !unmetered) { return error(app.game.error) }
     core.init()
     if !draw(app) { return error(app.game.error) }
+    if benchmark_path != "" { return benchmark(app,benchmark_path,clock_ms()-startup_start,baseline_working) }
     if replay_path != "" {
         data, replay_error := os.read_entire_file(replay_path, context.allocator)
         if replay_error != nil { return error("cannot read input replay") }

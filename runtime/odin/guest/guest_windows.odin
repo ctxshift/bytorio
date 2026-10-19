@@ -3,6 +3,7 @@ package guest
 import "core:mem"
 import "core:strings"
 import "core:math"
+import "core:time"
 import "base:runtime"
 import abi "../abi"
 
@@ -19,6 +20,8 @@ Game :: struct {
     has_commands: bool,
     commands: [abi.MAX_COMMANDS]abi.Command,
     count: int,
+    has_source, metered: bool,
+    compile_ms, instantiate_ms, initialize_ms: f64,
     error: string,
 }
 
@@ -50,7 +53,8 @@ check :: proc(game: ^Game, error: Error, trap: Trap) -> bool {
 }
 
 call :: proc(game: ^Game, function: ^Func, args: []Val, result: []Val) -> bool {
-    if !check(game, wasmtime_context_set_fuel(game.ctx, 10_000_000), nil) { return false }
+    budget := u64(500_000_000) if game.has_source else u64(10_000_000)
+    if game.metered && !check(game, wasmtime_context_set_fuel(game.ctx, budget), nil) { return false }
     trap: Trap
     error := wasmtime_func_call(game.ctx, function, raw_data(args), uint(len(args)), raw_data(result), uint(len(result)), &trap)
     return check(game, error, trap)
@@ -67,16 +71,19 @@ function :: proc(game: ^Game, name: string, result: ^Func) -> bool {
     return true
 }
 
-load :: proc(game: ^Game, bytes: []u8) -> bool {
+load :: proc(game: ^Game, bytes: []u8, source: []u8 = nil, metered := true) -> bool {
     if len(bytes) == 0 || len(bytes) > abi.MAX_GAME_BYTES { return fail(game, "game module exceeds prototype size limit") }
     config := wasm_config_new()
-    wasmtime_config_consume_fuel_set(config, true)
+    game.has_source, game.metered = len(source) > 0, metered
+    wasmtime_config_consume_fuel_set(config, metered)
     wasmtime_config_max_wasm_stack_set(config, 256 * 1024)
     game.engine = wasm_engine_new_with_config(config)
     game.store = wasmtime_store_new(game.engine, nil, nil)
     game.ctx = wasmtime_store_context(game.store)
     wasmtime_store_limiter(game.store, abi.MAX_MEMORY_BYTES, 1024, 1, 1, 1)
+    compile_start := time.tick_now()
     if !check(game, wasmtime_module_new(game.engine, raw_data(bytes), uint(len(bytes)), &game.module), nil) { return false }
+    game.compile_ms = time.duration_seconds(time.tick_since(compile_start))*1000
     // Odin's freestanding math.sin lowers to this one explicitly allowed import.
     game.linker = wasmtime_linker_new(game.engine)
     params, results: TypeVec
@@ -87,10 +94,18 @@ load :: proc(game: ^Game, bytes: []u8) -> bool {
     defer wasm_functype_delete(function_type)
     if !check(game, wasmtime_linker_define_func(game.linker, raw_data(string("env")), 3,
         raw_data(string("sin")), 3, function_type, sine, nil, nil), nil) { return false }
-    if !check(game, wasmtime_context_set_fuel(game.ctx, 2_000_000), nil) { return false }
+    if metered && !check(game, wasmtime_context_set_fuel(game.ctx, 2_000_000), nil) { return false }
     trap: Trap
+    instantiate_start := time.tick_now()
     error := wasmtime_linker_instantiate(game.linker, game.ctx, game.module, &game.instance, &trap)
     if !check(game, error, trap) { return false }
+    game.instantiate_ms = time.duration_seconds(time.tick_since(instantiate_start))*1000
+    initial_export: Extern
+    if wasmtime_instance_export_get(game.ctx, &game.instance, raw_data(string("_initialize")), 11, &initial_export) {
+        wasmtime_extern_delete(&initial_export)
+        initializer: Func
+        if !function(game, "_initialize", &initializer) || !call(game, &initializer, nil, nil) { return false }
+    }
 
     functions := [3]string{"game_init", "game_update", "game_draw"}
     for name in functions {
@@ -130,8 +145,55 @@ load :: proc(game: ^Game, bytes: []u8) -> bool {
         if !function(game, "game_commands", &game.command_offset) || !function(game, "game_command_count", &game.command_count) { return false }
         game.has_commands = true
     }
-    return call(game, &game.init, nil, nil)
+    initialize_start := time.tick_now()
+    if game.has_source {
+        if len(source) > 256*1024 { return fail(game, "Luau source exceeds prototype limit") }
+        capacity, offset, setter: Func
+        result: [1]Val
+        if !function(game, "game_source_capacity", &capacity) || !function(game, "game_source_buffer", &offset) ||
+            !function(game, "game_source_size", &setter) { return false }
+        if !call(game, &capacity, nil, result[:]) { return false }
+        if result[0].kind != 0 || result[0].of.i32 < i32(len(source)) { return fail(game, "source exceeds executor capacity") }
+        if !call(game, &offset, nil, result[:]) { return false }
+        if result[0].kind != 0 { return fail(game, "invalid source buffer") }
+        start := uint(u32(result[0].of.i32))
+        memory_size := wasmtime_memory_data_size(game.ctx, &game.memory)
+        if start > memory_size || uint(len(source)) > memory_size-start { return fail(game, "source buffer outside guest memory") }
+        data := wasmtime_memory_data(game.ctx, &game.memory)
+        mem.copy(&data[start], raw_data(source), len(source))
+        args := [1]Val{{kind=0, of={i32=i32(len(source))}}}
+        if !call(game, &setter, args[:], nil) { return false }
+    }
+    if !call(game, &game.init, nil, nil) || !executor_ok(game) { return false }
+    game.initialize_ms = time.duration_seconds(time.tick_since(initialize_start))*1000
+    return true
 }
+
+executor_ok :: proc(game: ^Game) -> bool {
+    if !game.has_source { return true }
+    length_fn, offset_fn: Func
+    result: [1]Val
+    if !function(game, "game_error_length", &length_fn) || !call(game, &length_fn, nil, result[:]) { return false }
+    if result[0].kind != 0 || result[0].of.i32 < 0 || result[0].of.i32 > 1024 { return fail(game, "invalid executor diagnostic") }
+    length := uint(result[0].of.i32)
+    if length == 0 { return true }
+    if !function(game, "game_error", &offset_fn) || !call(game, &offset_fn, nil, result[:]) { return false }
+    offset := uint(u32(result[0].of.i32))
+    size := wasmtime_memory_data_size(game.ctx, &game.memory)
+    if offset > size || length > size-offset { return fail(game, "executor diagnostic outside memory") }
+    data := wasmtime_memory_data(game.ctx, &game.memory)
+    return fail(game, string(data[offset:offset+length]))
+}
+
+heap_query :: proc(game: ^Game, name: string) -> u32 {
+    if !game.has_source { return 0 }
+    query: Func
+    result: [1]Val
+    if !function(game, name, &query) || !call(game, &query, nil, result[:]) { return 0 }
+    return u32(result[0].of.i32)
+}
+
+memory_bytes :: proc(game: ^Game) -> uint { return wasmtime_memory_data_size(game.ctx, &game.memory) }
 
 sine :: proc "c" (_environment, _caller: rawptr, args: [^]Val, _nargs: uint, results: [^]Val, _nresults: uint) -> Trap {
     context = runtime.default_context()
@@ -150,7 +212,7 @@ update :: proc(game: ^Game, input: abi.Input) -> bool {
 
 draw :: proc(game: ^Game, frame: ^abi.Frame) -> bool {
     result: [1]Val
-    if !call(game, &game.draw, nil, result[:]) { return false }
+    if !call(game, &game.draw, nil, result[:]) || !executor_ok(game) { return false }
     if result[0].kind != 0 { return fail(game, "game_draw must return a frame offset") }
     offset := uint(u32(result[0].of.i32))
     size := wasmtime_memory_data_size(game.ctx, &game.memory)

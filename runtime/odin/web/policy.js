@@ -51,6 +51,7 @@ export function inspectGuest(bytes) {
 
 export function readFrame(game) {
   const offset = game.game_draw();
+  checkExecutor(game);
   const memory = game.memory.buffer;
   if (!Number.isInteger(offset) || offset < 0 || offset > memory.byteLength - FRAME_BYTES) {
     throw new Error('Frame offset outside guest memory.');
@@ -60,4 +61,23 @@ export function readFrame(game) {
   return { bytes, ticks: view.getUint32(16, true), sounds: view.getUint32(20, true),
     spriteX: view.getInt32(8, true), spriteY: view.getInt32(12, true),
     x: view.getFloat64(24, true), y: view.getFloat64(32, true) };
+}
+
+export function checkExecutor(game) {
+  if (!game.game_error_length) return;
+  const length=game.game_error_length();
+  if(!Number.isInteger(length)||length<0||length>1024)throw new Error('Invalid executor diagnostic.');
+  if(!length)return;
+  const offset=game.game_error();
+  if(!Number.isInteger(offset)||offset<0||offset>game.memory.buffer.byteLength-length)throw new Error('Executor diagnostic outside memory.');
+  throw new Error(new TextDecoder().decode(new Uint8Array(game.memory.buffer,offset,length)));
+}
+
+export function loadSource(game,source) {
+  const bytes=new Uint8Array(source);
+  if(!bytes.length||bytes.length>256*1024||typeof game.game_source_buffer!=='function'||typeof game.game_source_capacity!=='function'||typeof game.game_source_size!=='function')throw new Error('Invalid source or executor.');
+  const offset=game.game_source_buffer(),capacity=game.game_source_capacity();
+  if(bytes.length>capacity||!Number.isInteger(offset)||offset<0||offset>game.memory.buffer.byteLength-bytes.length)throw new Error('Source outside executor memory.');
+  new Uint8Array(game.memory.buffer,offset,bytes.length).set(bytes);
+  game.game_source_size(bytes.length);
 }

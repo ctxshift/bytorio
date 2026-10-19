@@ -1,9 +1,11 @@
-import { inspectGuest, readFrame, FRAME_BYTES } from './policy.js';
+import { inspectGuest, readFrame, checkExecutor, loadSource, FRAME_BYTES } from './policy.js';
 
 let game, runtime;
 let smoke = false;
 let lastTick = 0;
 const imports = { env: { sin: Math.sin } };
+let startup;
+let initialMemory;
 
 async function fetchBytes(url) {
   const response = await fetch(url);
@@ -13,21 +15,30 @@ async function fetchBytes(url) {
   return bytes;
 }
 
-function frame() {
+function submit() {
   const record = readFrame(game);
   const target = runtime.runtime_frame();
   new Uint8Array(runtime.memory.buffer, target, FRAME_BYTES).set(record.bytes);
-  if (runtime.runtime_render() !== 1) throw new Error('Invalid frame command.');
+  let count=0;
   if (game.game_commands) {
     if (typeof game.game_command_count !== 'function') throw new Error('Missing display list length.');
-    const count = game.game_command_count(), offset = game.game_commands();
+    const offset = game.game_commands();
+    count=game.game_command_count();
     const bytes = count * 20;
     if (!Number.isInteger(count) || count < 0 || count > 16384 || !Number.isInteger(offset) || offset < 0 || offset > game.memory.buffer.byteLength - bytes) {
       throw new Error('Invalid display list bounds.');
     }
     new Uint8Array(runtime.memory.buffer, runtime.runtime_commands(), bytes).set(new Uint8Array(game.memory.buffer, offset, bytes));
-    if (runtime.runtime_render_commands(count) !== 1) throw new Error('Invalid display list command.');
   }
+  return {record,count};
+}
+function rasterize(count) {
+  if (runtime.runtime_render() !== 1) throw new Error('Invalid frame command.');
+  if (runtime.runtime_render_commands(count) !== 1) throw new Error('Invalid display list command.');
+}
+function frame() {
+  const {record,count}=submit();
+  rasterize(count);
   const pixels = new Uint8ClampedArray(runtime.memory.buffer, runtime.runtime_pixels(), 384 * 216 * 4).slice();
   lastTick = record.ticks;
   return { pixels: pixels.buffer, ticks: record.ticks, sounds: record.sounds, spriteX: record.spriteX,
@@ -39,17 +50,30 @@ self.onmessage = async ({ data }) => {
     if (data.type === 'load') {
       const url = new URL(data.gameUrl, location.href);
       if (url.origin !== location.origin) throw new Error('Game URL must use the player origin.');
-      const [gameBytes, runtimeBytes] = await Promise.all([fetchBytes(url), fetchBytes('./runtime.wasm')]);
+      const start=performance.now();
+      const isSource=url.pathname.endsWith('.luau');
+      const [gameBytes, runtimeBytes, source] = await Promise.all([fetchBytes(isSource?'./luau-executor.wasm':url), fetchBytes('./runtime.wasm'),isSource?fetchBytes(url):null]);
+      const fetched=performance.now();
       self.postMessage({ type: 'executing' });
-      game = (await WebAssembly.instantiate(inspectGuest(gameBytes), imports)).exports;
-      runtime = (await WebAssembly.instantiate(runtimeBytes, imports)).instance.exports;
+      const gameModule=inspectGuest(gameBytes),runtimeModule=new WebAssembly.Module(runtimeBytes);
+      const compiled=performance.now();
+      game = (await WebAssembly.instantiate(gameModule, imports)).exports;
+      runtime = (await WebAssembly.instantiate(runtimeModule, imports)).exports;
+      const instantiated=performance.now();
+      initialMemory=game.memory.buffer.byteLength;
       if (game.game_abi() !== 1 || game.game_frame_size() !== FRAME_BYTES) throw new Error('Unsupported game ABI or frame size.');
       runtime.runtime_init();
+      const runtimeInitialized=performance.now();
+      game._initialize?.();
+      if(source)loadSource(game,source);
       game.game_init();
+      checkExecutor(game);
+      const initialized=performance.now();
       smoke = !!data.smoke;
       const sample = new Float32Array(runtime.memory.buffer, runtime.runtime_sample(), 16000).slice();
       const output = frame();
-      self.postMessage({ type: 'ready', ...output, sample: sample.buffer }, [output.pixels, sample.buffer]);
+      startup={fetchMs:fetched-start,compileMs:compiled-fetched,instantiateMs:instantiated-compiled,runtimeInitMs:runtimeInitialized-instantiated,gameInitMs:initialized-runtimeInitialized,firstFrameMs:performance.now()-initialized,totalMs:performance.now()-start};
+      self.postMessage({ type: 'ready', ...output, startup, memory:memoryReport(), sample: sample.buffer }, [output.pixels, sample.buffer]);
     } else if (data.type === 'step') {
       if (!game || !Number.isInteger(data.steps) || data.steps < 1 || data.steps > 5) throw new Error('Invalid step request.');
       let output;
@@ -59,8 +83,33 @@ self.onmessage = async ({ data }) => {
         output = frame();
       }
       if (output) self.postMessage({ type: 'frame', ...output }, [output.pixels]);
+    } else if (data.type === 'benchmark') {
+      if(!game||!Array.isArray(data.masks)||!data.masks.length||data.masks.length>10000||data.masks.some(mask=>!Number.isInteger(mask)||mask<0||mask>31))throw new Error('Invalid benchmark replay.');
+      const timings=[],traces=[];
+      let peakLinear=game.memory.buffer.byteLength,peakHeap=0;
+      for(let pass=0;pass<7;pass++) {
+        game.game_init();checkExecutor(game);
+        for(const mask of data.masks) {
+          const t0=performance.now();game.game_update(mask,0,0,0);
+          const t1=performance.now();const {record,count}=submit();
+          const t2=performance.now();rasterize(count);
+          const t3=performance.now();
+          new Uint8Array(runtime.memory.buffer,runtime.runtime_pixels(),384*216*4).slice();
+          const t4=performance.now();
+          if(pass>=2)timings.push([t1-t0,t2-t1,t3-t2,t4-t3]);
+          if(pass===2)traces.push({hash:runtime.runtime_hash()>>>0,sounds:record.sounds});
+          peakLinear=Math.max(peakLinear,game.memory.buffer.byteLength);
+          peakHeap=Math.max(peakHeap,game.game_heap_peak?.()||0);
+        }
+      }
+      self.postMessage({type:'benchmark',startup,memory:{...memoryReport(),peakLinear,peakHeap:game.game_heap_peak?peakHeap:null},timings,traces});
     } else throw new Error('Unknown player request.');
   } catch (error) {
     self.postMessage({ type: 'error', error: error.message || String(error) });
   }
 };
+
+function memoryReport() {
+  return {initialLinear:initialMemory,currentLinear:game.memory.buffer.byteLength,runtimeLinear:runtime.memory.buffer.byteLength,
+    heapBytes:game.game_heap_bytes?.()??null,heapPeak:game.game_heap_peak?.()??null};
+}

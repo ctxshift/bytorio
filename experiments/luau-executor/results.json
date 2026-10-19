@@ -1,0 +1,131 @@
+{
+  "environment": {
+    "platform": "win32",
+    "arch": "x64",
+    "os": "10.0.26300",
+    "cpu": "11th Gen Intel(R) Core(TM) i7-11700K @ 3.60GHz",
+    "browser": "155.0.8059.41",
+    "samples": 5,
+    "warmupPasses": 2,
+    "measuredPasses": 5,
+    "questTicks": 134,
+    "defeatTicks": 76
+  },
+  "bytes": {
+    "odinModule": 15504,
+    "luauExecutor": 709019,
+    "luauCartridge": 16329,
+    "runtime": 2518,
+    "player": 509440
+  },
+  "native": {
+    "metered": {
+      "odin": {
+        "startupMedianMs": 7.5339,
+        "compileMedianMs": 6.5015,
+        "gameInitMedianMs": 0.0028,
+        "frameMeanMs": 0.209049,
+        "frameP50Ms": 0.2015,
+        "frameP95Ms": 0.2586,
+        "updateMeanMs": 0.000339,
+        "submitMeanMs": 0.143331,
+        "renderMeanMs": 0.065379,
+        "pixelCopyMeanMs": null,
+        "guestLinearBytes": 1441792,
+        "heapPeakBytes": null,
+        "workingSetMedianBytes": 19914752,
+        "peakWorkingSetBytes": 22188032,
+        "frameSamples": 3350
+      },
+      "luau": {
+        "startupMedianMs": 166.8029,
+        "compileMedianMs": 159.1682,
+        "gameInitMedianMs": 1.8333,
+        "frameMeanMs": 4.762433,
+        "frameP50Ms": 4.69,
+        "frameP95Ms": 5.3459,
+        "updateMeanMs": 0.003572,
+        "submitMeanMs": 4.690479,
+        "renderMeanMs": 0.068382,
+        "pixelCopyMeanMs": null,
+        "guestLinearBytes": 2097152,
+        "heapPeakBytes": 723072,
+        "workingSetMedianBytes": 29839360,
+        "peakWorkingSetBytes": 135434240,
+        "frameSamples": 3350
+      }
+    },
+    "unmetered": {
+      "odin": {
+        "startupMedianMs": 6.6947,
+        "compileMedianMs": 5.7888,
+        "gameInitMedianMs": 0.0026,
+        "frameMeanMs": 0.154366,
+        "frameP50Ms": 0.1441,
+        "frameP95Ms": 0.1904,
+        "updateMeanMs": 0.000317,
+        "submitMeanMs": 0.088535,
+        "renderMeanMs": 0.065514,
+        "pixelCopyMeanMs": null,
+        "guestLinearBytes": 1441792,
+        "heapPeakBytes": null,
+        "workingSetMedianBytes": 19484672,
+        "peakWorkingSetBytes": 20692992,
+        "frameSamples": 3350
+      },
+      "luau": {
+        "startupMedianMs": 126.6617,
+        "compileMedianMs": 120.0253,
+        "gameInitMedianMs": 1.3849,
+        "frameMeanMs": 3.965748,
+        "frameP50Ms": 3.9296,
+        "frameP95Ms": 4.3113,
+        "updateMeanMs": 0.002415,
+        "submitMeanMs": 3.897148,
+        "renderMeanMs": 0.066184,
+        "pixelCopyMeanMs": null,
+        "guestLinearBytes": 2097152,
+        "heapPeakBytes": 723072,
+        "workingSetMedianBytes": 28360704,
+        "peakWorkingSetBytes": 117735424,
+        "frameSamples": 3350
+      }
+    }
+  },
+  "browser": {
+    "odin": {
+      "startupMedianMs": 5.2,
+      "compileMedianMs": 0.5,
+      "gameInitMedianMs": 0,
+      "frameMeanMs": 0.136925,
+      "frameP50Ms": 0.1,
+      "frameP95Ms": 0.2,
+      "updateMeanMs": 0.000149,
+      "submitMeanMs": 0.061224,
+      "renderMeanMs": 0.075552,
+      "pixelCopyMeanMs": 0.091701,
+      "guestLinearBytes": 1441792,
+      "heapPeakBytes": null,
+      "workingSetMedianBytes": null,
+      "peakWorkingSetBytes": null,
+      "frameSamples": 3350
+    },
+    "luau": {
+      "startupMedianMs": 32.5,
+      "compileMedianMs": 1.4,
+      "gameInitMedianMs": 16.5,
+      "frameMeanMs": 3.500567,
+      "frameP50Ms": 3.4,
+      "frameP95Ms": 3.9,
+      "updateMeanMs": 0.003672,
+      "submitMeanMs": 3.41197,
+      "renderMeanMs": 0.084925,
+      "pixelCopyMeanMs": 0.085313,
+      "guestLinearBytes": 2097152,
+      "heapPeakBytes": 723072,
+      "workingSetMedianBytes": null,
+      "peakWorkingSetBytes": null,
+      "frameSamples": 3350
+    }
+  }
+}
