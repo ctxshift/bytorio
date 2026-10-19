@@ -1,6 +1,6 @@
 # Implementation plan
 
-Status: updated 2026-10-19. **Odin is the target language for both games and the runtime**, per [the accepted decision](adr/0001-use-odin-for-games-and-runtime.md). The working Luau/C++ player remains a reference implementation until the Odin native/browser slice passes its acceptance checks. This document supersedes the initial Luau/C++ roadmap.
+Status: updated 2026-10-19. **Odin is the target language for both games and the runtime**, per [the accepted decision](adr/0001-use-odin-for-games-and-runtime.md). The first native/browser [Odin reproduction](odin-development.md) passes its local sprite/sound and failure checks. The Luau/C++ reference is retained; full profile validation and retirement remain later work. This document supersedes the initial Luau/C++ roadmap.
 
 Keep the standalone native requirement, browser target, single 384 x 216 display, mostly 2D scope, approximate 128/512 MB package goals, and complete PNG cartridges. The [DS/3DS comparison](target-comparison.md) is advisory; the language change does not expand fidelity scope. The product name remains undecided; use neutral terminology and treat `sdk` command names as placeholders.
 
@@ -9,6 +9,7 @@ Keep the standalone native requirement, browser target, single 384 x 216 display
 - The Luau/C++ reference player runs on Windows and in Chrome, with a sprite, sound, input, memory/error handling, and matching scripted output.
 - The [Odin probe](../experiments/odin/README.md) compiles scalar game-state logic to Windows native code and an identical import-free Wasm module executed in Node and Chrome. It verifies movement, sound-event counts, and one bounds trap.
 - The probe does not render, play sound, allocate game data dynamically, load guests in the native player, meter runaway code, or load PNGs.
+- The subsequent reproduction does render and play the shared Odin sample on both hosts. Native Wasmtime fuel and browser Worker watchdog/restart paths pass, as do unsupported-ABI, bad-offset, invalid-command, and trap fixtures. A 120-tick replay matches the reference framebuffer hash. See the Odin development guide for exact scope and remaining gaps.
 - Existing CI targets the reference player and has not been verified remotely. The [development guide](development.md) documents the reference build.
 
 ## Migration approach
@@ -34,6 +35,8 @@ The current C++ files are still the reference implementation, not evidence that 
 
 ## Milestone 0: define the guest contract and measurement baseline
 
+The prototype ABI and native embedding proof now exist. Selecting minimum devices and a representative performance baseline remains open.
+
 - Define the smallest versioned Wasm ABI: initialization, fixed update, draw submission, input snapshot, one sound request, diagnostics, and state inspection.
 - Use fixed-width scalar values and validated offset/length buffers; do not expose Odin context, strings, slices, or native pointers across the ABI.
 - Establish context and allocator conventions at every exported Odin entry point.
@@ -43,6 +46,8 @@ The current C++ files are still the reference implementation, not evidence that 
 Exit: a documented ABI draft, pinned compiler/dependency revisions, named measurement environments, and a small native engine embedding proof. The prior scalar probe alone does not satisfy this milestone.
 
 ## Milestone 1: Odin native and browser player with one sprite and sound
+
+Implemented and checked locally on Windows/Chrome. The identical game module, shared Odin drawing/sample code, input, audio, reference replay, and controlled-failure paths pass. Physical controller/touch devices and clean-machine distribution still require validation.
 
 - Implement an Odin native executable with SDL window/input/presentation/audio integration and embedded guest execution.
 - Compile an Odin game to freestanding Wasm. Load the exact same bytes in the native engine and browser Wasm engine.
@@ -108,4 +113,4 @@ Exit: both games use the same documented Odin SDK and portable guest contract wi
 
 Use focused checks for guest validation, ABI decoding, input/timing, allocation/resource accounting, save identity, mixer output, and parser boundaries. Keep graphics/audio integration checks separate from scalar/headless tests. Fuzz cartridge and guest-command parsers when implemented. Record exact compiler/engine versions and observed results without machine-specific paths.
 
-An embedded Wasm engine, the Odin browser host, guest allocation support, Worker recovery, source-level debugging, realistic edit-loop timing, and footprint are still unproven together. These are implementation gates for the chosen language direction. No delivery dates are assigned until the first Odin player integration is measured.
+The embedded Wasm engine, Odin browser host, shared rendering/sample path, and basic Worker recovery are now proven together for this reproduction. Allocation-heavy guest support, source-level debugging, realistic edit-loop timing, broader feature policy, physical input devices, and minimum-device performance remain unproven. These are implementation gates for the chosen language direction, not reasons to treat the whole machine profile as complete.

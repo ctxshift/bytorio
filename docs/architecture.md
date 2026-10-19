@@ -1,6 +1,6 @@
 # Architecture
 
-Status: target design, updated 2026-10-19. [Odin for games and runtime](adr/0001-use-odin-for-games-and-runtime.md) supersedes the initial Luau/C++ direction. The working sprite-and-sound slice still uses Luau/C++; see [the development guide](development.md). The Odin player is not implemented yet.
+Status: target design, updated 2026-10-19. [Odin for games and runtime](adr/0001-use-odin-for-games-and-runtime.md) supersedes the initial Luau/C++ direction. The first [Odin reproduction](odin-development.md) now works on native Windows and browser with one shared game module, a sprite, and sound. The earlier Luau/C++ slice remains a reference. Broader profile features below are still proposed.
 
 ## Product intent and accepted decisions
 
@@ -71,10 +71,12 @@ Suggested implementation choices, subject to the first integration milestone:
 - A pinned Odin compiler for game and runtime builds. The evaluated compiler is `dev-2026-10-nightly:84bc3fc`; a production pin still needs the integration checks. Retain CMake only for the reference build and dependencies that need it.
 - SDL3 for native windows, input, controller mapping, and audio-device integration. SDL supports these services and works with C++: [SDL3 documentation](https://wiki.libsdl.org/SDL3/FrontPage).
 - Desktop OpenGL 3.3 and WebGL 2 backends sharing a constrained renderer and shader templates. Validate Odin bindings and browser glue during migration; the existing Emscripten/SDL renderer is a reference, not an automatically reusable Odin backend.
-- An embedded Wasm engine with a usable C interface for the native Odin host. Wasmtime is a candidate, not a selected dependency. Compare its footprint, startup, interruption, memory limits, and supported platforms with alternatives.
+- Wasmtime 49.0.3 through its C interface for the initial native Odin host. Its reproduction is validated locally; compare footprint/startup and validate further platforms before freezing the final engine dependency.
 - Prefer Odin for maintained SDK/build tooling as practical. Existing Node/Playwright utilities may remain as development helpers; JavaScript remains necessary for browser integration. No Node.js or compiler is required by a native player.
 
 Odin for the runtime means our maintained runtime code is Odin. SDL, graphics drivers, and an embedded Wasm engine may be implemented in other languages behind foreign interfaces. Browser host and game Wasm modules are separate instances; use a bounded JavaScript/Worker bridge rather than assuming shared pointers or direct native linking.
+
+The reproduction selects Wasmtime 49.0.3 for its native adapter, through a small pinned C binding. The browser uses two Wasm instances in one game Worker and presents the shared Odin software framebuffer through Canvas 2D. It validates a 40-byte prototype frame record and allows only the compiler-required `env.sin` import; the broader graphics command ABI, engine-footprint optimization, and complete feature policy remain open. See [current behavior and checks](odin-development.md).
 
 Keep interfaces specific: input snapshot, asset read request/completion, save read/write, drawing submission, audio delivery, monotonic host time, and diagnostics. Avoid a generic plugin framework before a concrete need exists.
 
@@ -110,7 +112,7 @@ Custom game shaders, advanced shadows, PBR, general scene editing, full physics,
 
 Share the mixer, voice rules, and sample interpretation between hosts. Start with 16 voices including music voices; define voice stealing and priority. Use a stable internal sample rate with host conversion as required. Add compressed music streaming only after selecting and profiling a decoder. Do not expand whole music tracks into PCM at startup.
 
-Audio callbacks must not allocate, fetch files, compile scripts, or wait for game execution. Browser audio must survive brief main-thread stalls and require the appropriate user gesture to begin. The initial slice plays the shared C++ PCM sample with a browser AudioBufferSourceNode and an SDL native audio callback. This proves static sample playback independently of the UI thread; it does not yet implement the full mixer. Before sustained/streaming audio, select and prove an AudioWorklet delivery approach, buffer ownership, latency, and underrun behavior. A baseline deployment must not require SharedArrayBuffer or cross-origin isolation; if that baseline fails the audio requirements, explicitly revisit the deployment contract rather than adding the requirement silently.
+Audio callbacks must not allocate, fetch files, compile scripts, or wait for game execution. Browser audio must survive brief main-thread stalls and require the appropriate user gesture to begin. The Odin reproduction generates the shared PCM sample in Odin, queues it through SDL on native, and uses a browser AudioBufferSourceNode on web. It matches the reference's single-sample behavior; it does not yet implement the full mixer. Before sustained/streaming audio, select and prove an AudioWorklet delivery approach, buffer ownership, latency, and underrun behavior. A baseline deployment must not require SharedArrayBuffer or cross-origin isolation; if that baseline fails the audio requirements, explicitly revisit the deployment contract rather than adding the requirement silently.
 
 ## Assets and cartridge format
 

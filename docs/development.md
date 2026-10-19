@@ -1,6 +1,6 @@
 # Building and running the first slice
 
-This guide describes the existing **Luau/C++ reference slice**. The target architecture has moved to [Odin for games and runtime](adr/0001-use-odin-for-games-and-runtime.md); the Odin player migration is planned in [the implementation plan](implementation-plan.md). The commands below continue to build the working reference player.
+This guide describes the existing **Luau/C++ reference slice**. The target architecture has moved to [Odin for games and runtime](adr/0001-use-odin-for-games-and-runtime.md); see [the Odin development guide](odin-development.md) for its implemented reproduction and [the implementation plan](implementation-plan.md) for remaining work. The commands below continue to build the working reference player.
 
 This slice runs `examples/hello/main.luau` in a shared C++/Luau core on native desktop and WebAssembly. It draws one built-in 16 x 16 sprite into a 384 x 216 framebuffer and plays one generated PCM sample. The small procedural assets keep the first integration independent of an unfinished importer or cartridge format.
 

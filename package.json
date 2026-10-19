@@ -4,7 +4,9 @@
   "type": "module",
   "scripts": {
     "serve": "node tools/serve.mjs",
-    "test:web": "node tools/verify-web.mjs"
+    "test:web": "node tools/verify-web.mjs",
+    "test:odin": "node tools/verify-odin.mjs",
+    "serve:odin": "node tools/serve.mjs build/odin-player/web"
   },
   "devDependencies": {
     "playwright": "1.64.1"

@@ -8,6 +8,33 @@ permissions:
   contents: read
 
 jobs:
+  odin:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Build pinned Odin native and browser players
+        shell: pwsh
+        run: ./tools/build-odin.ps1 all -Fixtures
+      - name: Install browser verifier
+        run: |
+          npm ci
+          npx playwright install chromium
+      - name: Verify Odin reproduction and recovery
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+          SDL_RENDER_DRIVER: software
+        run: npm run test:odin
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: odin-verification
+          path: build/odin-player/verification/
+
   native:
     runs-on: windows-latest
     steps:
