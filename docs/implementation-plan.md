@@ -86,14 +86,119 @@ Exit: useful diagnostics and bounded recovery on both players, measured edit-to-
 
 Exit: the supported Odin build replaces the reference player and its documented commands. A compile-only proof or headless state test is insufficient.
 
-## Milestone 4: strong 2D workflow and compact 3D
+## Milestone 4: typed graphics and audio resources
 
-- Grow sprites, batching, tilemaps, transforms, clipping, palette effects, text, and render targets around the playable reference game.
-- Add indexed meshes, depth testing, cameras, vertex colors, simple lighting/fog, and 3D-to-2D composition.
-- Develop the proposed 16-voice audio mixer, voice priority, and streamed music after measuring a decoder and proving browser worklet/buffering behavior.
-- Add live asset replacement and frame/resource diagnostics.
+Design: [resource interface proposal](resource-av-spec.md), proposed SDK 0.2.0 /
+ABI 2 / `resource-av-1`. Status: **design-only**. Current SDK 0.1.0 remains the
+implemented contract. Complete the stages in order; do not expose partial calls
+as supported profile features. [Proposal budgets](../sdk/proposals/resource-av-1.json)
+are targets to validate, not constants to apply to today's player.
 
-Exit: the mixed 2D/3D scene and sustained audio meet measured minimum-device targets. Custom shaders, advanced shadows, full physics, and complex animation remain deferred unless game needs justify them.
+### 4a. Resource ownership, transport and both SDKs
+
+- Generate one schema for capability/configuration/input records, packet headers,
+  opcodes, typed descriptors, acknowledgements and completion messages. Freeze
+  their exact layouts only after a small native/browser vertical slice passes.
+- Implement session/generation-checked handles, a bounded Odin resource registry,
+  staging snapshots, ordered commit validation and resource accounting. Define
+  identical portable charges for host copies, pending versions and retired data.
+- Implement typed Luau buffers/opaque handles and Odin slices/distinct handles.
+  Validate create/upload/use/destroy and errors through each public interface.
+- Consume a control commit after init and every update, independently of draws.
+  Preserve import-free guests and the ABI 1 compatibility adapter. Keep the new
+  profile out of advertised capabilities and PNG readers until its gates pass.
+
+Exit: one mutable texture and one PCM resource follow the same lifecycle on both
+hosts through each SDK. Malformed packets, overflow, stale/cross-session handles,
+wrong types, failed commits, generation wrap and budget exhaustion have focused
+tests. Guest buffer reuse after upload does not change accepted data. No device
+work retains guest pointers or calls game code re-entrantly.
+
+### 4b. Explicit graphics passes and low-level composition
+
+- Extend the Odin software reference with mutable index8/premultiplied-RGBA8
+  images, palettes, immutable pipelines, clips and affine transforms. Define and
+  test byte rounding, sampling and edge coverage before any accelerated adapter.
+- Add offscreen targets, independent stencil attachments, masks, source-over/add
+  blending, destination-index color tables and per-row palette/source offsets.
+- Implement ordered pass controls, target hazard checks, explicit presentation
+  and asynchronous readback tickets with bounded completion delivery. Add
+  matching SDK examples and diagnostics.
+- Integrate existing sprite/text conveniences over the new command protocol and
+  retain old-profile golden replays. Defer GPU acceleration until it can satisfy
+  the same reference fixtures and context-loss behavior.
+
+Exit: matching Luau/Odin scenes demonstrate procedural pixel upload, palette
+animation, compositing, stencil shadows, offscreen passes and row effects on
+native/browser. Tests cover clipping, feedback rejection, format mismatches,
+readback versions and display switches. Measure a full 640×360 RGBA upload at
+60 Hz; record copy volume, CPU time and memory rather than assuming it is cheap.
+
+### 4c. Shared PCM mixer and real-time delivery
+
+- Implement the Odin 48 kHz stereo mixer with 16 explicit voice slots, source-rate
+  PCM playback/loops, gain/pan ramps and typed bus routing. Use the same DSP on
+  native and browser, with no dependence on game execution in the audio callback.
+- Implement absolute logical-frame scheduling, a reported scheduling lead,
+  ordered events, bounded PCM streams, late-event/underrun counters and completion
+  mailboxes. Specify queue ownership, backpressure and off-thread reclamation.
+- Prove SDL delivery and AudioWorklet delivery with preallocated bounded queues
+  and recyclable transfers. Test the baseline without shared memory or additional
+  isolation headers; explicitly revise the proposal if that delivery path fails.
+- Verify gesture unlock, game/main-thread stalls, pause/resume, audio epochs and
+  reload. No callback allocation, file access, compilation or waiting on gameplay.
+
+Exit: both SDKs schedule the same note/sample event traces. Capture native/browser
+PCM and compare measured tolerances; device latency is reported separately.
+Sustained audio survives a 500 ms game/main-thread stall with queued/active sound,
+and empty streams emit defined silence. Test resource and queue pressure, one
+and multiple device block sizes/rates, and a physical output device. Measure the
+initial 50 ms lead target before accepting it as a shipping requirement.
+
+### 4d. Mutable synthesis and effects
+
+- Add partial sample/wavetable writes, independent voice state and live parameter
+  ramps with exact logical-frame application. Preserve old versions already used
+  by accepted submissions; all retained versions count against budgets.
+- Implement and validate typed source/control/DSP graphs: wavetable, seeded noise,
+  mix, ADSR, LFO, filter, bounded delay, pan and output. Bound graph topology,
+  coefficient domains, DSP node count, state memory and scheduled-event horizon.
+  Include typed audio-rate oscillator modulation and gain inputs in the shared
+  per-sample graph evaluation and reference fixtures.
+- Prepare resource changes and state off the real-time thread. Add a small tone
+  editor/test cartridge in both languages using our interface and asset schema.
+
+Exit: reference tests cover phase continuity, envelopes, modulation, filters,
+delay, replacement/release, simultaneous events and invalid/cyclic graphs. Stress
+the full permitted voice/node workload, including live writes, on both hosts.
+Record real-time CPU budget, copy overhead, peak memory, saturation behavior and
+underruns before freezing the provisional limits.
+
+### 4e. Conformance, packaging and profile publication
+
+- Publish the generated schema, SDK signatures, examples and measured limits only
+  after the preceding gates pass. Add explicit profile/ABI negotiation to native
+  and browser loaders; enable profile-2 PNG packaging without changing the
+  existing version-1 container header or pretending it supports large ROMs.
+- Exercise the same corpus through Luau/Odin, native/browser, loose development
+  payloads and PNGs. Re-run ABI 1 RPG/racing goldens. Test reload/termination,
+  unsupported features, failed device allocations and graphics-context loss.
+- Keep all four runtime/language combinations in CI. Add focused benchmarks for
+  upload bandwidth, rendering, voice/graph load, cold/warm startup, packet staging,
+  resource copies and peak memory. Select minimum target devices before claiming
+  universal frame/audio guarantees.
+
+Exit: a supported resource profile with equivalent controls, documented error
+and timing semantics, predictable budgets, complete SDK examples and standalone
+distributions. Design documents and provisional JSON alone do not meet this exit.
+
+### 4f. Compact 3D after the resource interface
+
+Add indexed meshes, depth testing, cameras, vertex colors, simple lighting/fog
+and 3D-to-2D composition using these target/resource lifetimes. Keep custom shaders,
+advanced shadows, full physics and complex animation deferred until game needs
+and minimum-device measurements justify them. Compressed music decoding and large
+asset streaming depend on milestone 5, not on the presence of a PCM stream handle.
 
 ## Milestone 5: indexed ROMs, full PNG cartridges, loading, and saves
 

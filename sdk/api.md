@@ -1,5 +1,9 @@
 # SDK API 0.1.0
 
+This page documents implemented calls. The proposed next interface is described
+in [typed graphics and audio resources](../docs/resource-av-spec.md), including
+equivalent Luau/Odin operation shapes. Those resource calls are not available yet.
+
 Luau imports `local console = require("@console")`. Odin imports
 `console "sdk:console"`. Sprite IDs start at zero. Drawing coordinates use the
 current display. Colors are opaque packed u32 values, made with `rgb`.

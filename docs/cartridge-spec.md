@@ -13,6 +13,20 @@ streamed assets and large ROMs remain future profiles. Both languages support
 the [version-1 PNG cartridge container](png-cartridges.md).
 An SDK release is complete for this profile without claiming those features.
 
+## Proposed successor: typed graphics and audio resources
+
+[The resource interface proposal](resource-av-spec.md) defines the intended next
+profile, `resource-av-1`: typed runtime resources, mutable pixel/PCM staging,
+explicit passes and composition, and a scheduled shared audio mixer/synthesizer.
+It targets SDK 0.2.0 / ABI 2 with negotiation, generation-checked handles, bounded
+control/draw packets and lifecycle rules for both Luau and Odin. Its provisional
+budgets are isolated in [the proposal manifest](../sdk/proposals/resource-av-1.json).
+
+That proposal is not implemented and does not change any behavior, limits,
+exports or PNG compatibility specified below. `sdk/contract.json` remains the
+authoritative implemented contract. Profile 2 must not be advertised until the
+implementation-plan gates and native/browser conformance checks pass.
+
 ## Execution and compatibility
 
 An Odin cartridge is a freestanding core Wasm module. A Luau cartridge is bundled

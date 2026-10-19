@@ -100,6 +100,13 @@ Provide a seeded PRNG and virtual tick time. Record input by tick for regression
 
 ## Graphics
 
+The [typed resource proposal](resource-av-spec.md) defines the next 2D interface:
+game-owned pixel buffers; runtime-owned textures, targets, palettes, lookup and
+row tables; immutable pipelines; ordered passes; explicit readback and presentation.
+It proposes premultiplied RGBA8 and independent stencil storage, with equal Luau
+and Odin capability through a versioned packet interface. These additions are
+not implemented by the current opaque-rectangle/atlas renderer.
+
 Render into the logical framebuffer, then present it using a documented scaling policy. Pointer coordinates map back into that logical space, with an explicit policy for letterboxed areas.
 
 Make 2D the primary API: sprite batching, indexed and RGBA textures, tilemaps, camera transforms, clipping, palette effects, text, and offscreen targets. Specify blend semantics and ordering; batch only where visual order remains correct. Document straight versus premultiplied alpha and color-space behavior before importer output becomes stable.
@@ -110,7 +117,14 @@ Custom game shaders, advanced shadows, PBR, general scene editing, full physics,
 
 ## Audio
 
-Share the mixer, voice rules, and sample interpretation between hosts. Start with 16 voices including music voices; define voice stealing and priority. Use a stable internal sample rate with host conversion as required. Add compressed music streaming only after selecting and profiling a decoder. Do not expand whole music tracks into PCM at startup.
+The [typed audio proposal](resource-av-spec.md#5-audio-interface) defines samples,
+wavetables, instrument graphs, buses, explicit voice slots and PCM streams, with
+control changes scheduled in 48 kHz stereo frames. The shared Odin mixer owns
+real-time processing; game callbacks submit validated commands after init/update.
+Native and browser use the same DSP with platform delivery adapters. This is
+proposed successor behavior; the current player still exposes one fixed sound cue.
+
+Share the mixer, voice rules, and sample interpretation between hosts. Start with 16 explicit voice slots including music voices; replacement occurs only when the game selects an occupied slot. Use a stable internal sample rate with host conversion as required. Add compressed music streaming only after selecting and profiling a decoder. Do not expand whole music tracks into PCM at startup.
 
 Audio callbacks must not allocate, fetch files, compile scripts, or wait for game execution. Browser audio must survive brief main-thread stalls and require the appropriate user gesture to begin. The Odin reproduction generates the shared PCM sample in Odin, queues it through SDL on native, and uses a browser AudioBufferSourceNode on web. It matches the reference's single-sample behavior; it does not yet implement the full mixer. Before sustained/streaming audio, select and prove an AudioWorklet delivery approach, buffer ownership, latency, and underrun behavior. A baseline deployment must not require SharedArrayBuffer or cross-origin isolation; if that baseline fails the audio requirements, explicitly revisit the deployment contract rather than adding the requirement silently.
 
