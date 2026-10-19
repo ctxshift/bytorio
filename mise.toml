@@ -28,7 +28,16 @@ run = ["npm run format:js", "node tools/format-code.mjs"]
 description = "Check formatting in every project language"
 run = ["npm run format:js:check", "node tools/format-code.mjs --check"]
 
+[tasks.generate]
+description = "Generate shared console and resource constants"
+run = "node tools/generate-constants.mjs"
+
+[tasks."generate:check"]
+description = "Check generated constants against their contracts"
+run = "node tools/generate-constants.mjs --check"
+
 [tasks.lint]
+depends = ["generate:check"]
 description = "Lint JavaScript, Odin and Luau"
 run = ["npm run lint:js", "node tools/lint-code.mjs odin", "node tools/lint-code.mjs luau"]
 

@@ -1,3 +1,4 @@
+import { COLOR_OPAQUE_BLACK } from "../../runtime/odin/web/constants.js";
 import { readFile } from "node:fs/promises";
 import assert from "node:assert/strict";
 
@@ -6,7 +7,9 @@ export function graphicsPacket(source) {
   const palette = source.palette.map((color) => {
     assert.match(color, /^#[\da-fA-F]{6}$/, "invalid palette color");
     return (
-      (0xff000000 | parseInt(color.slice(5, 7) + color.slice(3, 5) + color.slice(1, 3), 16)) >>> 0
+      (COLOR_OPAQUE_BLACK |
+        parseInt(color.slice(5, 7) + color.slice(3, 5) + color.slice(1, 3), 16)) >>>
+      0
     );
   });
   assert.ok(

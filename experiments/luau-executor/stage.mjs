@@ -39,6 +39,7 @@ for (const platform of ["web", "native"]) {
           "player.html",
           "player.js",
           "policy.js",
+          "constants.js",
           "cartridge.js",
           "worker.js",
           "executor-cache.js",

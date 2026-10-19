@@ -1,5 +1,6 @@
 package resources
 
+import abi "../abi"
 import core "../core"
 import w "../resource_protocol"
 import "core:math"
@@ -168,10 +169,10 @@ default_pipeline :: proc(format: u32) -> [8]u32 {
 }
 pipeline :: proc(t: ^Transaction, id, format, stencil: u32) -> ([8]u32, bool) {
     value := default_pipeline(format)
-    if id >= 0xfffffffd {
-        if (id == 0xfffffffd && format != w.format_rgba8) ||
-           (id == 0xfffffffe && format != w.format_index8) ||
-           id == 0xffffffff {
+    if id >= w.defaultRgbaPipelineId {
+        if (id == w.defaultRgbaPipelineId && format != w.format_rgba8) ||
+           (id == w.defaultIndexPipelineId && format != w.format_index8) ||
+           id == w.invalidPipelineId {
 
             return value, fail(t.registry, "default pipeline format mismatch")
         }
@@ -252,8 +253,8 @@ graphics_control :: proc(t: ^Transaction, op, id: u32, descriptor: [8]u32, data:
 
                     return fail(r, "invalid row palette")
                 }
-                if abs(i64(i32(u32le(data, at + 4)))) > 4096 ||
-                   abs(i64(i32(u32le(data, at + 8)))) > 4096 {
+                if abs(i64(i32(u32le(data, at + 4)))) > abi.COORDINATE_MAX ||
+                   abs(i64(i32(u32le(data, at + 8)))) > abi.COORDINATE_MAX {
 
                     return fail(r, "row offset outside supported range")
                 }
@@ -332,7 +333,7 @@ graphics_control :: proc(t: ^Transaction, op, id: u32, descriptor: [8]u32, data:
     case w.op_create_palette:
         kind = .Palette; size = 1024
     case w.op_create_color_table:
-        kind = .Color_Table; size = 65536
+        kind = .Color_Table; size = w.colorTableBytes
     case w.op_create_row_table:
         if args[0] == 0 || args[0] > 360 {
 
@@ -499,7 +500,7 @@ graphics_command :: proc(
             target   = id,
             pipeline = pipe,
             clip     = {0, 0, i32(target.width), i32(target.height)},
-            affine   = {65536, 0, 0, 65536, 0, 0},
+            affine   = {w.graphicsFixedOne, 0, 0, w.graphicsFixedOne, 0, 0},
         }
         if args[1] != 0 {
 
@@ -527,7 +528,7 @@ graphics_command :: proc(
         for i in 0 ..< 4 {
 
             state.clip[i] = i32(args[i])
-            if abs(i64(state.clip[i])) > 4096 || (i >= 2 && state.clip[i] < 0) {
+            if abs(i64(state.clip[i])) > abi.COORDINATE_MAX || (i >= 2 && state.clip[i] < 0) {
 
                 return fail(r, "invalid clip rectangle")
             }
@@ -547,7 +548,10 @@ graphics_command :: proc(
         for i in 0 ..< 6 {
 
             state.affine[i] = i32(args[i])
-            if abs(i64(state.affine[i])) > i64(16 * 65536 if i < 4 else 4096 * 65536) {
+            if abs(i64(state.affine[i])) >
+               i64(
+                   w.maxAffineCoefficient * w.graphicsFixedOne if i < 4 else abi.COORDINATE_MAX * w.graphicsFixedOne,
+               ) {
 
                 return fail(r, "transform outside supported range")
             }
@@ -948,7 +952,7 @@ raster :: proc(
     target := image(t, t.render.target)
     for value in rect {
 
-        if abs(i64(value)) > 4096 * 65536 {
+        if abs(i64(value)) > abi.COORDINATE_MAX * w.graphicsFixedOne {
 
             return fail(t.registry, "draw geometry outside supported range")
         }
@@ -961,7 +965,7 @@ raster :: proc(
 
         return fail(t.registry, "invalid premultiplied draw color")
     }
-    if target.format == w.format_index8 && source != nil && color != 0xffffffff {
+    if target.format == w.format_index8 && source != nil && color != abi.COLOR_OPAQUE_WHITE {
 
         return fail(t.registry, "indexed draw cannot tint RGBA")
     }
@@ -976,7 +980,7 @@ raster :: proc(
         }
         for value in src {
 
-            if abs(i64(value)) > 4096 {
+            if abs(i64(value)) > abi.COORDINATE_MAX {
 
                 return fail(t.registry, "source rectangle outside supported range")
             }
@@ -989,20 +993,27 @@ raster :: proc(
     m := t.render.affine
     a, b, c, d, tx, ty :=
         f64(m[0]) /
-        65536,
+        w.graphicsFixedOne,
         f64(m[1]) /
-        65536,
+        w.graphicsFixedOne,
         f64(m[2]) /
-        65536,
+        w.graphicsFixedOne,
         f64(m[3]) /
-        65536,
+        w.graphicsFixedOne,
         f64(m[4]) /
-        65536,
+        w.graphicsFixedOne,
         f64(m[5]) /
-        65536
+        w.graphicsFixedOne
     det := a * d - b * c
     rx, ry, rw, rh :=
-        f64(rect[0]) / 65536, f64(rect[1]) / 65536, f64(rect[2]) / 65536, f64(rect[3]) / 65536
+        f64(rect[0]) /
+        w.graphicsFixedOne,
+        f64(rect[1]) /
+        w.graphicsFixedOne,
+        f64(rect[2]) /
+        w.graphicsFixedOne,
+        f64(rect[3]) /
+        w.graphicsFixedOne
     min_x, min_y, max_x, max_y := f64(1e30), f64(1e30), -f64(1e30), -f64(1e30)
     for corner in 0 ..< 4 {
         x := rx + (rw if corner & 1 != 0 else 0)
@@ -1207,29 +1218,25 @@ convenience :: proc(t: ^Transaction, op: u32, descriptor: [8]u32, data: []u8) ->
             if char == 10 {
 
                 x = start
-                y += 9 * 65536
+                y += 9 * w.graphicsFixedOne
                 continue
             }
             for row in 0 ..< 7 {
                 for col in 0 ..< 5 {
                     if core.font[char][row] & (1 << u8(4 - col)) != 0 {
-                        if !raster(
-                            t,
-                            {x + i32(col) * 65536, y + i32(row) * 65536, 65536, 65536},
-                            nil,
-                            {},
-                            0,
-                            args[2],
-                            0,
-                            false,
-                        ) {
+                        if !raster(t, {
+                                x + i32(col) * w.graphicsFixedOne,
+                                y + i32(row) * w.graphicsFixedOne,
+                                w.graphicsFixedOne,
+                                w.graphicsFixedOne,
+                            }, nil, {}, 0, args[2], 0, false) {
 
                             return false
                         }
                     }
                 }
             }
-            x += 6 * 65536
+            x += 6 * w.graphicsFixedOne
         }
         return true
     }

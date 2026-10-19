@@ -67,8 +67,8 @@ destroy resources, then reuse a slot with a new generation.
 
 [resource-transport.json](proposals/resource-transport.json) defines the subset's
 version, limits, formats, field layouts, descriptors and configuration exports.
-`npm run generate:resources` generates the Odin, Luau and C++ constants;
-`node tools/generate-resource-schema.mjs --check` detects stale generated files.
+`mise run generate` generates the Odin, Luau, C++ and browser constants;
+`mise run generate:check` detects stale generated files.
 Version 2 adds a session-checked readback mailbox before each update. Its 16-byte
 header carries magic, count, byte length and session; up to four 32-byte records
 describe copied pixel results. At most 1 MiB of result data is delivered per

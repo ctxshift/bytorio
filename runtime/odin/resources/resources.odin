@@ -311,8 +311,8 @@ submit :: proc(
                 if args[0] != w.format_f32 ||
                    args[1] == 0 ||
                    (args[2] != 1 && args[2] != 2) ||
-                   args[3] < 8000 ||
-                   args[3] > 96000 {
+                   args[3] < w.minSampleRate ||
+                   args[3] > w.maxSampleRate {
 
                     return fail(r, "invalid sample descriptor")
                 }
@@ -499,7 +499,7 @@ submit :: proc(
 }
 
 hash :: proc(r: ^Registry) -> u32 {
-    result := u32(2166136261)
+    result := u32(abi.FNV1A_OFFSET_BASIS)
     for slot, i in r.slots {
         if slot.kind == .Empty {
 
@@ -518,12 +518,12 @@ hash :: proc(r: ^Registry) -> u32 {
 
             for shift in 0 ..< 4 {
 
-                result = (result ~ u32(u8(value >> u32(shift * 8)))) * 16777619
+                result = (result ~ u32(u8(value >> u32(shift * 8)))) * abi.FNV1A_PRIME
             }
         }
         for value in slot.data {
 
-            result = (result ~ u32(value)) * 16777619
+            result = (result ~ u32(value)) * abi.FNV1A_PRIME
         }
     }
     return result

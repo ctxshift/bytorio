@@ -24,7 +24,7 @@
     "console": "node tools/console.mjs",
     "test:sdk": "mise run test:sdk",
     "test:cartridge": "mise run test:cartridge",
-    "generate:resources": "node tools/generate-resource-schema.mjs",
+    "generate:resources": "mise run generate",
     "test:resources": "mise run test:resources",
     "test:graphics": "mise run test:graphics",
     "lint:js": "eslint .",

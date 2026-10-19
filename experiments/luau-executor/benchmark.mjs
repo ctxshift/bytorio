@@ -1,3 +1,4 @@
+import { FNV1A_OFFSET_BASIS, FNV1A_PRIME } from "../../runtime/odin/web/constants.js";
 // PROTOTYPE: serial measurements of the same replay through the same player.
 import assert from "node:assert/strict";
 import { readFile, writeFile, mkdir, stat, readdir } from "node:fs/promises";
@@ -118,10 +119,10 @@ async function reference(language, inputs) {
         runtime.runtime_pixels(),
         drawing.width * drawing.height * 4,
       );
-      let hash = 2166136261;
+      let hash = FNV1A_OFFSET_BASIS;
       for (let y = 0; y < 216; y++) {
         for (let x = 0; x < 384 * 4; x++) {
-          hash = Math.imul(hash ^ pixels[y * drawing.width * 4 + x], 16777619) >>> 0;
+          hash = Math.imul(hash ^ pixels[y * drawing.width * 4 + x], FNV1A_PRIME) >>> 0;
         }
       }
       legacy.push({ hash, sounds: record.sounds });

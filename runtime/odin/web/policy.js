@@ -1,6 +1,12 @@
-export const FRAME_BYTES = 40;
-export const MAX_GAME_BYTES = 1024 * 1024;
-export const MAX_PAGES = 128;
+import {
+  FRAME_BYTES,
+  MAX_GAME_BYTES,
+  MAX_MEMORY_BYTES,
+  WASM_PAGE_BYTES,
+  resourceSchema,
+} from "./constants.js";
+export { FRAME_BYTES, MAX_GAME_BYTES };
+export const MAX_PAGES = MAX_MEMORY_BYTES / WASM_PAGE_BYTES;
 const DISPLAY_DIMENSION_BITS = 16;
 const DISPLAY_DIMENSION_MASK = 2 ** DISPLAY_DIMENSION_BITS - 1;
 const resourceProtocols = new WeakMap();
@@ -35,7 +41,11 @@ export function configureResources(game, runtime) {
       }
     }
     const capacity = game.game_resource_mailbox_capacity();
-    if (!Number.isInteger(capacity) || capacity < 1048720 || capacity > 8388608) {
+    if (
+      !Number.isInteger(capacity) ||
+      capacity < resourceSchema.mailboxCapacity ||
+      capacity > MAX_MEMORY_BYTES
+    ) {
       throw new Error("Invalid completion mailbox capacity.");
     }
   }
@@ -54,7 +64,11 @@ export function deliverResources(game, runtime) {
   const capacity = game.game_resource_mailbox_capacity();
   const offset = game.game_resource_mailbox() >>> 0;
   const memory = game.memory.buffer;
-  if (size < 144 || size > capacity || offset > memory.byteLength - size) {
+  if (
+    size < resourceSchema.mailboxPayloadOffset ||
+    size > capacity ||
+    offset > memory.byteLength - size
+  ) {
     throw new Error("Completion mailbox outside guest memory.");
   }
   new Uint8Array(memory, offset, size).set(

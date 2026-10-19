@@ -281,10 +281,10 @@ receive :: proc() {
         context.allocator = runtime.default_wasm_allocator()
     }
     bytes := packet[:int(mailbox_size)]
-    if mailbox_size < 144 ||
+    if mailbox_size < w.mailboxPayloadOffset ||
        mailbox_size > r.MAILBOX_CAPACITY ||
        r.u32le(bytes, 0) != r.MAILBOX_MAGIC ||
-       r.u32le(bytes, 4) > 4 ||
+       r.u32le(bytes, 4) > w.mailboxMaxRecords ||
        r.u32le(bytes, 8) != mailbox_size ||
        r.u32le(bytes, 12) != session {
 
@@ -292,7 +292,7 @@ receive :: proc() {
         return
     }
     for i in 0 ..< int(r.u32le(bytes, 4)) {
-        at := 16 + i * 32
+        at := w.mailboxHeaderBytes + i * w.mailboxRecordBytes
         id := r.u32le(bytes, at)
         index := id & w.handleIndexMask
         offset, size := r.u32le(bytes, at + 16), r.u32le(bytes, at + 20)
@@ -300,7 +300,7 @@ receive :: proc() {
            index > w.maxSlots ||
            slots[index - 1].kind != 8 ||
            slots[index - 1].generation != id >> w.handleIndexBits ||
-           offset < 144 ||
+           offset < w.mailboxPayloadOffset ||
            !r.within(offset, size, len(bytes)) {
 
             fail("invalid resource completion")

@@ -128,3 +128,10 @@ the same tasks rather than maintaining another dependency build cache. Asset
 generators and packaging stay in JavaScript and invoke the pinned formatters
 before writing generated sources. Rebuilding assets must leave format checks
 passing. Project automation contains no shell scripts.
+
+Shared numeric limits and defaults come from `sdk/contract.json` and
+`sdk/proposals/resource-transport.json`. Run `mise run generate` after changing
+either contract. This updates the Odin, Luau, C++ bridge and browser constants;
+`mise run lint` checks that generated files are current. Keep unrelated meanings
+separate: a white tint, an integer limit and a checksum mask can have the same
+value without being the same constant.

@@ -1,4 +1,5 @@
 --!strict
+local c = require("./constants")
 local host = require("./native")
 local schema = require("./resource_schema")
 export type Texture = { _resourceKind: "texture" }
@@ -80,7 +81,7 @@ local function check(handle: Handle, kind: string): Record
     if record.id == 0 and record.kind == "target" then
         return record
     end
-    if record.id >= 4294967293 and record.kind == "pipeline" then
+    if record.id >= schema.defaultRgbaPipelineId and record.kind == "pipeline" then
         return record
     end
     local slot = slots[record.id % schema.handleGenerationStride]
@@ -100,7 +101,7 @@ local function emit(op: number, id: number, values: { number }?, bytes: buffer?)
     local args = buffer.create(if values then 32 else 0)
     if values then
         for i, value in values do
-            buffer.writeu32(args, (i - 1) * 4, value % 4294967296)
+            buffer.writeu32(args, (i - 1) * 4, value % c.U32_MODULUS)
         end
     end
     host.resource_emit(op, id, args, bytes or buffer.create(0))
@@ -161,12 +162,12 @@ function data.set_pixel(pixels: PixelBuffer, x: number, y: number, color: number
     integer(y, 0, pixels.height - 1)
     local at = y * pixels.width + x
     if pixels.format == "rgba8" then
-        integer(color, 0, 4294967295)
-        local alpha = math.floor(color / 16777216)
+        integer(color, 0, c.U32_MAX)
+        local alpha = math.floor(color / c.COLOR_ALPHA_SCALE)
         assert(
             color % 256 <= alpha
                 and math.floor(color / 256) % 256 <= alpha
-                and math.floor(color / 65536) % 256 <= alpha,
+                and math.floor(color / c.COLOR_BLUE_SCALE) % 256 <= alpha,
             "invalid premultiplied pixel"
         )
         buffer.writeu32(pixels.bytes, at * 4, color)
@@ -196,8 +197,8 @@ function data.copy_pixels(
     height: number
 )
     assert(destination.format == source.format, "pixel copy formats differ")
-    integer(width, 0, 1024)
-    integer(height, 0, 1024)
+    integer(width, 0, schema.maxImageAxis)
+    integer(height, 0, schema.maxImageAxis)
     integer(dx, 0, destination.width - width)
     integer(dy, 0, destination.height - height)
     integer(sx, 0, source.width - width)
@@ -275,7 +276,7 @@ end
 function audio.sample(desc: SampleDesc, pcm: PCMBuffer?): Sample
     integer(desc.frames, 1, schema.maxResourceBytes / 4)
     integer(desc.channels, 1, 2)
-    integer(desc.rate, 8000, 96000)
+    integer(desc.rate, schema.minSampleRate, schema.maxSampleRate)
     assert(desc.frames * desc.channels * 4 <= schema.maxResourceBytes, "sample capacity exceeded")
     local handle = reserve("sample", schema.format_f32, desc.channels)
     emit(
@@ -342,12 +343,12 @@ local function id(handle: Handle?, kind: string): number
     return if handle then check(handle, kind).id else 0
 end
 local function fixed(value: number, limit: number?): number
-    local bound = limit or 4096
+    local bound = limit or c.COORDINATE_MAX
     assert(
         value == value and value >= -bound and value <= bound,
         "graphics coordinate outside supported range"
     )
-    return math.floor(value * 65536 + 0.5) % 4294967296
+    return math.floor(value * schema.graphicsFixedOne + 0.5) % c.U32_MODULUS
 end
 local function drawReady()
     ready()
@@ -375,9 +376,9 @@ function gfx.rgba(r: number, g: number, b: number, a: number): number
     integer(b, 0, 255)
     integer(a, 0, 255)
     return math.floor((r * a + 127) / 255)
-        + math.floor((g * a + 127) / 255) * 256
-        + math.floor((b * a + 127) / 255) * 65536
-        + a * 16777216
+        + math.floor((g * a + 127) / 255) * c.COLOR_GREEN_SCALE
+        + math.floor((b * a + 127) / 255) * c.COLOR_BLUE_SCALE
+        + a * c.COLOR_ALPHA_SCALE
 end
 function gfx.screen(): Target
     return reserved("target", 0, schema.format_rgba8) :: Target
@@ -386,7 +387,7 @@ function gfx.default_pipeline(format: "rgba8" | "index8"): Pipeline
     assert(format == "rgba8" or format == "index8", "invalid default pipeline format")
     return reserved(
         "pipeline",
-        if format == "rgba8" then 4294967293 else 4294967294,
+        if format == "rgba8" then schema.defaultRgbaPipelineId else schema.defaultIndexPipelineId,
         formatId(format)
     ) :: Pipeline
 end
@@ -397,8 +398,8 @@ function gfx.target(desc: {
     stencil: Target?,
 }): Target
     local format = formatId(desc.format)
-    integer(desc.width, 1, 1024)
-    integer(desc.height, 1, 1024)
+    integer(desc.width, 1, schema.maxImageAxis)
+    integer(desc.height, 1, schema.maxImageAxis)
     if desc.stencil then
         local attachment = check(desc.stencil, "target")
         assert(
@@ -451,7 +452,7 @@ function gfx.pipeline(desc: PipelineDesc): Pipeline
         id(desc.color_table, "color_table"),
         integer(desc.write_mask or (if format == schema.format_rgba8 then 15 else 255), 0, 255),
         compare,
-        reference + readMask * 256 + writeMask * 65536,
+        reference + readMask * 256 + bit32.lshift(writeMask, 16),
         (if stencil.replace_pass then 1 else 0) + (if stencil.replace_fail then 2 else 0),
         transparent,
     })
@@ -459,7 +460,7 @@ function gfx.pipeline(desc: PipelineDesc): Pipeline
 end
 function gfx.write(target: Palette | ColorTable | RowTable, offset_bytes: number, bytes: buffer)
     local record = check(target, "any")
-    integer(offset_bytes, 0, 65536)
+    integer(offset_bytes, 0, schema.colorTableBytes)
     emit(schema.op_write_buffer, record.id, { offset_bytes }, bytes)
 end
 function gfx.write_rows(target: RowTable, first: number, rows: { Row })
@@ -468,8 +469,8 @@ function gfx.write_rows(target: RowTable, first: number, rows: { Row })
     local bytes = buffer.create(#rows * 12)
     for i, row in rows do
         buffer.writeu32(bytes, (i - 1) * 12, id(row.palette, "palette"))
-        buffer.writei32(bytes, (i - 1) * 12 + 4, integer(row.x, -4096, 4096))
-        buffer.writei32(bytes, (i - 1) * 12 + 8, integer(row.y, -4096, 4096))
+        buffer.writei32(bytes, (i - 1) * 12 + 4, integer(row.x, c.COORDINATE_MIN, c.COORDINATE_MAX))
+        buffer.writei32(bytes, (i - 1) * 12 + 8, integer(row.y, c.COORDINATE_MIN, c.COORDINATE_MAX))
     end
     gfx.write(target, first * 12, bytes)
 end
@@ -505,10 +506,10 @@ end
 function gfx.clip(pass: Pass, x: number, y: number, width: number, height: number)
     checkPass(pass)
     emit(schema.op_clip, 0, {
-        integer(x, -4096, 4096),
-        integer(y, -4096, 4096),
-        integer(width, 0, 4096),
-        integer(height, 0, 4096),
+        integer(x, c.COORDINATE_MIN, c.COORDINATE_MAX),
+        integer(y, c.COORDINATE_MIN, c.COORDINATE_MAX),
+        integer(width, 0, c.COORDINATE_MAX),
+        integer(height, 0, c.COORDINATE_MAX),
     })
 end
 function gfx.transform(pass: Pass, affine: { number })
@@ -516,7 +517,7 @@ function gfx.transform(pass: Pass, affine: { number })
     assert(#affine == 6, "affine transform needs six values")
     local values = {}
     for i, value in affine do
-        values[i] = fixed(value, if i <= 4 then 16 else 4096)
+        values[i] = fixed(value, if i <= 4 then schema.maxAffineCoefficient else c.COORDINATE_MAX)
     end
     emit(schema.op_transform, 0, values)
 end
@@ -538,7 +539,7 @@ function gfx.draw(pass: Pass, source: Image, src: Rect, dst: Rect, opts: DrawOpt
         fixed(dst.width),
         fixed(dst.height),
         id(options.palette, "palette"),
-        options.tint or 4294967295,
+        options.tint or c.COLOR_OPAQUE_WHITE,
         (if options.flip_x then 1 else 0)
             + (if options.flip_y then 2 else 0)
             + (if options.repeat_image then 4 else 0),
@@ -547,10 +548,10 @@ function gfx.draw(pass: Pass, source: Image, src: Rect, dst: Rect, opts: DrawOpt
         buffer.writeu32(quad, (i - 1) * 4, value)
     end
     emit(schema.op_draw, id(source, "image"), {
-        integer(src.x, -4096, 4096),
-        integer(src.y, -4096, 4096),
-        integer(src.width, 1, 4096),
-        integer(src.height, 1, 4096),
+        integer(src.x, c.COORDINATE_MIN, c.COORDINATE_MAX),
+        integer(src.y, c.COORDINATE_MIN, c.COORDINATE_MAX),
+        integer(src.width, 1, c.COORDINATE_MAX),
+        integer(src.height, 1, c.COORDINATE_MAX),
     }, quad)
 end
 function gfx.copy(source: Image, destination: Image, src: Rect, x: number, y: number)
@@ -568,7 +569,7 @@ function gfx.present(source: Image, opts: PresentOptions?)
         id(options.palette, "palette"),
         id(options.rows, "row_table"),
         if options.repeat_image then 1 else 0,
-        options.background or 4278190080,
+        options.background or c.COLOR_OPAQUE_BLACK,
     })
 end
 function gfx.readback(source: Image, rect: Rect): Readback
@@ -610,7 +611,7 @@ function gfx.sprite(
     emit(
         schema.op_sprite,
         0,
-        { sprite, fixed(x), fixed(y), fixed(width), fixed(height), tint or 4294967295 }
+        { sprite, fixed(x), fixed(y), fixed(width), fixed(height), tint or c.COLOR_OPAQUE_WHITE }
     )
 end
 function api._begin(tick: number)

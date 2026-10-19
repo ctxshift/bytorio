@@ -2,6 +2,7 @@ package console
 
 import abi "../../../runtime/odin/abi"
 import g "../../../runtime/odin/graphics"
+import w "../../../runtime/odin/resource_protocol"
 import gfx "../gfx"
 import resources "../resource"
 import "base:runtime"
@@ -64,7 +65,10 @@ valid :: proc(ok: bool, message: string) -> bool {
 }
 coordinates :: proc(x, y: int) -> bool {
     return valid(
-        x >= -4096 && x <= 4096 && y >= -4096 && y <= 4096,
+        x >= abi.COORDINATE_MIN &&
+        x <= abi.COORDINATE_MAX &&
+        y >= abi.COORDINATE_MIN &&
+        y <= abi.COORDINATE_MAX,
         "coordinates outside supported range",
     )
 }
@@ -80,12 +84,12 @@ start :: proc(hooks: Callbacks, config: Config) {
     held, down, up, clock = 0, 0, 0, 0
     pointer_active = false
     pointer_x, pointer_y = 0, 0
-    random_state = 1
+    random_state = abi.DEFAULT_RANDOM_SEED
     frame = {
         version  = abi.VERSION,
-        clear    = 0xff322015,
-        sprite_x = -4096,
-        sprite_y = -4096,
+        clear    = abi.DEFAULT_CLEAR_COLOR,
+        sprite_x = abi.COORDINATE_MIN,
+        sprite_y = abi.COORDINATE_MIN,
     }
     g.begin()
     mode := abi.DISPLAY_HIGH if u32(config.display) == 0 else u32(config.display)
@@ -129,9 +133,9 @@ rgb :: proc(r, g, b: int) -> u32 {
         "color channel outside supported range",
     ) {
 
-        return 0xff000000
+        return abi.COLOR_OPAQUE_BLACK
     }
-    return 0xff000000 | u32(b) << 16 | u32(g) << 8 | u32(r)
+    return abi.COLOR_OPAQUE_BLACK | u32(b) << 16 | u32(g) << 8 | u32(r)
 }
 clear :: proc(color: u32) {
     if valid(color >> 24 == 255, "colors must be opaque") {
@@ -148,7 +152,7 @@ rect :: proc(x, y, w, h: int, color: u32) {
     if coordinates(x, y) &&
        valid(color >> 24 == 255, "colors must be opaque") &&
        valid(
-           w >= 0 && w <= 4096 && h >= 0 && h <= 4096,
+           w >= 0 && w <= abi.COORDINATE_MAX && h >= 0 && h <= abi.COORDINATE_MAX,
            "rectangle dimensions outside supported range",
        ) {
 
@@ -193,7 +197,7 @@ sprite_size :: proc(id, x, y, w, h: int) {
 text :: proc(value: string, x, y: int, color: u32) {
     if !coordinates(x, y) ||
        !valid(color >> 24 == 255, "colors must be opaque") ||
-       !valid(len(value) <= 1024, "text command exceeds 1024 bytes") {
+       !valid(len(value) <= abi.MAX_TEXT_BYTES_PER_COMMAND, "text command exceeds 1024 bytes") {
 
         return
     }
@@ -245,7 +249,7 @@ sound :: proc() {
 }
 seed :: proc(value: u32) {
 
-    random_state = 0x6d2b79f5 if value == 0 else value
+    random_state = abi.RANDOM_ZERO_SEED_FALLBACK if value == 0 else value
 }
 random_u32 :: proc() -> u32 {
     random_state ~= random_state << 13
@@ -254,7 +258,13 @@ random_u32 :: proc() -> u32 {
     return random_state
 }
 debug_position :: proc(x, y: f64) {
-    if valid(x >= -4096 && x <= 4096 && y >= -4096 && y <= 4096, "invalid development position") {
+    if valid(
+        x >= abi.COORDINATE_MIN &&
+        x <= abi.COORDINATE_MAX &&
+        y >= abi.COORDINATE_MIN &&
+        y <= abi.COORDINATE_MAX,
+        "invalid development position",
+    ) {
 
         frame.x, frame.y = x, y
     }
@@ -409,11 +419,11 @@ game_resource_mailbox :: proc "c" () -> u32 {
 @(export)
 game_resource_mailbox_capacity :: proc "c" () -> u32 {
 
-    return 1048720
+    return w.mailboxCapacity
 }
 @(export)
 game_resource_mailbox_size :: proc "c" (size: u32) -> u32 {
-    if size > 1048720 {
+    if size > w.mailboxCapacity {
 
         return 0
     }

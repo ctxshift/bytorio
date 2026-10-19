@@ -360,10 +360,10 @@ load :: proc(
     defer wasm_memorytype_delete(memory_type)
     maximum: u64
     if !wasmtime_memorytype_maximum(memory_type, &maximum) ||
-       maximum > abi.MAX_MEMORY_BYTES / 65536 ||
+       maximum > abi.MAX_MEMORY_BYTES / abi.WASM_PAGE_BYTES ||
        wasmtime_memorytype_is64(memory_type) ||
        wasmtime_memorytype_isshared(memory_type) ||
-       wasmtime_memorytype_page_size(memory_type) != 65536 {
+       wasmtime_memorytype_page_size(memory_type) != abi.WASM_PAGE_BYTES {
         return fail(game, "game memory must declare an 8 MiB maximum or less")
     }
     extension: Extern

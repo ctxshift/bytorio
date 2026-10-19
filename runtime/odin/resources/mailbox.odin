@@ -1,9 +1,9 @@
 package resources
 
 import w "../resource_protocol"
-MAILBOX_MAGIC :: u32(0x3158424d)
-MAILBOX_HEADER :: 16 + 4 * 32
-MAILBOX_CAPACITY :: MAILBOX_HEADER + w.maxCompletionPayload
+MAILBOX_MAGIC :: u32(w.mailboxMagic)
+MAILBOX_HEADER :: w.mailboxPayloadOffset
+MAILBOX_CAPACITY :: w.mailboxCapacity
 
 // Snapshot results were copied during draw. Delivery is deferred until a later
 // update and bounded independently from the number of ready tickets.
@@ -24,13 +24,13 @@ mailbox :: proc(r: ^Registry, destination: []u8) -> int {
 
             continue
         }
-        if count == 4 {
+        if count == w.mailboxMaxRecords {
 
             break
         }
-        at := 16 + count * 32
+        at := w.mailboxHeaderBytes + count * w.mailboxRecordBytes
         fields := [8]u32 {
-            u32(i + 1) | slot.generation << 16,
+            u32(i + 1) | slot.generation << w.handleIndexBits,
             slot.format,
             slot.width,
             slot.height,

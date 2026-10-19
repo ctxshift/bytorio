@@ -1,4 +1,5 @@
 --!strict
+local c = require("./constants")
 local host = require("./native")
 local resources = require("./resources")
 export type Texture = resources.Texture
@@ -19,7 +20,7 @@ api.gfx = resources.gfx
 api.audio = resources.audio
 api.data = resources.data
 local masks = { left = 1, right = 2, up = 4, down = 8, action = 16 }
-local held, down, up, clock, randomState = 0, 0, 0, 0, 1
+local held, down, up, clock, randomState = 0, 0, 0, 0, c.DEFAULT_RANDOM_SEED
 local width, height = 640, 360
 local pointerActive, pointerX, pointerY = false, 0, 0
 local phase = "load"
@@ -42,10 +43,13 @@ function api.size(): (number, number)
     return width, height
 end
 function api.rgb(r: number, g: number, b: number): number
-    return 4278190080 + integer(b, 0, 255) * 65536 + integer(g, 0, 255) * 256 + integer(r, 0, 255)
+    return c.COLOR_OPAQUE_BLACK
+        + integer(b, 0, c.COLOR_CHANNEL_MAX) * c.COLOR_BLUE_SCALE
+        + integer(g, 0, c.COLOR_CHANNEL_MAX) * c.COLOR_GREEN_SCALE
+        + integer(r, 0, c.COLOR_CHANNEL_MAX)
 end
 function api.clear(color: number)
-    integer(color, 4278190080, 4294967295)
+    integer(color, c.COLOR_OPAQUE_BLACK, c.U32_MAX)
     if resources._in_pass() then
         resources.gfx.clear(resources.gfx.current_pass(), color)
     else
@@ -57,7 +61,7 @@ function api.clear(color: number)
     end
 end
 function api.rect(x: number, y: number, w: number, h: number, color: number)
-    integer(color, 4278190080, 4294967295)
+    integer(color, c.COLOR_OPAQUE_BLACK, c.U32_MAX)
     if resources._in_pass() then
         resources.gfx.rect(resources.gfx.current_pass(), x, y, w, h, color)
     else
@@ -84,11 +88,11 @@ function api.sprite_size(id: number, x: number, y: number, w: number, h: number)
     end
 end
 function api.text(value: string, x: number, y: number, color: number)
-    assert(#value <= 1024, "text command exceeds 1024 bytes")
+    assert(#value <= c.MAX_TEXT_BYTES_PER_COMMAND, "text command exceeds 1024 bytes")
     for i = 1, #value do
         assert(string.byte(value, i) < 128, "text must be ASCII")
     end
-    integer(color, 4278190080, 4294967295)
+    integer(color, c.COLOR_OPAQUE_BLACK, c.U32_MAX)
     if resources._in_pass() then
         resources.gfx.text(resources.gfx.current_pass(), value, x, y, color)
     else
@@ -121,8 +125,8 @@ function api.sound()
     host.sound()
 end
 function api.seed(value: number)
-    integer(value, 0, 4294967295)
-    randomState = if value == 0 then 1831565813 else value
+    integer(value, 0, c.U32_MAX)
+    randomState = if value == 0 then c.RANDOM_ZERO_SEED_FALLBACK else value
 end
 function api.random_u32(): number
     randomState = bit32.bxor(randomState, bit32.lshift(randomState, 13))
@@ -142,7 +146,7 @@ function api._wrap(game: Game, initialWidth: number?, initialHeight: number?): G
     )
     return {
         init = function()
-            held, down, up, clock, randomState = 0, 0, 0, 0, 1
+            held, down, up, clock, randomState = 0, 0, 0, 0, c.DEFAULT_RANDOM_SEED
             pointerActive, pointerX, pointerY = false, 0, 0
             width, height = initialWidth or 640, initialHeight or 360
             host.display(width, height)
@@ -157,7 +161,7 @@ function api._wrap(game: Game, initialWidth: number?, initialHeight: number?): G
             down, up =
                 bit32.band(nextHeld, bit32.bnot(held)), bit32.band(held, bit32.bnot(nextHeld))
             held = nextHeld
-            clock = (clock + 1) % 4294967296
+            clock = (clock + 1) % c.U32_MODULUS
             local active, x, y = host.pointer()
             pointerActive = active and x >= 0 and y >= 0 and x < width and y < height
             pointerX, pointerY = if pointerActive then x else 0, if pointerActive then y else 0

@@ -15,8 +15,8 @@ sample :: proc(desc: Sample_Desc, pcm: data.PCM_Buffer) -> Sample {
     if !t.valid(
         desc.frames > 0 &&
         (desc.channels == 1 || desc.channels == 2) &&
-        desc.rate >= 8000 &&
-        desc.rate <= 96000 &&
+        desc.rate >= w.minSampleRate &&
+        desc.rate <= w.maxSampleRate &&
         u64(desc.frames) * u64(desc.channels) * 4 <= w.maxResourceBytes,
         "invalid sample descriptor",
     ) {

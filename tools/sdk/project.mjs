@@ -91,7 +91,13 @@ export async function manifest(path) {
 export async function syncEditor(project) {
   const target = resolve(project, ".console");
   await mkdir(target, { recursive: true });
-  for (const file of ["console.luau", "native.luau", "resources.luau", "resource_schema.luau"]) {
+  for (const file of [
+    "console.luau",
+    "native.luau",
+    "resources.luau",
+    "resource_schema.luau",
+    "constants.luau",
+  ]) {
     await copyFile(resolve(repo, "sdk/luau", file), resolve(target, file));
   }
 }
@@ -346,6 +352,7 @@ export async function buildProject(path, options = {}) {
             "player.js",
             "worker.js",
             "policy.js",
+            "constants.js",
             "cartridge.js",
             "executor-cache.js",
             "executor-cache-core.js",

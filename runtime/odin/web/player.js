@@ -1,3 +1,4 @@
+import { PREVIEW_SAMPLE_RATE } from "./constants.js";
 import { prepareExecutor } from "./executor-cache.js";
 const canvas = document.getElementById("canvas");
 const display = canvas.getContext("2d", { alpha: false });
@@ -102,7 +103,7 @@ async function start() {
     return;
   }
   if (!audio.buffer) {
-    audio.buffer = audio.context.createBuffer(1, audio.samples.length, 48000);
+    audio.buffer = audio.context.createBuffer(1, audio.samples.length, PREVIEW_SAMPLE_RATE);
     audio.buffer.copyToChannel(audio.samples, 0);
   }
   started = true;

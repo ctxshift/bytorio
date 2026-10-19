@@ -4,6 +4,7 @@
   "abiVersion": 1,
   "profile": "2d-preview-1",
   "tickRate": 60,
+  "defaults": {"clearColor": 4281475093, "randomSeed": 1, "zeroSeedFallback": 1831565813, "previewSampleRate": 48000},
   "displayModes": [[640, 360], [320, 180]],
   "defaultDisplayMode": [640, 360],
   "cartridge": {

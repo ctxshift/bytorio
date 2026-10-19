@@ -1,5 +1,6 @@
 package gfx
 
+import abi "../../../runtime/odin/abi"
 import w "../../../runtime/odin/resource_protocol"
 import r "../../../runtime/odin/resources"
 import data "../data"
@@ -133,7 +134,7 @@ upload :: proc(target: $Image, rect: Rect, pixels: data.Pixel_Buffer, opts := Up
     t.emit(w.op_write_texture, handle, args[:], pixels.bytes)
 }
 
-q :: proc(value: f64, limit: f64 = 4096) -> u32 {
+q :: proc(value: f64, limit: f64 = abi.COORDINATE_MAX) -> u32 {
     if !t.valid(
         !math.is_nan(value) && !math.is_inf(value) && abs(value) <= limit,
         "graphics coordinate outside supported range",
@@ -141,7 +142,7 @@ q :: proc(value: f64, limit: f64 = 4096) -> u32 {
 
         return 0
     }
-    return u32(i32(math.floor(value * 65536 + 0.5)))
+    return u32(i32(math.floor(value * w.graphicsFixedOne + 0.5)))
 }
 rgba :: proc(red, green, blue, alpha: u32) -> u32 {
     if !t.valid(
@@ -167,7 +168,10 @@ default_pipeline :: proc(format: data.Pixel_Format) -> Pipeline {
 
         return {}
     }
-    return Pipeline(t.Handle{t.session, 0xfffffffd if format == .RGBA8 else 0xfffffffe})
+    return Pipeline(t.Handle {
+        t.session,
+        w.defaultRgbaPipelineId if format == .RGBA8 else w.defaultIndexPipelineId,
+    })
 }
 pipeline_id :: proc(value: Pipeline) -> u32 {
     handle := t.Handle(value)
@@ -175,7 +179,7 @@ pipeline_id :: proc(value: Pipeline) -> u32 {
 
         return 0
     }
-    if handle.id >= 0xfffffffd {
+    if handle.id >= w.defaultRgbaPipelineId {
 
         if !t.valid(handle.session == t.session, "stale default pipeline") {
 
@@ -388,7 +392,7 @@ transform :: proc(pass: Pass, affine: [6]f64) {
     args: [8]u32
     for value, i in affine {
 
-        args[i] = q(value, 16 if i < 4 else 4096)
+        args[i] = q(value, w.maxAffineCoefficient if i < 4 else abi.COORDINATE_MAX)
     }
     t.emit(w.op_transform, {}, args[:])
 }
@@ -426,7 +430,7 @@ draw :: proc(pass: Pass, source: $Image, src: Source_Rect, dst: Quad, opts := Dr
         q(dst.width),
         q(dst.height),
         opts.palette.id,
-        optional(opts.tint, 0xffffffff),
+        optional(opts.tint, abi.COLOR_OPAQUE_WHITE),
         u32(opts.flip_x) | u32(opts.flip_y) << 1 | u32(opts.repeat_image) << 2,
         0,
     }
@@ -460,7 +464,7 @@ present :: proc(source: $Image, opts := Present_Options{}) {
         opts.palette.id,
         opts.rows.id,
         u32(opts.repeat_image),
-        optional(opts.background, 0xff000000),
+        optional(opts.background, abi.COLOR_OPAQUE_BLACK),
         0,
         0,
         0,
@@ -526,7 +530,7 @@ text :: proc(pass: Pass, value: string, x, y: f64, color: u32) {
     args := [8]u32{q(x), q(y), color, 0, 0, 0, 0, 0}
     t.emit(w.op_text, {}, args[:], transmute([]u8)value)
 }
-sprite :: proc(pass: Pass, id: int, x, y, width, height: f64, tint: u32 = 0xffffffff) {
+sprite :: proc(pass: Pass, id: int, x, y, width, height: f64, tint: u32 = abi.COLOR_OPAQUE_WHITE) {
     if !check_pass(pass) {
 
         return

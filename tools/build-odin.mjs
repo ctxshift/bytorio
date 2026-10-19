@@ -48,6 +48,7 @@ if (target !== "native") {
     "player.js",
     "worker.js",
     "policy.js",
+    "constants.js",
     "cartridge.js",
     "executor-cache.js",
     "executor-cache-core.js",

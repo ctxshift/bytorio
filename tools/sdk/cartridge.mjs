@@ -1,19 +1,23 @@
+import { MAX_GAME_BYTES, MAX_LUAU_SOURCE_BYTES } from "../../runtime/odin/web/constants.js";
 import { deflateSync } from "node:zlib";
 
 export const PNG_LIMIT = 2 * 1024 * 1024;
 export const signature = Buffer.from("89504e470d0a1a0a", "hex");
+const CRC32_POLYNOMIAL = 0xedb88320;
+const CRC32_INITIAL = 0xffffffff;
+const CRC32_XOR_OUT = 0xffffffff;
 const table = Array.from({ length: 256 }, (_, value) => {
   for (let i = 0; i < 8; i++) {
-    value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
+    value = value & 1 ? CRC32_POLYNOMIAL ^ (value >>> 1) : value >>> 1;
   }
   return value >>> 0;
 });
 export function crc32(bytes) {
-  let crc = 0xffffffff;
+  let crc = CRC32_INITIAL;
   for (const byte of bytes) {
     crc = table[(crc ^ byte) & 255] ^ (crc >>> 8);
   }
-  return (crc ^ 0xffffffff) >>> 0;
+  return (crc ^ CRC32_XOR_OUT) >>> 0;
 }
 export function chunk(type, data) {
   const result = Buffer.alloc(data.length + 12);
@@ -139,7 +143,11 @@ export function encodeCartridge({ title, language, display, code, cover, assets 
     throw new Error("Cartridge title must be 1..128 UTF-8 bytes");
   }
   const kind = language === "luau" ? 1 : language === "odin" ? 2 : 0;
-  if (!kind || !code.length || code.length > (kind === 1 ? 262144 : 1048576)) {
+  if (
+    !kind ||
+    !code.length ||
+    code.length > (kind === 1 ? MAX_LUAU_SOURCE_BYTES : MAX_GAME_BYTES)
+  ) {
     throw new Error("Invalid cartridge language or code size");
   }
   if (

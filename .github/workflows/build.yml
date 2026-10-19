@@ -37,8 +37,8 @@ jobs:
         run: mise run lint
       - name: Check formatting in all project languages
         run: mise run format:check
-      - name: Check generated resource schema
-        run: node tools/generate-resource-schema.mjs --check
+      - name: Check generated constants
+        run: mise run generate:check
       - name: Verify SDKs, cartridges, resources, graphics and game replays
         run: mise run test
       - name: Verify drawing batches

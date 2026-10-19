@@ -12,10 +12,6 @@ valid_display :: proc(mode: u32) -> bool {
 
     return mode == DISPLAY_HIGH || mode == DISPLAY_LOW
 }
-FRAME_BYTES :: 40
-MAX_GAME_BYTES :: 1024 * 1024
-MAX_MEMORY_BYTES :: 8 * 1024 * 1024
-MAX_COMMANDS :: 16384
 Command :: struct {
     x, y, w, h: i32,
     color:      u32,
@@ -27,8 +23,6 @@ Draw_Command :: struct {
     color, offset, length: u32,
 }
 #assert(size_of(Draw_Command) == 32)
-MAX_TEXT_BYTES :: 16384
-MAX_GRAPHICS_BYTES :: 16 + 64 + 256 * 256 + 128 * 7
 
 // Fixed-width, little-endian wire record. It contains no pointers or Odin context.
 Frame :: struct {

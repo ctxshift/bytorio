@@ -1,6 +1,7 @@
 // Only the Luau bridge lives here; resource validation/storage belongs to Odin.
 #include "resource_transport.h"
 #include "resource_schema.h"
+#include "console_constants.h"
 #include <lualib.h>
 #include <emscripten/emscripten.h>
 #include <cmath>
@@ -8,6 +9,7 @@
 
 namespace resource_transport {
 using namespace resource_schema;
+using namespace console_constants;
 constexpr unsigned payload_base = headerBytes + maxCommands * commandBytes;
 unsigned char packet[payload_base + maxPayload];
 unsigned configured_session, sequence, count, payload_size;
@@ -33,12 +35,12 @@ unsigned get(unsigned at) {
 int results(lua_State* L) {
     lua_newtable(L);
     if (!mailbox_size) return 1;
-    if (mailbox_size < 144 || mailbox_size > 1048720 || get(0) != 0x3158424d || get(4) > 4 || get(8) != mailbox_size || get(12) != configured_session)
+    if (mailbox_size < mailboxPayloadOffset || mailbox_size > mailboxCapacity || get(0) != mailboxMagic || get(4) > mailboxMaxRecords || get(8) != mailbox_size || get(12) != configured_session)
         luaL_error(L, "invalid resource mailbox");
     const unsigned total = get(4);
     for (unsigned i = 0; i < total; ++i) {
-        const unsigned at = 16+i*32, offset = get(at+16), length = get(at+20);
-        if (offset < 144 || offset > mailbox_size || length > mailbox_size-offset) luaL_error(L, "invalid readback completion");
+        const unsigned at = mailboxHeaderBytes+i*mailboxRecordBytes, offset = get(at+16), length = get(at+20);
+        if (offset < mailboxPayloadOffset || offset > mailbox_size || length > mailbox_size-offset) luaL_error(L, "invalid readback completion");
         lua_newtable(L);
         const char* names[] = {"id", "format", "width", "height"};
         for (unsigned j = 0; j < 4; ++j) {lua_pushnumber(L, get(at+j*4));lua_setfield(L,-2,names[j]);}
@@ -51,7 +53,7 @@ int results(lua_State* L) {
 }
 unsigned integer(lua_State* L, int index) {
     const double value = luaL_checknumber(L, index);
-    if (!std::isfinite(value) || value < 0 || value > 4294967295.0 || value != std::floor(value))
+    if (!std::isfinite(value) || value < 0 || value > U32_MAX || value != std::floor(value))
         luaL_argerror(L, index, "invalid resource integer");
     return static_cast<unsigned>(value);
 }
@@ -90,7 +92,7 @@ EMSCRIPTEN_KEEPALIVE unsigned game_resource_configure(unsigned session) {
 EMSCRIPTEN_KEEPALIVE const unsigned char* game_commit() {
     using namespace resource_transport;
     if (!configured_session) return nullptr;
-    if (active || sealed || sequence == 0xffffffffu || diagnostic[0]) { diagnostic = "cannot seal resource packet"; return nullptr; }
+    if (active || sealed || sequence == U32_MAX || diagnostic[0]) { diagnostic = "cannot seal resource packet"; return nullptr; }
     ++sequence;
     const unsigned offset = headerBytes + count * commandBytes;
     std::memmove(packet + offset, packet + payload_base, payload_size);
@@ -109,9 +111,9 @@ EMSCRIPTEN_KEEPALIVE unsigned game_commit_ack(unsigned value) {
     sealed = false; return 1;
 }
 EMSCRIPTEN_KEEPALIVE unsigned char* game_resource_mailbox() {return resource_transport::packet;}
-EMSCRIPTEN_KEEPALIVE unsigned game_resource_mailbox_capacity() {return 1048720;}
+EMSCRIPTEN_KEEPALIVE unsigned game_resource_mailbox_capacity() {return resource_schema::mailboxCapacity;}
 EMSCRIPTEN_KEEPALIVE unsigned game_resource_mailbox_size(unsigned size) {
-    if (size > 1048720) return 0;
+    if (size > resource_schema::mailboxCapacity) return 0;
     resource_transport::mailbox_size = size; return 1;
 }
 }

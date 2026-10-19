@@ -1,3 +1,4 @@
+import { FNV1A_OFFSET_BASIS, FNV1A_PRIME } from "../runtime/odin/web/constants.js";
 import assert from "node:assert/strict";
 import { mkdir, copyFile, readFile, writeFile } from "node:fs/promises";
 import { resolve, relative } from "node:path";
@@ -26,7 +27,7 @@ function run(exe, args) {
   assert.equal(result.status, 0, result.stderr || result.stdout || String(result.error));
   return result.stdout;
 }
-run(process.execPath, ["tools/generate-resource-schema.mjs", "--check"]);
+run(process.execPath, ["tools/generate-constants.mjs", "--check"]);
 const odin = tool("odin");
 const dependency = dependencyRoot();
 run(odin, ["test", "tests/resources", `-out:${resolve(root, "registry-tests.exe")}`]);
@@ -180,7 +181,7 @@ for (const language of ["odin", "luau"]) {
   expectedSlot([65538, 2, 3, 4, 0, 2, 48000], samples);
   assert.equal(
     trace[0][0],
-    expected.reduce((hash, byte) => Math.imul(hash ^ byte, 16777619) >>> 0, 2166136261),
+    expected.reduce((hash, byte) => Math.imul(hash ^ byte, FNV1A_PRIME) >>> 0, FNV1A_OFFSET_BASIS),
   );
   assert.notEqual(trace[2][0], trace[0][0], "texture edit changes owned bytes");
   assert.notEqual(trace[3][0], trace[2][0], "PCM edit changes owned bytes");

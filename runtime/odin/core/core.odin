@@ -3,7 +3,7 @@ package console_core
 import abi "../abi"
 import "core:math"
 
-SAMPLE_RATE :: 48000
+SAMPLE_RATE :: abi.PREVIEW_SAMPLE_RATE
 SAMPLE_COUNT :: SAMPLE_RATE / 3
 pixels: [abi.WIDTH * abi.HEIGHT]u32
 width, height: int = abi.WIDTH, abi.HEIGHT
@@ -55,14 +55,14 @@ valid :: proc(frame: abi.Frame) -> bool {
     return(
         frame.version == abi.VERSION &&
         frame.clear >> 24 == 255 &&
-        frame.sprite_x >= -4096 &&
-        frame.sprite_x <= 4096 &&
-        frame.sprite_y >= -4096 &&
-        frame.sprite_y <= 4096 &&
-        frame.x >= -4096 &&
-        frame.x <= 4096 &&
-        frame.y >= -4096 &&
-        frame.y <= 4096 \
+        frame.sprite_x >= abi.COORDINATE_MIN &&
+        frame.sprite_x <= abi.COORDINATE_MAX &&
+        frame.sprite_y >= abi.COORDINATE_MIN &&
+        frame.sprite_y <= abi.COORDINATE_MAX &&
+        frame.x >= abi.COORDINATE_MIN &&
+        frame.x <= abi.COORDINATE_MAX &&
+        frame.y >= abi.COORDINATE_MIN &&
+        frame.y <= abi.COORDINATE_MAX \
     )
 }
 
@@ -87,11 +87,11 @@ render :: proc(frame: abi.Frame) -> bool {
 }
 
 hash :: proc() -> u32 {
-    result := u32(2166136261)
+    result := u32(abi.FNV1A_OFFSET_BASIS)
     for pixel in pixels[:width * height] {
         for shift in 0 ..< 4 {
 
-            result = (result ~ ((pixel >> u32(shift * 8)) & 255)) * 16777619
+            result = (result ~ ((pixel >> u32(shift * 8)) & 255)) * abi.FNV1A_PRIME
         }
     }
     return result
@@ -104,14 +104,14 @@ render_commands :: proc(commands: []abi.Command) -> bool {
     }
     for c in commands {
         if c.color >> 24 != 255 ||
-           c.x < -4096 ||
-           c.x > 4096 ||
-           c.y < -4096 ||
-           c.y > 4096 ||
+           c.x < abi.COORDINATE_MIN ||
+           c.x > abi.COORDINATE_MAX ||
+           c.y < abi.COORDINATE_MIN ||
+           c.y > abi.COORDINATE_MAX ||
            c.w < 0 ||
-           c.w > 4096 ||
+           c.w > abi.COORDINATE_MAX ||
            c.h < 0 ||
-           c.h > 4096 {
+           c.h > abi.COORDINATE_MAX {
 
             return false
         }
@@ -193,7 +193,10 @@ render_batch :: proc(commands: []abi.Draw_Command, text: []u8) -> bool {
         return false
     }
     for c in commands {
-        if c.x < -4096 || c.x > 4096 || c.y < -4096 || c.y > 4096 {
+        if c.x < abi.COORDINATE_MIN ||
+           c.x > abi.COORDINATE_MAX ||
+           c.y < abi.COORDINATE_MIN ||
+           c.y > abi.COORDINATE_MAX {
 
             return false
         }
@@ -204,7 +207,7 @@ render_batch :: proc(commands: []abi.Draw_Command, text: []u8) -> bool {
 
                 return false
             }
-            if c.w < 0 || c.w > 4096 || c.h < 0 || c.h > 4096 {
+            if c.w < 0 || c.w > abi.COORDINATE_MAX || c.h < 0 || c.h > abi.COORDINATE_MAX {
 
                 return false
             }
@@ -260,7 +263,7 @@ render_batch :: proc(commands: []abi.Draw_Command, text: []u8) -> bool {
             if sprite_count == 0 ||
                c.offset > u32(len(text)) ||
                c.length > u32(len(text)) - c.offset ||
-               c.length > 1024 {
+               c.length > abi.MAX_TEXT_BYTES_PER_COMMAND {
 
                 return false
             }
