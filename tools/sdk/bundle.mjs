@@ -57,7 +57,9 @@ export async function bundleLuau({entry,project,sdkRoot,assets,display=[640,360]
     if(visiting.has(id))throw new Error(`Cyclic require: ${id}`);
     if(modules.has(id))return id;
     visiting.add(id);
-    const source=await readFile(file,'utf8'),lex=tokens(source),edits=[];
+    const source=await readFile(file,'utf8');
+    if(Buffer.byteLength(source)>256*1024||modules.size+visiting.size>256)throw new Error('Luau module graph exceeds preview limits');
+    const lex=tokens(source),edits=[];
     for(let i=0;i<lex.length;i++) {
       const t=lex[i];if(t.kind!=='id'||t.value!=='require'||['.',':'].includes(lex[i-1]?.value))continue;
       if(lex[i+1]?.value!=='('||lex[i+2]?.kind!=='string'||lex[i+3]?.value!==')'||lex[i+2].value.includes('\\'))throw new Error('require must use one literal module path');

@@ -1,5 +1,7 @@
+local console = require("@console")
+local assets = require("./assets")
 -- Mossglen: identical rules and assets to the Odin cartridge.
-local g = graphics
+local g = console
 local p = assets.palette
 local s
 local numbers = {}
@@ -52,10 +54,7 @@ return {
         console.sound()
     end,
     update = function(_dt: number)
-        local buttons = 0
-        for i, name in {"left","right","up","down","action"} do
-            if console.button(name) then buttons = bit32.bor(buttons,2^(i-1)) end
-        end
+        local buttons = console.buttons()
         local pressed = bit32.band(buttons,bit32.bnot(s.previous))
         s.previous = buttons
         s.cooldown = math.max(0,s.cooldown-1)
@@ -113,7 +112,7 @@ return {
         end
     end,
     draw = function()
-        console.clear(21,32,50)
+        console.clear(console.rgb(21,32,50))
         local cx = math.clamp(s.x-11,0,8)*16
         local cy = math.clamp(s.y-4,0,10)*16
         for y = 0,19 do

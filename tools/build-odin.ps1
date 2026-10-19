@@ -52,6 +52,7 @@ try {
         $common = @('-o:speed', '-source-code-locations:filename')
     }
     New-Item -ItemType Directory -Force $web, $native | Out-Null
+    $common += "-collection:sdk=$root/sdk/odin"
     & $Odin build $gameSource -target:freestanding_wasm32 -no-entry-point @common "-out:$web/game.wasm" '-extra-linker-flags:--max-memory=8388608'
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 

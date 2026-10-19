@@ -1,15 +1,13 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import {resolve} from 'node:path';
+import {bundleLuau,odinEntry} from './sdk/bundle.mjs';
+import {graphicsPacket} from './sdk/assets.mjs';
 
 const source = JSON.parse(await readFile('examples/rpg-shared/assets.json', 'utf8'));
 const json = value => JSON.stringify(value);
 const palette = source.palette.map(hex => (0xff000000 | parseInt(hex.slice(5,7)+hex.slice(3,5)+hex.slice(1,3),16)) >>> 0);
 const assets = { ...source, palette };
-const packet=Buffer.alloc(16+64+assets.sprites.length*256+128*7);
-packet.writeUInt32LE(0x31584647,0);packet.writeUInt32LE(assets.sprites.length,4);
-packet.writeUInt32LE(16,8);packet.writeUInt32LE(128,12);
-palette.forEach((color,i)=>packet.writeUInt32LE(color,16+i*4));
-assets.sprites.forEach((rows,id)=>rows.forEach((row,y)=>[...row].forEach((ink,x)=>{packet[80+id*256+y*16+x]=ink==='.'?255:parseInt(ink,16);})));
-for(const [c,rows] of Object.entries(assets.font))rows.forEach((row,y)=>{packet[80+assets.sprites.length*256+c.charCodeAt(0)*7+y]=parseInt(row,2);});
+const {packet}=graphicsPacket(source);
 assets.raster64=packet.toString('base64');
 const dir = 'examples/rpg-odin/assets';
 await mkdir(dir, { recursive: true });
@@ -27,7 +25,11 @@ const luaValue = value => Array.isArray(value) ? `{${value.map(luaValue).join(',
 await mkdir('build/rpg', { recursive: true });
 const helpers = await readFile('examples/rpg-luau/graphics.luau','utf8');
 const game = await readFile('examples/rpg-luau/main.luau','utf8');
-await writeFile('build/rpg/main.luau', `-- Generated cartridge source: shared assets, SDK, game.\nlocal assets = ${luaValue(assets)}\n${helpers}\n${game}`);
+// Preserve the earlier C++ reference player's standalone source bundle.
+const legacy=game.replace(/^local (?:console|assets) = require\([^\n]+\)\n/gm,'').replace('local g = console','local g = graphics').replace('console.clear(console.rgb(21,32,50))','console.clear(21,32,50)').replace('local buttons = console.buttons()',`local buttons = 0\n        for i, name in {"left","right","up","down","action"} do\n            if console.button(name) then buttons = bit32.bor(buttons,2^(i-1)) end\n        end`);
+await writeFile('build/rpg/main.luau', `-- Generated reference cartridge.\nlocal assets = ${luaValue(assets)}\n${helpers}\n${legacy}`);
 const compact={palette,world:assets.world,raster64:assets.raster64};
-await writeFile('build/rpg/batched.luau',`-- Generated batched cartridge: one packed atlas plus map.\nlocal assets = ${luaValue(compact)}\n${helpers}\n${game}`);
+await writeFile('examples/rpg-luau/assets.luau',`--!strict\n-- Generated shared palette and map.\nreturn ${luaValue({palette,world:assets.world})}\n`);
+await writeFile('examples/rpg-odin/cartridge.odin',odinEntry());
+await writeFile('build/rpg/batched.luau',await bundleLuau({entry:resolve('examples/rpg-luau/main.luau'),project:resolve('examples/rpg-luau'),sdkRoot:resolve('sdk/luau'),assets:packet}));
 console.log('Shared RPG assets and Luau cartridge bundled.');

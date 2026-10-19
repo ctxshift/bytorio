@@ -1,3 +1,5 @@
+local console = require("@console")
+local assets = require("./assets")
 -- Copper Circuit: fixed-step simulation, integer projection and sprite billboards.
 local LAP = 72000
 local curves = {0,0,1,1,0,-1,-1,0,1,0,-1,0}
@@ -47,8 +49,8 @@ local function update()
     if s.distance>=LAP*3 then s.finished=true;console.sound() end
 end
 local function rect(x,y,w,h,index) console.rect(x,y,w,h,assets.palette[index+1]) end
-local function text(value,x,y,index) console.draw_text(value,x,y,assets.palette[index+1]) end
-local function sprite(id,x,y,scale) console.draw_sprite(id,x,y,scale or 1) end
+local function text(value,x,y,index) console.text(value,x,y,assets.palette[index+1]) end
+local function sprite(id,x,y,scale) console.sprite(id,x,y,scale or 1) end
 local function center(distance,p)
     local bend=floor(curve(s.distance+distance)*distance*distance*p/2000000)
     return clamp(160-floor(s.x*p/1000)+bend,-100,420)
@@ -57,7 +59,7 @@ local function billboard(id,distance,lane)
     if distance<80 or distance>5000 then return end
     local p=floor(7000/(distance+80))
     local size=clamp(floor(p*3/4),2,48)
-    console.draw_sprite_size(id,center(distance,p)+floor(lane*p/1000)-floor(size/2),48+p-size,size,size)
+    console.sprite_size(id,center(distance,p)+floor(lane*p/1000)-floor(size/2),48+p-size,size,size)
 end
 local function draw()
     rect(0,0,320,180,0);rect(0,18,320,56,1);rect(248,26,20,20,10)

@@ -1,10 +1,16 @@
 # Implementation plan
 
-Status: updated 2026-10-19. **Odin is the target language for both games and the runtime**, per [the accepted decision](adr/0001-use-odin-for-games-and-runtime.md). The first native/browser [Odin reproduction](odin-development.md) passes its local sprite/sound and failure checks. The Luau/C++ reference is retained; full profile validation and retirement remain later work. This document supersedes the initial Luau/C++ roadmap.
+Status: updated 2026-10-19. **Luau is the default cartridge language; Odin cartridges are also supported.** The runtime remains Odin. [SDK 0.1.0](../sdk/README.md) implements the shared [2D preview contract](cartridge-spec.md), superseding the earlier Odin-only authoring direction. The Luau/C++ reference is retained; full machine-profile validation and retirement remain later work.
 
 Keep the standalone native requirement, browser target, single display with 640×360 and 320×180 modes, mostly 2D scope, approximate 128/512 MB package goals, and complete PNG cartridges. The [DS/3DS comparison](target-comparison.md) is advisory; the language change does not expand fidelity scope. The product name remains undecided; use neutral terminology and treat `sdk` command names as placeholders.
 
 ## Current evidence
+
+SDK 0.1.0 formalizes the implemented 2D preview profile and supports Luau as the
+default authoring language alongside Odin. Both SDKs provide lifecycle handling,
+drawing, input, timing, deterministic random numbers and cue audio. The shared CLI
+creates, checks, builds, runs and watches projects; see [the SDK guide](../sdk/README.md).
+This supersedes the earlier Odin-only authoring direction. The runtime remains Odin.
 
 - The Luau/C++ reference player runs on Windows and in Chrome, with a sprite, sound, input, memory/error handling, and matching scripted output.
 - The [Odin probe](../experiments/odin/README.md) compiles scalar game-state logic to Windows native code and an identical import-free Wasm module executed in Node and Chrome. It verifies movement, sound-event counts, and one bounds trap.

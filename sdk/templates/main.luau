@@ -21,4 +21,5 @@ local function draw()
     console.sprite(0,x,y)
     console.text("HELLO, CONSOLE!",8,7,console.rgb(244,236,214))
 end
-return {init=init,update=update,draw=draw}
+local game:console.Game = {init=init,update=update,draw=draw}
+return game

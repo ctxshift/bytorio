@@ -31,6 +31,7 @@ const wasm={odin:await readFile(`${root}/web/game.wasm`),luau:await readFile(`${
 const source=await readFile(`${root}/web/rpg.luau`),runtimeBytes=await readFile(`${root}/web/runtime.wasm`);
 assert.deepEqual(WebAssembly.Module.imports(new WebAssembly.Module(wasm.luau)),[],'executor has no host imports');
 for(const language of ['odin','luau'])assert.deepEqual(wasm[language],await readFile(`${root}/native/${language==='odin'?'game':'luau-executor'}.wasm`));
+const golden=JSON.parse(await readFile('tests/rpg/parity.json','utf8'));
 
 async function reference(language,inputs) {
     const game=(await WebAssembly.instantiate(wasm[language],imports)).instance.exports;
@@ -38,23 +39,28 @@ async function reference(language,inputs) {
     game._initialize?.();if(language==='luau')loadSource(game,source);
     game.game_init();checkExecutor(game);runtime.runtime_init();
     uploadGraphics(game,runtime);
-    const frames=[];
+    const frames=[],legacy=[];
     for(const mask of inputs) {
         game.game_update(mask,0,0,0);
         const drawing=submitDrawing(game,runtime),{record}=drawing;
         rasterizeDrawing(runtime,drawing);
         frames.push({hash:runtime.runtime_hash()>>>0,sounds:record.sounds});
+        if(language==='odin') {
+            // The historical reference covers the original 384×216 artwork.
+            const pixels=new Uint8Array(runtime.memory.buffer,runtime.runtime_pixels(),drawing.width*drawing.height*4);
+            let hash=2166136261;
+            for(let y=0;y<216;y++)for(let x=0;x<384*4;x++)hash=Math.imul(hash^pixels[y*drawing.width*4+x],16777619)>>>0;
+            legacy.push({hash,sounds:record.sounds});
+        }
     }
     if(language==='odin') {
         const state=new Int32Array(game.memory.buffer,game.game_inspect(),10);
         assert.equal(state[7],inputs===masks?15:1,'expected complete quest or recovered quest acceptance');
+        assert.deepEqual(legacy,inputs===masks?golden.quest:golden.defeat,'SDK preserves original RPG artwork and sound events');
     }
     return frames;
 }
 const expected=await reference('odin',masks),defeatExpected=await reference('odin',defeat);
-const golden=JSON.parse(await readFile('tests/rpg/parity.json','utf8'));
-assert.deepEqual(expected,golden.quest,'batching preserves the original quest frames');
-assert.deepEqual(defeatExpected,golden.defeat,'batching preserves the original defeat frames');
 assert.deepEqual(await reference('luau',masks),expected);
 assert.deepEqual(await reference('luau',defeat),defeatExpected);
 
@@ -75,7 +81,7 @@ for(const language of ['odin','luau']) {
     const smoke=spawnSync(resolve(`${root}/native/player.exe`),args,{env,encoding:'utf8',timeout:30000});
     assert.equal(smoke.status,0,smoke.stderr);
     const report=JSON.parse(smoke.stdout);
-    assert.equal(report.ticks,120);assert.equal(report.hash,808241555);assert.ok(report.audioQueuedFrames>0);
+    assert.equal(report.ticks,120);assert.equal(report.hash,1373895059);assert.ok(report.audioQueuedFrames>0);
 }
 console.log('Parity and native SDL checks passed for both cartridges.');
 const nativeResults={metered:{odin:[],luau:[],luauCached:[]},unmetered:{odin:[],luau:[],luauCached:[]}};

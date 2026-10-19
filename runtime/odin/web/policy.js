@@ -56,7 +56,7 @@ export function readFrame(game) {
   if (!Number.isInteger(offset) || offset < 0 || offset > memory.byteLength - FRAME_BYTES) {
     throw new Error('Frame offset outside guest memory.');
   }
-  const bytes = new Uint8Array(memory, offset, FRAME_BYTES);
+  const bytes = new Uint8Array(memory, offset, FRAME_BYTES).slice();
   const view = new DataView(memory, offset, FRAME_BYTES);
   return { bytes, ticks: view.getUint32(16, true), sounds: view.getUint32(20, true),
     spriteX: view.getInt32(8, true), spriteY: view.getInt32(12, true),

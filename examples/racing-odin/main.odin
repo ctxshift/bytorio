@@ -2,13 +2,13 @@ package main
 
 import "core:fmt"
 import "core:math"
-import g "../../runtime/odin/graphics"
+import g "sdk:console"
 import "assets"
 
 LAP :: 72000
 curves := [12]int{0,0,1,1,0,-1,-1,0,1,0,-1,0}
 State :: struct {
-    ticks, sounds: u32,
+    ticks: u32,
     distance, x, speed, charge, elapsed, hits, offroad, boosts: int,
     previous: u32,
     finished: bool,
@@ -19,18 +19,20 @@ s: State
 floor_div :: proc(a,b:int) -> int {return int(math.floor(f64(a)/f64(b)))}
 curve :: proc(z:int) -> int {return curves[(z%LAP)/6000]}
 init :: proc() {
-    s = State{sounds=1,charge=100}
+    s = State{charge=100}
+    g.display(.Low);g.sound()
     for i in 0..<6 {s.rivals[i]=-600+i*340;s.lanes[i]=(i%3-1)*420}
 }
-update :: proc(buttons:u32) {
+update :: proc(dt:f64) {
+    buttons:=g.buttons()
     s.ticks+=1
     action := buttons&16 != 0 && s.previous&16 == 0
     s.previous=buttons
     if s.finished {
-        if action {sounds:=s.sounds;init();s.sounds=sounds+1}
+        if action {init()}
         return
     }
-    if s.ticks <= 90 {if s.ticks%30 == 0 {s.sounds+=1};return}
+    if s.ticks <= 90 {if s.ticks%30 == 0 {g.sound()};return}
     s.elapsed+=1
     if buttons&4 != 0 {
         s.speed=min(180,s.speed+3) if s.speed<180 else max(180,s.speed-2)
@@ -50,12 +52,12 @@ update :: proc(buttons:u32) {
         s.rivals[i]+=min(144+i*6,s.elapsed*3)
         s.lanes[i]=(i%3-1)*420+abs((int(s.ticks)+i*37)%240-120)-60
         if abs(s.rivals[i]-s.distance)<160 && abs(s.lanes[i]-s.x)<140 && s.speed>100 {
-            s.speed=80;s.hits+=1;s.sounds+=1
+            s.speed=80;s.hits+=1;g.sound()
             s.x+=180 if s.x>=s.lanes[i] else -180
         }
     }
-    if s.distance/LAP != previous_distance/LAP {s.sounds+=1}
-    if s.distance>=LAP*3 {s.finished=true;s.sounds+=1}
+    if s.distance/LAP != previous_distance/LAP {g.sound()}
+    if s.distance>=LAP*3 {s.finished=true;g.sound()}
 }
 ink :: proc(index:int) -> u32 {return assets.palette[index]}
 rect :: proc(x,y,w,h,index:int) {g.rect(x,y,w,h,ink(index))}
@@ -75,6 +77,7 @@ billboard :: proc(id,distance,lane:int) {
     g.sprite_size(id,x,y-size,size,size)
 }
 draw :: proc() {
+    g.debug_position(f64(s.x),f64(s.speed))
     rect(0,0,320,180,0)
     rect(0,18,320,56,1)
     rect(248,26,20,20,10)

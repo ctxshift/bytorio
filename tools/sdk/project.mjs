@@ -3,9 +3,10 @@ import {resolve,dirname,relative,sep} from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
+import {Worker} from 'node:worker_threads';
 import {readGraphics} from './assets.mjs';
 import {bundleLuau,odinEntry} from './bundle.mjs';
-import {inspectGuest,loadSource,checkExecutor,uploadGraphics,submitDrawing,rasterizeDrawing} from '../../runtime/odin/web/policy.js';
+import {inspectGuest} from '../../runtime/odin/web/policy.js';
 
 export const repo=resolve(dirname(fileURLToPath(import.meta.url)),'../..');
 const contract=JSON.parse(await readFile(resolve(repo,'sdk/contract.json'),'utf8'));
@@ -109,20 +110,25 @@ async function player() {
   const sources=[...await files(resolve(repo,'runtime/odin'),['.odin','.js','.html']),resolve(repo,'experiments/luau-executor/executor.cpp'),resolve(repo,'experiments/luau-executor/capabilities.cpp'),resolve(repo,'experiments/luau-executor/CMakeLists.txt')];
   const hash=createHash('sha256');for(const file of sources)hash.update(relative(repo,file)).update(await readFile(file));
   const key=hash.digest('hex'),stamp=resolve(repo,'build/sdk-player-hash');
-  if(!await exists(stamp)||(await readFile(stamp,'utf8'))!==key) {
+  const required=['build/odin-player/native/player.exe','build/odin-player/native/SDL3.dll','build/odin-player/native/wasmtime.dll','build/odin-player/web/runtime.wasm','build/luau-executor/luau-executor.wasm'];
+  if(!await exists(stamp)||(await readFile(stamp,'utf8'))!==key||!(await Promise.all(required.map(file=>exists(resolve(repo,file))))).every(Boolean)) {
     ps('build-odin.ps1');ps('build-luau-executor.ps1');
     await writeFile(stamp,key);
   }
 }
 async function smoke(spec) {
   const luau=spec.language==='luau';
-  const bytes=await readFile(resolve(repo,luau?'build/luau-executor/luau-executor.wasm':relative(repo,resolve(spec.generated,'game.wasm'))));
-  inspectGuest(bytes);
-  const game=(await WebAssembly.instantiate(bytes,{env:{sin:Math.sin}})).instance.exports;
-  const runtime=(await WebAssembly.instantiate(await readFile(resolve(repo,'build/odin-player/web/runtime.wasm')),{env:{sin:Math.sin}})).instance.exports;
-  game._initialize?.();if(luau)loadSource(game,await readFile(resolve(spec.generated,'game.luau')));
-  game.game_init();checkExecutor(game);runtime.runtime_init();uploadGraphics(game,runtime);
-  for(let i=0;i<3;i++) {game.game_update(0,0,0,0);const drawing=submitDrawing(game,runtime);rasterizeDrawing(runtime,drawing);}
+  await new Promise((done,reject)=>{
+    const worker=new Worker(new URL('./smoke-worker.mjs',import.meta.url),{workerData:{game:luau?resolve(repo,'build/luau-executor/luau-executor.wasm'):resolve(spec.generated,'game.wasm'),source:luau?resolve(spec.generated,'game.luau'):null,runtime:resolve(repo,'build/odin-player/web/runtime.wasm')}});
+    let settled=false,timer;
+    const finish=error=>{if(settled)return;settled=true;clearTimeout(timer);worker.terminate();if(error)reject(error);else done();};
+    timer=setTimeout(()=>finish(new Error('SDK check timed out while loading')),10000);
+    worker.on('message',message=>{
+      if(message.type==='executing'){clearTimeout(timer);timer=setTimeout(()=>finish(new Error('Game stopped responding during SDK check')),1000);}
+      else finish(message.type==='error'?new Error(message.message):null);
+    });
+    worker.on('error',finish);worker.on('exit',code=>{if(!settled)finish(new Error(`SDK check worker exited (${code})`));});
+  });
 }
 export async function checkProject(path) {
   const spec=await prepare(path);await player();await smoke(spec);
@@ -155,4 +161,3 @@ export async function buildProject(path) {
   }
   console.log(`Built ${spec.language}: ${relative(process.cwd(),resolve(spec.project,'build'))}`);return spec;
 }
-

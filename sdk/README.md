@@ -91,3 +91,7 @@ The suite builds real projects with both SDKs and verifies native/browser parity
 mode switching, clipped and sized sprites, text, input edges, pointer delivery,
 known random vectors, sound events, reload, static errors and invalid arguments.
 Retained projects and outputs live in ignored `build/sdk-verification/`.
+The RPG and racing examples also use these SDKs; their existing build commands
+generate the entry points and pack their shared art. Racing replays retain all
+2,236 pre-SDK framebuffer/sound pairs, and RPG checks retain the original artwork
+hashes within its historical 384×216 scene on the current default canvas.

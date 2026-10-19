@@ -46,6 +46,7 @@ for(const language of ['odin','luau']) {
   const frame=draw(p);assert.deepEqual(draw(p),frame,'draw is stable without another update');
   assert.equal(frame.width,i>=19&&i<39||i>=59?320:640);
   assert.equal(frame.y,i<5?0:i<15?1:i<45?11:i<48?12:22,'pressed/released edges and held keys');
+  assert.equal(frame.sounds,i<5?1:i<45?2:3,'sound requests occur only on press edges');
   if(i<3)assert.equal(frame.x,[31682556,4018661298,2101636938][i]%1000,'known xorshift32 vector');
   if(language==='odin')expected.push(frame);else assert.deepEqual(frame,expected[i],`SDK frame ${i}`);
  }
@@ -81,6 +82,21 @@ try {
 } finally {await browser.close();await new Promise(r=>server.close(r));}
 // SDK error behavior, caught independently of rendering and reset on reload.
 const luau=await pair('luau');
+// Getter calls may grow memory after draw; the submitted frame must be a snapshot.
+const growing=new WebAssembly.Memory({initial:1,maximum:2});
+const frameView=new DataView(growing.buffer);frameView.setUint32(0,1,true);frameView.setUint32(4,0xff102030,true);frameView.setInt32(8,-4096,true);frameView.setInt32(12,-4096,true);
+const mock={memory:growing,game_draw:()=>0,game_display_mode:()=>{growing.grow(1);return (640<<16)|360;}};
+const copied=submitDrawing(mock,luau.runtime);rasterizeDrawing(luau.runtime,copied);
+assert.equal(new Uint32Array(luau.runtime.memory.buffer,luau.runtime.runtime_pixels(),1)[0],0xff102030,'frame survives memory growth');
+const runtimeFrame=new DataView(luau.runtime.memory.buffer,luau.runtime.runtime_frame(),40);
+runtimeFrame.setUint32(4,0,true);assert.equal(luau.runtime.runtime_render(),0,'host rejects nonopaque clear');
+runtimeFrame.setUint32(4,0xff102030,true);
+const command=new DataView(luau.runtime.memory.buffer,luau.runtime.runtime_batch(),32);
+for(let i=0;i<32;i+=4)command.setUint32(i,0,true);
+command.setInt32(12,1,true);command.setInt32(16,1,true);
+assert.equal(luau.runtime.runtime_render_batch(1,0),0,'host rejects nonopaque rect');
+command.setUint32(0,3,true);command.setInt32(12,129,true);
+assert.equal(luau.runtime.runtime_render_batch(1,0),0,'host rejects oversized resampling');
 for(const statement of ['console.sprite(0,0,0,0)','console.text("é",0,0,console.rgb(1,2,3))','console.rect(0,0,-1,1,console.rgb(1,2,3))']) {
  const main=resolve(paths.luau,'src/main.luau');
  await writeFile(main,`local console=require("@console")\nreturn {init=function() end,update=function() end,draw=function() ${statement} end}\n`);
@@ -94,6 +110,15 @@ await writeFile(resolve(paths.luau,'src/main.luau'),'--!strict\nlocal console=re
 await assert.rejects(()=>checkProject(paths.luau),/failed/);
 await writeFile(resolve(paths.odin,'src/main.odin'),'package main\nimport console "sdk:console"\ninit :: proc(){_=console.button(.Jump)}\nupdate :: proc(dt:f64){}\ndraw :: proc(){}\n');
 await assert.rejects(()=>checkProject(paths.odin),/failed/);
+for(const statement of ['console.sprite(0,0,0,0)','console.text("é",0,0,console.rgb(1,2,3))','console.rect(0,0,-1,1,console.rgb(1,2,3))']) {
+ await writeFile(resolve(paths.odin,'src/main.odin'),`package main\nimport console "sdk:console"\ninit :: proc(){}\nupdate :: proc(dt:f64){}\ndraw :: proc(){${statement}}\n`);
+ await assert.rejects(()=>checkProject(paths.odin),/invalid sprite|ASCII|rectangle dimensions/);
+ const game=(await WebAssembly.instantiate(await readFile(resolve(paths.odin,'build/generated/game.wasm')))).instance.exports;
+ game.game_init();assert.equal(game.game_error_length(),0);game.game_draw();const length=game.game_error_length();assert.ok(length>0);
+ game.game_update(0,0,0,0);assert.equal(game.game_error_length(),length);game.game_init();assert.equal(game.game_error_length(),0);
+}
+await writeFile(resolve(paths.luau,'src/main.luau'),'--!strict\nreturn {init=function() while true do end end,update=function(_dt:number) end,draw=function() end}\n');
+await assert.rejects(()=>checkProject(paths.luau),/stopped responding/);
 const sample=JSON.parse(await readFile(resolve(paths.luau,'assets.json'),'utf8'));
 sample.sprites[0][0]='bad';assert.throws(()=>graphicsPacket(sample),/width/);
 await writeFile(resolve(paths.luau,'src/main.luau'),'local m=require("../outside")\nreturn m');

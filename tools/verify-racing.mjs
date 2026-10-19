@@ -50,6 +50,9 @@ export const handlingExpected=handling.map((mask,i)=>{
  return frame;
 });
 assert.ok(state()[6]>0,'off-road slowdown exercised');assert.ok(state()[2]>0,'recovered speed');
+const golden=JSON.parse(await readFile('tests/sdk/racing-parity.json','utf8'));
+assert.deepEqual(expected,golden.race,'SDK migration preserves the race and restart');
+assert.deepEqual(handlingExpected,golden.handling,'SDK migration preserves handling');
 for(const [name,inputs] of [['race',race],['handling',handling]])await writeFile(`${out}/${name}.inputs`,inputs.join('\n')+'\n');
 for(const language of ['odin','luau']) {
  const pair=await instance(language);

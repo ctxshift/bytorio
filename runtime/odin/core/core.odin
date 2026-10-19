@@ -37,7 +37,7 @@ init :: proc() {
 }
 
 valid :: proc(frame: abi.Frame) -> bool {
-    return frame.version == abi.VERSION && frame.sprite_x >= -4096 && frame.sprite_x <= 4096 &&
+    return frame.version == abi.VERSION && frame.clear>>24 == 255 && frame.sprite_x >= -4096 && frame.sprite_x <= 4096 &&
         frame.sprite_y >= -4096 && frame.sprite_y <= 4096 &&
         frame.x >= -4096 && frame.x <= 4096 && frame.y >= -4096 && frame.y <= 4096
 }
@@ -67,7 +67,7 @@ hash :: proc() -> u32 {
 render_commands :: proc(commands: []abi.Command) -> bool {
     if len(commands) > abi.MAX_COMMANDS { return false }
     for c in commands {
-        if c.x < -4096 || c.x > 4096 || c.y < -4096 || c.y > 4096 || c.w < 0 || c.w > 4096 || c.h < 0 || c.h > 4096 { return false }
+        if c.color>>24 != 255 || c.x < -4096 || c.x > 4096 || c.y < -4096 || c.y > 4096 || c.w < 0 || c.w > 4096 || c.h < 0 || c.h > 4096 { return false }
         for y := max(0, int(c.y)); y < min(height, int(c.y+c.h)); y += 1 {
             for x := max(0, int(c.x)); x < min(width, int(c.x+c.w)); x += 1 { pixels[y*width+x] = c.color }
         }
@@ -117,6 +117,7 @@ render_batch :: proc(commands: []abi.Draw_Command, text: []u8) -> bool {
         x,y := int(c.x),int(c.y)
         switch c.kind {
         case 0:
+            if c.color>>24 != 255 {return false}
             if c.w < 0 || c.w > 4096 || c.h < 0 || c.h > 4096 { return false }
             fill_rect(x,y,int(c.w),int(c.h),c.color)
         case 1:
@@ -141,6 +142,7 @@ render_batch :: proc(commands: []abi.Draw_Command, text: []u8) -> bool {
                 }
             }
         case 2:
+            if c.color>>24 != 255 {return false}
             if sprite_count == 0 || c.offset > u32(len(text)) || c.length > u32(len(text))-c.offset || c.length > 1024 { return false }
             px,py := x,y
             for char in text[c.offset:c.offset+c.length] {

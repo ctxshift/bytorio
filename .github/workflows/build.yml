@@ -8,6 +8,33 @@ permissions:
   contents: read
 
 jobs:
+  sdk:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install pinned Emscripten
+        shell: pwsh
+        run: |
+          git clone https://github.com/emscripten-core/emsdk.git .tools/emsdk
+          git -C .tools/emsdk checkout 3b3963d86a5c97adaf6eaa845cdfe0b811c2f960
+          ./.tools/emsdk/emsdk.bat install 6.0.12
+          ./.tools/emsdk/emsdk.bat activate 6.0.12
+      - name: Install browser verifier
+        run: npm ci
+      - name: Verify both SDKs and project tools
+        env:
+          PLAYER_BROWSER_CHANNEL: chrome
+        run: npm run test:sdk
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sdk-verification
+          path: build/sdk-verification/
+
   odin:
     runs-on: windows-latest
     steps:

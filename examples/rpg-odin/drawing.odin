@@ -1,6 +1,6 @@
 package main
 
-import g "../../runtime/odin/graphics"
+import g "sdk:console"
 
 text :: proc(value: string, x, y: int, color: u32) {
     g.text(value,x,y,color)

@@ -1,6 +1,6 @@
 package main
 
-import g "../../runtime/odin/graphics"
+import g "sdk:console"
 import "assets"
 
 Mode :: enum { Explore, Dialog, Battle }
@@ -9,11 +9,11 @@ State :: struct {
     quest, herb, won, complete, defeated: bool,
     mode: Mode,
     message: string,
-    previous, ticks, sounds: u32,
+    previous, ticks: u32,
 }
 s: State
 
-say :: proc(message: string) { s.mode = .Dialog; s.message = message; s.sounds += 1 }
+say :: proc(message: string) { s.mode = .Dialog; s.message = message; g.sound() }
 near :: proc(x, y: int) -> bool { return abs(s.x-x)+abs(s.y-y) <= 1 }
 tile :: proc(x, y: int) -> u8 {
     if x < 0 || x >= 32 || y < 0 || y >= 20 { return 'T' }
@@ -30,7 +30,7 @@ battle :: proc() {
         s.hp = min(20,s.hp+8)
         s.message = "POTION RESTORES 8. SLIME HITS FOR 3."
     }
-    s.sounds += 1
+    g.sound()
     if s.enemy <= 0 {
         s.won = true
         say("THE SLIME RETREATS! THE GROVE IS SAFE.\nFIND THE GOLDEN SUNLEAF TO THE EAST.")
@@ -42,8 +42,9 @@ battle :: proc() {
         say("YOU FALL... THE HEALER BRINGS YOU HOME.\nREST, THEN TRY THE GROVE AGAIN.")
     }
 }
-init :: proc() { s = State{x=5,y=6,hp=20,potions=1,enemy=10,sounds=1} }
-update :: proc(buttons: u32) {
+init :: proc() { s = State{x=5,y=6,hp=20,potions=1,enemy=10};g.sound() }
+update :: proc(dt:f64) {
+    buttons:=g.buttons()
     s.ticks += 1
     pressed := buttons & ~s.previous
     s.previous = buttons
@@ -95,10 +96,11 @@ update :: proc(buttons: u32) {
     if nx == 19 && ny == 6 && !s.won {
         s.mode,s.enemy,s.choice = .Battle,10,0
         s.message = "A MOSS SLIME BLOCKS THE GROVE!"
-        s.sounds += 1
+        g.sound()
     }
 }
 draw :: proc() {
+    g.debug_position(f64(s.x),f64(s.y))
     cx, cy := clamp(s.x-11,0,8)*16, clamp(s.y-4,0,10)*16
     for y in 0..<20 {
         for x in 0..<32 {

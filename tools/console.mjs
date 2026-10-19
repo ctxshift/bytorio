@@ -36,15 +36,15 @@ try {
     server.on('listening',()=>console.log(`Player: http://127.0.0.1:${port}/player.html`));
    }
    if(action==='watch') {
-    let pending=false,timer;
+    let pending=false,dirty=false,timer;
     const rebuild=async()=>{
-     if(pending)return;pending=true;
+     if(pending){dirty=true;return;}pending=true;
      try {
       if(options.native&&child&&child.exitCode===null){await new Promise(resolve=>{child.once('exit',resolve);child.kill();});}
       spec=await buildProject(path);
       if(options.native)launch();else console.log('Build ready. Reload the browser to start fresh.');
      }
-     catch(error){console.error(error.message);}finally{pending=false;}
+     catch(error){console.error(error.message);}finally{pending=false;if(dirty){dirty=false;timer=setTimeout(rebuild,150);}}
     };
     watch(spec.project,{recursive:true},(_event,file)=>{
      const name=String(file).replaceAll('\\','/');

@@ -1,6 +1,6 @@
 # Architecture
 
-Status: target design, updated 2026-10-19. [Odin for games and runtime](adr/0001-use-odin-for-games-and-runtime.md) supersedes the initial Luau/C++ direction. The first [Odin reproduction](odin-development.md) now works on native Windows and browser with one shared game module, a sprite, and sound. The earlier Luau/C++ slice remains a reference. Broader profile features below are still proposed.
+Status: target design, updated 2026-10-19. The runtime is Odin, with Luau as the default cartridge language and Odin also supported. The [SDK specification](cartridge-spec.md) supersedes the earlier Odin-only authoring direction in [the language decision](adr/0001-use-odin-for-games-and-runtime.md). The native/browser RPG and racing examples use the shared SDKs. The earlier Luau/C++ slice remains a reference. Broader profile features below are still proposed.
 
 ## Product intent and accepted decisions
 
@@ -10,7 +10,7 @@ The repository codename is temporary; the final product name is undecided. Use n
 
 Accepted decisions:
 
-- Game language: Odin, with a documented SDK and explicit allocation conventions.
+- Game languages: Luau by default, with Odin supported for explicit memory control and performance. Both SDKs implement the [0.1.0 cartridge specification](cartridge-spec.md).
 - Runtime implementation: Odin, sharing platform-independent code between native and browser targets.
 - Native execution: a standalone runtime without a webview; playing games must not require Node.js or a developer toolchain.
 - Browser execution: compile the runtime to WebAssembly; use JavaScript only where browser integration requires it.
@@ -116,7 +116,7 @@ Audio callbacks must not allocate, fetch files, compile scripts, or wait for gam
 
 ## Assets and cartridge format
 
-Development projects are ordinary folders containing a manifest, Odin source, and source assets. Importers and the pinned compiler produce reproducible runtime assets and a game module in a generated directory. Keep generated caches out of source control unless a particular release workflow requires them.
+Development projects are ordinary folders containing a manifest, Luau or Odin source, and source assets. The shared SDK CLI imports assets, checks types, bundles Luau modules or invokes the pinned Odin compiler, and stages the result in a generated directory. Keep generated caches out of source control unless a particular release workflow requires them.
 
 The packed cartridge has a versioned manifest/index, bounded offsets and lengths, independently compressed entries or chunks, stable identifiers, and integrity hashes. Hashes detect corruption; they do not establish publisher trust. Reject traversal paths, overlapping/invalid ranges, oversized decoded entries, unsupported versions, and decompression bombs before allocating large buffers.
 
