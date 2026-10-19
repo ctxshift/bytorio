@@ -2,19 +2,32 @@ package graphics
 
 import abi "../abi"
 
-// The guest SDK builds a bounded display list; the player only draws rectangles.
-Command :: abi.Command
+// Sprites and text remain high-level commands until the shared renderer.
+Command :: abi.Draw_Command
 MAX_COMMANDS :: abi.MAX_COMMANDS
 commands: [MAX_COMMANDS]Command
 count: u32
 overflow: bool
+text_bytes: [abi.MAX_TEXT_BYTES]u8
+text_count: u32
 
-begin :: proc() { count = 0; overflow = false }
+begin :: proc() { count = 0; text_count = 0; overflow = false }
 rect :: proc(x, y, w, h: int, color: u32) {
     if w <= 0 || h <= 0 || x >= abi.WIDTH || y >= abi.HEIGHT || x+w <= 0 || y+h <= 0 { return }
     if count == MAX_COMMANDS { overflow = true; return }
-    commands[count] = Command{i32(x), i32(y), i32(w), i32(h), color}
+    commands[count] = Command{kind=0,x=i32(x),y=i32(y),w=i32(w),h=i32(h),color=color}
     count += 1
+}
+sprite :: proc(id, x, y: int, scale := 1) {
+    if count == MAX_COMMANDS { overflow = true; return }
+    commands[count] = Command{kind=1,x=i32(x),y=i32(y),w=i32(id),h=i32(scale)}
+    count += 1
+}
+text :: proc(value: string, x, y: int, color: u32) {
+    if count == MAX_COMMANDS || len(value) > abi.MAX_TEXT_BYTES-int(text_count) { overflow = true; return }
+    for byte,i in transmute([]u8)value { text_bytes[int(text_count)+i] = byte }
+    commands[count] = Command{kind=2,x=i32(x),y=i32(y),color=color,offset=text_count,length=u32(len(value))}
+    text_count += u32(len(value)); count += 1
 }
 image :: proc(rows: []string, palette: []u32, x, y: int, scale := 1) {
     for row, ry in rows {

@@ -81,3 +81,39 @@ export function loadSource(game,source) {
   new Uint8Array(game.memory.buffer,offset,bytes.length).set(bytes);
   game.game_source_size(bytes.length);
 }
+
+function blob(game,offsetName,sizeName,limit) {
+  if(typeof game[offsetName]!=='function'||typeof game[sizeName]!=='function')throw new Error('Missing guest buffer exports.');
+  const size=game[sizeName](),offset=game[offsetName]();
+  if(!Number.isInteger(size)||size<0||size>limit||!Number.isInteger(offset)||offset<0||offset>game.memory.buffer.byteLength-size)throw new Error('Guest buffer outside memory.');
+  return new Uint8Array(game.memory.buffer,offset,size);
+}
+export function uploadGraphics(game,runtime) {
+  if(!game.game_assets)return;
+  const bytes=blob(game,'game_assets','game_assets_size',16+64+256*256+128*7);
+  new Uint8Array(runtime.memory.buffer,runtime.runtime_assets(),bytes.length).set(bytes);
+  if(runtime.runtime_load_graphics(bytes.length)!==1)throw new Error('Invalid graphics assets.');
+}
+export function submitDrawing(game,runtime) {
+  const record=readFrame(game);
+  new Uint8Array(runtime.memory.buffer,runtime.runtime_frame(),FRAME_BYTES).set(record.bytes);
+  let count=0,stride=20,textSize=0;
+  if(game.game_commands) {
+    stride=game.game_command_stride?.()??20;
+    if(stride!==20&&stride!==32)throw new Error('Unsupported command stride.');
+    const offset=game.game_commands();count=game.game_command_count();
+    if(!Number.isInteger(count)||count<0||count>16384||!Number.isInteger(offset)||offset<0||offset>game.memory.buffer.byteLength-count*stride)throw new Error('Invalid display list bounds.');
+    const target=stride===32?runtime.runtime_batch():runtime.runtime_commands();
+    new Uint8Array(runtime.memory.buffer,target,count*stride).set(new Uint8Array(game.memory.buffer,offset,count*stride));
+    if(stride===32) {
+      const bytes=blob(game,'game_text','game_text_size',16384);textSize=bytes.length;
+      new Uint8Array(runtime.memory.buffer,runtime.runtime_text(),textSize).set(bytes);
+    }
+  }
+  return {record,count,stride,textSize};
+}
+export function rasterizeDrawing(runtime,{count,stride,textSize}) {
+  if(runtime.runtime_render()!==1)throw new Error('Invalid frame command.');
+  const valid=stride===32?runtime.runtime_render_batch(count,textSize):runtime.runtime_render_commands(count);
+  if(valid!==1)throw new Error('Invalid display list command.');
+}

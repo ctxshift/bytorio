@@ -44,7 +44,7 @@ benchmark :: proc(app: ^App, path: string, startup_ms: f64, baseline_working: ui
             t1 := clock_ms()
             if !guest.draw(&app.game,&app.frame) { return error(app.game.error) }
             t2 := clock_ms()
-            if !core.render(app.frame) || !core.render_commands(app.game.commands[:app.game.count]) { return error("invalid benchmark frame") }
+            if !render_current(app) { return error("invalid benchmark frame") }
             t3 := clock_ms()
             if pass >= 2 { append(&timings,[3]f64{t1-t0,t2-t1,t3-t2}) }
             if pass == 2 { append(&hashes,core.hash());append(&sounds,app.frame.sounds) }

@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import { once } from 'node:events';
 import { chromium } from 'playwright';
 import { serve } from './serve.mjs';
+import {uploadGraphics,submitDrawing,rasterizeDrawing} from '../runtime/odin/web/policy.js';
 
 const out = 'build/rpg/verification';
 await mkdir(out,{recursive:true});
@@ -32,16 +33,13 @@ async function cartridge() {
     const game = (await WebAssembly.instantiate(gameBytes,imports)).instance.exports;
     const runtime = (await WebAssembly.instantiate(runtimeBytes,imports)).instance.exports;
     game.game_init(); runtime.runtime_init();
+    uploadGraphics(game,runtime);
     function state() { return Array.from(new Int32Array(game.memory.buffer,game.game_inspect(),10)); }
     function step(mask) {
         game.game_update(mask,0,0,0);
-        const frame = game.game_draw(), count = game.game_command_count();
-        assert.ok(count > 0 && count <= 16384);
-        new Uint8Array(runtime.memory.buffer,runtime.runtime_frame(),40).set(new Uint8Array(game.memory.buffer,frame,40));
-        assert.equal(runtime.runtime_render(),1);
-        new Uint8Array(runtime.memory.buffer,runtime.runtime_commands(),count*20).set(new Uint8Array(game.memory.buffer,game.game_commands(),count*20));
-        assert.equal(runtime.runtime_render_commands(count),1);
-        return {hash:runtime.runtime_hash()>>>0,sounds:new DataView(game.memory.buffer,frame,40).getUint32(20,true)};
+        const drawing=submitDrawing(game,runtime);
+        rasterizeDrawing(runtime,drawing);
+        return {hash:runtime.runtime_hash()>>>0,sounds:drawing.record.sounds};
     }
     return {state,step};
 }

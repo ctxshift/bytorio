@@ -63,7 +63,12 @@ input :: proc(app: ^App) -> abi.Input {
 
 draw :: proc(app: ^App) -> bool {
     if !guest.draw(&app.game, &app.frame) { return false }
-    if !core.render(app.frame) || !core.render_commands(app.game.commands[:app.game.count]) { return guest.fail(&app.game, "invalid frame command") }
+    return render_current(app)
+}
+render_current :: proc(app: ^App) -> bool {
+    if !core.render(app.frame) {return guest.fail(&app.game,"invalid frame command")}
+    valid := core.render_batch(app.game.batch[:app.game.count],app.game.text[:app.game.text_size]) if app.game.stride == 32 else core.render_commands(app.game.commands[:app.game.count])
+    if !valid {return guest.fail(&app.game,"invalid frame command")}
     return true
 }
 
@@ -113,6 +118,9 @@ run :: proc() -> int {
     defer delete(source)
     if !guest.load(&app.game, bytes, source, !unmetered) { return error(app.game.error) }
     core.init()
+    asset_size,graphics_ok := guest.read_graphics(&app.game)
+    if !graphics_ok {return error(app.game.error)}
+    if asset_size > 0 && !core.load_graphics(app.game.assets[:asset_size]) {return error("invalid graphics assets")}
     if !draw(app) { return error(app.game.error) }
     if benchmark_path != "" { return benchmark(app,benchmark_path,clock_ms()-startup_start,baseline_working) }
     if replay_path != "" {

@@ -19,6 +19,10 @@ Game :: struct {
     command_offset, command_count: Func,
     has_commands: bool,
     commands: [abi.MAX_COMMANDS]abi.Command,
+    batch: [abi.MAX_COMMANDS]abi.Draw_Command,
+    text: [abi.MAX_TEXT_BYTES]u8,
+    assets: [abi.MAX_GRAPHICS_BYTES]u8,
+    text_size, stride: int,
     count: int,
     has_source, metered: bool,
     compile_ms, instantiate_ms, initialize_ms: f64,
@@ -69,6 +73,30 @@ function :: proc(game: ^Game, name: string, result: ^Func) -> bool {
     if value.kind != 0 { return fail(game, "required game export is not a function") }
     result^ = value.of.function
     return true
+}
+has_export :: proc(game: ^Game, name: string) -> bool {
+    value: Extern
+    if !wasmtime_instance_export_get(game.ctx,&game.instance,raw_data(name),uint(len(name)),&value) {return false}
+    wasmtime_extern_delete(&value)
+    return true
+}
+read_blob :: proc(game: ^Game, offset_name, size_name: string, destination: []u8) -> (int,bool) {
+    offset_fn,size_fn: Func
+    result: [1]Val
+    if !function(game,offset_name,&offset_fn) || !function(game,size_name,&size_fn) || !call(game,&size_fn,nil,result[:]) {return 0,false}
+    if result[0].kind != 0 || result[0].of.i32 < 0 || int(result[0].of.i32) > len(destination) {return 0,fail(game,"invalid guest blob size")}
+    length := int(result[0].of.i32)
+    if !call(game,&offset_fn,nil,result[:]) {return 0,false}
+    if result[0].kind != 0 {return 0,fail(game,"invalid guest blob offset")}
+    offset := uint(u32(result[0].of.i32))
+    size := wasmtime_memory_data_size(game.ctx,&game.memory)
+    if offset > size || uint(length) > size-offset {return 0,fail(game,"guest blob outside memory")}
+    if length > 0 {mem.copy(raw_data(destination),&wasmtime_memory_data(game.ctx,&game.memory)[offset],length)}
+    return length,true
+}
+read_graphics :: proc(game: ^Game) -> (int,bool) {
+    if !has_export(game,"game_assets") {return 0,true}
+    return read_blob(game,"game_assets","game_assets_size",game.assets[:])
 }
 
 load :: proc(game: ^Game, bytes: []u8, source: []u8 = nil, metered := true) -> bool {
@@ -144,6 +172,14 @@ load :: proc(game: ^Game, bytes: []u8, source: []u8 = nil, metered := true) -> b
         wasmtime_extern_delete(&extension)
         if !function(game, "game_commands", &game.command_offset) || !function(game, "game_command_count", &game.command_count) { return false }
         game.has_commands = true
+    }
+    game.stride = 20
+    if has_export(game,"game_command_stride") {
+        query: Func
+        result: [1]Val
+        if !function(game,"game_command_stride",&query) || !call(game,&query,nil,result[:]) {return false}
+        if result[0].kind != 0 || (result[0].of.i32 != 20 && result[0].of.i32 != 32) {return fail(game,"unsupported command stride")}
+        game.stride = int(result[0].of.i32)
     }
     initialize_start := time.tick_now()
     if game.has_source {
@@ -227,12 +263,20 @@ draw :: proc(game: ^Game, frame: ^abi.Frame) -> bool {
         if !call(game, &game.command_offset, nil, result[:]) { return false }
         if result[0].kind != 0 { return fail(game, "invalid display list offset") }
         command_offset := uint(u32(result[0].of.i32))
-        command_bytes := uint(game.count * size_of(abi.Command))
+        command_bytes := uint(game.count * game.stride)
         // Reacquire memory after guest calls, which may grow it.
         size = wasmtime_memory_data_size(game.ctx, &game.memory)
         data = wasmtime_memory_data(game.ctx, &game.memory)
         if command_offset > size || command_bytes > size-command_offset { return fail(game, "display list outside guest memory") }
-        if command_bytes > 0 { mem.copy(&game.commands, &data[command_offset], int(command_bytes)) }
+        destination: rawptr = &game.commands
+        if game.stride == 32 {destination = &game.batch}
+        if command_bytes > 0 { mem.copy(destination, &data[command_offset], int(command_bytes)) }
+        game.text_size = 0
+        if game.stride == 32 {
+            length,ok := read_blob(game,"game_text","game_text_size",game.text[:])
+            if !ok {return false}
+            game.text_size = length
+        }
     }
     return true
 }

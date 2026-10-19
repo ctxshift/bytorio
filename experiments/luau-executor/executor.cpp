@@ -13,14 +13,17 @@
 
 namespace {
 struct Frame { std::uint32_t version, clear; std::int32_t sprite_x,sprite_y; std::uint32_t ticks,sounds; double x,y; };
-struct Command { std::int32_t x,y,w,h; std::uint32_t color; };
+struct Command { std::uint32_t kind; std::int32_t x,y,w,h; std::uint32_t color,offset,length; };
 static_assert(sizeof(Frame)==40 && offsetof(Frame,x)==24);
-static_assert(sizeof(Command)==20);
+static_assert(sizeof(Command)==32);
 constexpr std::size_t source_capacity=256*1024, heap_limit=4*1024*1024, max_commands=16384;
 char source[source_capacity], error[1024];
 std::uint32_t source_size, buttons, command_count;
 std::size_t heap_bytes, peak_heap_bytes;
 Command commands[max_commands];
+constexpr std::size_t max_assets=16+64+256*256+128*7, max_text=16384;
+unsigned char assets[max_assets],text[max_text];
+std::uint32_t assets_size,text_size;
 Frame frame;
 lua_State* state;
 int module=-1;
@@ -51,8 +54,38 @@ int rect(lua_State* L) {
     if(!std::isfinite(color)||color<0||color>4294967295.0)luaL_argerror(L,5,"invalid RGBA color");
     if(w==0||h==0||x>=384||y>=216||x+w<=0||y+h<=0)return 0;
     if(command_count==max_commands)luaL_error(L,"display list limit exceeded");
-    commands[command_count++]={x,y,w,h,static_cast<std::uint32_t>(color)};
+    commands[command_count++]={0,x,y,w,h,static_cast<std::uint32_t>(color),0,0};
     return 0;
+}
+int graphics_assets(lua_State* L) {
+    std::size_t size;
+    const auto* encoded=luaL_checklstring(L,1,&size);
+    if(size>max_assets*4/3+4)luaL_error(L,"graphics assets too large");
+    assets_size=0;std::uint32_t bits=0;int count=0;
+    for(std::size_t i=0;i<size;i++) {
+        const char c=encoded[i];
+        if(c=='='){for(;i<size;i++)if(encoded[i]!='=')luaL_error(L,"invalid graphics encoding");break;}
+        int value=c>='A'&&c<='Z'?c-'A':c>='a'&&c<='z'?c-'a'+26:c>='0'&&c<='9'?c-'0'+52:c=='+'?62:c=='/'?63:-1;
+        if(value<0)luaL_error(L,"invalid graphics encoding");
+        bits=(bits<<6)|value;count+=6;
+        if(count>=8){count-=8;if(assets_size==max_assets)luaL_error(L,"graphics assets too large");assets[assets_size++]=static_cast<unsigned char>(bits>>count);}
+    }
+    return 0;
+}
+int draw_sprite(lua_State* L) {
+    const int id=integer(L,1,0,255),x=integer(L,2,-4096,4096),y=integer(L,3,-4096,4096),scale=integer(L,4,1,8);
+    if(command_count==max_commands)luaL_error(L,"display list limit exceeded");
+    commands[command_count++]={1,x,y,id,scale,0,0,0};return 0;
+}
+int draw_text(lua_State* L) {
+    std::size_t size;const char* value=luaL_checklstring(L,1,&size);
+    const int x=integer(L,2,-4096,4096),y=integer(L,3,-4096,4096);
+    const double color=luaL_checknumber(L,4);
+    if(!std::isfinite(color)||color<0||color>4294967295.0)luaL_argerror(L,4,"invalid RGBA color");
+    if(command_count==max_commands||size>1024||size>max_text-text_size)luaL_error(L,"text batch limit exceeded");
+    std::memcpy(text+text_size,value,size);
+    commands[command_count++]={2,x,y,0,0,static_cast<std::uint32_t>(color),text_size,static_cast<std::uint32_t>(size)};
+    text_size+=size;return 0;
 }
 int button(lua_State* L) {
     const char* name=luaL_checkstring(L,1);
@@ -84,13 +117,13 @@ EMSCRIPTEN_KEEPALIVE std::uint32_t game_heap_bytes(){return heap_bytes;}
 EMSCRIPTEN_KEEPALIVE std::uint32_t game_heap_peak(){return peak_heap_bytes;}
 EMSCRIPTEN_KEEPALIVE void game_init(){
     if(state)lua_close(state);
-    state=nullptr;module=-1;heap_bytes=peak_heap_bytes=0;buttons=command_count=0;error[0]=0;
+    state=nullptr;module=-1;heap_bytes=peak_heap_bytes=0;buttons=command_count=assets_size=text_size=0;error[0]=0;
     frame={1,0xff322015,-4096,-4096,0,0,0,0};
     if(!source_size||source_size>source_capacity){fail("invalid Luau source size");return;}
     state=lua_newstate(allocate,nullptr);
     if(!state){fail("cannot allocate Luau VM");return;}
     luaL_openlibs(state);
-    const luaL_Reg api[]={{"clear",clear},{"rect",rect},{"button",button},{"sound",sound},{nullptr,nullptr}};
+    const luaL_Reg api[]={{"clear",clear},{"rect",rect},{"button",button},{"sound",sound},{"graphics_assets",graphics_assets},{"draw_sprite",draw_sprite},{"draw_text",draw_text},{nullptr,nullptr}};
     luaL_register(state,"console",api);lua_setreadonly(state,-1,true);lua_pop(state,1);
     luaL_sandbox(state);luaL_sandboxthread(state);
     std::size_t size=0;
@@ -103,7 +136,12 @@ EMSCRIPTEN_KEEPALIVE void game_init(){
     module=lua_ref(state,-1);lua_pop(state,1);call("init");
 }
 EMSCRIPTEN_KEEPALIVE void game_update(std::uint32_t mask,std::uint32_t,double,double){buttons=mask;if(call("update",true))++frame.ticks;}
-EMSCRIPTEN_KEEPALIVE const Frame* game_draw(){command_count=0;call("draw");return &frame;}
+EMSCRIPTEN_KEEPALIVE const Frame* game_draw(){command_count=text_size=0;call("draw");return &frame;}
 EMSCRIPTEN_KEEPALIVE const Command* game_commands(){return commands;}
 EMSCRIPTEN_KEEPALIVE std::uint32_t game_command_count(){return command_count;}
+EMSCRIPTEN_KEEPALIVE std::uint32_t game_command_stride(){return sizeof(Command);}
+EMSCRIPTEN_KEEPALIVE const unsigned char* game_text(){return text;}
+EMSCRIPTEN_KEEPALIVE std::uint32_t game_text_size(){return text_size;}
+EMSCRIPTEN_KEEPALIVE const unsigned char* game_assets(){return assets;}
+EMSCRIPTEN_KEEPALIVE std::uint32_t game_assets_size(){return assets_size;}
 }

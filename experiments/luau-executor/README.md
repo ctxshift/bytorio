@@ -6,6 +6,8 @@ Question: can Luau and Odin cartridges run through the **same Odin player**, nat
 
 See [measured results](RESULTS.md) and [the numeric snapshot](results.json).
 
+The subsequent [batched drawing extension](BATCHING.md) preserves the original visuals while moving sprite and font expansion into the shared renderer. The original results above are the rectangle-path baseline.
+
 ## Reproduce
 
 From the repository root, with the existing Odin, Emscripten, CMake, Node, and Playwright prerequisites installed:

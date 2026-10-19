@@ -6,7 +6,7 @@ for(const platform of ['web','native']) {
     const files=platform==='web'?['player.html','player.js','policy.js','worker.js','runtime.wasm','game.wasm']:['player.exe','SDL3.dll','wasmtime.dll','game.wasm'];
     for(const file of files)await copyFile(`${source}/${file}`,`${target}/${file}`);
     await copyFile('build/luau-executor/luau-executor.wasm',`${target}/luau-executor.wasm`);
-    await copyFile('build/rpg/main.luau',`${target}/rpg.luau`);
+    await copyFile('build/rpg/batched.luau',`${target}/rpg.luau`);
     for(const file of await readdir(`${source}/licenses`))await copyFile(`${source}/licenses/${file}`,`${target}/licenses/${file}`);
     await copyFile('.tools/emsdk/upstream/emscripten/LICENSE',`${target}/licenses/emscripten.txt`);
     for(const [path,name] of [['libcxx/LICENSE.TXT','libcxx.txt'],['libcxxabi/LICENSE.TXT','libcxxabi.txt'],['libc/musl/COPYRIGHT','musl.txt']]) {

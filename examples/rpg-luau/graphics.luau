@@ -1,5 +1,7 @@
 -- Shared guest-side drawing helpers. Assets are bundled before this module.
 local graphics = {}
+local batched = console.draw_sprite ~= nil
+if batched then console.graphics_assets(assets.raster64) end
 function graphics.rect(x: number, y: number, w: number, h: number, color: number)
     console.rect(x, y, w, h, color)
 end
@@ -20,9 +22,11 @@ function graphics.image(rows, x: number, y: number, scale: number?)
     end
 end
 function graphics.sprite(id: number, x: number, y: number, scale: number?)
+    if batched then console.draw_sprite(id,x,y,scale or 1); return end
     graphics.image(assets.sprites[id+1], x, y, scale)
 end
 function graphics.text(value: string, x: number, y: number, color: number)
+    if batched then console.draw_text(value,x,y,color); return end
     local start = x
     for i = 1, #value do
         local c = string.sub(value, i, i)

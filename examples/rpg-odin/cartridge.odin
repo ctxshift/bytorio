@@ -3,6 +3,7 @@ package main
 import "base:runtime"
 import abi "../../runtime/odin/abi"
 import g "../../runtime/odin/graphics"
+import "assets"
 
 // Player ABI glue is separate from the gameplay module.
 frame: abi.Frame
@@ -23,6 +24,11 @@ frame: abi.Frame
 }
 @(export) game_commands :: proc "c" () -> u32 { return u32(uintptr(&g.commands)) }
 @(export) game_command_count :: proc "c" () -> u32 { return 0xffffffff if g.overflow else g.count }
+@(export) game_command_stride :: proc "c" () -> u32 { return 32 }
+@(export) game_text :: proc "c" () -> u32 { return u32(uintptr(&g.text_bytes)) }
+@(export) game_text_size :: proc "c" () -> u32 { return g.text_count }
+@(export) game_assets :: proc "c" () -> u32 { return u32(uintptr(&assets.raster)) }
+@(export) game_assets_size :: proc "c" () -> u32 { return u32(size_of(assets.raster)) }
 
 // Optional cartridge diagnostics for the development replay tool.
 inspection: [10]i32

@@ -1,4 +1,4 @@
-import { inspectGuest, readFrame, checkExecutor, loadSource, FRAME_BYTES } from './policy.js';
+import { inspectGuest, checkExecutor, loadSource, uploadGraphics, submitDrawing, rasterizeDrawing, FRAME_BYTES } from './policy.js';
 
 let game, runtime;
 let smoke = false;
@@ -16,29 +16,15 @@ async function fetchBytes(url) {
 }
 
 function submit() {
-  const record = readFrame(game);
-  const target = runtime.runtime_frame();
-  new Uint8Array(runtime.memory.buffer, target, FRAME_BYTES).set(record.bytes);
-  let count=0;
-  if (game.game_commands) {
-    if (typeof game.game_command_count !== 'function') throw new Error('Missing display list length.');
-    const offset = game.game_commands();
-    count=game.game_command_count();
-    const bytes = count * 20;
-    if (!Number.isInteger(count) || count < 0 || count > 16384 || !Number.isInteger(offset) || offset < 0 || offset > game.memory.buffer.byteLength - bytes) {
-      throw new Error('Invalid display list bounds.');
-    }
-    new Uint8Array(runtime.memory.buffer, runtime.runtime_commands(), bytes).set(new Uint8Array(game.memory.buffer, offset, bytes));
-  }
-  return {record,count};
+  return submitDrawing(game,runtime);
 }
-function rasterize(count) {
-  if (runtime.runtime_render() !== 1) throw new Error('Invalid frame command.');
-  if (runtime.runtime_render_commands(count) !== 1) throw new Error('Invalid display list command.');
+function rasterize(drawing) {
+  rasterizeDrawing(runtime,drawing);
 }
 function frame() {
-  const {record,count}=submit();
-  rasterize(count);
+  const drawing=submit();
+  const {record}=drawing;
+  rasterize(drawing);
   const pixels = new Uint8ClampedArray(runtime.memory.buffer, runtime.runtime_pixels(), 384 * 216 * 4).slice();
   lastTick = record.ticks;
   return { pixels: pixels.buffer, ticks: record.ticks, sounds: record.sounds, spriteX: record.spriteX,
@@ -68,6 +54,7 @@ self.onmessage = async ({ data }) => {
       if(source)loadSource(game,source);
       game.game_init();
       checkExecutor(game);
+      uploadGraphics(game,runtime);
       const initialized=performance.now();
       smoke = !!data.smoke;
       const sample = new Float32Array(runtime.memory.buffer, runtime.runtime_sample(), 16000).slice();
@@ -91,8 +78,8 @@ self.onmessage = async ({ data }) => {
         game.game_init();checkExecutor(game);
         for(const mask of data.masks) {
           const t0=performance.now();game.game_update(mask,0,0,0);
-          const t1=performance.now();const {record,count}=submit();
-          const t2=performance.now();rasterize(count);
+          const t1=performance.now();const drawing=submit();const {record}=drawing;
+          const t2=performance.now();rasterize(drawing);
           const t3=performance.now();
           new Uint8Array(runtime.memory.buffer,runtime.runtime_pixels(),384*216*4).slice();
           const t4=performance.now();

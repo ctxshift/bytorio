@@ -7,7 +7,7 @@ import {cpus,platform,arch,release} from 'node:os';
 import {once} from 'node:events';
 import {chromium} from 'playwright';
 import {serve} from '../../tools/serve.mjs';
-import {readFrame,loadSource,checkExecutor} from '../../runtime/odin/web/policy.js';
+import {loadSource,checkExecutor,uploadGraphics,submitDrawing,rasterizeDrawing} from '../../runtime/odin/web/policy.js';
 
 const root='build/unified-player',out=`${root}/benchmark`;
 await mkdir(out,{recursive:true});
@@ -36,14 +36,12 @@ async function reference(language,inputs) {
     const runtime=(await WebAssembly.instantiate(runtimeBytes,imports)).instance.exports;
     game._initialize?.();if(language==='luau')loadSource(game,source);
     game.game_init();checkExecutor(game);runtime.runtime_init();
+    uploadGraphics(game,runtime);
     const frames=[];
     for(const mask of inputs) {
         game.game_update(mask,0,0,0);
-        const record=readFrame(game),count=game.game_command_count();
-        assert.ok(count>0&&count<=16384);
-        new Uint8Array(runtime.memory.buffer,runtime.runtime_frame(),40).set(record.bytes);
-        new Uint8Array(runtime.memory.buffer,runtime.runtime_commands(),count*20).set(new Uint8Array(game.memory.buffer,game.game_commands(),count*20));
-        assert.equal(runtime.runtime_render(),1);assert.equal(runtime.runtime_render_commands(count),1);
+        const drawing=submitDrawing(game,runtime),{record}=drawing;
+        rasterizeDrawing(runtime,drawing);
         frames.push({hash:runtime.runtime_hash()>>>0,sounds:record.sounds});
     }
     if(language==='odin') {
@@ -53,6 +51,9 @@ async function reference(language,inputs) {
     return frames;
 }
 const expected=await reference('odin',masks),defeatExpected=await reference('odin',defeat);
+const golden=JSON.parse(await readFile('tests/rpg/parity.json','utf8'));
+assert.deepEqual(expected,golden.quest,'batching preserves the original quest frames');
+assert.deepEqual(defeatExpected,golden.defeat,'batching preserves the original defeat frames');
 assert.deepEqual(await reference('luau',masks),expected);
 assert.deepEqual(await reference('luau',defeat),defeatExpected);
 
