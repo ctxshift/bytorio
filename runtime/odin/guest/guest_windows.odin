@@ -1,6 +1,7 @@
 package guest
 
 import abi "../abi"
+import w "../resource_protocol"
 import resources "../resources"
 import "base:runtime"
 import "core:fmt"
@@ -540,7 +541,7 @@ initialize :: proc(game: ^Game) -> bool {
 
             return false
         }
-        if result[0].kind != 0 || (result[0].of.i32 < 1 || result[0].of.i32 > 3) {
+        if result[0].kind != 0 || (result[0].of.i32 < 1 || result[0].of.i32 > w.version) {
 
             return fail(game, "unsupported internal resource protocol")
         }

@@ -35,18 +35,21 @@ const common = [
 ];
 const build = (args) => run(odin, ["build", ...args], { stdio: "inherit" });
 const wasm = ["-target:freestanding_wasm32", "-no-entry-point", ...common];
+// The shared real-time mixer needs production optimization even for a small guest.
+const hostFlags = common.map((flag) => (flag.startsWith("-o:") ? "-o:speed" : flag));
+const hostWasm = ["-target:freestanding_wasm32", "-no-entry-point", ...hostFlags];
 build([source, ...wasm, `-out:${web}/game.wasm`, "-extra-linker-flags:--max-memory=8388608"]);
 const compilerRoot = dirname(odin);
 if (target !== "native") {
   build([
     "runtime/odin/web",
-    ...wasm,
+    ...hostWasm,
     `-out:${web}/runtime.wasm`,
     `-extra-linker-flags:--max-memory=${limits.maxRuntimeBytes}`,
   ]);
   build([
     "runtime/odin/audio_web",
-    ...wasm,
+    ...hostWasm,
     `-out:${web}/audio.wasm`,
     `-extra-linker-flags:--max-memory=${limits.maxAudioRuntimeBytes}`,
   ]);
@@ -73,7 +76,7 @@ if (target !== "web") {
   const dependency = dependencyRoot();
   build([
     "runtime/odin/native",
-    ...common,
+    ...hostFlags,
     `-out:${native}/player.exe`,
     `-collection:deps=${dependency}`,
   ]);

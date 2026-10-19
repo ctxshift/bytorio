@@ -17,7 +17,7 @@ export function configureResources(game, runtime) {
     return;
   }
   const protocol = game.game_resource_protocol();
-  if (![1, 2, 3].includes(protocol) || !runtime.runtime_resource_reset) {
+  if (![1, 2, 3, 4].includes(protocol) || !runtime.runtime_resource_reset) {
     throw new Error("Unsupported internal resource protocol.");
   }
   for (const name of [

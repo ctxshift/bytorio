@@ -2,7 +2,7 @@
 
 Both SDKs expose the same 48 kHz stereo mixer. The native player delivers its
 output through SDL; the browser runs the same Odin DSP in an independent
-AudioWorklet. These APIs use internal resource transport version 3 and require
+AudioWorklet. These APIs use internal resource transport version 4 and require
 matching players from this checkout. SDK 0.2.0 / ABI 2 / `resource-av-1` remain
 unpublished until the remaining conformance and negotiation work in 4e.
 
@@ -84,8 +84,10 @@ scheduling allowance, not measured speaker latency or a guarantee for all device
 
 Accepted sample playback owns a snapshot of the source **at the play command**.
 Later `audio.write` or destruction does not alter scheduled/playing sound.
-Buffer reuse after a command is safe. Live scheduled source edits, synthesis,
-instruments, modulation and effects belong to 4d.
+The [synthesis API](synthesis.md) explicitly opts samples into live shared source
+storage with scheduled edits; its lifetime rules then apply. Buffer reuse after
+a command is safe. Milestone 4d now implements live scheduled source edits,
+synthesis, instruments, modulation and effects.
 
 Streams contain stereo 48 kHz PCM. `write_stream(stream, at, pcm)` reserves a
 nonoverlapping absolute interval `[at, at+frames)`. Gaps produce silence while
@@ -108,7 +110,7 @@ cancels its directly routed voices and future plays targeting that generation.
 | Browser packet transfers | 4 credits with aggregate capacity bounded to one maximum packet |
 | Device block / rate | Up to 2,048 frames per render call; 8,000–192,000 Hz |
 | Completion ring / per-update delivery | 64 / 16 |
-| Fixed portable audio resource charge | 52,369,936 bytes, plus ordinary sample/bus/stream resources |
+| Fixed portable audio resource charge | 55,463,952 bytes, plus ordinary sample/bus/stream resources |
 
 The fixed charge reserves worst-case controller/DSP metadata, both PCM arenas,
 wire arenas, transfer credits, feedback and device scratch. Native pays the same

@@ -183,6 +183,15 @@ initial 50 ms lead target before accepting it as a shipping requirement.
 
 ### 4d. Mutable synthesis and effects
 
+Implemented experimentally: [both synthesis SDKs](../sdk/synthesis.md), typed
+acyclic instrument/effects graphs, per-voice state, scheduled partial source
+edits, audio-rate modulation, ADSR/LFO, seeded noise, filters, delay and bus
+chains. `mise run test:synthesis` builds the matching interactive tone cartridges
+and full 320-node workload for native/browser capture, timing and memory checks.
+Independent source/envelope/effect references and malformed-packet rollback
+checks complement cross-host PCM comparisons. See [verification](synthesis-measurements.md).
+Minimum-device budgets and public profile publication remain 4e gates.
+
 - Add partial sample/wavetable writes, independent voice state and live parameter
   ramps with exact logical-frame application. Preserve old versions already used
   by accepted submissions; all retained versions count against budgets.

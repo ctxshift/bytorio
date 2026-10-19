@@ -1,27 +1,36 @@
 # Typed graphics and audio resources
 
-Status: **proposed profile; milestones 4a–4c implemented experimentally**, 2026-10-19. Proposed SDK 0.2.0,
+Status: **proposed profile; milestones 4a–4d implemented experimentally**, 2026-10-19. Proposed SDK 0.2.0,
 ABI 2, profile `resource-av-1`. The implemented SDK 0.1.0 / ABI 1 contract remains
 [unchanged](cartridge-spec.md). This document defines the intended public
 interface and observable behavior; wire opcode numbers and descriptor layouts
 must be generated and tested before this profile ships.
 
-The [internal resource implementation](../sdk/resources.md) and
-[software graphics reference](../sdk/graphics.md) and [PCM mixer](../sdk/audio.md)
-support 4a–4c through both SDKs
+The [internal resource implementation](../sdk/resources.md),
+[software graphics reference](../sdk/graphics.md), [PCM mixer](../sdk/audio.md)
+and [synthesis/effects](../sdk/synthesis.md) support 4a–4d through both SDKs
 and hosts. This experimental transport does not publish the complete profile;
-synthesis, full negotiated ABI and profile packaging remain later work.
+full negotiated ABI and profile packaging remain later work.
 
 The 4c slice snapshots sample contents at each accepted play command. Source
-writes affect later plays; scheduled edits to an active source are 4d. Its
-8 MiB immutable PCM arena is page allocated by the producer; rendering returns
+writes affect later plays; the explicit scheduled edits from 4d opt a source into
+live storage. Its 8 MiB PCM/history arena is page allocated by the producer; rendering returns
 leases through a fixed queue. Streams allow 64 chunks / 8,192 frames each.
 Controller/DSP state, wire/transfer arenas and feedback reserve a portable
-52,369,936-byte charge on either host, plus ordinary resource storage. This
+55,463,952-byte charge on either host, plus ordinary resource storage. This
 conservative reservation and the 50 ms lead remain provisional. Delivery uses
 SDL callbacks and transferable AudioWorklet buffers, with a maximum 2,048-frame
 render call; larger native callback requests are split. See the
 [measurement method and remaining gates](audio-measurements.md).
+
+Protocol 4 implements the synthesis slice with fixed typed DAGs and one mutable
+source store shared by instrument instances. Explicit `edit_sample` opts PCM
+playback into that live store; ordinary 4c snapshot playback otherwise remains
+unchanged. Definitions retain sources; per-note and bus history is reserved in
+the same 8 MiB arena before publication. Effects topology changes use the current
+simulation frame, with future controls/edits scheduled independently. Note pitches
+are explicit Hz relative to a 440 Hz definition root. Detailed experimental
+signatures and numerical behavior are in the [SDK reference](../sdk/synthesis.md).
 
 The console provides low-level control through typed data, resource handles,
 ordered rendering and scheduled audio. Games manipulate their own bytes and
@@ -294,11 +303,11 @@ domains in the DSP descriptor schema before implementation is accepted.
 
 Games explicitly select one of 16 `Voice` slots. `play_sample` accepts rate,
 gain, pan, loop and bus; `play_stream` selects a queued PCM stream and bus;
-`note_on` accepts instrument, note, velocity and bus.
+`note_on` accepts instrument, explicit frequency in Hz, velocity and bus.
 Replacing a playing slot occurs at the requested frame and resets its state;
-there is no hidden allocation or voice stealing. `release` starts the instrument
-release envelope; `stop` silences immediately. Sample release uses a specified
-fade length. Zero-duration changes may click: smoothing is an explicit ramp or
+there is no hidden allocation or voice stealing. `note_off` starts the instrument
+release envelope; `stop` silences immediately. The existing `release` call uses
+an explicit fade length for either PCM or instrument voices. Zero-duration changes may click: smoothing is an explicit ramp or
 instrument envelope, not an undocumented delay. Controls address typed voice,
 instrument-instance or bus parameters and reject parameters for the wrong type.
 Mix voices in slot order and buses in a defined child order; clamp master output
@@ -356,7 +365,10 @@ and callback behavior; add synthesis only after the delivery path passes.
 
 ## 6. Equivalent SDK surfaces
 
-These are proposed calls, not available in SDK 0.1.0. Use `console.gfx`,
+These describe the target resource interface. The experimental 4a–4d calls are
+available through matching checkout SDKs/players; their exact implemented
+signatures are documented in the SDK references above. The full negotiated
+profile is not published in SDK 0.1.0. Use `console.gfx`,
 `console.audio` and `console.data` in Luau, and the corresponding `sdk:gfx`,
 `sdk:audio` and `sdk:data` Odin packages. Descriptors use named fields, explicit
 units and tagged enum choices. Odin wraps handle kinds in distinct types; Luau
@@ -379,13 +391,13 @@ exports matching opaque types checked by the runtime as well as its analyzer.
 | Resolve screen | `gfx.present(image,opts)` | `gfx.present(image,opts)` |
 | Pixel readback | `gfx.readback(target,rect)` | `gfx.readback(target,rect)` |
 | Consume readback | `gfx.poll(ticket)` | `gfx.poll(ticket)`; tagged pending/ready result |
-| Audio storage/graph | `audio.sample(desc,pcm)`, `audio.instrument(desc)` | Same operations with typed descriptors/slices |
+| Audio storage/graph | `audio.sample(desc,pcm)`, `audio.wavetable(desc,pcm)`, `audio.instrument(nodes)` | Same operations with typed descriptors/slices |
 | Voices/routing | `audio.voice(index)`, `audio.master()`, `audio.bus(desc)` | Same operations; typed voice/bus handles |
-| Explicit playback | `audio.play_sample(voice,sample,opts)`, `audio.note_on(voice,inst,note,opts)` | Same operations; typed voice/instrument handles |
-| PCM queue | `audio.stream(desc)`, `audio.play_stream(voice,stream,opts)` | Same operations; typed stream handle |
-| Scheduled controls | `audio.control(target,param,value,opts)` | Same operation; typed parameter enum |
-| Mutable audio | `audio.write(source,frames,pcm,opts)` | Same operation; explicit frame range and time |
-| Release/stop | `audio.release(voice,opts)`, `audio.stop(voice,opts)` | Same operations |
+| Explicit playback | `audio.play_sample(voice,sample,opts)`, `audio.note_on(voice,inst,frequency_hz,opts)` | Same operations; typed voice/instrument handles |
+| PCM queue | `audio.stream()`, `audio.write_stream(stream,at,pcm)`, `audio.play_stream(voice,stream,opts)` | Same operations; typed stream handle |
+| Scheduled controls | `audio.node_control(voice,inst,node,param,value,at,ramp_frames)`, `audio.effect_control(bus,node,param,value,at,ramp_frames)` | Same operations; typed parameter enum |
+| Mutable audio | `audio.edit_sample(sample,first,pcm,at)`, `audio.edit_wavetable(table,first,pcm,at)` | Same operations; explicit source-frame offset and time |
+| Release/stop | `audio.note_off(voice,at)`, `audio.release(voice,fade_frames,at)`, `audio.stop(voice,at)` | Same operations |
 | Clock/status | `audio.time()`, `audio.status()`, `console.capabilities()` | Same queries; integer clock and read-only snapshots |
 | Free resource | `gfx.destroy(handle)` / `audio.destroy(handle)` | Same operations |
 
@@ -395,11 +407,11 @@ be whole numbers. Resource counts/sizes and capabilities are read-only metadata.
 Memory allocation strategy inside the game remains language-specific; renderer,
 DSP features, synchronization and failure behavior do not.
 
-For `audio.write`, ranges address source frames for samples/wavetables, and
-absolute 48 kHz logical frames for streams; the typed source determines which
-rule applies. `opts.at` is an absolute mixer-frame time for a sample/wavetable
-edit. Stream writes are queued for their frame positions rather than applying
-an additional edit timestamp. SDK descriptor names expose these units explicitly.
+For `edit_sample` and `edit_wavetable`, `first` addresses source frames and the
+PCM buffer declares the replacement frame count. `at` is an absolute 48 kHz
+logical frame. Stream writes address absolute logical intervals instead of
+source-frame offsets. Ordinary `audio.write` still initializes/updates a sample
+before live binding using its explicit frame range. SDK names expose these units.
 
 ## 7. Initial limits and verification gates
 

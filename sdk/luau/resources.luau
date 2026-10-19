@@ -15,6 +15,8 @@ export type Bus = { _resourceKind: "bus" }
 export type Stream = { _resourceKind: "stream" }
 export type Voice = { _voice: "voice" }
 export type Sample = { _resourceKind: "sample" }
+export type Wavetable = { _resourceKind: "wavetable" }
+export type Instrument = { _resourceKind: "instrument" }
 export type PixelBuffer = {
     read format: "index8" | "rgba8" | "stencil8",
     read width: number,
@@ -38,6 +40,8 @@ type Handle =
     | Readback
     | Bus
     | Stream
+    | Wavetable
+    | Instrument
 type Record = { session: number, id: number, kind: string, format: number, channels: number }
 local records: { [Handle]: Record } = setmetatable({}, { __mode = "k" }) :: any
 local slots: { [number]: { generation: number, live: boolean } } = {}
@@ -127,9 +131,15 @@ local function destroy(handle: Handle, kind: string)
             then schema.op_destroy_texture
             elseif kind == "sample" then schema.op_destroy_sample
             elseif kind == "bus" or kind == "stream" then schema.op_audio_destroy
+            elseif kind == "wavetable" or kind == "instrument" then schema.op_audio_destroy_synth
             else schema.op_destroy_resource,
         record.id,
-        if kind == "bus" or kind == "stream" then {} else nil
+        if kind == "bus"
+                or kind == "stream"
+                or kind == "wavetable"
+                or kind == "instrument"
+            then {}
+            else nil
     )
     results[record.id] = nil
     local slot = slots[record.id % schema.handleGenerationStride]
@@ -685,6 +695,306 @@ local function voiceIndex(voice: Voice): number
     local record = voiceRecords[voice]
     assert(record and record.session == session, "stale or invalid voice")
     return record.index
+end
+export type NodeKind =
+    "input"
+    | "sample"
+    | "wavetable"
+    | "noise"
+    | "constant"
+    | "mix"
+    | "gain"
+    | "adsr"
+    | "lfo"
+    | "filter"
+    | "delay"
+    | "pan"
+    | "output"
+export type Parameter =
+    "frequency"
+    | "phase"
+    | "wave"
+    | "rate"
+    | "gain"
+    | "secondary_gain"
+    | "depth"
+    | "pan"
+    | "cutoff"
+    | "resonance"
+    | "delay_frames"
+    | "feedback"
+    | "wet"
+    | "attack"
+    | "decay"
+    | "sustain"
+    | "release"
+export type SynthNode = {
+    kind: NodeKind,
+    input: number?,
+    other: number?,
+    frequency_input: number?,
+    phase_input: number?,
+    gain_input: number?,
+    source: (Sample | Wavetable)?,
+    frequency_hz: number?,
+    gain: number?,
+    secondary_gain: number?,
+    rate: number?,
+    depth: number?,
+    sustain: number?,
+    cutoff_hz: number?,
+    wet: number?,
+    value: number?,
+    pan: number?,
+    resonance: number?,
+    feedback: number?,
+    wave: number?,
+    phase_cycles: number?,
+    fm_depth_hz: number?,
+    pm_depth_cycles: number?,
+    attack_frames: number?,
+    decay_frames: number?,
+    release_frames: number?,
+    max_delay_frames: number?,
+    delay_frames: number?,
+    loop_start: number?,
+    loop_end: number?,
+    seed: number?,
+    loop: boolean?,
+    filter_mode: ("lowpass" | "bandpass" | "highpass")?,
+}
+export type NoteOptions = { at: number?, velocity: number?, pan: number?, bus: Bus? }
+local nodeKinds: { [string]: number } = {
+    input = schema.node_input,
+    sample = schema.node_sample,
+    wavetable = schema.node_wavetable,
+    noise = schema.node_noise,
+    constant = schema.node_constant,
+    mix = schema.node_mix,
+    gain = schema.node_gain,
+    adsr = schema.node_adsr,
+    lfo = schema.node_lfo,
+    filter = schema.node_filter,
+    delay = schema.node_delay,
+    pan = schema.node_pan,
+    output = schema.node_output,
+}
+local parameters: { [string]: number } = {
+    frequency = schema.param_frequency,
+    phase = schema.param_phase,
+    wave = schema.param_wave,
+    rate = schema.param_rate,
+    gain = schema.param_gain,
+    secondary_gain = schema.param_secondary_gain,
+    depth = schema.param_depth,
+    pan = schema.param_pan,
+    cutoff = schema.param_cutoff,
+    resonance = schema.param_resonance,
+    delay_frames = schema.param_delay_frames,
+    feedback = schema.param_feedback,
+    wet = schema.param_wet,
+    attack = schema.param_attack,
+    decay = schema.param_decay,
+    sustain = schema.param_sustain,
+    release = schema.param_release,
+}
+local function encodeGraph(nodes: { SynthNode }, bus: boolean): buffer
+    integer(#nodes, 1, if bus then schema.maxBusNodes else schema.maxInstrumentNodes)
+    local bytes = buffer.create(schema.graphHeaderBytes + #nodes * schema.graphNodeBytes)
+    buffer.writeu32(bytes, 0, #nodes)
+    local history = 0
+    local function input(value: number?): number
+        return if value == nil then schema.noNode else integer(value, 0, #nodes - 1)
+    end
+    for i, n in nodes do
+        local at = schema.graphHeaderBytes + (i - 1) * schema.graphNodeBytes
+        buffer.writeu32(bytes, at, assert(nodeKinds[n.kind], "unknown node kind"))
+        buffer.writeu32(bytes, at + 4, input(n.input))
+        buffer.writeu32(bytes, at + 8, input(n.other))
+        local source = 0
+        if n.kind == "sample" or n.kind == "wavetable" then
+            assert(n.source, "source node requires a handle")
+            source = check(n.source, n.kind).id
+        end
+        buffer.writeu32(bytes, at + 12, source)
+        buffer.writeu32(bytes, at + 16, input(n.frequency_input))
+        buffer.writeu32(bytes, at + 20, input(n.phase_input))
+        buffer.writeu32(bytes, at + 24, input(n.gain_input))
+        local flags = 0
+        local p = { 0, 0, 0, 0, 0, 0, 0, 0 }
+        if n.kind == "wavetable" then
+            p[1], p[2], p[3], p[4], p[5] =
+                n.frequency_hz or 440,
+                n.wave or 0,
+                n.fm_depth_hz or 0,
+                n.pm_depth_cycles or 0,
+                n.phase_cycles or 0
+        elseif n.kind == "sample" then
+            p[1], p[2], p[3] = n.rate or 1, n.loop_start or 0, n.loop_end or 0
+            flags = if n.loop then 1 else 0
+        elseif n.kind == "noise" then
+            flags = integer(n.seed or 1, 1, c.U32_MAX)
+        elseif n.kind == "constant" then
+            p[1] = n.value or 0
+        elseif n.kind == "mix" then
+            p[1], p[2] = n.gain or 1, n.secondary_gain or 1
+        elseif n.kind == "gain" then
+            p[1], p[2] = n.gain or 1, n.depth or 1
+        elseif n.kind == "adsr" then
+            p[1], p[2], p[3], p[4] =
+                n.attack_frames or 0, n.decay_frames or 0, n.sustain or 1, n.release_frames or 0
+        elseif n.kind == "lfo" then
+            p[1], p[2] = n.frequency_hz or 5, n.phase_cycles or 0
+        elseif n.kind == "filter" then
+            p[1], p[2] = n.cutoff_hz or 1000, n.resonance or 0
+            flags = if n.filter_mode == "bandpass"
+                then 1
+                elseif n.filter_mode == "highpass" then 2
+                else 0
+        elseif n.kind == "delay" then
+            flags = integer(n.max_delay_frames or 0, 1, schema.maxDelayFrames)
+            p[1], p[2], p[3] = n.delay_frames or flags, n.feedback or 0, n.wet or 0.5
+            history += flags * 2
+        elseif n.kind == "pan" then
+            p[1] = n.pan or 0
+        end
+        buffer.writeu32(bytes, at + 28, flags)
+        for j, value in p do
+            buffer.writeu32(bytes, at + 32 + (j - 1) * 4, floatWord(value, -1000000, 1000000))
+        end
+    end
+    integer(history, 0, schema.maxAudioSnapshotBytes / 4)
+    buffer.writeu32(bytes, 4, history)
+    return bytes
+end
+function audio.wavetable(desc: { frames: number, waves: number }, pcm: PCMBuffer): Wavetable
+    audioReady()
+    assert(
+        pcm.channels == 1
+            and pcm.frames == desc.frames * desc.waves
+            and buffer.len(pcm.samples) == pcm.frames * 4,
+        "invalid wavetable buffer"
+    )
+    local h = reserve("wavetable", schema.format_f32, 1)
+    emit(schema.op_audio_wavetable, records[h].id, { desc.frames, desc.waves }, pcm.samples)
+    return h :: Wavetable
+end
+function audio.instrument(nodes: { SynthNode }): Instrument
+    audioReady()
+    local graph = encodeGraph(nodes, false)
+    local h = reserve("instrument", 0, 0)
+    emit(schema.op_audio_instrument, records[h].id, {}, graph)
+    return h :: Instrument
+end
+local function editSource(
+    target: Sample | Wavetable,
+    kind: string,
+    first: number,
+    pcm: PCMBuffer,
+    at: number?
+)
+    audioReady()
+    local record = check(target, kind)
+    local lo, hi = eventTime(at)
+    integer(first, 0, schema.maxResourceBytes / 4)
+    integer(pcm.frames, 1, schema.maxPayload / 4)
+    assert(buffer.len(pcm.samples) == pcm.frames * pcm.channels * 4, "invalid edit buffer")
+    emit(schema.op_audio_edit, record.id, { lo, hi, first, pcm.frames }, pcm.samples)
+end
+function audio.edit_sample(target: Sample, first: number, pcm: PCMBuffer, at: number?)
+    editSource(target, "sample", first, pcm, at)
+end
+function audio.edit_wavetable(target: Wavetable, first: number, pcm: PCMBuffer, at: number?)
+    editSource(target, "wavetable", first, pcm, at)
+end
+function audio.note_on(
+    voice: Voice,
+    instrument: Instrument,
+    frequency_hz: number,
+    opts: NoteOptions?
+)
+    local index = voiceIndex(voice)
+    local record = check(instrument, "instrument")
+    local options: NoteOptions = opts or {}
+    local lo, hi = eventTime(options.at)
+    emit(schema.op_audio_note_on, index, {
+        lo,
+        hi,
+        record.id,
+        id(options.bus, "bus"),
+        floatWord(frequency_hz, 1, 20000),
+        floatWord(options.velocity or 1, 0, 1),
+        floatWord(options.pan or 0, -1, 1),
+    })
+end
+function audio.note_off(voice: Voice, at: number?)
+    local index = voiceIndex(voice)
+    local lo, hi = eventTime(at)
+    emit(schema.op_audio_note_off, index, { lo, hi })
+end
+function audio.node_control(
+    voice: Voice,
+    instrument: Instrument,
+    node: number,
+    parameter: Parameter,
+    value: number,
+    at: number?,
+    ramp_frames: number?
+)
+    local index = voiceIndex(voice)
+    local record = check(instrument, "instrument")
+    local lo, hi = eventTime(at)
+    emit(schema.op_audio_node_control, index, {
+        lo,
+        hi,
+        record.id,
+        integer(node, 0, schema.maxInstrumentNodes - 1),
+        assert(parameters[parameter], "unknown parameter"),
+        floatWord(value, -schema.maxDelayFrames, schema.maxDelayFrames),
+        integer(ramp_frames or 0, 0, schema.audioHorizonFrames),
+        0,
+    })
+end
+function audio.effects(bus: Bus, nodes: { SynthNode }, at: number?)
+    audioReady()
+    local record = check(bus, "bus")
+    local lo, hi = eventTime(at)
+    emit(
+        schema.op_audio_effects,
+        record.id,
+        { lo, hi },
+        if #nodes == 0 then nil else encodeGraph(nodes, true)
+    )
+end
+function audio.effect_control(
+    bus: Bus,
+    node: number,
+    parameter: Parameter,
+    value: number,
+    at: number?,
+    ramp_frames: number?
+)
+    audioReady()
+    local record = check(bus, "bus")
+    local lo, hi = eventTime(at)
+    emit(schema.op_audio_node_control, record.id, {
+        lo,
+        hi,
+        0,
+        integer(node, 0, schema.maxBusNodes - 1),
+        assert(parameters[parameter], "unknown parameter"),
+        floatWord(value, -schema.maxDelayFrames, schema.maxDelayFrames),
+        integer(ramp_frames or 0, 0, schema.audioHorizonFrames),
+        1,
+    })
+end
+function audio.destroy_wavetable(target: Wavetable)
+    audioReady()
+    destroy(target, "wavetable")
+end
+function audio.destroy_instrument(target: Instrument)
+    audioReady()
+    destroy(target, "instrument")
 end
 function audio.time(): number
     return audioLogicalFrame

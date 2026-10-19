@@ -1,8 +1,8 @@
-# Experimental typed resources: milestones 4a–4c
+# Experimental typed resources: milestones 4a–4d
 
 The current native player and browser Worker support an **internal development
-transport**, version 3, for typed resource ownership, explicit software
-graphics and scheduled PCM audio. Version-1/2 guests remain supported with their original
+transport**, version 4, for typed resource ownership, explicit software
+graphics and scheduled PCM/synthesized audio. Version-1/2/3 guests remain supported with their original
 capabilities. These implement slices of [the resource proposal](../docs/resource-av-spec.md).
 It does not advertise SDK 0.2.0, ABI 2, or `resource-av-1`; the existing SDK 0.1.0 /
 ABI 1 cartridge contract and PNG readers are unchanged. These experimental calls
@@ -13,6 +13,8 @@ Resources can be created, uploaded, edited and destroyed. [Explicit graphics](gr
 now renders textures and targets with passes, composition and readback.
 [PCM audio](audio.md) adds explicit voices, buses, loops, ramps and bounded
 streams. Existing sprite, text and sound-cue calls work.
+[Synthesis/effects](synthesis.md) add typed graphs, instruments, wavetables,
+scheduled source edits and independent voice/bus DSP state.
 
 ## SDK operations
 
@@ -79,7 +81,9 @@ later work. Version 3 inserts a 448-byte audio status/completion block after the
 readback records, moving payload data from byte 144 to byte 592. It carries up to
 16 voice completions per update. Input still uses the existing arguments.
 
-Before init, the player checks `game_resource_protocol()` (1, 2 or 3) and configures a
+Version 4 adds synthesis commands and graph descriptors with the same mailbox.
+
+Before init, the player checks `game_resource_protocol()` (1–4) and configures a
 nonzero fresh session with `game_resource_configure(session)`. The version fixes
 the supported operations and limits; a mismatch is rejected. After init and
 **every update**, the host calls `game_commit()` then `game_commit_size()`, copies
@@ -103,6 +107,9 @@ Audio operations use opcodes 32–41 and 32-byte descriptors; audio destruction
 also requires that descriptor, filled with zeroes. Absolute times use low/high
 u32 words. Sample loops use an additional 8-byte source-frame range. The schema
 defines opcode-specific layouts; [audio.md](audio.md) defines units and timing.
+Synthesis uses public opcodes 42–49, fixed 64-byte typed nodes and a 16-byte graph
+header. The separate prepared audio queue translates source creation/destruction
+to internal opcodes 50/51; those are rejected in guest resource packets.
 
 The registry simulates metadata and prepares copy-on-write allocations before
 publication. Failure retains the previous registry, sequence and bytes; temporary

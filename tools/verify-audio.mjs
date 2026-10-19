@@ -18,9 +18,15 @@ import {
   readFrame,
 } from "../runtime/odin/web/policy.js";
 
-const root = resolve("build/audio-verification", randomUUID());
+const synthesis = process.argv.includes("--synthesis");
+const stress = process.argv.includes("--stress");
+const expectedCompletions = synthesis ? (stress ? 0 : 4) : 4;
+const root = resolve(
+  synthesis ? "build/synthesis-verification" : "build/audio-verification",
+  randomUUID(),
+);
 await mkdir(root, { recursive: true });
-function run(exe, args, env = {}) {
+function run(exe, args, env = {}, diagnostics = false) {
   const result = spawnSync(exe, args, {
     encoding: "utf8",
     timeout: 120000,
@@ -28,7 +34,7 @@ function run(exe, args, env = {}) {
     env: { ...process.env, ...env },
   });
   assert.equal(result.status, 0, result.stdout + result.stderr || String(result.error));
-  return result.stdout;
+  return result.stdout + (diagnostics ? result.stderr : "");
 }
 const deps = dependencyRoot();
 run(tool("odin"), [
@@ -40,15 +46,27 @@ run(tool("odin"), [
 ]);
 await copyFile(resolve(deps, "wasmtime.dll"), resolve(root, "wasmtime.dll"));
 await copyFile(resolve(toolRoot("odin"), "vendor/sdl3/SDL3.dll"), resolve(root, "SDL3.dll"));
-const report = { schedulingLeadFrames: limits.audioLeadFrames, rates: {}, device: {}, worklet: {} };
+const report = {
+  synthesis,
+  stress,
+  schedulingLeadFrames: limits.audioLeadFrames,
+  rates: {},
+  device: {},
+  worklet: {},
+};
 let packetReference, pcmReference;
 const projects = {};
-run(tool("odin"), ["test", "tests/audio", `-out:${resolve(root, "mixer-tests.exe")}`]);
+await writeFile(
+  resolve(root, "unit.log"),
+  run(tool("odin"), ["test", "tests/audio", `-out:${resolve(root, "mixer-tests.exe")}`], {}, true),
+);
 for (const language of ["odin", "luau"]) {
   const project = resolve(root, language);
   await createProject(project, language);
   await copyFile(
-    `tests/audio/cartridges/game.${language}`,
+    synthesis
+      ? `tests/synthesis/${stress ? "stress" : "cartridges"}/game.${language}`
+      : `tests/audio/cartridges/game.${language}`,
     resolve(project, `src/main.${language}`),
   );
   const manifest = JSON.parse(await readFile(resolve(project, "console.json")));
@@ -97,7 +115,75 @@ for (const language of ["odin", "luau"]) {
     return { game, runtime, resourcePacket };
   }
   const { runtime: exporting, resourcePacket } = await prepare();
-  if (language === "odin") {
+  if (language === "odin" && synthesis && !stress) {
+    const find = (opcode, occurrence = 0) => {
+      let seen = 0;
+      for (let i = 0; i < resourcePacket.readUInt32LE(32); i++) {
+        const command = limits.headerBytes + i * limits.commandBytes;
+        if (resourcePacket.readUInt16LE(command) === opcode && seen++ === occurrence) {
+          const payload = resourcePacket.readUInt32LE(44);
+          return {
+            command,
+            args: payload + resourcePacket.readUInt32LE(command + 12),
+            data: payload + resourcePacket.readUInt32LE(command + 20),
+          };
+        }
+      }
+      throw new Error(`Missing synthesis opcode ${opcode}`);
+    };
+    const wave = find(limits.op_audio_wavetable);
+    const graph = find(limits.op_audio_instrument).data;
+    const node = (index) => graph + limits.graphHeaderBytes + index * limits.graphNodeBytes;
+    const mutations = [
+      ["wave size", (b) => b.writeUInt32LE(31, wave.args)],
+      ["wave count", (b) => b.writeUInt32LE(limits.maxWaves + 1, wave.args + 4)],
+      ["wave NaN", (b) => b.writeUInt32LE(0x7fc00000, wave.data)],
+      ["wave amplitude", (b) => b.writeFloatLE(2, wave.data)],
+      ["forward edge", (b) => b.writeUInt32LE(4, node(4) + 16)],
+      ["audio/control port", (b) => b.writeUInt32LE(3, node(5) + 4)],
+      ["wrong source kind", (b) => b.writeUInt32LE(limits.handleIndexMask - 1, node(0) + 12)],
+      ["node kind", (b) => b.writeUInt32LE(1000, node(0))],
+      ["graph count", (b) => b.writeUInt32LE(limits.maxInstrumentNodes + 1, graph)],
+      ["graph history", (b) => b.writeUInt32LE(1, graph + 4)],
+      ["filter stability", (b) => b.writeFloatLE(1, node(7) + 36)],
+      ["delay capacity", (b) => b.writeUInt32LE(limits.maxDelayFrames + 1, node(8) + 28)],
+      ["delay feedback", (b) => b.writeFloatLE(1, node(8) + 36)],
+      ["note velocity", (b) => b.writeFloatLE(2, find(limits.op_audio_note_on).args + 20)],
+      [
+        "typed control",
+        (b) => b.writeUInt32LE(limits.param_pan, find(limits.op_audio_node_control).args + 16),
+      ],
+      ["wave selection", (b) => b.writeFloatLE(2, find(limits.op_audio_node_control).args + 20)],
+      ["edit bounds", (b) => b.writeUInt32LE(64, find(limits.op_audio_edit).args + 8)],
+      ["reserved graph word", (b) => b.writeUInt32LE(1, graph + 8)],
+      ["reserved node parameter", (b) => b.writeFloatLE(1, node(0) + 60)],
+    ];
+    const verifier = (
+      await WebAssembly.instantiate(await readFile(resolve(base, "runtime.wasm")), {
+        env: { sin: Math.sin },
+      })
+    ).instance.exports;
+    for (const [name, mutate] of mutations) {
+      const session = verifier.runtime_resource_reset(limits.version);
+      const valid = Buffer.from(resourcePacket);
+      valid.writeUInt32LE(session, 12);
+      const invalid = Buffer.from(valid);
+      mutate(invalid);
+      const pointer = verifier.runtime_resource_packet();
+      new Uint8Array(verifier.memory.buffer, pointer, invalid.length).set(invalid);
+      assert.equal(verifier.runtime_resource_submit(invalid.length), 0, `reject synthesis ${name}`);
+      assert.equal(verifier.runtime_resource_bytes(), 0, `roll back synthesis ${name}`);
+      assert.equal(verifier.runtime_audio_enabled(), 0, `roll back synthesis engine ${name}`);
+      new Uint8Array(verifier.memory.buffer, pointer, valid.length).set(valid);
+      assert.equal(
+        verifier.runtime_resource_submit(valid.length),
+        1,
+        `recover after synthesis ${name}`,
+      );
+    }
+    report.invalidSynthesisPackets = mutations.length;
+  }
+  if (language === "odin" && !synthesis) {
     const invalid = [];
     const locate = (opcode, occurrence = 0) => {
       let seen = 0;
@@ -169,7 +255,50 @@ for (const language of ["odin", "luau"]) {
     );
   }
   assert.ok(packets.length);
-  if (language === "odin") {
+  if (language === "odin" && synthesis && !stress) {
+    const packet = packets[0];
+    const command = (op) => {
+      for (let i = 0; i < packet.readUInt32LE(4); i++) {
+        const at = limits.audioPacketHeaderBytes + i * limits.audioEventBytes;
+        if (packet.readUInt32LE(at + 16) === op) {
+          return at;
+        }
+      }
+      throw new Error(`Missing prepared synthesis opcode ${op}`);
+    };
+    const graph = packet.readUInt32LE(command(limits.op_audio_instrument) + 84);
+    const mutations = [
+      ["source stride", (b) => b.writeUInt32LE(3, command(limits.op_audio_source) + 36)],
+      [
+        "source address",
+        (b) => b.writeUInt32LE(limits.handleIndexMask, command(limits.op_audio_source) + 20),
+      ],
+      ["typed graph edge", (b) => b.writeUInt32LE(0, graph + limits.graphHeaderBytes + 4)],
+      ["graph state size", (b) => b.writeUInt32LE(0, graph + 4)],
+      ["note history size", (b) => b.writeUInt32LE(1, command(limits.op_audio_note_on) + 32)],
+      [
+        "edit offset",
+        (b) => b.writeUInt32LE(limits.maxWaveFrames, command(limits.op_audio_edit) + 76),
+      ],
+      ["control slot", (b) => b.writeUInt32LE(8, command(limits.op_audio_node_control) + 76)],
+      ["event order", (b) => b.writeUInt32LE(1000, command(limits.op_audio_note_on) + 8)],
+    ];
+    const dsp = (await WebAssembly.instantiate(await readFile(resolve(base, "audio.wasm")), {}))
+      .instance.exports;
+    for (const [name, mutate] of mutations) {
+      assert.equal(dsp.audio_init(), 1);
+      const invalid = Buffer.from(packet);
+      mutate(invalid);
+      const pointer = dsp.audio_packet();
+      new Uint8Array(dsp.memory.buffer, pointer, invalid.length).set(invalid);
+      assert.equal(dsp.audio_submit(invalid.length), 0, `reject prepared synthesis ${name}`);
+      new Uint8Array(dsp.memory.buffer, pointer, packet.length).set(packet);
+      assert.equal(dsp.audio_submit(packet.length), 1, `recover prepared synthesis ${name}`);
+      assert.equal(dsp.audio_submit(packet.length), 0, "prepared synthesis replay rejected");
+    }
+    report.invalidPreparedSynthesisPackets = mutations.length;
+  }
+  if (language === "odin" && !synthesis) {
     const dsp = (await WebAssembly.instantiate(await readFile(resolve(base, "audio.wasm")), {}))
       .instance.exports;
     const packet = packets[0];
@@ -291,6 +420,8 @@ for (const language of ["odin", "luau"]) {
   for (const rate of [44100, 48000, 96000]) {
     const { game, runtime } = await prepare();
     const pcm = new Float32Array(48000 * 2);
+    const memoryBefore = runtime.memory.buffer.byteLength;
+    const renderStarted = performance.now();
     for (let at = 0; at < 48000;) {
       const frames = Math.min(128, 48000 - at);
       const pointer = runtime.runtime_audio_render(frames, rate);
@@ -298,13 +429,23 @@ for (const language of ["odin", "luau"]) {
       pcm.set(new Float32Array(runtime.memory.buffer, pointer, frames * 2), at * 2);
       at += frames;
     }
+    const wasmRenderMs = performance.now() - renderStarted;
+    assert.equal(
+      runtime.memory.buffer.byteLength,
+      memoryBefore,
+      "DSP rendering does not grow linear memory",
+    );
     deliverResources(game, runtime);
     game.game_update(0, 0, 0, 0);
     checkExecutor(game);
     game.game_draw();
     const sdkStatus = readFrame(game);
-    assert.equal(sdkStatus.x, 4, "SDK receives cumulative audio completion count");
-    assert.equal(sdkStatus.y, 4, "SDK decodes four completion records");
+    assert.equal(
+      sdkStatus.x,
+      expectedCompletions,
+      "SDK receives cumulative audio completion count",
+    );
+    assert.equal(sdkStatus.y, expectedCompletions, "SDK decodes completion records");
     const nativePath = resolve(root, `${language}-${rate}.f32`);
     const trace = run(resolve(root, "trace.exe"), [
       resolve(base, language === "luau" ? "luau-executor.wasm" : "game.wasm"),
@@ -312,6 +453,7 @@ for (const language of ["odin", "luau"]) {
       nativePath,
       String(rate),
       "offline",
+      String(expectedCompletions),
     ]);
     const native = await readFile(nativePath);
     let error = 0;
@@ -321,8 +463,13 @@ for (const language of ["odin", "luau"]) {
     assert.ok(error <= 1e-6, `native/browser ${language} ${rate} maximum error ${error}`);
     const status = JSON.parse(trace.trim().split("\n").at(-1));
     assert.equal(status.late, 0);
-    assert.equal(status.underruns, 80);
-    report.rates[`${language}-${rate}`] = { maximumError: error, ...status };
+    assert.equal(status.underruns, synthesis ? 0 : 80);
+    report.rates[`${language}-${rate}`] = {
+      maximumError: error,
+      ...status,
+      wasmRenderMs,
+      runtimeMemoryBytes: memoryBefore,
+    };
     if (rate === 48000) {
       if (pcmReference) {
         assert.deepEqual(pcm, pcmReference, "SDKs render the same PCM");
@@ -336,7 +483,7 @@ for (const language of ["odin", "luau"]) {
         const second = first + 1 >= 8 ? (loopStart ?? 7) : first + 1;
         return wave[first] + (wave[second] - wave[first]) * fraction;
       };
-      for (let n = 0; n < 1000; n++) {
+      for (let n = 0; !synthesis && n < 1000; n++) {
         const position = n * 0.5;
         let left = sample(position % 8, 0) * Math.fround(0.02),
           right = left;
@@ -378,6 +525,7 @@ for (const language of ["odin", "luau"]) {
           devicePath,
           "48000",
           "device",
+          String(expectedCompletions),
         ],
         { SDL_AUDIODRIVER: "dummy" },
       );
@@ -519,6 +667,17 @@ try {
     await page.click("#start");
     await page.waitForFunction(() => playerAudio.mixerStatus?.frame > 5000);
     const initial = await page.evaluate(() => playerAudio.mixerStatus);
+    if (synthesis && !stress) {
+      const hash = await page.evaluate(() => playerStatus.hash);
+      await page.keyboard.down("ArrowRight");
+      await page.waitForFunction((previous) => playerStatus.hash !== previous, hash);
+      await page.keyboard.up("ArrowRight");
+      assert.equal(
+        await page.evaluate(() => playerStatus.error),
+        "",
+        "tone editor input updates its graph controls",
+      );
+    }
     await page.evaluate(() => window.dispatchEvent(new Event("blur")));
     await page.waitForTimeout(150);
     const paused = await page.evaluate(() => playerAudio.mixerStatus.frame);
@@ -546,5 +705,5 @@ try {
 }
 await writeFile(resolve(root, "results.json"), JSON.stringify(report, null, 2) + "\n");
 console.log(
-  `Audio passed: both SDKs, native/Wasm PCM at three rates, SDL callbacks, independent sample/loop/ramp/stream references, Worklet main-thread stalls, pause/resume and no shared memory. ${relative(process.cwd(), root)}`,
+  `${synthesis ? "Synthesis" : "Audio"}${stress ? " stress" : ""} passed: both SDKs, native/Wasm PCM at three rates, SDL callbacks, Worklet stalls, pause/resume, reload and no shared memory. ${relative(process.cwd(), root)}`,
 );

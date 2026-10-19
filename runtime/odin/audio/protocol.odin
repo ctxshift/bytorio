@@ -65,6 +65,8 @@ decode :: proc(b: []u8) -> Command {
     }
 }
 valid_command :: proc(c: Command) -> bool {
+    if c.op >=
+       w.op_audio_wavetable { return c.at <= w.audioMaxExactFrame && c.ramp <= w.audioHorizonFrames && valid_synthesis_command(c) }
     if c.at > w.audioMaxExactFrame || c.ramp > w.audioHorizonFrames { return false }
     switch c.op {
     case w.op_audio_bus:
@@ -89,6 +91,9 @@ valid_command :: proc(c: Command) -> bool {
             c.bus < w.maxBuses &&
             c.lease > 0 &&
             c.frames > 0 &&
+            c.parameter <= 1 &&
+            (c.parameter == 0 ||
+                    (source_slot(c.resource) >= 0 && source_slot(c.resource) < w.maxSlots)) &&
             (c.channels == 1 || c.channels == 2) &&
             c.source_rate >= w.minSampleRate &&
             c.source_rate <= w.maxSampleRate &&
@@ -173,6 +178,7 @@ import_batch :: proc(e: ^Engine, bytes: []u8) -> bool {
        e.submitted - e.processed + u64(count) > w.maxAudioEvents { return false }
     // Check the complete host-produced packet before publishing or copying.
     occupied := e.pages
+    model := e.model
     seen: [w.maxAudioLeases]bool
     for i in 0 ..< int(count) {
         b := bytes[w.audioPacketHeaderBytes + i * w.audioEventBytes:][:w.audioEventBytes]
@@ -196,10 +202,18 @@ import_batch :: proc(e: ^Engine, bytes: []u8) -> bool {
                 if occupied[page] { return false }
                 occupied[page] = true
             }
-            for at := int(offset); at < int(offset) + int(size); at += 4 {
-                if !finite(transmute(f32)word(bytes, at), -1, 1) { return false }
+            if c.op != w.op_audio_instrument && c.op != w.op_audio_effects {
+                for at := int(offset); at < int(offset) + int(size); at += 4 {
+                    if !finite(transmute(f32)word(bytes, at), -1, 1) { return false }
+                }
             }
         } else if size != 0 || offset != 0 { return false }
+        if c.op >= w.op_audio_wavetable &&
+           !validate_prepared_synthesis(
+                   c,
+                   bytes[int(offset):][:int(size)],
+                   &model,
+               ) { return false }
     }
     batch := &e.batches[e.head % w.maxAudioBatches]
     batch.count = count
@@ -224,6 +238,7 @@ import_batch :: proc(e: ^Engine, bytes: []u8) -> bool {
         }
     }
     e.submitted += u64(count)
+    e.model = model
     e.order += u64(count)
     e.head += 1
     return true

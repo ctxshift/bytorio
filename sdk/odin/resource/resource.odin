@@ -208,7 +208,7 @@ destroy :: proc(handle: Handle, kind: u32) {
         return
     }
     emit(
-        w.op_audio_destroy if kind >= 9 else (w.op_destroy_texture if kind == 1 else (w.op_destroy_sample if kind == 2 else w.op_destroy_resource)),
+        w.op_audio_destroy_synth if kind >= w.kindWavetable else (w.op_audio_destroy if kind >= 9 else (w.op_destroy_texture if kind == 1 else (w.op_destroy_sample if kind == 2 else w.op_destroy_resource))),
         handle,
         []u32{0, 0, 0, 0, 0, 0, 0, 0} if kind >= 9 else nil,
     )

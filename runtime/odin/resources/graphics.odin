@@ -18,6 +18,7 @@ Transaction :: struct {
     peak:                                                 int,
     audio:                                                audio.Transaction,
     audio_created:                                        bool,
+    audio_master:                                         Slot,
 }
 Render_State :: struct {
     active:   bool,
@@ -71,6 +72,8 @@ unused :: proc(t: ^Transaction, id: u32) -> ^Slot {
     return slot
 }
 referenced :: proc(t: ^Transaction, id: u32) -> bool {
+    if len(t.audio_master.data) > 32 &&
+       graph_references(t.audio_master.data[32:], id) { return true }
     for slot in t.slots^ {
         if slot.kind == .Empty {
 
@@ -90,6 +93,10 @@ referenced :: proc(t: ^Transaction, id: u32) -> bool {
                 }
             }
         }
+        if slot.kind == .Instrument && graph_references(slot.data, id) { return true }
+        if slot.kind == .Bus &&
+           len(slot.data) > 32 &&
+           graph_references(slot.data[32:], id) { return true }
     }
     return false
 }

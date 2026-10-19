@@ -18,6 +18,8 @@ Kind :: enum {
     Readback,
     Bus,
     Stream,
+    Wavetable,
+    Instrument,
 }
 Slot :: struct {
     generation:                            u32,
@@ -41,6 +43,7 @@ Registry :: struct {
     has_output:                  bool,
     stats:                       Stats,
     audio:                       ^audio.Engine,
+    audio_master:                Slot,
 }
 Stats :: struct {
     packet_bytes, copy_bytes, pixel_work, peak_bytes: u64,
@@ -70,6 +73,7 @@ close :: proc(r: ^Registry) {
         context.allocator = wasm_allocator()
     }
     audio.close(r.audio)
+    delete(r.audio_master.data)
     for &slot in r.slots {
 
         delete(slot.data)
@@ -186,18 +190,21 @@ submit :: proc(
         screen.height = display & abi.DISPLAY_DIMENSION_MASK
     }
     txn := Transaction {
-        registry = r,
-        slots    = &shadow,
-        screen   = &screen,
-        retained = r.bytes + len(packet),
-        budget   = budget,
-        width    = int(display >> abi.DISPLAY_DIMENSION_BITS),
-        height   = int(display & abi.DISPLAY_DIMENSION_MASK),
-        output   = r.output,
+        registry     = r,
+        slots        = &shadow,
+        screen       = &screen,
+        retained     = r.bytes + len(packet),
+        budget       = budget,
+        width        = int(display >> abi.DISPLAY_DIMENSION_BITS),
+        height       = int(display & abi.DISPLAY_DIMENSION_MASK),
+        output       = r.output,
+        audio_master = r.audio_master,
     }
     committed := false
     defer {
         if !committed {
+            if raw_data(txn.audio_master.data) !=
+               raw_data(r.audio_master.data) { delete(txn.audio_master.data) }
             audio.abort(&txn.audio)
             if txn.audio_created { audio.close(r.audio); r.audio = nil }
             for slot, i in shadow {
@@ -386,6 +393,7 @@ submit :: proc(
 
                     return fail(r, "resource is still referenced")
                 }
+                if kind == .Sample && !destroy_source(&txn, id, tick) { return false }
                 if owned {
 
                     txn.retained -= len(slot.data)
@@ -428,6 +436,10 @@ submit :: proc(
                     }
                 }
             } else {
+                if source_registered(
+                    &txn,
+                    id,
+                ) { return fail(r, "live sample requires audio.edit_sample") }
                 if args[1] == 0 ||
                    u64(args[0]) + u64(args[1]) > u64(slot.width) ||
                    u64(data_size) != u64(args[1]) * u64(slot.channels) * 4 {
@@ -484,7 +496,10 @@ submit :: proc(
 
         return fail(r, "draw requires closed passes and exactly one presentation")
     }
-    r.bytes = len(screen.data) + len(txn.output) * 4
+    r.bytes = len(screen.data) + len(txn.output) * 4 + len(txn.audio_master.data)
+    if raw_data(txn.audio_master.data) !=
+       raw_data(r.audio_master.data) { delete(r.audio_master.data) }
+    r.audio_master = txn.audio_master
     if r.audio != nil { r.bytes += audio.RESERVED_BYTES }
     audio.publish(&txn.audio)
     for slot, i in shadow {

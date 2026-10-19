@@ -13,6 +13,10 @@ audio_command :: proc(
 ) -> bool {
     r := t.registry
     if phase == 2 { return fail(r, "audio commands require init/update") }
+    if op >= w.op_audio_wavetable {
+        if r.protocol < 4 { return fail(r, "synthesis requires resource protocol 4") }
+        return synthesis_command(t, op, id, a, data, tick)
+    }
     used := 0
     switch op {
     case w.op_audio_bus:
@@ -37,18 +41,7 @@ audio_command :: proc(
     for i in used ..< len(a) {
         if a[i] != 0 { return fail(r, "nonzero reserved audio descriptor field") }
     }
-    if r.audio == nil {
-        r.audio = audio.create()
-        if r.audio == nil { return fail(r, "cannot preallocate audio engine") }
-        t.audio_created = true
-        t.retained += audio.RESERVED_BYTES
-        if t.retained > t.budget { return fail(r, "audio reservations exceed resource budget") }
-    }
-    if !t.audio.active {
-        ok: bool
-        t.audio, ok = audio.begin(r.audio)
-        if !ok { return fail(r, "audio queue backpressure") }
-    }
+    if !prepare_audio(t) { return false }
     at := u64(a[0]) | u64(a[1]) << 32
     now := tick * w.audioFramesPerTick
     c := audio.Command {
@@ -151,6 +144,7 @@ audio_command :: proc(
                u32le(data, 4) != 0 { return fail(r, "noncanonical disabled loop") }
             c.lease, c.page, ok = audio.snapshot(&t.audio, slot.data)
             if !ok { return fail(r, "audio snapshot budget exceeded") }
+            c.parameter = u32(source_registered(t, a[2]))
         } else {
             _, valid := audio.stream_index(model, a[2])
             c.rate, c.gain, c.pan = 1, transmute(f32)a[4], transmute(f32)a[5]

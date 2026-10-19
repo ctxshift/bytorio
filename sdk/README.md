@@ -9,7 +9,8 @@ ABI. The [formal specification](../docs/cartridge-spec.md) defines behavior and
 The proposed [typed graphics/audio interface](../docs/resource-av-spec.md) adds
 runtime resources, explicit rendering controls and scheduled DSP in a future
 SDK 0.2.0 / ABI 2 profile. [Experimental resources](resources.md) and
-[explicit graphics](graphics.md) and [PCM audio](audio.md) implement 4a–4c,
+[explicit graphics](graphics.md), [PCM audio](audio.md) and
+[synthesis/effects](synthesis.md) implement 4a–4d,
 while the complete profile remains unpublished;
 [proposal targets](proposals/resource-av-1.json) are separate from the live contract.
 

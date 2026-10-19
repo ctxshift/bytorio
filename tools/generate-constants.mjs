@@ -23,6 +23,12 @@ for (const [name, value] of Object.entries(schema.opcodes)) {
 for (const [name, value] of Object.entries(schema.formats)) {
   constants[`format_${name}`] = value;
 }
+for (const [name, value] of Object.entries(schema.nodes)) {
+  constants[`node_${name}`] = value;
+}
+for (const [name, value] of Object.entries(schema.parameters)) {
+  constants[`param_${name}`] = value;
+}
 constants.colorTableBytes = schema.paletteEntries * schema.paletteEntries;
 constants.graphicsFixedOne = 2 ** schema.graphicsFractionBits;
 constants.mailboxMagic = schema.mailbox.magic;
@@ -37,14 +43,20 @@ constants.audioStatusOffset = constants.mailboxPayloadOffset;
 constants.mailboxPayloadOffset += schema.audioStatusBytes;
 constants.mailboxCapacity = constants.mailboxPayloadOffset + schema.maxCompletionPayload;
 constants.maxAudioLeases =
-  schema.maxAudioEvents + schema.maxVoices + schema.maxStreams * schema.maxStreamChunks;
+  schema.maxAudioEvents +
+  schema.maxVoices +
+  schema.maxStreams * schema.maxStreamChunks +
+  schema.maxSlots +
+  schema.maxInstruments +
+  schema.maxBuses;
+constants.maxAudioDoneRecords = constants.maxAudioLeases + schema.maxAudioEvents + schema.maxVoices;
 constants.audioPacketHeaderBytes = 16;
 constants.audioEventBytes = 96;
 constants.maxAudioPacketBytes =
   constants.audioPacketHeaderBytes +
   schema.maxAudioEvents * constants.audioEventBytes +
   schema.maxAudioSnapshotBytes;
-constants.maxAudioFeedbackBytes = 80 + (constants.maxAudioLeases + schema.maxVoices) * 32;
+constants.maxAudioFeedbackBytes = 80 + constants.maxAudioDoneRecords * 32;
 const contract = JSON.parse(await readFile(new URL("sdk/contract.json", root)));
 // Numeric encodings are fixed-width; policy limits and defaults come from the contract.
 const common = {

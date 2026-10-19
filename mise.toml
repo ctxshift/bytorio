@@ -102,6 +102,10 @@ run = "node tools/verify-resources.mjs"
 description = "Verify low-level PCM APIs, mixer and native/browser delivery"
 run = "node tools/verify-audio.mjs"
 
+[tasks."test:synthesis"]
+description = "Verify synthesis, effects and the full DSP workload on native/browser"
+run = ["node tools/verify-audio.mjs --synthesis", "node tools/verify-audio.mjs --synthesis --stress"]
+
 [tasks."test:graphics"]
 run = "node tools/verify-graphics.mjs"
 
@@ -130,6 +134,7 @@ run = [
   { task = "test:resources" },
   { task = "test:graphics" },
   { task = "test:audio" },
+  { task = "test:synthesis" },
   { task = "test:odin" },
   { task = "test:display" },
   { task = "test:rpg" },

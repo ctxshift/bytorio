@@ -104,7 +104,14 @@ main :: proc() {
        nil { os.exit(1) }
     if !guest.update(game, abi.Input{}) { fmt.eprintln(game.error); os.exit(1) }
     sdk_frame: abi.Frame
-    if !guest.draw(game, &sdk_frame) || sdk_frame.x != 4 || sdk_frame.y != 4 {
+    expected := u64(4)
+    if len(os.args) > 6 {
+        expected, ok = strconv.parse_u64(os.args[6])
+        if !ok { os.exit(1) }
+    }
+    if !guest.draw(game, &sdk_frame) ||
+       sdk_frame.x != f64(expected) ||
+       sdk_frame.y != f64(expected) {
         fmt.eprintln("SDK audio status/completion decoding failed")
         os.exit(1)
     }

@@ -7,7 +7,7 @@ import "core:math"
 // Only the producer allocates/reclaims pages. The renderer owns voices, the heap,
 // and stream cursors. Release/acquire SPSC indices publish immutable snapshots.
 PAGE_COUNT :: w.maxAudioSnapshotBytes / (w.audioPageFrames * 4)
-DONE_CAPACITY :: w.maxAudioLeases + w.maxVoices
+DONE_CAPACITY :: w.maxAudioDoneRecords
 NO_VOICE :: max(u32)
 Command :: struct {
     at, order:                                          u64,
@@ -42,8 +42,10 @@ Stream_Model :: struct {
     intervals: [w.maxStreamChunks]Interval,
 }
 Model :: struct {
-    buses:   [w.maxBuses]Bus_Model,
-    streams: [w.maxStreams]Stream_Model,
+    buses:       [w.maxBuses]Bus_Model,
+    streams:     [w.maxStreams]Stream_Model,
+    sources:     [w.maxSlots]Source_Info,
+    definitions: [w.maxInstruments]Definition_Info,
 }
 Ramp :: struct {
     value, target: f64,
@@ -56,11 +58,13 @@ Voice :: struct {
     position, rate:                                      f64,
     gain, pan:                                           Ramp,
     releasing:                                           bool,
+    synth:                                               Synth,
 }
 Bus :: struct {
     id, parent, depth: u32,
     live:              bool,
     gain:              Ramp,
+    effects:           Synth,
 }
 Chunk :: struct {
     first, end: u64,
@@ -97,6 +101,8 @@ Engine :: struct {
     voices:                                                                               [w.maxVoices]Voice,
     buses:                                                                                [w.maxBuses]Bus,
     streams:                                                                              [w.maxStreams]Stream,
+    sources:                                                                              [w.maxSlots]Source,
+    graphs:                                                                               [w.maxInstruments]Graph,
     frame, processed_local, late_local, underruns_local, rejected_local, completed_local: u64,
     lead_remaining:                                                                       u32,
     paused:                                                                               bool,
@@ -212,8 +218,18 @@ append :: proc(t: ^Transaction, command: Command) -> bool {
     return true
 }
 snapshot :: proc(t: ^Transaction, bytes: []u8) -> (lease, page: u32, ok: bool) {
+    lease, page, ok = reserve_snapshot(t, len(bytes))
+    if ok {
+        target := (cast([^]u8)raw_data(t.engine.pool))[int(page) *
+        w.audioPageFrames *
+        4:][:len(bytes)]
+        copy(target, bytes)
+    }
+    return
+}
+reserve_snapshot :: proc(t: ^Transaction, size: int) -> (lease, page: u32, ok: bool) {
     e := t.engine
-    needed := (len(bytes) + w.audioPageFrames * 4 - 1) / (w.audioPageFrames * 4)
+    needed := (size + w.audioPageFrames * 4 - 1) / (w.audioPageFrames * 4)
     first, run := 0, 0
     for busy, i in e.pages {
         if busy { run = 0; first = i + 1 } else { run += 1 }
@@ -228,8 +244,8 @@ snapshot :: proc(t: ^Transaction, bytes: []u8) -> (lease, page: u32, ok: bool) {
             live  = true,
         }
         for j in first ..< first + needed { e.pages[j] = true }
-        target := (cast([^]u8)raw_data(e.pool))[first * w.audioPageFrames * 4:][:len(bytes)]
-        copy(target, bytes)
+        target := (cast([^]u8)raw_data(e.pool))[first * w.audioPageFrames * 4:][:size]
+        for &b in target { b = 0 }
         e.used += u64(needed * w.audioPageFrames * 4)
         e.peak = max(e.peak, e.used)
         return u32(i + 1), u32(first), true
@@ -250,6 +266,7 @@ finite :: proc(value: f32, lo, hi: f32) -> bool {
 // Called only by the renderer. The queue is larger than every possible live lease
 // plus voice completion. Producer admission also bounds outstanding commands.
 finish :: proc(e: ^Engine, lease, voice, reason: u32, after_frame: bool = false) {
+    if lease == 0 && voice == NO_VOICE { return }
     head := e.done_head
     if head - load(&e.done_tail) >= DONE_CAPACITY { return }
     serial := u64(0)
@@ -310,6 +327,10 @@ consume :: proc(e: ^Engine) {
 }
 apply :: proc(e: ^Engine, c: Command) {
     if c.at < e.frame { e.late_local += 1 }
+    if c.op >= w.op_audio_wavetable {
+        apply_synthesis(e, c)
+        return
+    }
     switch c.op {
     case w.op_audio_bus:
         e.buses[c.id] = {
@@ -326,6 +347,8 @@ apply :: proc(e: ^Engine, c: Command) {
         }
     case w.op_audio_destroy:
         if c.parameter == 9 {
+            finish(e, e.buses[c.id].effects.graph.lease, NO_VOICE, 0)
+            e.buses[c.id].effects = {}
             e.buses[c.id].live = false
             for v, i in e.voices { if v.kind != 0 && v.bus == c.id { stop_voice(e, u32(i), w.audioReasonCancelled) } }
         } else {
@@ -342,6 +365,11 @@ apply :: proc(e: ^Engine, c: Command) {
             found := false
             for s in e.streams { if s.live && s.id == c.resource { found = true; break } }
             if !found { finish(e, 0, c.id, w.audioReasonCancelled); break }
+        }
+        if c.op == w.op_audio_play_sample && c.parameter == 1 {
+            source := &e.sources[source_slot(c.resource)]
+            if source.info.id !=
+               c.resource { finish(e, c.lease, c.id, w.audioReasonCancelled); break }
         }
         stop_voice(e, c.id, w.audioReasonStopped)
         v := &e.voices[c.id]
@@ -362,6 +390,16 @@ apply :: proc(e: ^Engine, c: Command) {
         }
         if c.lease !=
            0 { v.data = e.pool[int(c.page) * w.audioPageFrames:][:int(c.frames * c.channels)] }
+        if c.op == w.op_audio_play_sample &&
+           source_slot(c.resource) >= 0 &&
+           source_slot(c.resource) < w.maxSlots {
+            source := &e.sources[source_slot(c.resource)]
+            if source.info.id == c.resource {
+                finish(e, c.lease, NO_VOICE, 0)
+                v.lease = 0
+                v.data = source.data
+            }
+        }
     case w.op_audio_stop:
         stop_voice(e, c.id, w.audioReasonStopped)
     case w.op_audio_release:
@@ -405,7 +443,10 @@ logical_frame :: proc(e: ^Engine) -> [2]f32 {
     for &v, index in e.voices {
         if v.kind == 0 { continue }
         value: [2]f64
-        if v.kind == 1 {
+        synth_done := false
+        if v.kind == 3 {
+            value, synth_done = synth_frame(e, &v.synth)
+        } else if v.kind == 1 {
             if v.position >=
                f64(v.frames) { stop_voice(e, u32(index), w.audioReasonNatural); continue }
             first := u32(math.floor(v.position))
@@ -447,14 +488,18 @@ logical_frame :: proc(e: ^Engine) -> [2]f32 {
         advance(&v.gain); advance(&v.pan)
         if v.releasing &&
            v.gain.remaining == 0 { stop_voice(e, u32(index), w.audioReasonStopped, true) }
+        if synth_done { stop_voice(e, u32(index), w.audioReasonStopped, true) }
     }
     for depth := w.maxBuses - 1; depth > 0; depth -= 1 {
         for &b, i in e.buses {
             if b.live && b.depth == u32(depth) {
+                if b.effects.graph.count != 0 { mix[i], _ = synth_frame(e, &b.effects, mix[i]) }
                 for channel in 0 ..< 2 { mix[b.parent][channel] += mix[i][channel] * b.gain.value }
             }
         }
     }
+    if e.buses[0].effects.graph.count !=
+       0 { mix[0], _ = synth_frame(e, &e.buses[0].effects, mix[0]) }
     result := [2]f32 {
         f32(clamp(mix[0][0] * e.buses[0].gain.value, -1, 1)),
         f32(clamp(mix[0][1] * e.buses[0].gain.value, -1, 1)),
