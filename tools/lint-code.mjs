@@ -53,7 +53,8 @@ if (language === "cpp") {
       pkg.endsWith("/player") ||
       pkg === "experiments/odin" ||
       pkg === "tests/graphics" ||
-      pkg === "tests/resources";
+      pkg === "tests/resources" ||
+      pkg === "tests/audio";
     const args = [
       "check",
       pkg,

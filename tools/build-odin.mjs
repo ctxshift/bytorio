@@ -1,3 +1,4 @@
+import { resourceSchema as limits } from "../runtime/odin/web/constants.js";
 import { mkdir, copyFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { parseArgs } from "node:util";
@@ -41,13 +42,20 @@ if (target !== "native") {
     "runtime/odin/web",
     ...wasm,
     `-out:${web}/runtime.wasm`,
-    "-extra-linker-flags:--max-memory=83886080",
+    `-extra-linker-flags:--max-memory=${limits.maxRuntimeBytes}`,
+  ]);
+  build([
+    "runtime/odin/audio_web",
+    ...wasm,
+    `-out:${web}/audio.wasm`,
+    `-extra-linker-flags:--max-memory=${limits.maxAudioRuntimeBytes}`,
   ]);
   for (const file of [
     "player.html",
     "player.js",
     "worker.js",
     "policy.js",
+    "audio-worklet.js",
     "constants.js",
     "cartridge.js",
     "executor-cache.js",

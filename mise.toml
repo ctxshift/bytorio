@@ -98,6 +98,10 @@ run = "node tools/verify-cartridge.mjs"
 [tasks."test:resources"]
 run = "node tools/verify-resources.mjs"
 
+[tasks."test:audio"]
+description = "Verify low-level PCM APIs, mixer and native/browser delivery"
+run = "node tools/verify-audio.mjs"
+
 [tasks."test:graphics"]
 run = "node tools/verify-graphics.mjs"
 
@@ -125,6 +129,7 @@ run = [
   { task = "test:cartridge" },
   { task = "test:resources" },
   { task = "test:graphics" },
+  { task = "test:audio" },
   { task = "test:odin" },
   { task = "test:display" },
   { task = "test:rpg" },

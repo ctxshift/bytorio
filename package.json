@@ -26,6 +26,7 @@
     "test:cartridge": "mise run test:cartridge",
     "generate:resources": "mise run generate",
     "test:resources": "mise run test:resources",
+    "test:audio": "mise run test:audio",
     "test:graphics": "mise run test:graphics",
     "lint:js": "eslint .",
     "lint:odin": "mise exec -- node tools/lint-code.mjs odin",

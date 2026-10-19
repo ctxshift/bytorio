@@ -100,8 +100,9 @@ Implemented: [experimental resource transport and SDKs](../sdk/resources.md),
 with texture/PCM lifecycles, shared transactional registry, typed staging,
 session/generation validation, control commits on every update and four-way
 native/browser verification. Version 1 remains supported; internal version 2 adds
-the graphics draw stream and readback mailbox. Full negotiated configuration and
-audio input/completion records remain later work before profile publication in 4e.
+the graphics draw stream and readback mailbox; version 3 adds the 4c audio
+status/completion block. Full negotiated configuration and input records remain
+later work before profile publication in 4e.
 
 - Generate one schema for capability/configuration/input records, packet headers,
   opcodes, typed descriptors, acknowledgements and completion messages. Freeze
@@ -151,6 +152,15 @@ readback versions and display switches. Measure a full 640×360 RGBA upload at
 60 Hz; record copy volume, CPU time and memory rather than assuming it is cheap.
 
 ### 4c. Shared PCM mixer and real-time delivery
+
+Implemented experimentally: [both PCM SDKs](../sdk/audio.md), shared Odin DSP,
+SDL callback delivery and an independent AudioWorklet with bounded recyclable
+transfers. `mise run test:audio` compares both SDKs/native/browser at three device
+rates, independent PCM references, malformed packets, queue pressure, completion
+delivery, 500 ms stalls, pause/resume and player PNG reload. A muted WASAPI probe
+also verified a physical output device. See [measurements](audio-measurements.md).
+Audible listening, acoustic latency and minimum-device guarantees remain open;
+the 50 ms lead remains provisional. Publication/negotiation stays in 4e.
 
 - Implement the Odin 48 kHz stereo mixer with 16 explicit voice slots, source-rate
   PCM playback/loops, gain/pan ramps and typed bus routing. Use the same DSP on

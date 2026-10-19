@@ -352,6 +352,8 @@ export async function buildProject(path, options = {}) {
             "player.js",
             "worker.js",
             "policy.js",
+            "audio-worklet.js",
+            "audio.wasm",
             "constants.js",
             "cartridge.js",
             "executor-cache.js",

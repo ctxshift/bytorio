@@ -1,6 +1,7 @@
 package resources
 
 import abi "../abi"
+import audio "../audio"
 import core "../core"
 import w "../resource_protocol"
 import "core:math"
@@ -15,6 +16,8 @@ Transaction :: struct {
     render:                                               Render_State,
     copy_bytes:                                           u64,
     peak:                                                 int,
+    audio:                                                audio.Transaction,
+    audio_created:                                        bool,
 }
 Render_State :: struct {
     active:   bool,

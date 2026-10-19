@@ -1,9 +1,11 @@
 package main
 
 import abi "../abi"
+import mixer "../audio"
 import cartridge "../cartridge"
 import core "../core"
 import guest "../guest"
+import w "../resource_protocol"
 import "core:fmt"
 import "core:os"
 import "core:strconv"
@@ -39,6 +41,10 @@ App :: struct {
     renderer:                      ^sdl.Renderer,
     texture:                       ^sdl.Texture,
     audio:                         ^sdl.AudioStream,
+    mixer_audio:                   ^sdl.AudioStream,
+    audio_paused:                  bool,
+    audio_engine:                  ^mixer.Engine,
+    audio_buffer:                  [w.maxAudioDeviceBlock * 2]f32,
     gamepad:                       ^sdl.Gamepad,
     focused:                       bool,
     texture_width, texture_height: int,
@@ -51,6 +57,7 @@ error :: proc(message: string) -> int {
 }
 
 cleanup :: proc(app: ^App) {
+    if app.mixer_audio != nil { sdl.DestroyAudioStream(app.mixer_audio) }
     if app.audio != nil {
 
         sdl.DestroyAudioStream(app.audio)
@@ -510,6 +517,15 @@ run :: proc() -> int {
             accumulator = 0
         }
         if !check_only {
+            if !attach_audio(app) { return error("cannot start PCM mixer output") }
+            mixer.pause(app.audio_engine, !app.focused)
+            if app.audio_paused != !app.focused {
+                app.audio_paused = !app.focused
+                if app.mixer_audio != nil {
+                    _ = sdl.ClearAudioStream(app.mixer_audio)
+                }
+            }
+            mixer.reclaim(app.audio_engine)
             if app.frame.sounds != app.sounds_played {
                 _ = sdl.ClearAudioStream(app.audio)
                 if !sdl.PutAudioStreamData(app.audio, &core.sample, size_of(core.sample)) {
@@ -555,7 +571,7 @@ run :: proc() -> int {
     }
     // Double braces escape Odin's formatting syntax in the JSON report.
     fmt.printf(
-        "{{\"ticks\":%d,\"sounds\":%d,\"hash\":%d,\"spriteX\":%d,\"spriteY\":%d,\"audioQueuedFrames\":%d,\"resourceHash\":%d,\"resourceBytes\":%d}}\n",
+        "{{\"ticks\":%d,\"sounds\":%d,\"hash\":%d,\"spriteX\":%d,\"spriteY\":%d,\"audioQueuedFrames\":%d,\"resourceHash\":%d,\"resourceBytes\":%d",
         app.frame.ticks,
         app.frame.sounds,
         core.hash(),
@@ -565,6 +581,13 @@ run :: proc() -> int {
         guest.resource_hash(&app.game),
         app.game.resources.bytes,
     )
+    if app.game.resources.audio != nil {
+        fmt.printf(
+            " ,\"audioMixerFrame\":%d",
+            mixer.load(&app.game.resources.audio.published_frame),
+        )
+    }
+    fmt.println("}")
     return 0
 }
 

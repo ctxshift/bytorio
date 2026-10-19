@@ -34,6 +34,20 @@ export default [
     languageOptions: { globals: { ...globals.browser, ...globals.worker } },
   },
   {
+    files: ["runtime/odin/web/audio-worklet.js", "tests/audio/web/capture-worklet.js"],
+    languageOptions: {
+      globals: {
+        AudioWorkletProcessor: "readonly",
+        registerProcessor: "readonly",
+        sampleRate: "readonly",
+      },
+    },
+  },
+  {
+    files: ["tests/audio/web/*.js"],
+    languageOptions: { globals: globals.worker },
+  },
+  {
     // Browser verification callbacks are serialized by Playwright.
     files: ["tools/verify-*.mjs", "experiments/**/*.mjs"],
     languageOptions: {

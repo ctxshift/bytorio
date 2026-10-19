@@ -1,15 +1,27 @@
 # Typed graphics and audio resources
 
-Status: **proposed profile; milestones 4a/4b implemented**, 2026-10-19. Proposed SDK 0.2.0,
+Status: **proposed profile; milestones 4a–4c implemented experimentally**, 2026-10-19. Proposed SDK 0.2.0,
 ABI 2, profile `resource-av-1`. The implemented SDK 0.1.0 / ABI 1 contract remains
 [unchanged](cartridge-spec.md). This document defines the intended public
 interface and observable behavior; wire opcode numbers and descriptor layouts
 must be generated and tested before this profile ships.
 
 The [internal resource implementation](../sdk/resources.md) and
-[software graphics reference](../sdk/graphics.md) support 4a/4b through both SDKs
+[software graphics reference](../sdk/graphics.md) and [PCM mixer](../sdk/audio.md)
+support 4a–4c through both SDKs
 and hosts. This experimental transport does not publish the complete profile;
-the mixer/synthesis, full negotiated ABI and profile packaging remain later work.
+synthesis, full negotiated ABI and profile packaging remain later work.
+
+The 4c slice snapshots sample contents at each accepted play command. Source
+writes affect later plays; scheduled edits to an active source are 4d. Its
+8 MiB immutable PCM arena is page allocated by the producer; rendering returns
+leases through a fixed queue. Streams allow 64 chunks / 8,192 frames each.
+Controller/DSP state, wire/transfer arenas and feedback reserve a portable
+52,369,936-byte charge on either host, plus ordinary resource storage. This
+conservative reservation and the 50 ms lead remain provisional. Delivery uses
+SDL callbacks and transferable AudioWorklet buffers, with a maximum 2,048-frame
+render call; larger native callback requests are split. See the
+[measurement method and remaining gates](audio-measurements.md).
 
 The console provides low-level control through typed data, resource handles,
 ordered rendering and scheduled audio. Games manipulate their own bytes and

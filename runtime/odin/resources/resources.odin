@@ -1,6 +1,7 @@
 package resources
 
 import abi "../abi"
+import audio "../audio"
 import w "../resource_protocol"
 import "core:math"
 import "core:mem"
@@ -15,6 +16,8 @@ Kind :: enum {
     Row_Table,
     Pipeline,
     Readback,
+    Bus,
+    Stream,
 }
 Slot :: struct {
     generation:                            u32,
@@ -37,6 +40,7 @@ Registry :: struct {
     output_width, output_height: int,
     has_output:                  bool,
     stats:                       Stats,
+    audio:                       ^audio.Engine,
 }
 Stats :: struct {
     packet_bytes, copy_bytes, pixel_work, peak_bytes: u64,
@@ -65,6 +69,7 @@ close :: proc(r: ^Registry) {
 
         context.allocator = wasm_allocator()
     }
+    audio.close(r.audio)
     for &slot in r.slots {
 
         delete(slot.data)
@@ -193,6 +198,8 @@ submit :: proc(
     committed := false
     defer {
         if !committed {
+            audio.abort(&txn.audio)
+            if txn.audio_created { audio.close(r.audio); r.audio = nil }
             for slot, i in shadow {
 
                 if raw_data(slot.data) != raw_data(r.slots[i].data) {
@@ -250,6 +257,22 @@ submit :: proc(
         for i in 0 ..< int(args_size / 4) {
 
             args[i] = u32le(payload, int(args_offset) + i * 4)
+        }
+        if op >= w.op_audio_bus {
+            if r.protocol < 3 ||
+               !audio_command(
+                       &txn,
+                       op,
+                       id,
+                       args,
+                       payload[int(data_offset):][:int(data_size)],
+                       phase,
+                       tick,
+                   ) {
+                if r.error == "" { _ = fail(r, "audio requires resource protocol 3") }
+                return false
+            }
+            continue
         }
         if op > w.op_destroy_sample {
             if !graphics_command(
@@ -462,6 +485,8 @@ submit :: proc(
         return fail(r, "draw requires closed passes and exactly one presentation")
     }
     r.bytes = len(screen.data) + len(txn.output) * 4
+    if r.audio != nil { r.bytes += audio.RESERVED_BYTES }
+    audio.publish(&txn.audio)
     for slot, i in shadow {
         if raw_data(slot.data) != raw_data(r.slots[i].data) {
 

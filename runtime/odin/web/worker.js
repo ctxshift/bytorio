@@ -1,3 +1,4 @@
+import { resourceSchema as audioLimits } from "./constants.js";
 import {
   inspectGuest,
   checkExecutor,
@@ -20,6 +21,56 @@ let startup;
 let resourceTrace = false;
 let initialMemory;
 let executorRequest;
+const audioTransfers = Array.from({ length: audioLimits.maxAudioTransfers }, () => ({
+  buffer: null,
+  busy: false,
+  capacity: 0,
+}));
+let pendingAudioBytes = 0;
+function drainAudio() {
+  if (!runtime?.runtime_audio_enabled?.()) {
+    return;
+  }
+  for (let id = 0; id < audioTransfers.length; id++) {
+    const slot = audioTransfers[id];
+    if (slot.busy) {
+      continue;
+    }
+    const bytes = pendingAudioBytes || runtime.runtime_audio_export();
+    if (!bytes) {
+      break;
+    }
+    if (bytes < 0) {
+      throw new Error("Audio packet exceeds transfer capacity.");
+    }
+    pendingAudioBytes = bytes;
+    // One aggregate credit budget, including buffers currently owned by the
+    // worklet. Discard oversized idle buffers on this producer, never in process().
+    let retained = 0;
+    for (const other of audioTransfers) {
+      if (!other.busy && other !== slot) {
+        other.buffer = null;
+        other.capacity = 0;
+      }
+      retained += other.capacity;
+    }
+    const capacity = Math.max(slot.capacity, bytes);
+    if (retained - slot.capacity + capacity > audioLimits.maxAudioPacketBytes) {
+      return;
+    }
+    if (!slot.buffer || slot.buffer.byteLength < bytes) {
+      slot.buffer = new ArrayBuffer(bytes);
+      slot.capacity = bytes;
+    }
+    new Uint8Array(slot.buffer, 0, bytes).set(
+      new Uint8Array(runtime.memory.buffer, runtime.runtime_audio_packet(), bytes),
+    );
+    self.postMessage({ type: "audio-packet", id, bytes, buffer: slot.buffer }, [slot.buffer]);
+    slot.buffer = null;
+    slot.busy = true;
+    pendingAudioBytes = 0;
+  }
+}
 function requestExecutor() {
   return new Promise((resolve) => {
     executorRequest = resolve;
@@ -82,6 +133,7 @@ function frame() {
     pixels: pixels.buffer,
     ticks: record.ticks,
     sounds: record.sounds,
+    audioEnabled: !!runtime.runtime_audio_enabled?.(),
     spriteX: record.spriteX,
     spriteY: record.spriteY,
     x: record.x,
@@ -98,6 +150,31 @@ function frame() {
 
 self.onmessage = async ({ data }) => {
   try {
+    if (data.type === "audio-recycle") {
+      const slot = audioTransfers[data.id];
+      if (!slot || !slot.busy) {
+        throw new Error("Invalid recycled audio transfer.");
+      }
+      slot.buffer = data.buffer;
+      slot.busy = false;
+      drainAudio();
+      return;
+    }
+    if (data.type === "audio-feedback") {
+      new Uint8Array(
+        runtime.memory.buffer,
+        runtime.runtime_audio_feedback_pointer(),
+        data.bytes,
+      ).set(new Uint8Array(data.buffer, 0, data.bytes));
+      if (runtime.runtime_audio_feedback(data.bytes) !== 1) {
+        throw new Error("Invalid audio feedback.");
+      }
+      self.postMessage({ type: "audio-feedback-recycle", id: data.id, buffer: data.buffer }, [
+        data.buffer,
+      ]);
+      drainAudio();
+      return;
+    }
     if (data.type === "executor" && executorRequest) {
       const resolve = executorRequest;
       executorRequest = null;
@@ -164,6 +241,7 @@ self.onmessage = async ({ data }) => {
         16000,
       ).slice();
       const output = frame();
+      drainAudio();
       startup = {
         fetchMs: fetched - start,
         compileMs: compiled - fetched,
@@ -203,6 +281,7 @@ self.onmessage = async ({ data }) => {
         );
         checkExecutor(game);
         submitResources(game, runtime);
+        drainAudio();
         output = frame();
       }
       if (output) {

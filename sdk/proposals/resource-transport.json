@@ -1,6 +1,6 @@
 {
-  "status": "internal-milestone-4b",
-  "version": 2,
+  "status": "internal-milestone-4c",
+  "version": 3,
   "abi": 2,
   "magic": 827348545,
   "headerBytes": 64,
@@ -12,6 +12,9 @@
   "handleIndexBits": 16,
   "handleGenerationBits": 16,
   "maxResourceBytes": 67108864,
+  "audioReasonNatural": 1,
+  "audioReasonStopped": 2,
+  "audioReasonCancelled": 3,
   "maxImageAxis": 1024,
   "minSampleRate": 8000,
   "maxSampleRate": 96000,
@@ -47,7 +50,17 @@
     "present": 25,
     "readback": 26,
     "text": 27,
-    "sprite": 28
+    "sprite": 28,
+    "audio_bus": 32,
+    "audio_stream": 33,
+    "audio_play_sample": 34,
+    "audio_play_stream": 35,
+    "audio_stop": 36,
+    "audio_release": 37,
+    "audio_voice_control": 38,
+    "audio_bus_gain": 39,
+    "audio_stream_write": 40,
+    "audio_destroy": 41
   },
   "formats": {
     "index8": 1,
@@ -195,10 +208,37 @@
       "reserved"
     ],
     "end_pass": [],
-    "clip": ["x", "y", "width", "height", "reserved", "reserved", "reserved", "reserved"],
-    "transform": ["aQ16", "bQ16", "cQ16", "dQ16", "txQ16", "tyQ16", "reserved", "reserved"],
+    "clip": [
+      "x",
+      "y",
+      "width",
+      "height",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved"
+    ],
+    "transform": [
+      "aQ16",
+      "bQ16",
+      "cQ16",
+      "dQ16",
+      "txQ16",
+      "tyQ16",
+      "reserved",
+      "reserved"
+    ],
     "bind": [],
-    "rect": ["xQ16", "yQ16", "widthQ16", "heightQ16", "color", "reserved", "reserved", "reserved"],
+    "rect": [
+      "xQ16",
+      "yQ16",
+      "widthQ16",
+      "heightQ16",
+      "color",
+      "reserved",
+      "reserved",
+      "reserved"
+    ],
     "clear": [
       "color",
       "stencilEnabled",
@@ -219,7 +259,16 @@
       "reserved",
       "reserved"
     ],
-    "copy": ["destination", "srcX", "srcY", "width", "height", "dstX", "dstY", "reserved"],
+    "copy": [
+      "destination",
+      "srcX",
+      "srcY",
+      "width",
+      "height",
+      "dstX",
+      "dstY",
+      "reserved"
+    ],
     "present": [
       "palette",
       "rows",
@@ -230,9 +279,136 @@
       "reserved",
       "reserved"
     ],
-    "readback": ["source", "x", "y", "width", "height", "reserved", "reserved", "reserved"],
-    "text": ["xQ16", "yQ16", "color", "reserved", "reserved", "reserved", "reserved", "reserved"],
-    "sprite": ["sprite", "xQ16", "yQ16", "widthQ16", "heightQ16", "tint", "reserved", "reserved"]
+    "readback": [
+      "source",
+      "x",
+      "y",
+      "width",
+      "height",
+      "reserved",
+      "reserved",
+      "reserved"
+    ],
+    "text": [
+      "xQ16",
+      "yQ16",
+      "color",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved"
+    ],
+    "sprite": [
+      "sprite",
+      "xQ16",
+      "yQ16",
+      "widthQ16",
+      "heightQ16",
+      "tint",
+      "reserved",
+      "reserved"
+    ],
+    "audio_bus": [
+      "parent",
+      "gain",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved"
+    ],
+    "audio_stream": [
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved"
+    ],
+    "audio_play_sample": [
+      "atLo",
+      "atHi",
+      "sample",
+      "bus",
+      "rate",
+      "gain",
+      "pan",
+      "loop"
+    ],
+    "audio_play_stream": [
+      "atLo",
+      "atHi",
+      "stream",
+      "bus",
+      "gain",
+      "pan",
+      "reserved",
+      "reserved"
+    ],
+    "audio_stop": [
+      "atLo",
+      "atHi",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved"
+    ],
+    "audio_release": [
+      "atLo",
+      "atHi",
+      "frames",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved"
+    ],
+    "audio_voice_control": [
+      "atLo",
+      "atHi",
+      "parameter",
+      "value",
+      "rampFrames",
+      "reserved",
+      "reserved",
+      "reserved"
+    ],
+    "audio_bus_gain": [
+      "atLo",
+      "atHi",
+      "gain",
+      "rampFrames",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved"
+    ],
+    "audio_stream_write": [
+      "atLo",
+      "atHi",
+      "frames",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved"
+    ],
+    "audio_destroy": [
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved"
+    ]
   },
   "configuration": {
     "exports": {
@@ -254,7 +430,16 @@
   "maxReadbackBytes": 1048576,
   "maxCompletionPayload": 1048576,
   "maxPixelWork": 16777216,
-  "drawData": ["xQ16", "yQ16", "widthQ16", "heightQ16", "palette", "tint", "flags", "reserved"],
+  "drawData": [
+    "xQ16",
+    "yQ16",
+    "widthQ16",
+    "heightQ16",
+    "palette",
+    "tint",
+    "flags",
+    "reserved"
+  ],
   "mailbox": {
     "magic": 827867725,
     "headerBytes": 16,
@@ -276,5 +461,30 @@
       "bytes": 8,
       "session": 12
     }
-  }
+  },
+  "audioRate": 48000,
+  "audioChannels": 2,
+  "audioFramesPerTick": 800,
+  "maxVoices": 16,
+  "maxBuses": 8,
+  "maxStreams": 4,
+  "maxStreamFrames": 8192,
+  "maxStreamChunks": 64,
+  "maxAudioEvents": 4096,
+  "maxAudioBatches": 8,
+  "audioLeadFrames": 2400,
+  "audioHorizonFrames": 96000,
+  "maxAudioSnapshotBytes": 8388608,
+  "audioPageFrames": 256,
+  "maxAudioDeviceBlock": 2048,
+  "maxAudioCompletions": 64,
+  "audioMailboxCompletions": 16,
+  "audioStatusBytes": 448,
+  "audioMaxExactFrame": 9007199254740991,
+  "audioPauseFadeFrames": 64,
+  "maxAudioTransfers": 4,
+  "maxAudioDeviceRate": 192000,
+  "audioMetadataReservationBytes": 4194304,
+  "maxRuntimeBytes": 167772160,
+  "maxAudioRuntimeBytes": 83886080
 }

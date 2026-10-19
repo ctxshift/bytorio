@@ -54,6 +54,15 @@ unsigned get(unsigned at) {
     return value;
 }
 
+int audio_status(lua_State* L) {
+    void* out = lua_newbuffer(L, audioStatusBytes);
+    if (mailbox_size >= mailboxPayloadOffset)
+        std::memcpy(out, packet + audioStatusOffset, audioStatusBytes);
+    else
+        std::memset(out, 0, audioStatusBytes);
+    return 1;
+}
+
 int results(lua_State* L) {
     lua_newtable(L);
     if (!mailbox_size)

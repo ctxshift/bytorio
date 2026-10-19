@@ -1,4 +1,4 @@
-import { PREVIEW_SAMPLE_RATE } from "./constants.js";
+import { PREVIEW_SAMPLE_RATE, resourceSchema as audioLimits } from "./constants.js";
 import { prepareExecutor } from "./executor-cache.js";
 const canvas = document.getElementById("canvas");
 const display = canvas.getContext("2d", { alpha: false });
@@ -14,6 +14,101 @@ let worker,
   started = false,
   autoStart = false;
 let selectedCartridge = null;
+let mixerNode = null;
+let mixerLoading = null;
+let mixerGeneration = 0;
+const mixerPackets = [];
+
+async function ensureMixer() {
+  if (mixerNode || !globalThis.playerAudio.lowEnabled) {
+    return;
+  }
+  if (mixerLoading) {
+    return mixerLoading;
+  }
+  const current = generation;
+  mixerLoading = (async () => {
+    const context = globalThis.playerAudio.context;
+    await context.audioWorklet.addModule("./audio-worklet.js");
+    const response = await fetch("./audio.wasm");
+    if (!response.ok) {
+      throw new Error("Cannot load shared audio mixer.");
+    }
+    const module = await WebAssembly.compile(await response.arrayBuffer());
+    if (current !== generation || !worker || !globalThis.playerStatus.ready) {
+      return;
+    }
+    const node = new AudioWorkletNode(context, "console-pcm-mixer", {
+      numberOfInputs: 0,
+      numberOfOutputs: 1,
+      outputChannelCount: [2],
+      processorOptions: { module },
+    });
+    mixerNode = node;
+    mixerGeneration = current;
+    node.port.onmessage = ({ data }) => {
+      if (data.type === "closed") {
+        node.port.close();
+        return;
+      }
+      if (current !== generation) {
+        return;
+      }
+      if (data.type === "error") {
+        fail(data.error);
+      } else if (data.type === "recycle") {
+        worker.postMessage({ type: "audio-recycle", id: data.id, buffer: data.buffer }, [
+          data.buffer,
+        ]);
+      } else if (data.type === "feedback") {
+        const view = new DataView(data.buffer, 0, data.bytes);
+        const wide = (at) => view.getUint32(at, true) + view.getUint32(at + 4, true) * 2 ** 32;
+        globalThis.playerAudio.mixerStatus = {
+          frame: wide(16),
+          epoch: view.getUint32(12, true),
+          lateEvents: wide(32),
+          underrunFrames: wide(40),
+          rejectedWrites: wide(48),
+          completed: wide(56),
+          deviceRate: context.sampleRate,
+          leadFrames: audioLimits.audioLeadFrames,
+          baseLatency: context.baseLatency,
+          outputLatency: context.outputLatency ?? null,
+        };
+        worker.postMessage(
+          { type: "audio-feedback", id: data.id, buffer: data.buffer, bytes: data.bytes },
+          [data.buffer],
+        );
+      }
+    };
+    node.onprocessorerror = () => {
+      if (current === generation && mixerNode === node) {
+        fail("AudioWorklet mixer failed.");
+      }
+    };
+    for (const packet of mixerPackets.splice(0)) {
+      node.port.postMessage({ ...packet, type: "packet" }, [packet.buffer]);
+    }
+    node.connect(context.destination);
+  })();
+  try {
+    await mixerLoading;
+  } finally {
+    mixerLoading = null;
+  }
+}
+
+function closeMixer() {
+  mixerGeneration = 0;
+  if (mixerNode) {
+    mixerNode.port.postMessage({ type: "close" });
+    mixerNode.disconnect();
+    mixerNode = null;
+  }
+  mixerPackets.length = 0;
+  globalThis.playerAudio.lowEnabled = false;
+  globalThis.playerAudio.mixerStatus = null;
+}
 let selection = 0;
 let previous = performance.now(),
   accumulator = 0,
@@ -66,6 +161,7 @@ function fail(message) {
   clearTimeout(watchdog);
   worker?.terminate();
   stopOutput();
+  closeMixer();
   worker = null;
   pending = started = false;
   globalThis.playerStatus = { ...globalThis.playerStatus, ready: false, error: message };
@@ -107,6 +203,8 @@ async function start() {
     audio.buffer.copyToChannel(audio.samples, 0);
   }
   started = true;
+  await ensureMixer();
+  mixerNode?.port.postMessage({ type: "pause", paused: false });
   previous = performance.now();
   accumulator = 0;
   button.textContent = "Resume game";
@@ -118,6 +216,7 @@ async function load(restart = false) {
   const currentGeneration = ++generation;
   worker?.terminate();
   stopOutput();
+  closeMixer();
   pending = started = false;
   autoStart = restart;
   soundsPlayed = 0;
@@ -135,6 +234,24 @@ async function load(restart = false) {
   };
   worker.onmessage = ({ data }) => {
     if (currentGeneration !== generation) {
+      return;
+    }
+    if (data.type === "audio-packet") {
+      if (mixerNode && mixerGeneration === generation) {
+        mixerNode.port.postMessage({ ...data, type: "packet" }, [data.buffer]);
+      } else {
+        if (mixerPackets.length >= audioLimits.maxAudioTransfers) {
+          fail("Initial audio schedule exceeds transfer credits.");
+          return;
+        }
+        mixerPackets.push(data);
+      }
+      return;
+    }
+    if (data.type === "audio-feedback-recycle") {
+      mixerNode?.port.postMessage({ type: "feedback-recycle", id: data.id, buffer: data.buffer }, [
+        data.buffer,
+      ]);
       return;
     }
     if (data.type === "executor") {
@@ -175,6 +292,12 @@ async function load(restart = false) {
     if (data.type !== "ready" && data.type !== "frame") {
       fail("Invalid player response.");
       return;
+    }
+    if (data.audioEnabled) {
+      globalThis.playerAudio.lowEnabled = true;
+      if (started) {
+        ensureMixer().catch((error) => fail(error.message));
+      }
     }
     if (canvas.width !== data.width || canvas.height !== data.height) {
       canvas.width = data.width;
@@ -335,10 +458,15 @@ function resetInput() {
 window.addEventListener("blur", () => {
   resetInput();
   started = false;
+  mixerNode?.port.postMessage({ type: "pause", paused: true });
 });
 document.addEventListener("visibilitychange", () => {
   resetInput();
   previous = performance.now();
+  if (document.hidden) {
+    started = false;
+    mixerNode?.port.postMessage({ type: "pause", paused: true });
+  }
 });
 window.addEventListener("keydown", (event) => {
   if (document.activeElement !== canvas) {

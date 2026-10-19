@@ -11,6 +11,9 @@ export type Pipeline = { _resourceKind: "pipeline" }
 export type Readback = { _resourceKind: "readback" }
 export type Image = Texture | Target
 export type Pass = { read session: number, read epoch: number, read serial: number }
+export type Bus = { _resourceKind: "bus" }
+export type Stream = { _resourceKind: "stream" }
+export type Voice = { _voice: "voice" }
 export type Sample = { _resourceKind: "sample" }
 export type PixelBuffer = {
     read format: "index8" | "rgba8" | "stencil8",
@@ -24,7 +27,17 @@ export type SampleDesc = { frames: number, channels: number, rate: number }
 export type Rect = { x: number, y: number, width: number, height: number }
 export type FrameRange = { first: number, frames: number }
 export type Upload = { offset_bytes: number?, stride_bytes: number? }
-type Handle = Texture | Sample | Target | Palette | ColorTable | RowTable | Pipeline | Readback
+type Handle =
+    Texture
+    | Sample
+    | Target
+    | Palette
+    | ColorTable
+    | RowTable
+    | Pipeline
+    | Readback
+    | Bus
+    | Stream
 type Record = { session: number, id: number, kind: string, format: number, channels: number }
 local records: { [Handle]: Record } = setmetatable({}, { __mode = "k" }) :: any
 local slots: { [number]: { generation: number, live: boolean } } = {}
@@ -78,7 +91,7 @@ local function check(handle: Handle, kind: string): Record
             ),
         "wrong resource kind or stale session"
     )
-    if record.id == 0 and record.kind == "target" then
+    if record.id == 0 and (record.kind == "target" or record.kind == "bus") then
         return record
     end
     if record.id >= schema.defaultRgbaPipelineId and record.kind == "pipeline" then
@@ -95,7 +108,8 @@ local function check(handle: Handle, kind: string): Record
 end
 local function emit(op: number, id: number, values: { number }?, bytes: buffer?)
     assert(
-        (op <= 13 and phase ~= "draw") or (op >= 16 and phase == "draw"),
+        ((op <= 13 or op >= schema.op_audio_bus) and phase ~= "draw")
+            or (op >= 16 and op <= schema.op_sprite and phase == "draw"),
         "resource command in wrong callback phase"
     )
     local args = buffer.create(if values then 32 else 0)
@@ -112,8 +126,10 @@ local function destroy(handle: Handle, kind: string)
         if kind == "texture"
             then schema.op_destroy_texture
             elseif kind == "sample" then schema.op_destroy_sample
+            elseif kind == "bus" or kind == "stream" then schema.op_audio_destroy
             else schema.op_destroy_resource,
-        record.id
+        record.id,
+        if kind == "bus" or kind == "stream" then {} else nil
     )
     results[record.id] = nil
     local slot = slots[record.id % schema.handleGenerationStride]
@@ -614,7 +630,234 @@ function gfx.sprite(
         { sprite, fixed(x), fixed(y), fixed(width), fixed(height), tint or c.COLOR_OPAQUE_WHITE }
     )
 end
+local audioLogicalFrame = 0
+local audioStatus = buffer.create(schema.audioStatusBytes)
+export type PlayOptions = {
+    at: number?,
+    rate: number?,
+    gain: number?,
+    pan: number?,
+    bus: Bus?,
+    loop: boolean?,
+    loop_start: number?,
+    loop_end: number?,
+}
+export type StreamOptions = { at: number?, gain: number?, pan: number?, bus: Bus? }
+export type AudioStatus = {
+    frame: number,
+    lead_frames: number,
+    epoch: number,
+    late_events: number,
+    underrun_frames: number,
+    rejected_writes: number,
+    completed: number,
+    completion_overflow: number,
+    pending_events: number,
+}
+export type Completion = { voice: number, reason: number, frame: number, serial: number }
+audio.COMPLETION_NATURAL = schema.audioReasonNatural
+audio.COMPLETION_STOPPED = schema.audioReasonStopped
+audio.COMPLETION_CANCELLED = schema.audioReasonCancelled
+local voiceRecords: { [Voice]: { session: number, index: number } } = setmetatable(
+    {},
+    { __mode = "k" }
+) :: any
+local floatBuffer = buffer.create(4)
+local function audioReady()
+    ready()
+    assert(phase ~= "draw", "audio requires init/update")
+end
+local function floatWord(value: number, lo: number, hi: number): number
+    assert(value == value and value >= lo and value <= hi, "invalid audio scalar")
+    buffer.writef32(floatBuffer, 0, value)
+    return buffer.readu32(floatBuffer, 0)
+end
+local function eventTime(at: number?): (number, number)
+    local value = integer(
+        at or audioLogicalFrame,
+        audioLogicalFrame,
+        math.min(audioLogicalFrame + schema.audioHorizonFrames, schema.audioMaxExactFrame)
+    )
+    return value % c.U32_MODULUS, math.floor(value / c.U32_MODULUS)
+end
+local function voiceIndex(voice: Voice): number
+    audioReady()
+    local record = voiceRecords[voice]
+    assert(record and record.session == session, "stale or invalid voice")
+    return record.index
+end
+function audio.time(): number
+    return audioLogicalFrame
+end
+function audio.voice(index: number): Voice
+    audioReady()
+    integer(index, 0, schema.maxVoices - 1)
+    local handle = table.freeze({ _voice = "voice" }) :: Voice
+    voiceRecords[handle] = { session = session, index = index }
+    return handle
+end
+function audio.master(): Bus
+    return reserved("bus", 0, 0) :: Bus
+end
+function audio.bus(desc: { parent: Bus?, gain: number? }?): Bus
+    audioReady()
+    local options: { parent: Bus?, gain: number? } = desc or {}
+    local parent = id(options.parent, "bus")
+    local handle = reserve("bus", 0, 0)
+    emit(schema.op_audio_bus, records[handle].id, { parent, floatWord(options.gain or 1, 0, 4) })
+    return handle :: Bus
+end
+function audio.stream(): Stream
+    audioReady()
+    local handle = reserve("stream", 0, 0)
+    emit(schema.op_audio_stream, records[handle].id, {})
+    return handle :: Stream
+end
+function audio.play_sample(voice: Voice, source: Sample, opts: PlayOptions?)
+    local index = voiceIndex(voice)
+    local sample = check(source, "sample")
+    local options: PlayOptions = opts or {}
+    local lo, hi = eventTime(options.at)
+    local loop = buffer.create(8)
+    buffer.writeu32(loop, 0, integer(options.loop_start or 0, 0, c.U32_MAX))
+    buffer.writeu32(loop, 4, integer(options.loop_end or 0, 0, c.U32_MAX))
+    emit(schema.op_audio_play_sample, index, {
+        lo,
+        hi,
+        sample.id,
+        id(options.bus, "bus"),
+        floatWord(options.rate or 1, 0.0625, 16),
+        floatWord(options.gain or 1, 0, 4),
+        floatWord(options.pan or 0, -1, 1),
+        if options.loop then 1 else 0,
+    }, loop)
+end
+function audio.play_stream(voice: Voice, source: Stream, opts: StreamOptions?)
+    local index = voiceIndex(voice)
+    local stream = check(source, "stream")
+    local options: StreamOptions = opts or {}
+    local lo, hi = eventTime(options.at)
+    emit(schema.op_audio_play_stream, index, {
+        lo,
+        hi,
+        stream.id,
+        id(options.bus, "bus"),
+        floatWord(options.gain or 1, 0, 4),
+        floatWord(options.pan or 0, -1, 1),
+    })
+end
+function audio.stop(voice: Voice, at: number?)
+    local index = voiceIndex(voice)
+    local lo, hi = eventTime(at)
+    emit(schema.op_audio_stop, index, { lo, hi })
+end
+function audio.release(voice: Voice, fade_frames: number, at: number?)
+    local index = voiceIndex(voice)
+    local lo, hi = eventTime(at)
+    emit(
+        schema.op_audio_release,
+        index,
+        { lo, hi, integer(fade_frames, 0, schema.audioHorizonFrames) }
+    )
+end
+local function voiceControl(
+    voice: Voice,
+    parameter: number,
+    value: number,
+    at: number?,
+    ramp_frames: number?
+)
+    local index = voiceIndex(voice)
+    local lo, hi = eventTime(at)
+    emit(schema.op_audio_voice_control, index, {
+        lo,
+        hi,
+        parameter,
+        floatWord(value, if parameter == 0 then 0 else -1, if parameter == 0 then 4 else 1),
+        integer(ramp_frames or 0, 0, schema.audioHorizonFrames),
+    })
+end
+function audio.gain(voice: Voice, value: number, at: number?, ramp_frames: number?)
+    voiceControl(voice, 0, value, at, ramp_frames)
+end
+function audio.pan(voice: Voice, value: number, at: number?, ramp_frames: number?)
+    voiceControl(voice, 1, value, at, ramp_frames)
+end
+function audio.bus_gain(bus: Bus, value: number, at: number?, ramp_frames: number?)
+    audioReady()
+    local record = check(bus, "bus")
+    local lo, hi = eventTime(at)
+    emit(
+        schema.op_audio_bus_gain,
+        record.id,
+        { lo, hi, floatWord(value, 0, 4), integer(ramp_frames or 0, 0, schema.audioHorizonFrames) }
+    )
+end
+function audio.write_stream(stream: Stream, at: number, pcm: PCMBuffer)
+    audioReady()
+    local record = check(stream, "stream")
+    assert(
+        pcm.channels == 2
+            and pcm.frames > 0
+            and pcm.frames <= schema.maxStreamFrames
+            and buffer.len(pcm.samples) == pcm.frames * 8,
+        "stream requires bounded stereo PCM"
+    )
+    local lo, hi = eventTime(at)
+    emit(schema.op_audio_stream_write, record.id, { lo, hi, pcm.frames }, pcm.samples)
+end
+function audio.destroy_bus(bus: Bus)
+    audioReady()
+    assert(check(bus, "bus").id ~= 0, "cannot destroy master bus")
+    destroy(bus, "bus")
+end
+function audio.destroy_stream(stream: Stream)
+    audioReady()
+    destroy(stream, "stream")
+end
+local function readWide(bytes: buffer, offset: number): number
+    return buffer.readu32(bytes, offset) + buffer.readu32(bytes, offset + 4) * c.U32_MODULUS
+end
+function audio.status(): AudioStatus
+    return {
+        frame = readWide(audioStatus, 0),
+        lead_frames = schema.audioLeadFrames,
+        epoch = buffer.readu32(audioStatus, 12),
+        late_events = readWide(audioStatus, 16),
+        underrun_frames = readWide(audioStatus, 24),
+        rejected_writes = readWide(audioStatus, 32),
+        completed = readWide(audioStatus, 40),
+        completion_overflow = readWide(audioStatus, 48),
+        pending_events = buffer.readu32(audioStatus, 56),
+    }
+end
+function audio.completions(): { Completion }
+    local count = integer(buffer.readu32(audioStatus, 60), 0, schema.audioMailboxCompletions)
+    local result: { Completion } = {}
+    for i = 0, count - 1 do
+        local at = 64 + i * 24
+        table.insert(result, {
+            voice = buffer.readu32(audioStatus, at),
+            reason = buffer.readu32(audioStatus, at + 4),
+            frame = readWide(audioStatus, at + 8),
+            serial = readWide(audioStatus, at + 16),
+        })
+    end
+    return result
+end
+function data.from_i16(samples: buffer, channels: number): PCMBuffer
+    integer(channels, 1, 2)
+    local frames = buffer.len(samples) / (2 * channels)
+    integer(frames, 1, schema.maxResourceBytes / (4 * channels))
+    local result = data.pcm(frames, channels)
+    for i = 0, frames * channels - 1 do
+        buffer.writef32(result.samples, i * 4, buffer.readi16(samples, i * 2) / 32768)
+    end
+    return result
+end
 function api._begin(tick: number)
+    audioLogicalFrame = tick * schema.audioFramesPerTick
+    audioStatus = host.resource_audio_status()
     if tick == 0 then
         session = host.resource_session()
         slots = {}

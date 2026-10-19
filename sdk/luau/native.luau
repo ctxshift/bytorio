@@ -4,6 +4,9 @@ local function unavailable(): never
     error("The console native bridge is provided by the player")
 end
 return {
+    resource_audio_status = function(): buffer
+        return unavailable()
+    end,
     resource_results = function(): {
         {
             id: number,

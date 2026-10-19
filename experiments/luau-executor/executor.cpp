@@ -315,7 +315,8 @@ EMSCRIPTEN_KEEPALIVE void game_init() {
         return;
     }
     luaL_openlibs(state);
-    const luaL_Reg api[] = {{"resource_results", resource_transport::results},
+    const luaL_Reg api[] = {{"resource_audio_status", resource_transport::audio_status},
+                            {"resource_results", resource_transport::results},
                             {"resource_session", resource_transport::session},
                             {"resource_emit", resource_transport::emit},
                             {"display", display},

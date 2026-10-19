@@ -17,7 +17,7 @@ export function configureResources(game, runtime) {
     return;
   }
   const protocol = game.game_resource_protocol();
-  if (![1, 2].includes(protocol) || !runtime.runtime_resource_reset) {
+  if (![1, 2, 3].includes(protocol) || !runtime.runtime_resource_reset) {
     throw new Error("Unsupported internal resource protocol.");
   }
   for (const name of [
@@ -43,7 +43,8 @@ export function configureResources(game, runtime) {
     const capacity = game.game_resource_mailbox_capacity();
     if (
       !Number.isInteger(capacity) ||
-      capacity < resourceSchema.mailboxCapacity ||
+      capacity <
+        (protocol >= 3 ? resourceSchema.mailboxCapacity : resourceSchema.legacyMailboxCapacity) ||
       capacity > MAX_MEMORY_BYTES
     ) {
       throw new Error("Invalid completion mailbox capacity.");
@@ -65,7 +66,10 @@ export function deliverResources(game, runtime) {
   const offset = game.game_resource_mailbox() >>> 0;
   const memory = game.memory.buffer;
   if (
-    size < resourceSchema.mailboxPayloadOffset ||
+    size <
+      ((resourceProtocols.get(game) || 0) >= 3
+        ? resourceSchema.mailboxPayloadOffset
+        : resourceSchema.legacyMailboxPayloadOffset) ||
     size > capacity ||
     offset > memory.byteLength - size
   ) {

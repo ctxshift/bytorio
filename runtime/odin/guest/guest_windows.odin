@@ -540,7 +540,7 @@ initialize :: proc(game: ^Game) -> bool {
 
             return false
         }
-        if result[0].kind != 0 || (result[0].of.i32 != 1 && result[0].of.i32 != 2) {
+        if result[0].kind != 0 || (result[0].of.i32 < 1 || result[0].of.i32 > 3) {
 
             return fail(game, "unsupported internal resource protocol")
         }
@@ -565,7 +565,8 @@ initialize :: proc(game: ^Game) -> bool {
                 return false
             }
             if result[0].kind != 0 ||
-               result[0].of.i32 < resources.MAILBOX_CAPACITY ||
+               result[0].of.i32 <
+                   (resources.MAILBOX_CAPACITY if game.resource_protocol >= 3 else resources.LEGACY_MAILBOX_CAPACITY) ||
                result[0].of.i32 > abi.MAX_MEMORY_BYTES {
 
                 return fail(game, "invalid completion mailbox capacity")

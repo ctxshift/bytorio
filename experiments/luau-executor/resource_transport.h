@@ -9,4 +9,5 @@ const char* error();
 int session(lua_State*);
 int emit(lua_State*);
 int results(lua_State*);
+int audio_status(lua_State*);
 } // namespace resource_transport

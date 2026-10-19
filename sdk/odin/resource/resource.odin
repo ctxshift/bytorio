@@ -1,5 +1,6 @@
 package resource
 
+import a "../../../runtime/odin/audio"
 import w "../../../runtime/odin/resource_protocol"
 import r "../../../runtime/odin/resources"
 import "base:runtime"
@@ -19,6 +20,7 @@ phase: u32
 active, sealed: bool
 active_pass, pass_serial, draw_epoch: u32
 mailbox_size: u32
+audio_status: [w.audioStatusBytes]u8
 Result :: struct {
     format, width, height: u32,
     bytes:                 []u8,
@@ -55,6 +57,7 @@ configure :: proc(value: u32) -> bool {
         }
         result = {}
     }
+    audio_status = {}
     active_pass = 0
     pass_serial = 0
     draw_epoch = 0
@@ -205,8 +208,9 @@ destroy :: proc(handle: Handle, kind: u32) {
         return
     }
     emit(
-        w.op_destroy_texture if kind == 1 else (w.op_destroy_sample if kind == 2 else w.op_destroy_resource),
+        w.op_audio_destroy if kind >= 9 else (w.op_destroy_texture if kind == 1 else (w.op_destroy_sample if kind == 2 else w.op_destroy_resource)),
         handle,
+        []u32{0, 0, 0, 0, 0, 0, 0, 0} if kind >= 9 else nil,
     )
     if kind == 8 {
 
@@ -291,6 +295,9 @@ receive :: proc() {
         fail("invalid resource mailbox")
         return
     }
+    copy(audio_status[:], bytes[w.audioStatusOffset:][:w.audioStatusBytes])
+    if a.word(audio_status[:], 60) >
+       w.audioMailboxCompletions { fail("invalid audio completions"); return }
     for i in 0 ..< int(r.u32le(bytes, 4)) {
         at := w.mailboxHeaderBytes + i * w.mailboxRecordBytes
         id := r.u32le(bytes, at)

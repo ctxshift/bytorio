@@ -1,8 +1,8 @@
-# Experimental typed resources: milestones 4a/4b
+# Experimental typed resources: milestones 4a–4c
 
 The current native player and browser Worker support an **internal development
-transport**, version 2, for typed resource ownership and explicit software
-graphics. Version-1 texture/PCM guests remain supported with their original
+transport**, version 3, for typed resource ownership, explicit software
+graphics and scheduled PCM audio. Version-1/2 guests remain supported with their original
 capabilities. These implement slices of [the resource proposal](../docs/resource-av-spec.md).
 It does not advertise SDK 0.2.0, ABI 2, or `resource-av-1`; the existing SDK 0.1.0 /
 ABI 1 cartridge contract and PNG readers are unchanged. These experimental calls
@@ -10,8 +10,9 @@ require matching players from this checkout. They are not portable to older
 players merely because the cartridge still uses the existing container profile.
 
 Resources can be created, uploaded, edited and destroyed. [Explicit graphics](graphics.md)
-now renders textures and targets with passes, composition and readback. PCM
-playback waits for the mixer in 4c. Existing sprite, text and sound-cue calls work.
+now renders textures and targets with passes, composition and readback.
+[PCM audio](audio.md) adds explicit voices, buses, loops, ramps and bounded
+streams. Existing sprite, text and sound-cue calls work.
 
 ## SDK operations
 
@@ -36,8 +37,8 @@ channel must be at most alpha. No texture storage is directly mapped into a game
 
 PCM is finite interleaved f32, mono or stereo, with a declared source rate from
 8,000 to 96,000 Hz. `first` and `frames` address source frames, not bytes or scalar
-samples. The buffer's channel count must match the sample. No playback, loop,
-resampling or scheduled-edit semantics are implemented by this slice. Sample
+samples. The buffer's channel count must match the sample. Playback, looping and
+resampling use the [4c mixer](audio.md); scheduled live source edits remain 4d. Sample
 creation can omit initial PCM in Luau, or use an empty `PCM_Buffer` in Odin;
 storage begins at zero and can be filled with chunked writes.
 
@@ -73,10 +74,12 @@ Version 2 adds a session-checked readback mailbox before each update. Its 16-byt
 header carries magic, count, byte length and session; up to four 32-byte records
 describe copied pixel results. At most 1 MiB of result data is delivered per
 update. The mailbox reuses the acknowledged packet arena; SDKs consume/copy it
-before recording new commands. Full profile configuration negotiation and audio
-completion messages remain later work. Input still uses the existing arguments.
+before recording new commands. Full profile configuration negotiation remains
+later work. Version 3 inserts a 448-byte audio status/completion block after the
+readback records, moving payload data from byte 144 to byte 592. It carries up to
+16 voice completions per update. Input still uses the existing arguments.
 
-Before init, the player checks `game_resource_protocol()` (1 or 2) and configures a
+Before init, the player checks `game_resource_protocol()` (1, 2 or 3) and configures a
 nonzero fresh session with `game_resource_configure(session)`. The version fixes
 the supported operations and limits; a mismatch is rejected. After init and
 **every update**, the host calls `game_commit()` then `game_commit_size()`, copies
@@ -93,9 +96,13 @@ update and draw are phases 0, 1 and 2. Updates require successive ticks; all
 packets require successive sequences. Draw uses the most recent update's tick.
 Commands begin at byte 64 and use 32-byte records. The payload follows the used
 commands immediately. Argument/data offsets are relative to the payload; typed
-descriptors contain eight little-endian u32 fields. Destroy, bind and end-pass have no arguments or
+descriptors contain eight little-endian u32 fields. Graphics destroy, bind and end-pass have no arguments or
 data. Reserved fields are zero. Unknown opcodes, flags, bad ranges, unsupported
 formats and malformed descriptors fail the entire packet with a command index.
+Audio operations use opcodes 32–41 and 32-byte descriptors; audio destruction
+also requires that descriptor, filled with zeroes. Absolute times use low/high
+u32 words. Sample loops use an additional 8-byte source-frame range. The schema
+defines opcode-specific layouts; [audio.md](audio.md) defines units and timing.
 
 The registry simulates metadata and prepares copy-on-write allocations before
 publication. Failure retains the previous registry, sequence and bytes; temporary

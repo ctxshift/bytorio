@@ -192,3 +192,13 @@ copy_pixels :: proc(
         )
     }
 }
+
+from_i16 :: proc(samples: []i16, channels: int) -> PCM_Buffer {
+    if !transport.valid(
+        (channels == 1 || channels == 2) && len(samples) > 0 && len(samples) % channels == 0,
+        "invalid i16 PCM",
+    ) { return {} }
+    result := pcm(len(samples) / channels, channels)
+    for value, i in samples { result.samples[i] = f32(value) / 32768 }
+    return result
+}
