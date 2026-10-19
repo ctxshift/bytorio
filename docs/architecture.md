@@ -1,6 +1,6 @@
 # Architecture
 
-Status: initial design, updated 2026-10-19. The first native/browser sprite-and-sound slice is implemented; see [the development guide](development.md). The broader profile and remaining subsystems below are still proposed.
+Status: target design, updated 2026-10-19. [Odin for games and runtime](adr/0001-use-odin-for-games-and-runtime.md) supersedes the initial Luau/C++ direction. The working sprite-and-sound slice still uses Luau/C++; see [the development guide](development.md). The Odin player is not implemented yet.
 
 ## Product intent and accepted decisions
 
@@ -10,8 +10,8 @@ The repository codename is temporary; the final product name is undecided. Use n
 
 Accepted decisions:
 
-- Game language: Luau, with optional types and a documented console API.
-- Runtime implementation: C++, shared between native and browser targets.
+- Game language: Odin, with a documented SDK and explicit allocation conventions.
+- Runtime implementation: Odin, sharing platform-independent code between native and browser targets.
 - Native execution: a standalone runtime without a webview; playing games must not require Node.js or a developer toolchain.
 - Browser execution: compile the runtime to WebAssembly; use JavaScript only where browser integration requires it.
 - Display: one 384 x 216 logical screen.
@@ -43,48 +43,52 @@ Everything in this section beyond the accepted display and package-size intent i
 
 Use decimal MB for distribution targets and binary MiB for memory. Before freezing the cartridge format, confirm whether the nominal 512 MB ceiling means 512,000,000 bytes or 512 MiB; the reader must enforce an explicit byte ceiling.
 
-Resident game data includes script heap, buffers, decoded CPU assets, mesh data, and resident audio. Report VM/compiler overhead, temporary decoding peaks, package cache, GPU allocations, and total process/Wasm memory separately. Logical resource accounting is not a guarantee about browser process memory. Retain a VM heap cap within the resident budget so script tables cannot consume the whole asset allowance unexpectedly.
+Resident game data includes guest linear memory, buffers, decoded CPU assets, mesh data, and resident audio. Linear memory includes guest stack, static data, allocator metadata, and heap; do not treat its maximum as a heap-only cap. Report Wasm engine overhead, temporary decoding peaks, package cache, GPU allocations, and total process/Wasm memory separately. Logical resource accounting is not a guarantee about browser process memory.
 
-Do not invent a virtual CPU frequency. Start with performance measurements and runaway-script protection. A portable, deterministic CPU quota would require a separately designed meter, including charges for expensive host calls.
+Do not invent a virtual CPU frequency. Start with performance measurements and runaway-code protection. A portable, deterministic CPU quota would require a separately designed meter, including charges for expensive host calls.
 
 ## Runtime boundaries
 
 ```text
-Luau game source + cartridge assets
+Odin game source -> portable game.wasm + cartridge assets
                   |
-       Luau VM and console API
+       versioned guest ABI and console services
                   |
   timing / resources / graphics / audio / saves
                   |
-      narrow platform service interfaces
+      shared Odin runtime and platform interfaces
            /                     \
  native host                 browser host
- SDL3 + desktop GL           Wasm + WebGL 2
- native files/audio          fetch/storage/audio glue
+ native Odin executable      Odin runtime.wasm + WebGL 2
+ embedded guest engine       browser guest Wasm + Worker
+ SDL3/files/audio            fetch/storage/audio/JS bridge
 ```
 
-The shared core owns observable game behavior. The host owns delivery to physical devices and platform services. Game code never calls SDL, OpenGL, browser globals, native filesystem APIs, or arbitrary host libraries directly.
+The shared Odin core owns observable console behavior. The host owns delivery to physical devices and platform services. Proposed cartridges contain one freestanding Wasm game module, with the same module loaded on native and web. Game code never calls SDL, OpenGL, browser globals, native filesystem APIs, or arbitrary host libraries directly.
 
 Suggested implementation choices, subject to the first integration milestone:
 
-- C++20 and CMake, with pinned Luau and other dependency revisions.
+- A pinned Odin compiler for game and runtime builds. The evaluated compiler is `dev-2026-10-nightly:84bc3fc`; a production pin still needs the integration checks. Retain CMake only for the reference build and dependencies that need it.
 - SDL3 for native windows, input, controller mapping, and audio-device integration. SDL supports these services and works with C++: [SDL3 documentation](https://wiki.libsdl.org/SDL3/FrontPage).
-- Desktop OpenGL 3.3 and WebGL 2 backends sharing a constrained renderer and shader templates. Avoid desktop-only features. Emscripten recommends the WebGL-friendly OpenGL ES subset: [graphics documentation](https://emscripten.org/docs/porting/multimedia_and_graphics/OpenGL-support.html).
-- TypeScript for SDK orchestration, development server, import tooling, and editor integration where useful. It is a development dependency, not a native player dependency.
+- Desktop OpenGL 3.3 and WebGL 2 backends sharing a constrained renderer and shader templates. Validate Odin bindings and browser glue during migration; the existing Emscripten/SDL renderer is a reference, not an automatically reusable Odin backend.
+- An embedded Wasm engine with a usable C interface for the native Odin host. Wasmtime is a candidate, not a selected dependency. Compare its footprint, startup, interruption, memory limits, and supported platforms with alternatives.
+- Prefer Odin for maintained SDK/build tooling as practical. Existing Node/Playwright utilities may remain as development helpers; JavaScript remains necessary for browser integration. No Node.js or compiler is required by a native player.
+
+Odin for the runtime means our maintained runtime code is Odin. SDL, graphics drivers, and an embedded Wasm engine may be implemented in other languages behind foreign interfaces. Browser host and game Wasm modules are separate instances; use a bounded JavaScript/Worker bridge rather than assuming shared pointers or direct native linking.
 
 Keep interfaces specific: input snapshot, asset read request/completion, save read/write, drawing submission, audio delivery, monotonic host time, and diagnostics. Avoid a generic plugin framework before a concrete need exists.
 
 ## Game execution and language services
 
-One Luau VM per running game. Compile source using the compiler revision bundled with that runtime. Start without native Luau code generation so browser behavior and the baseline execution path remain comparable; native acceleration can be evaluated later.
+Compile game source during development/packing into a validated freestanding Wasm module. Players execute the module without shipping the Odin compiler. Start with one instance and separate linear memory per running game; pin an allowed Wasm feature subset and validate imports, exports, memory declarations, and ABI version before running it.
 
-Expose initialization, fixed update, and render callbacks through a returned game module. Exact names and signatures are to be proven by the reference game. Keep mutable game state explicit so restart, serialization, and future reload hooks have understandable boundaries.
+Expose initialization, fixed update, and render entry points through a versioned scalar/buffer ABI. Freeze integer widths, layout, byte order, resource handles, and error codes. Odin context, strings, slices, pointers, and C++ objects are not public ABI types. Establish required Odin context at exported entry points and keep mutable game state explicit.
 
-Use a small set of API namespaces, initially graphics, input, audio, assets, storage, math, and diagnostics. API names are proposals until implemented. Provide packed buffers and bulk operations for procedural assets and large data sets; ordinary gameplay should not require manual allocation or pointer arithmetic. Luau already provides bounds-checked byte buffers: [standard library](https://luau.org/library/).
+Use small SDK packages for graphics, input, audio, assets, storage, math, and diagnostics. Provide packed data and bulk command submission to avoid a host transition per pixel or vertex. Supply persistent and per-frame allocation conventions, with development tracking; explicit memory control is part of the programming model. A guest can corrupt its own memory, so every host operation independently validates guest offsets, lengths, handles, and ownership.
 
-Ship API type definitions and documentation from one maintained source. Configure luau-lsp for this custom environment, without Roblox globals, and resolve modules consistently in the compiler, language server, and runtime. The language server supports custom definitions: [luau-lsp](https://github.com/JohnnyMorganz/luau-lsp).
+Ship ordinary Odin SDK packages that the compiler and OLS can inspect, plus generated ABI documentation. Validate completion, navigation, build diagnostics, and runtime source locations in the supported editor workflow. Source-level Wasm failure diagnostics remain an integration requirement, not a capability established by the compiler probe.
 
-Initial editing behavior is automatic restart after valid source changes. Preserve saves. Add live asset replacement next. State-preserving code reload requires explicit export/import hooks; arbitrary closures and VM internals are not a reload contract.
+Initial editing behavior is compile, validate, then restart with a new instance after valid source changes. Preserve saves. Add live asset replacement next. State-preserving reload needs explicit serialization and schema migration; reusing raw heaps can retain invalid pointers, layouts, or function references.
 
 ## Timing and reproducibility
 
@@ -110,11 +114,11 @@ Audio callbacks must not allocate, fetch files, compile scripts, or wait for gam
 
 ## Assets and cartridge format
 
-Development projects are ordinary folders containing a manifest, Luau source, and source assets. Importers produce reproducible runtime assets in a generated directory. Keep generated caches out of source control unless a particular release workflow requires them.
+Development projects are ordinary folders containing a manifest, Odin source, and source assets. Importers and the pinned compiler produce reproducible runtime assets and a game module in a generated directory. Keep generated caches out of source control unless a particular release workflow requires them.
 
 The packed cartridge has a versioned manifest/index, bounded offsets and lengths, independently compressed entries or chunks, stable identifiers, and integrity hashes. Hashes detect corruption; they do not establish publisher trust. Reject traversal paths, overlapping/invalid ranges, oversized decoded entries, unsupported versions, and decompression bombs before allocating large buffers.
 
-Initially ship source and compile it with the local trusted compiler. Luau assumes valid compiler-produced bytecode; arbitrary downloaded bytecode is not a safe interchange format: [Luau sandbox guidance](https://luau.org/sandbox/).
+Ship validated Wasm code and assets; source/debug information may be included separately. The PNG format does not require source compilation on the player's machine. A trusted developer compiler does not make downloaded modules trusted: validate their requirements and restrict host capabilities before instantiation.
 
 Use the same logical asset index across delivery modes:
 
@@ -122,7 +126,7 @@ Use the same logical asset index across delivery modes:
 - Web: exported fetchable chunks by default; optional HTTP range delivery later.
 - Development: source directory and importer cache.
 
-PNG packaging is another representation of the same logical cartridge. It must preserve source, assets, identity, and machine-version requirements rather than define a second game format.
+PNG packaging is another representation of the same logical cartridge. It must preserve game-module bytes, assets, identity, and machine-version requirements rather than define a second game format.
 
 Define a small startup asset set. Prefetch levels explicitly and deliver asset readiness through controlled update-boundary events; the browser runtime must not pretend arbitrary network reads are synchronous. Bound cache growth and loading concurrency. Measure compressed bytes, decoded bytes, temporary memory, and startup downloads independently.
 
@@ -146,7 +150,9 @@ The original PNG file is the distribution artifact. Image editors, screenshottin
 
 Namespace saves by stable cartridge identity, separate from the cartridge and development source. Use versioned save schemas, bounded writes, and failure-aware commit semantics. Native and browser persistence have different failure modes; report quota, unavailable storage, and failed writes to the game. Asset hashes should not change save identity on each build.
 
-Sandbox Luau libraries and custom host bindings, impose allocator limits, and implement interrupt checks for runaway scripts. Luau interrupt hooks are not a deterministic instruction budget, and long host functions also need bounded work. The VM sandbox is one layer; native parsers, decoders, compiler input, and bindings still need validation and memory-safety checks. See [Luau embedding guidance](https://luau.org/sandbox/).
+Use the guest engine's isolation and memory limits, with bounds validation at every host boundary. Odin bounds checking is not a replacement for this boundary. Long host operations also need bounded work. Native parsers, decoders, and bindings remain part of the trusted implementation and need validation.
+
+On native, evaluate engine fuel or epoch interruption and how to recover from traps. Browser Wasm has no equivalent built-in fuel control; the initial proposal runs game code in a dedicated Worker with an external watchdog able to terminate/recreate it. Worker termination loses instance state and does not create a portable instruction quota. The UI/audio presentation must remain responsive during a runaway game. See [the evaluation](odin-evaluation.md) for sources and unresolved tradeoffs.
 
 Default game capabilities are graphics, audio, input, cartridge reads, and saves. Network access and host filesystem access require a later capability design. Development tools may access the chosen project directory; that permission does not extend to a distributed game.
 
@@ -176,4 +182,4 @@ Version machine profiles, cartridge schema, SDK, and runtime separately. A cartr
 
 Before v0.1 freezes, settle minimum devices/browsers, total memory envelopes, CPU/GPU limits, audio decoder/output behavior, save limits, asset formats, and exact package byte limits. Version any later expanded graphics profile explicitly. A second profile is deferred until games demonstrate a need.
 
-Deferred work includes alternative cartridge languages, Wasm guest modules, a new programming language, networking, rollback, storefronts, a fantasy desktop, and a full asset editor suite.
+Deferred work includes additional supported game languages, a new programming language, networking, rollback, storefronts, a fantasy desktop, and a full asset editor suite. Odin Wasm guest execution is now part of the proposed migration, not deferred alternative-language support.

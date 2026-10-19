@@ -1,137 +1,111 @@
 # Implementation plan
 
-Status: updated 2026-10-19. The first Milestone 1 slice is implemented: a standalone native player and browser Wasm build run the same Luau example with one sprite and one sound. SDK commands and later milestones remain planned. See [the development guide](development.md) for actual build/run commands.
+Status: updated 2026-10-19. **Odin is the target language for both games and the runtime**, per [the accepted decision](adr/0001-use-odin-for-games-and-runtime.md). The working Luau/C++ player remains a reference implementation until the Odin native/browser slice passes its acceptance checks. This document supersedes the initial Luau/C++ roadmap.
 
-Current evidence: native core contracts and a live SDL smoke scenario pass on Windows; browser loading, keyboard movement, audio startup/stall behavior, and matching scripted framebuffer output have been checked in Chrome. Runaway execution, memory exhaustion, and source/runtime errors have explicit checks. CI configuration is included but has not yet run remotely. Physical controller/touch-device validation, a named minimum-device benchmark, streaming audio, and other desktop platforms remain open; this slice does not declare the entire machine profile complete.
+Keep the standalone native requirement, browser target, single 384 x 216 display, mostly 2D scope, approximate 128/512 MB package goals, and complete PNG cartridges. The [DS/3DS comparison](target-comparison.md) is advisory; the language change does not expand fidelity scope. The product name remains undecided; use neutral terminology and treat `sdk` command names as placeholders.
 
-Follow the [architecture](architecture.md). Preserve the accepted Luau/C++ stack, standalone native host, browser target, 384 x 216 screen, and 2D-first emphasis. The [3DS comparison](target-comparison.md) is advisory until a different scope is explicitly selected.
+## Current evidence
 
-The product name remains undecided. Use neutral terminology in docs and code comments; avoid codename-derived namespaces, format markers, and extensions. All `sdk` command examples below are executable placeholders. Distribution must include self-contained PNG cartridges containing the full ROM and visible cover art.
+- The Luau/C++ reference player runs on Windows and in Chrome, with a sprite, sound, input, memory/error handling, and matching scripted output.
+- The [Odin probe](../experiments/odin/README.md) compiles scalar game-state logic to Windows native code and an identical import-free Wasm module executed in Node and Chrome. It verifies movement, sound-event counts, and one bounds trap.
+- The probe does not render, play sound, allocate game data dynamically, load guests in the native player, meter runaway code, or load PNGs.
+- Existing CI targets the reference player and has not been verified remotely. The [development guide](development.md) documents the reference build.
 
-## Delivery approach
+## Migration approach
 
-Build a playable vertical slice before a broad engine API. Keep native and browser builds working at every runtime milestone. Select exact dependency versions at bootstrap, record them in the build, and build from a clean checkout without global project-specific configuration.
+Keep the current player runnable while replacing one responsibility at a time. Implement maintained game and runtime code in Odin; use third-party C interfaces for SDL and the selected guest engine. Do not rewrite those dependencies or introduce permanent Luau compatibility as part of this migration.
 
-Proposed source layout:
+Proposed boundaries, created only when needed:
 
 ```text
-runtime/core/          Timing, input snapshots, resources, diagnostics
-runtime/script/        Luau integration and console bindings
-runtime/graphics/      Render commands and constrained graphics backends
-runtime/audio/         Mixer, voices, streaming buffers
-runtime/cartridge/     Index reader, validation, asset delivery
-runtime/platform/      Native and browser adapters
-tools/                 SDK CLI and import pipeline
-sdk/                   API definitions, documentation, project templates
-examples/              Reference games
-tests/                 Focused conformance and integration scenarios
-docs/                  Architecture and project decisions
+runtime/core/          Shared Odin timing, resources, and console behavior
+runtime/guest/         Wasm validation, guest ABI, native engine adapter
+runtime/graphics/      Odin drawing commands and platform backends
+runtime/audio/         Odin sample/mixer behavior and platform output
+runtime/cartridge/     Indexed ROM and PNG wrapper readers
+runtime/platform/      Native SDL and browser service adapters
+sdk/                   Odin API packages, compiler/build orchestration
+examples/              Reference game and Odin successor
+experiments/odin/      Existing isolated compiler probe
+tests/                 Contracts, integration, and conformance
 ```
 
-This is an intended layout, not a requirement to create empty module scaffolding immediately.
+The current C++ files are still the reference implementation, not evidence that these Odin boundaries already exist. Keep migration code/build commands distinct until parity is demonstrated, then retire the old implementation in a focused change.
 
-## Milestone 0: agree on measurable targets
+## Milestone 0: define the guest contract and measurement baseline
 
-- Record the existing accepted decisions and the unresolved DS/3DS fidelity question.
-- Select a minimum native device and browser/device combination, plus a representative browser matrix.
-- Define a reference scene and frame-time measurement method. At 60 FPS the full frame has approximately 16.67 ms; allocate script, rendering, and host headroom after measuring the prototype.
-- Define distribution, decoded asset, VM heap, GPU, startup-download, and startup-time measurements separately.
-- Include PNG wrapper overhead and cover-decoding memory in the measurement definitions, separately from the ROM payload ceiling.
+- Define the smallest versioned Wasm ABI: initialization, fixed update, draw submission, input snapshot, one sound request, diagnostics, and state inspection.
+- Use fixed-width scalar values and validated offset/length buffers; do not expose Odin context, strings, slices, or native pointers across the ABI.
+- Establish context and allocator conventions at every exported Odin entry point.
+- Select a native Wasm engine through a small Odin C-interface probe. Wasmtime is a candidate; measure footprint, startup, memory controls, interruption, and deployment dependencies before selecting it.
+- Select the minimum native/browser environments and provisional frame, startup, memory, recovery, and iteration targets.
 
-Exit: a short benchmark specification with named test environments, reproducible workloads, and explicit provisional budgets. Do not freeze arbitrary limits based on a development workstation alone.
+Exit: a documented ABI draft, pinned compiler/dependency revisions, named measurement environments, and a small native engine embedding proof. The prior scalar probe alone does not satisfy this milestone.
 
-## Milestone 1: prove both hosts and the VM
+## Milestone 1: Odin native and browser player with one sprite and sound
 
-- Set up C++20/CMake, pinned Luau, native SDL3 integration, and Emscripten builds.
-- Run the same Luau module with initialization/update/render callbacks on both hosts.
-- Display a 384 x 216 framebuffer, draw a sprite, map keyboard/controller/pointer input, and play one sample.
-- Resolve browser audio delivery, gesture startup, buffering, and the baseline without shared-memory requirements now.
-- Implement bounded allocator behavior, source diagnostics, a failing-script path, and an infinite-loop interruption path.
-- Add basic native and web build checks to CI.
+- Implement an Odin native executable with SDL window/input/presentation/audio integration and embedded guest execution.
+- Compile an Odin game to freestanding Wasm. Load the exact same bytes in the native engine and browser Wasm engine.
+- Compile the shared Odin runtime for browser execution. Supply only the necessary JavaScript bridge to drawing, input, audio, loading, and storage.
+- Run browser game code in a Worker, with bounded command messages and an external watchdog. Keep presentation responsive during runaway code; do not silently require shared memory or cross-origin isolation.
+- Recreate the existing example's sprite, movement, bobbing, pointer interaction, action edge, and sound using the shared Odin console behavior.
+- Preserve logical 384 x 216 rendering, fixed ticks, bounded catch-up, gesture-unlocked browser audio, pause/resume, and controlled errors.
 
-Exit: clean-checkout instructions produce a standalone native player and a browser build; both run the same source. A script failure or resource limit produces a controlled error, not a frozen player. Audio is measured during an intentional main-thread stall. Record deployment headers and browser requirements explicitly.
+Exit: a standalone Odin native player and browser player run one identical game module with real graphics/audio. Scripted positions, sound requests, and rendered output match the reference where specified. Native users need no compiler, Node.js, or webview.
 
-## Milestone 2: establish the 2D development loop
+## Milestone 2: memory, failures, and developer workflow
 
-- Implement sprites, batching, tilemaps, transforms, clipping, alpha blending, palette swaps, bitmap text, and render targets in the order the reference game needs them.
-- Add fixed ticks, input snapshots, seeded randomness, pause/resume, and bounded catch-up.
-- Implement an initial manifest, source module resolution, and imported image assets.
-- Provide `sdk dev`, `sdk run`, and `sdk check` with API definitions and useful source errors.
-- Restart automatically after valid code changes. A failed edit should retain a usable error view and allow recovery on the next save.
-- Show frame time, script allocations, resource bytes, draw calls, and asset-loading activity.
+- Prove persistent game and per-frame arenas with allocation tracking, exhaustion behavior, and stale-resource diagnostics.
+- Validate imports/exports, feature subset, guest memory maximums, command bounds, integer overflow, and resource handles.
+- Test traps, stack exhaustion, excessive growth, malformed modules, invalid host requests, and infinite loops on both targets. Native interruption and browser Worker termination must recover cleanly.
+- Provide ordinary Odin SDK packages, OLS completion/navigation, compiler diagnostics, and runtime failures mapped to source locations.
+- Implement save, compile, validate, restart; retain the last working game on compilation failure. Measure ten warm iterations and three first-run/cold scenarios rather than extrapolating the scalar probe.
+- Start with restart-on-change. State-preserving reload requires explicit serialization/version migration.
 
-Exit: a small scrolling game with animated actors and controller/pointer input runs in both hosts. A new developer can change movement and add a sprite using only the checked-in SDK documentation. Capture measured edit-to-visible latency and compare with the benchmark target.
+Exit: useful diagnostics and bounded recovery on both players, measured edit-to-first-frame latency, explicit memory accounting, and no dependence on an unrestricted native game plugin.
 
-## Milestone 3: prove occasional 3D and sustained audio
+## Milestone 3: automate parity and retire the reference implementation
 
-- Add a compact indexed-mesh format, camera/transforms, depth testing, and textured unlit materials.
-- Add vertex colors, one simple lighting model, and fog only as the sample requires them.
-- Render a rotating textured object into a target composited with the 2D game.
-- Expand the mixer to the proposed 16 voices, with documented priority and stealing.
-- Select a streaming music codec/decoder after profiling its footprint, decode cost, and licensing. Prove that decoding and asset loading stay off the audio callback.
-- Add live asset refresh with safe resource replacement.
+- Add Odin native and browser builds to CI alongside focused contract checks.
+- Verify clean-checkout builds and standalone distributions, including required native libraries and license notices.
+- Replay the sprite/sound scenario, inspect actual captures, test browser audio through a UI-thread stall, and exercise suspend/resume and focus changes.
+- Validate controller/touch support on physical devices and report platform coverage honestly.
+- When checks pass, retire Luau, maintained C++ runtime code, and their build dependencies in a focused change. Preserve useful reference fixtures and update build instructions.
+- Keep Node/Playwright development utilities where useful; they are not player runtime requirements.
 
-Exit: the 2D scene, 3D object, music, and effects run together at the agreed frame target on the minimum device. Report percentile frame times, memory peaks, and audio underruns. Revisit budgets if the prototype fails; do not hide failures by raising only native limits.
+Exit: the supported Odin build replaces the reference player and its documented commands. A compile-only proof or headless state test is insufficient.
 
-## Milestone 4: cartridges, loading, and saves
+## Milestone 4: strong 2D workflow and compact 3D
 
-- Implement the indexed cartridge format, source compilation, version checks, per-entry compression, hashes, and malformed-input limits.
-- Specify and implement the PNG wrapper: cover image, private ancillary directory/payload chunks, bounded sizes, and logical-to-file offset mapping. Encode the entire ROM, not a network launcher. Keep the cover viewable in ordinary PNG viewers.
-- Implement native open/drop and browser file-picker/drop loading of original PNG cartridges. Read payload ranges without full-ROM extraction or cover-pixel decoding.
-- Implement the shared logical asset index with native packed reads and browser chunk delivery.
-- Define startup asset sets, prefetch/readiness semantics, cache bounds, cancellation, and loading errors.
-- Add isolated native/browser saves with stable identities, schema versions, quotas, and write-error reporting.
-- Implement `sdk pack`, `sdk pack --format png`, size reports, and initial web/native exports.
+- Grow sprites, batching, tilemaps, transforms, clipping, palette effects, text, and render targets around the playable reference game.
+- Add indexed meshes, depth testing, cameras, vertex colors, simple lighting/fog, and 3D-to-2D composition.
+- Develop the proposed 16-voice audio mixer, voice priority, and streamed music after measuring a decoder and proving browser worklet/buffering behavior.
+- Add live asset replacement and frame/resource diagnostics.
 
-Exit: a representative approximately 128 MB content package starts by fetching its startup set. A synthetic package near the proposed 512 MB ceiling exercises indexing, selective loading, and decoded-memory bounds without full decompression. Test slow/offline delivery, corrupt/truncated entries, oversized decoded assets, unavailable storage, and version incompatibility. Check that saves survive player restart and cartridge rebuild.
+Exit: the mixed 2D/3D scene and sustained audio meet measured minimum-device targets. Custom shaders, advanced shadows, full physics, and complex animation remain deferred unless game needs justify them.
 
-PNG acceptance: round-trip both small fixtures and near-ceiling synthetic ROMs through PNG packaging and verify byte-identical logical payloads, stable save identity, and bounded memory. Open the cover in an independent PNG decoder. Load the original PNG on native and web players; confirm a local self-contained cartridge needs no network assets. Reject invalid chunk order/CRC/lengths, excessive cover dimensions, stripped payloads, unsupported versions, and corrupt indexes. Distinguish local bounded reads, remote full-file downloads, optional HTTP ranges, and chunked web exports in startup reports. Document that image resizing/re-encoding can destroy cartridge data.
+## Milestone 5: indexed ROMs, full PNG cartridges, loading, and saves
 
-Synthetic large packages establish container behavior, not the quality or performance of a complete 512 MB game.
+- Package the game module, assets, profile requirements, and optional source/debug data under a versioned manifest.
+- Implement native indexed ROM reads, browser chunk delivery, startup sets, prefetch/readiness, cache bounds, cancellation, and corruption handling.
+- Implement valid PNG covers plus private ancillary directory/payload chunks carrying the complete ROM. Preserve exact game-module bytes and save identity across wrapper conversions.
+- Support native open/drop and browser file-picker/drop without requiring the SDK. Read local payload ranges without full cover decode or ROM extraction.
+- Add isolated, failure-aware native/browser saves and explicit byte/memory ceilings.
+- Provide provisional `sdk pack`, PNG packing, and native/web exports.
 
-## Milestone 5: reference game and automation
+Exit: small and near-512 MB synthetic payloads round-trip with bounded memory. Test malformed PNG/index data, oversized decoded resources, stripped payloads, storage failures, unsupported profiles, and slow/offline delivery. The original-file sharing workflow is documented; image re-encoding is not guaranteed to preserve ROM data.
 
-- Finish the small playable reference game: scrolling map, animation, effects, music, saves, menu, and a 3D object or scene.
-- Add `sdk test` with scripted input, tick limits, state assertions, and structured diagnostics.
-- Add graphics-host screenshot checks and offline mixer captures separately from headless logic tests.
-- Validate suspend/resume, focus loss, resize, controller reconnect, graphics-context loss, and audio startup/recovery.
-- Produce standalone native and static web distributions with required dependencies and license notices.
-- Exercise the player-facing PNG open/drop workflow and original-file sharing instructions without requiring the SDK.
+## Milestone 6: second game and machine profile v0.1
 
-Exit: another developer or an AI agent can create a project, diagnose an intentional error, make a gameplay change, run a scenario, and export both targets using the SDK documentation. Native players require no webview, Node.js, compiler, or SDK installation. Browser exports work under the documented deployment contract.
+- Complete one playable reference game and a second game with a different 2D workload.
+- Use them to refine the SDK and freeze the ABI, cartridge schema, resource limits, and compatibility policy.
+- Publish reproducible native/browser conformance, performance, and export checks.
+- Revisit richer 3D only with evidence from actual games.
 
-## Milestone 6: prove the API with a second game and freeze v0.1
+Exit: both games use the same documented Odin SDK and portable guest contract without game-specific host escape hatches.
 
-- Make a second small game with a different 2D workload to identify accidental assumptions in the first game's API.
-- Remove or revise awkward APIs while compatibility is still inexpensive.
-- Publish the machine profile, memory accounting, feature limits, cartridge version, supported hosts, and compatibility policy.
-- Establish conformance fixtures and measured minimum-device performance baselines.
-- Confirm whether richer 3D is an evidenced need; keep a 3DS-like expansion separate from completing the initial profile.
+## Validation and remaining uncertainty
 
-Exit: two games use the same documented API without game-specific host escape hatches. Their cartridges run on the native and browser player. v0.1's guarantees are explicit and tested.
+Use focused checks for guest validation, ABI decoding, input/timing, allocation/resource accounting, save identity, mixer output, and parser boundaries. Keep graphics/audio integration checks separate from scalar/headless tests. Fuzz cartridge and guest-command parsers when implemented. Record exact compiler/engine versions and observed results without machine-specific paths.
 
-## Validation strategy
-
-Use focused tests where a wrong result would violate the machine contract: tick/input behavior, resource ownership and accounting, cartridge parsing, save identity, module resolution, and mixer behavior. Fuzz package/index parsing and critical decoder boundaries when those components exist. Use sanitizers on native builds where supported.
-
-Use integration checks for VM errors/interrupts, real browser startup, selective asset delivery, exported-player dependencies, and save persistence. Test graphical output with tolerances appropriate to documented GPU differences; do not promise pixel-identical output across all drivers. Compare state replays under controlled inputs without claiming universal cross-platform determinism.
-
-PNG tests must verify ROM bytes independently of cover-image validity: a valid-looking image can lack a valid payload. Cover decoding and cartridge reading need separate bounds and malformed-input coverage. Include the PNG wrapper in parser fuzzing once implemented.
-
-Retain compact benchmark reports with exact tool/runtime versions and observed results. A successful compile is not proof of playable performance, and headless tests are not proof of working audio or graphics.
-
-## Main risks and decision gates
-
-| Risk | Resolve by | Required evidence |
-| --- | --- | --- |
-| Luau/browser integration or bindings cost | Milestones 1-2 | Same module running on both targets, measured script/host-call cost |
-| Browser audio glitches or restrictive deployment | Milestone 1 | Stall test, latency/underrun report, documented headers |
-| Asset decode/cache memory exceeds nominal budget | Milestones 3-4 | Peak-memory report with temporary allocations included |
-| Large packages cause long web startup | Milestone 4 | Network trace showing startup-only fetches |
-| Large PNGs trigger full decode or extraction | Milestone 4 | Bounded local-read measurements and separate ROM/cover memory accounting |
-| Image processing strips the game payload | Milestones 4-5 | Clear invalid-cartridge errors and original-file sharing instructions |
-| Editor tools assume Roblox | Milestone 2 | Correct custom API and module diagnostics in an ordinary project |
-| 3D scope overtakes 2D workflow | Milestones 3 and 6 | Reference-game need and explicit scope decision |
-| SDK and runtime behavior drift | Milestones 5-6 | Export and conformance checks on native and browser |
-
-No delivery dates are assigned until the first integration milestone reveals platform and tooling costs. The first implementation task is the smallest native-and-browser Luau player with one sprite and one sound, following Milestone 0's measurable target selection.
+An embedded Wasm engine, the Odin browser host, guest allocation support, Worker recovery, source-level debugging, realistic edit-loop timing, and footprint are still unproven together. These are implementation gates for the chosen language direction. No delivery dates are assigned until the first Odin player integration is measured.

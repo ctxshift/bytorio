@@ -6,7 +6,7 @@ Research date: 2026-10-19. Status: recommendation; no change to the agreed displ
 
 Keep the initial target **DS-inspired production scope with modern conveniences**: mostly 2D, occasional textured 3D, a single 384×216 display, and small games. Allow artists to pursue a cleaner or more detailed look where the measured budgets permit. Do not promise broad 3DS-level 3D capability in version one.
 
-This is a product and implementation recommendation, not a claim that contemporary hosts cannot render such games. Luau with a shared C++ runtime, compiled to native and WebAssembly, does not inherently restrict the project to either historical console's graphics. The first reference games and the minimum supported host must establish practical limits.
+This is a product and implementation recommendation, not a claim that contemporary hosts cannot render such games. The selected Odin game/runtime direction does not define a historical console's graphics limits or expand the agreed fidelity scope. The first reference games and the minimum supported host must establish practical limits.
 
 ## Display comparison
 
