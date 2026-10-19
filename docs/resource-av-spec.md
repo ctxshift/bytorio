@@ -1,14 +1,15 @@
 # Typed graphics and audio resources
 
-Status: **proposed profile; milestone 4a resource slice implemented**, 2026-10-19. Proposed SDK 0.2.0,
+Status: **proposed profile; milestones 4a/4b implemented**, 2026-10-19. Proposed SDK 0.2.0,
 ABI 2, profile `resource-av-1`. The implemented SDK 0.1.0 / ABI 1 contract remains
 [unchanged](cartridge-spec.md). This document defines the intended public
 interface and observable behavior; wire opcode numbers and descriptor layouts
 must be generated and tested before this profile ships.
 
-The [internal 4a implementation](../sdk/resources.md) supports texture and PCM
-ownership through both SDKs and hosts. Its experimental control transport does
-not publish this complete profile or supply the graphics/audio features below.
+The [internal resource implementation](../sdk/resources.md) and
+[software graphics reference](../sdk/graphics.md) support 4a/4b through both SDKs
+and hosts. This experimental transport does not publish the complete profile;
+the mixer/synthesis, full negotiated ABI and profile packaging remain later work.
 
 The console provides low-level control through typed data, resource handles,
 ordered rendering and scheduled audio. Games manipulate their own bytes and

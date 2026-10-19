@@ -25,7 +25,8 @@
     "test:sdk": "node tools/verify-sdk.mjs && node tools/verify-sdk-cli.mjs",
     "test:cartridge": "node tools/verify-cartridge.mjs",
     "generate:resources": "node tools/generate-resource-schema.mjs",
-    "test:resources": "node tools/verify-resources.mjs"
+    "test:resources": "node tools/verify-resources.mjs",
+    "test:graphics": "node tools/verify-graphics.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

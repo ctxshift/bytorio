@@ -11,19 +11,44 @@ using namespace resource_schema;
 constexpr unsigned payload_base = headerBytes + maxCommands * commandBytes;
 unsigned char packet[payload_base + maxPayload];
 unsigned configured_session, sequence, count, payload_size;
+unsigned phase, mailbox_size;
 std::uint64_t tick;
 bool active, sealed;
 const char* diagnostic = "";
 void put(unsigned at, unsigned value) {
     for (unsigned i = 0; i < 4; ++i) packet[at + i] = static_cast<unsigned char>(value >> (i * 8));
 }
-void begin(std::uint64_t value) {
+void begin(std::uint64_t value, unsigned next_phase) {
     if (sealed) { diagnostic = "resource packet was not acknowledged"; return; }
-    tick = value; count = payload_size = 0; active = true;
+    tick = value; phase = next_phase; count = payload_size = 0; active = true;
 }
 void end() { active = false; }
 const char* error() { return diagnostic; }
 int session(lua_State* L) { lua_pushnumber(L, configured_session); return 1; }
+unsigned get(unsigned at) {
+    unsigned value = 0;
+    for (unsigned i = 0; i < 4; ++i) value |= unsigned(packet[at+i]) << (i*8);
+    return value;
+}
+int results(lua_State* L) {
+    lua_newtable(L);
+    if (!mailbox_size) return 1;
+    if (mailbox_size < 144 || mailbox_size > 1048720 || get(0) != 0x3158424d || get(4) > 4 || get(8) != mailbox_size || get(12) != configured_session)
+        luaL_error(L, "invalid resource mailbox");
+    const unsigned total = get(4);
+    for (unsigned i = 0; i < total; ++i) {
+        const unsigned at = 16+i*32, offset = get(at+16), length = get(at+20);
+        if (offset < 144 || offset > mailbox_size || length > mailbox_size-offset) luaL_error(L, "invalid readback completion");
+        lua_newtable(L);
+        const char* names[] = {"id", "format", "width", "height"};
+        for (unsigned j = 0; j < 4; ++j) {lua_pushnumber(L, get(at+j*4));lua_setfield(L,-2,names[j]);}
+        void* bytes = lua_newbuffer(L, length);
+        std::memcpy(bytes,packet+offset,length);lua_setfield(L,-2,"bytes");
+        lua_rawseti(L,-2,i+1);
+    }
+    mailbox_size = 0;
+    return 1;
+}
 unsigned integer(lua_State* L, int index) {
     const double value = luaL_checknumber(L, index);
     if (!std::isfinite(value) || value < 0 || value > 4294967295.0 || value != std::floor(value))
@@ -59,7 +84,7 @@ EMSCRIPTEN_KEEPALIVE unsigned game_resource_protocol() { return resource_schema:
 EMSCRIPTEN_KEEPALIVE unsigned game_resource_configure(unsigned session) {
     using namespace resource_transport;
     if (!session || active || sealed) return 0;
-    configured_session = session; sequence = count = payload_size = 0; diagnostic = "";
+    configured_session = session; sequence = count = payload_size = mailbox_size = 0; diagnostic = "";
     return 1;
 }
 EMSCRIPTEN_KEEPALIVE const unsigned char* game_commit() {
@@ -70,7 +95,7 @@ EMSCRIPTEN_KEEPALIVE const unsigned char* game_commit() {
     const unsigned offset = headerBytes + count * commandBytes;
     std::memmove(packet + offset, packet + payload_base, payload_size);
     std::memset(packet, 0, headerBytes);
-    const unsigned fields[] = {magic, abi, headerBytes, configured_session, static_cast<unsigned>(tick), static_cast<unsigned>(tick >> 32), tick == 0 ? 0u : 1u, sequence, count, headerBytes, count * commandBytes, offset, payload_size};
+    const unsigned fields[] = {magic, abi, headerBytes, configured_session, static_cast<unsigned>(tick), static_cast<unsigned>(tick >> 32), phase, sequence, count, headerBytes, count * commandBytes, offset, payload_size};
     for (unsigned i = 0; i < 13; ++i) put(i * 4, fields[i]);
     sealed = true; return packet;
 }
@@ -82,5 +107,11 @@ EMSCRIPTEN_KEEPALIVE unsigned game_commit_ack(unsigned value) {
     using namespace resource_transport;
     if (!sealed || value != sequence) { diagnostic = "resource acknowledgement mismatch"; return 0; }
     sealed = false; return 1;
+}
+EMSCRIPTEN_KEEPALIVE unsigned char* game_resource_mailbox() {return resource_transport::packet;}
+EMSCRIPTEN_KEEPALIVE unsigned game_resource_mailbox_capacity() {return 1048720;}
+EMSCRIPTEN_KEEPALIVE unsigned game_resource_mailbox_size(unsigned size) {
+    if (size > 1048720) return 0;
+    resource_transport::mailbox_size = size; return 1;
 }
 }

@@ -1,16 +1,17 @@
-# Experimental typed resources: milestone 4a
+# Experimental typed resources: milestones 4a/4b
 
 The current native player and browser Worker support an **internal development
-transport**, version 1, for texture and PCM resource ownership. This is the first
-implemented slice of [the resource proposal](../docs/resource-av-spec.md).
+transport**, version 2, for typed resource ownership and explicit software
+graphics. Version-1 texture/PCM guests remain supported with their original
+capabilities. These implement slices of [the resource proposal](../docs/resource-av-spec.md).
 It does not advertise SDK 0.2.0, ABI 2, or `resource-av-1`; the existing SDK 0.1.0 /
 ABI 1 cartridge contract and PNG readers are unchanged. These experimental calls
 require matching players from this checkout. They are not portable to older
 players merely because the cartridge still uses the existing container profile.
 
-Resources can be created, uploaded, edited and destroyed. They cannot yet be
-drawn or played: explicit passes arrive in 4b and the mixer in 4c. Existing sprite,
-text and sound-cue calls continue to work.
+Resources can be created, uploaded, edited and destroyed. [Explicit graphics](graphics.md)
+now renders textures and targets with passes, composition and readback. PCM
+playback waits for the mixer in 4c. Existing sprite, text and sound-cue calls work.
 
 ## SDK operations
 
@@ -30,7 +31,7 @@ Luau uses `console.data`, `console.gfx`, and `console.audio`. Odin imports
 Upload options specify `offset_bytes` and `stride_bytes`; omitted or zero stride is the
 pixel buffer's row width. Rectangles use top-left coordinates and positive sizes;
 uploads must fit the destination. Buffer format must match texture format. Pixel
-bytes are row-major index8 or premultiplied RGBA8, in R/G/B/A order. Every RGB
+bytes are row-major index8, stencil8 attachments or premultiplied RGBA8, in R/G/B/A order. Every RGB
 channel must be at most alpha. No texture storage is directly mapped into a game.
 
 PCM is finite interleaved f32, mono or stereo, with a declared source rate from
@@ -54,8 +55,8 @@ allocation remains within the existing memory/heap limits.
 Call resource operations inside init/update. Each operation copies supplied data
 into bounded SDK staging immediately, so a source buffer can be reused before
 the callback returns. Destruction is explicit; handles from a destroyed resource
-or previous session fail. Texture/sample definitions are independent in 4a; the
-dependency rules for pipelines, readbacks and voices apply when those exist.
+or previous session fail. Version 2 also retains pipeline/table, row/palette and
+target/stencil dependencies; destroy dependants before resources they reference.
 
 For complete, type-checked usage, see the equivalent
 [Luau fixture](../tests/resources/cartridges/game.luau) and
@@ -68,24 +69,31 @@ destroy resources, then reuse a slot with a new generation.
 version, limits, formats, field layouts, descriptors and configuration exports.
 `npm run generate:resources` generates the Odin, Luau and C++ constants;
 `node tools/generate-resource-schema.mjs --check` detects stale generated files.
-The complete profile's asynchronous mailbox and negotiated configuration records
-remain future work; this version uses fixed capabilities and the existing input
-arguments, with no asynchronous resource completions.
+Version 2 adds a session-checked readback mailbox before each update. Its 16-byte
+header carries magic, count, byte length and session; up to four 32-byte records
+describe copied pixel results. At most 1 MiB of result data is delivered per
+update. The mailbox reuses the acknowledged packet arena; SDKs consume/copy it
+before recording new commands. Full profile configuration negotiation and audio
+completion messages remain later work. Input still uses the existing arguments.
 
-Before init, the player checks `game_resource_protocol() == 1` and configures a
+Before init, the player checks `game_resource_protocol()` (1 or 2) and configures a
 nonzero fresh session with `game_resource_configure(session)`. The version fixes
 the supported operations and limits; a mismatch is rejected. After init and
 **every update**, the host calls `game_commit()` then `game_commit_size()`, copies
 the packet, validates it in the shared Odin registry, and acknowledges its exact
-sequence with `game_commit_ack(sequence)`. There is one sealed packet per guest;
-the SDK refuses to reuse its arena before acknowledgement. Draws do not consume
-or replay control packets. Legacy guests without these exports remain supported.
+sequence with `game_commit_ack(sequence)`. Version 2 does the same after every
+draw, using a distinct draw phase without advancing the simulation tick. There
+is one sealed packet per guest; the SDK refuses arena reuse before acknowledgement.
+Draws cannot repeat control/audio events. Legacy guests without these exports
+remain supported. Hosts validate version-2 mailbox exports before init and cache
+the negotiated version rather than querying a mutable guest getter each frame.
 
-The wire header is the proposal's 64-byte `AVP1` header with ABI field 2. Only init
-and update phases are implemented; updates require successive ticks and sequences.
+The wire header is the proposal's 64-byte `AVP1` header with ABI field 2. Init,
+update and draw are phases 0, 1 and 2. Updates require successive ticks; all
+packets require successive sequences. Draw uses the most recent update's tick.
 Commands begin at byte 64 and use 32-byte records. The payload follows the used
 commands immediately. Argument/data offsets are relative to the payload; typed
-descriptors contain eight little-endian u32 fields. Destroy has no arguments or
+descriptors contain eight little-endian u32 fields. Destroy, bind and end-pass have no arguments or
 data. Reserved fields are zero. Unknown opcodes, flags, bad ranges, unsupported
 formats and malformed descriptors fail the entire packet with a command index.
 
@@ -106,7 +114,7 @@ be chunked. Texture axes are 1..1024; actual buffers still must fit guest limits
 The browser runtime now has an 80 MiB linear-memory ceiling to accommodate the
 resource quota plus fixed runtime storage and allocation overhead. **Guest memory
 remains capped at 8 MiB and the tracked Luau heap at 4 MiB.** The Luau executor's
-initial memory grows from 2 MiB to 4 MiB for its bounded transport arena. Native
+initial memory is 4 MiB for its bounded transport arena. Native
 and browser use the same registry and charging rules. Faults stop the session;
 worker errors explicitly release resources and discard the guest.
 

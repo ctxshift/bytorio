@@ -9,6 +9,7 @@ import {
   rasterizeDrawing,
   configureResources,
   submitResources,
+  deliverResources,
 } from "../../runtime/odin/web/policy.js";
 try {
   const imports = { env: { sin: Math.sin } };
@@ -37,6 +38,7 @@ try {
   runtime.runtime_init();
   uploadGraphics(game, runtime);
   for (let i = 0; i < 3; i++) {
+    deliverResources(game, runtime);
     game.game_update(0, 0, 0, 0);
     checkExecutor(game);
     submitResources(game, runtime);

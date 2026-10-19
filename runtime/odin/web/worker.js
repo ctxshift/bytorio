@@ -8,6 +8,7 @@ import {
   FRAME_BYTES,
   configureResources,
   submitResources,
+  deliverResources,
 } from "./policy.js";
 import { decodeCartridge } from "./cartridge.js";
 
@@ -193,6 +194,7 @@ self.onmessage = async ({ data }) => {
       let output;
       for (let i = 0; i < data.steps && (!smoke || lastTick < 120); i++) {
         const buttons = smoke ? (lastTick < 60 ? 2 : lastTick === 60 ? 16 : 0) : data.input.buttons;
+        deliverResources(game, runtime);
         game.game_update(
           buttons,
           smoke ? 0 : Number(data.input.pointer),
@@ -220,13 +222,18 @@ self.onmessage = async ({ data }) => {
         traces = [];
       let peakLinear = game.memory.buffer.byteLength,
         peakHeap = 0;
+      let resourceBaseline = [0, 0, 0];
       for (let pass = 0; pass < 7; pass++) {
         configureResources(game, runtime);
         game.game_init();
         checkExecutor(game);
         submitResources(game, runtime);
+        resourceBaseline = [0, 1, 2].map((index) =>
+          Number(runtime.runtime_resource_stat?.(index) || 0),
+        );
         for (const mask of data.masks) {
           const t0 = performance.now();
+          deliverResources(game, runtime);
           game.game_update(mask, 0, 0, 0);
           checkExecutor(game);
           submitResources(game, runtime);
@@ -258,6 +265,12 @@ self.onmessage = async ({ data }) => {
         memory: { ...memoryReport(), peakLinear, peakHeap: game.game_heap_peak ? peakHeap : null },
         timings,
         traces,
+        resourceStats: {
+          packetBytes: Number(runtime.runtime_resource_stat?.(0) || 0) - resourceBaseline[0],
+          hostCopyBytes: Number(runtime.runtime_resource_stat?.(1) || 0) - resourceBaseline[1],
+          pixelWork: Number(runtime.runtime_resource_stat?.(2) || 0) - resourceBaseline[2],
+          peakResourceBytes: Number(runtime.runtime_resource_stat?.(3) || 0),
+        },
       });
     } else {
       throw new Error("Unknown player request.");

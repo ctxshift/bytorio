@@ -2,9 +2,9 @@
 
 This page documents implemented calls. The proposed next interface is described
 in [typed graphics and audio resources](../docs/resource-av-spec.md), including
-equivalent Luau/Odin operation shapes. A development-only subset for texture/PCM
-ownership is documented in [experimental resources](resources.md); rendering and
-playback of those resources are not available yet.
+equivalent Luau/Odin operation shapes. Development-only [resource ownership](resources.md)
+and [explicit graphics](graphics.md) are implemented. PCM playback remains later
+work; the complete successor profile is not published.
 
 Luau imports `local console = require("@console")`. Odin imports
 `console "sdk:console"`. Sprite IDs start at zero. Drawing coordinates use the

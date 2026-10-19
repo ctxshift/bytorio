@@ -84,6 +84,7 @@ render_current :: proc(app: ^App) -> bool {
     if !core.render(app.frame) {return guest.fail(&app.game,"invalid frame command")}
     valid := core.render_batch(app.game.batch[:app.game.count],app.game.text[:app.game.text_size]) if app.game.stride == 32 else core.render_commands(app.game.commands[:app.game.count])
     if !valid {return guest.fail(&app.game,"invalid frame command")}
+    guest.apply_graphics(&app.game)
     return true
 }
 

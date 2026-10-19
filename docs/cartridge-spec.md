@@ -22,7 +22,7 @@ It targets SDK 0.2.0 / ABI 2 with negotiation, generation-checked handles, bound
 control/draw packets and lifecycle rules for both Luau and Odin. Its provisional
 budgets are isolated in [the proposal manifest](../sdk/proposals/resource-av-1.json).
 
-The complete profile is not implemented. Its [internal 4a slice](../sdk/resources.md)
+The complete profile is not implemented. Its [internal 4a/4b slices](../sdk/resources.md)
 does not change the advertised behavior, limits,
 exports or PNG compatibility specified below. `sdk/contract.json` remains the
 authoritative implemented contract. Profile 2 must not be advertised until the

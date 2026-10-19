@@ -89,7 +89,7 @@ Exit: the supported Odin build replaces the reference player and its documented 
 ## Milestone 4: typed graphics and audio resources
 
 Design: [resource interface proposal](resource-av-spec.md), proposed SDK 0.2.0 /
-ABI 2 / `resource-av-1`. Status: **4a resource slice implemented; full profile not published**. Current SDK 0.1.0 remains the
+ABI 2 / `resource-av-1`. Status: **4a/4b implemented; full profile not published**. Current SDK 0.1.0 remains the
 implemented contract. Complete the stages in order; do not expose partial calls
 as supported profile features. [Proposal budgets](../sdk/proposals/resource-av-1.json)
 are targets to validate, not constants to apply to today's player.
@@ -99,10 +99,9 @@ are targets to validate, not constants to apply to today's player.
 Implemented: [experimental resource transport and SDKs](../sdk/resources.md),
 with texture/PCM lifecycles, shared transactional registry, typed staging,
 session/generation validation, control commits on every update and four-way
-native/browser verification. The generated internal version-1 subset uses fixed
-capabilities and existing input arguments. Full negotiated configuration/input
-records, asynchronous completions and draw packets are not frozen by this slice;
-extend the schema as their consumers arrive, before profile publication in 4e.
+native/browser verification. Version 1 remains supported; internal version 2 adds
+the graphics draw stream and readback mailbox. Full negotiated configuration and
+audio input/completion records remain later work before profile publication in 4e.
 
 - Generate one schema for capability/configuration/input records, packet headers,
   opcodes, typed descriptors, acknowledgements and completion messages. Freeze
@@ -123,6 +122,15 @@ tests. Guest buffer reuse after upload does not change accepted data. No device
 work retains guest pointers or calls game code re-entrantly.
 
 ### 4b. Explicit graphics passes and low-level composition
+
+Implemented: [both graphics SDKs and the software reference](../sdk/graphics.md),
+including typed targets/palettes/tables/pipelines, masks and stencil, affine quads,
+ordered passes, screen resolution, readback and sprite/text conveniences in passes.
+`npm run test:graphics` compares complete native/browser frames from both SDKs,
+checks independent reference pixels, rollback and completion bounds, and records
+the full-frame upload workload. See [measurement method](graphics-measurements.md).
+The accelerated adapter remains deferred; full-profile publication still waits
+for 4c-4e rather than inferring support from these experimental SDK calls.
 
 - Extend the Odin software reference with mutable index8/premultiplied-RGBA8
   images, palettes, immutable pipelines, clips and affine transforms. Define and

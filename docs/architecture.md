@@ -103,9 +103,11 @@ Provide a seeded PRNG and virtual tick time. Record input by tick for regression
 The [typed resource proposal](resource-av-spec.md) defines the next 2D interface:
 game-owned pixel buffers; runtime-owned textures, targets, palettes, lookup and
 row tables; immutable pipelines; ordered passes; explicit readback and presentation.
-It proposes premultiplied RGBA8 and independent stencil storage, with equal Luau
-and Odin capability through a versioned packet interface. These additions are
-not implemented by the current opaque-rectangle/atlas renderer.
+The [implemented 4b reference](../sdk/graphics.md) supplies premultiplied RGBA8,
+independent stencil, composition tables, affine sampling and readback with equal
+Luau/Odin capability on native/browser. It uses a transactional Odin software
+renderer and internal transport version 2. The published profile still retains
+the old rectangle/atlas contract; the complete resource profile is not published.
 
 Render into the logical framebuffer, then present it using a documented scaling policy. Pointer coordinates map back into that logical space, with an explicit policy for letterboxed areas.
 

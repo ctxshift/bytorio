@@ -4,6 +4,7 @@ import "base:runtime"
 import abi "../../../runtime/odin/abi"
 import g "../../../runtime/odin/graphics"
 import resources "../resource"
+import gfx "../gfx"
 
 VERSION :: "0.1.0"
 VERSION_WORD :: u32(256)
@@ -60,20 +61,20 @@ rgb :: proc(r,g,b:int) -> u32 {
     if !valid(r>=0&&r<=255&&g>=0&&g<=255&&b>=0&&b<=255,"color channel outside supported range") {return 0xff000000}
     return 0xff000000|u32(b)<<16|u32(g)<<8|u32(r)
 }
-clear :: proc(color:u32) {if valid(color>>24==255,"colors must be opaque") {frame.clear=color}}
+clear :: proc(color:u32) {if valid(color>>24==255,"colors must be opaque") {if resources.active_pass!=0 {gfx.clear(gfx.current_pass(),color)} else {frame.clear=color}}}
 rect :: proc(x,y,w,h:int,color:u32) {
-    if coordinates(x,y) && valid(color>>24==255,"colors must be opaque") && valid(w>=0&&w<=4096&&h>=0&&h<=4096,"rectangle dimensions outside supported range") {g.rect(x,y,w,h,color)}
+    if coordinates(x,y) && valid(color>>24==255,"colors must be opaque") && valid(w>=0&&w<=4096&&h>=0&&h<=4096,"rectangle dimensions outside supported range") {if resources.active_pass!=0 {gfx.rect(gfx.current_pass(),f64(x),f64(y),f64(w),f64(h),color)} else {g.rect(x,y,w,h,color)}}
 }
 sprite :: proc(id,x,y:int,scale:=1) {
-    if coordinates(x,y) && valid(id>=0&&id<256&&scale>=1&&scale<=8,"invalid sprite ID or scale") {g.sprite(id,x,y,scale)}
+    if coordinates(x,y) && valid(id>=0&&id<256&&scale>=1&&scale<=8,"invalid sprite ID or scale") {if resources.active_pass!=0 {gfx.sprite(gfx.current_pass(),id,f64(x),f64(y),f64(16*scale),f64(16*scale))} else {g.sprite(id,x,y,scale)}}
 }
 sprite_size :: proc(id,x,y,w,h:int) {
-    if coordinates(x,y) && valid(id>=0&&id<256&&w>=1&&w<=128&&h>=1&&h<=128,"invalid sprite ID or size") {g.sprite_size(id,x,y,w,h)}
+    if coordinates(x,y) && valid(id>=0&&id<256&&w>=1&&w<=128&&h>=1&&h<=128,"invalid sprite ID or size") {if resources.active_pass!=0 {gfx.sprite(gfx.current_pass(),id,f64(x),f64(y),f64(w),f64(h))} else {g.sprite_size(id,x,y,w,h)}}
 }
 text :: proc(value:string,x,y:int,color:u32) {
     if !coordinates(x,y) || !valid(color>>24==255,"colors must be opaque") || !valid(len(value)<=1024,"text command exceeds 1024 bytes") {return}
     for char in value {if !valid(char>=0&&char<128,"text must be ASCII") {return}}
-    g.text(value,x,y,color)
+    if resources.active_pass!=0 {gfx.text(gfx.current_pass(),value,f64(x),f64(y),color)} else {g.text(value,x,y,color)}
 }
 buttons :: proc() -> u32 {return held}
 button :: proc(key:Button) -> bool {return held&u32(key)!=0}
@@ -118,7 +119,9 @@ debug_position :: proc(x,y:f64) {
     context=runtime.default_context()
     when ODIN_ARCH==.wasm32 {context.allocator=runtime.default_wasm_allocator()}
     g.begin()
+    resources.begin_draw(u64(clock))
     if diagnostic_size==0 {callbacks.draw()}
+    resources.end()
     if g.overflow {fail("graphics batch capacity exceeded")}
     return u32(uintptr(&frame))
 }
@@ -136,3 +139,6 @@ debug_position :: proc(x,y:f64) {
 @(export) game_commit :: proc "c" () -> u32 {context=runtime.default_context();return resources.commit()}
 @(export) game_commit_size :: proc "c" () -> u32 {return resources.packet_size()}
 @(export) game_commit_ack :: proc "c" (sequence:u32) -> u32 {context=runtime.default_context();return u32(resources.ack(sequence))}
+@(export) game_resource_mailbox :: proc "c" () -> u32 {return u32(uintptr(&resources.packet))}
+@(export) game_resource_mailbox_capacity :: proc "c" () -> u32 {return 1048720}
+@(export) game_resource_mailbox_size :: proc "c" (size:u32) -> u32 {if size>1048720 {return 0};resources.mailbox_size=size;return 1}

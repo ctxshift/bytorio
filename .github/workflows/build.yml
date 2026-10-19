@@ -50,6 +50,10 @@ jobs:
         env:
           PLAYER_BROWSER_CHANNEL: chrome
         run: npm run test:resources
+      - name: Verify explicit graphics and upload budgets
+        env:
+          PLAYER_BROWSER_CHANNEL: chrome
+        run: npm run test:graphics
       - name: Build and verify both game languages on both hosts
         env:
           PLAYER_BROWSER_CHANNEL: chrome
@@ -76,6 +80,7 @@ jobs:
             build/sdk-verification/
             build/cartridge-verification/
             build/resource-verification/
+            build/graphics-verification/
 
   odin:
     runs-on: windows-latest

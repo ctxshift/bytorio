@@ -8,8 +8,8 @@ ABI. The [formal specification](../docs/cartridge-spec.md) defines behavior and
 
 The proposed [typed graphics/audio interface](../docs/resource-av-spec.md) adds
 runtime resources, explicit rendering controls and scheduled DSP in a future
-SDK 0.2.0 / ABI 2 profile. [Experimental 4a resources](resources.md) implement the
-ownership/transport slice, while the complete profile remains unpublished;
+SDK 0.2.0 / ABI 2 profile. [Experimental resources](resources.md) and
+[explicit graphics](graphics.md) implement 4a/4b, while the complete profile remains unpublished;
 [proposal targets](proposals/resource-av-1.json) are separate from the live contract.
 
 ## Start a game

@@ -10,11 +10,11 @@ resource_registry:resources.Registry
 resource_packet:[resources.PACKET_BYTES]u8
 resource_session:u32
 @(export) runtime_resource_close :: proc "c" () {context=runtime.default_context();resources.close(&resource_registry)}
-@(export) runtime_resource_reset :: proc "c" () -> u32 {
+@(export) runtime_resource_reset :: proc "c" (protocol:u32) -> u32 {
     context=runtime.default_context()
     if resource_session==max(u32) {return 0}
     resource_session+=1
-    if !resources.reset(&resource_registry,resource_session) {return 0}
+    if !resources.reset(&resource_registry,resource_session,protocol if protocol!=0 else 2) {return 0}
     return resource_session
 }
 @(export) runtime_resource_packet :: proc "c" () -> u32 {return u32(uintptr(&resource_packet))}
@@ -22,13 +22,17 @@ resource_session:u32
 @(export) runtime_resource_submit :: proc "c" (size:u32) -> u32 {
     context=runtime.default_context()
     if size>resources.PACKET_BYTES {resource_registry.error="resource packet too large";return 0}
-    return u32(resources.submit(&resource_registry,resource_packet[:size]))
+    return u32(resources.submit(&resource_registry,resource_packet[:size],display=u32(core.width<<16|core.height)))
 }
+@(export) runtime_resource_mailbox :: proc "c" () -> u32 {context=runtime.default_context();return u32(resources.mailbox(&resource_registry,resource_packet[:]))}
 @(export) runtime_resource_error :: proc "c" () -> u32 {return u32(uintptr(raw_data(resource_registry.error)))}
 @(export) runtime_resource_error_size :: proc "c" () -> u32 {return u32(len(resource_registry.error))}
 @(export) runtime_resource_error_command :: proc "c" () -> i32 {return i32(resource_registry.command)}
 @(export) runtime_resource_hash :: proc "c" () -> u32 {context=runtime.default_context();return resources.hash(&resource_registry)}
 @(export) runtime_resource_bytes :: proc "c" () -> u32 {return u32(resource_registry.bytes)}
+@(export) runtime_resource_stat :: proc "c" (index:u32) -> u64 {
+    switch index {case 0:return resource_registry.stats.packet_bytes;case 1:return resource_registry.stats.copy_bytes;case 2:return resource_registry.stats.pixel_work;case 3:return resource_registry.stats.peak_bytes};return 0
+}
 
 cartridge_buffer: [cartridge.MAX_BYTES]u8
 cartridge_info: cartridge.Cartridge
@@ -66,13 +70,15 @@ assets: [abi.MAX_GRAPHICS_BYTES]u8
 @(export) runtime_render_batch :: proc "c" (count, size: u32) -> u32 {
     context = runtime.default_context()
     if count > abi.MAX_COMMANDS || size > abi.MAX_TEXT_BYTES {return 0}
-    return u32(core.render_batch(batch[:count],text[:size]))
+    if !core.render_batch(batch[:count],text[:size]) {return 0}
+    resources.apply_output(&resource_registry);return 1
 }
 @(export) runtime_commands :: proc "c" () -> u32 { return u32(uintptr(&commands)) }
 @(export) runtime_render_commands :: proc "c" (count: u32) -> u32 {
     context = runtime.default_context()
     if count > abi.MAX_COMMANDS { return 0 }
-    return u32(core.render_commands(commands[:count]))
+    if !core.render_commands(commands[:count]) {return 0}
+    resources.apply_output(&resource_registry);return 1
 }
 @(export) runtime_init :: proc "c" () {
     context = runtime.default_context()

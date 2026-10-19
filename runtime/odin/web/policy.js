@@ -1,13 +1,15 @@
 export const FRAME_BYTES = 40;
 export const MAX_GAME_BYTES = 1024 * 1024;
 export const MAX_PAGES = 128;
+const resourceProtocols = new WeakMap();
 
-// Internal 4a transport. This does not advertise the unfinished ABI-2 profile.
+// Internal resource transport. This does not advertise the unfinished ABI-2 profile.
 export function configureResources(game, runtime) {
   if (!game.game_resource_protocol) {
     return;
   }
-  if (game.game_resource_protocol() !== 1 || !runtime.runtime_resource_reset) {
+  const protocol = game.game_resource_protocol();
+  if (![1, 2].includes(protocol) || !runtime.runtime_resource_reset) {
     throw new Error("Unsupported internal resource protocol.");
   }
   for (const name of [
@@ -20,14 +22,49 @@ export function configureResources(game, runtime) {
       throw new Error(`Missing resource export: ${name}.`);
     }
   }
-  const session = runtime.runtime_resource_reset();
+  if (protocol >= 2) {
+    for (const name of [
+      "game_resource_mailbox",
+      "game_resource_mailbox_capacity",
+      "game_resource_mailbox_size",
+    ]) {
+      if (typeof game[name] !== "function") {
+        throw new Error(`Missing resource export: ${name}.`);
+      }
+    }
+    const capacity = game.game_resource_mailbox_capacity();
+    if (!Number.isInteger(capacity) || capacity < 1048720 || capacity > 8388608) {
+      throw new Error("Invalid completion mailbox capacity.");
+    }
+  }
+  const session = runtime.runtime_resource_reset(protocol);
   if (!session || game.game_resource_configure(session) !== 1) {
     throw new Error("Resource configuration rejected.");
+  }
+  resourceProtocols.set(game, protocol);
+}
+
+export function deliverResources(game, runtime) {
+  if ((resourceProtocols.get(game) || 0) < 2) {
+    return;
+  }
+  const size = runtime.runtime_resource_mailbox();
+  const capacity = game.game_resource_mailbox_capacity();
+  const offset = game.game_resource_mailbox() >>> 0;
+  const memory = game.memory.buffer;
+  if (size < 144 || size > capacity || offset > memory.byteLength - size) {
+    throw new Error("Completion mailbox outside guest memory.");
+  }
+  new Uint8Array(memory, offset, size).set(
+    new Uint8Array(runtime.memory.buffer, runtime.runtime_resource_packet(), size),
+  );
+  if (game.game_resource_mailbox_size(size) !== 1) {
+    throw new Error("Completion mailbox rejected.");
   }
 }
 
 export function submitResources(game, runtime) {
-  if (!game.game_resource_protocol) {
+  if (!resourceProtocols.has(game)) {
     return;
   }
   const offset = game.game_commit() >>> 0;
@@ -267,6 +304,9 @@ export function submitDrawing(game, runtime) {
       textSize = bytes.length;
       new Uint8Array(runtime.memory.buffer, runtime.runtime_text(), textSize).set(bytes);
     }
+  }
+  if ((resourceProtocols.get(game) || 0) >= 2) {
+    submitResources(game, runtime);
   }
   return { record, count, stride, textSize, ...display };
 }

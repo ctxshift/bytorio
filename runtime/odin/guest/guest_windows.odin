@@ -34,6 +34,7 @@ Game :: struct {
     resources: resources.Registry,
     resource_packet: []u8,
     resource_enabled: bool,
+    resource_protocol:u32,
 }
 
 resource_session:u32
@@ -76,7 +77,7 @@ check :: proc(game: ^Game, error: Error, trap: Trap) -> bool {
 }
 
 call :: proc(game: ^Game, function: ^Func, args: []Val, result: []Val) -> bool {
-    budget := u64(500_000_000) if game.has_source else u64(10_000_000)
+    budget := u64(500_000_000) if game.has_source else (u64(100_000_000) if game.resource_protocol>=2 else u64(10_000_000))
     if game.metered && !check(game, wasmtime_context_set_fuel(game.ctx, budget), nil) { return false }
     trap: Trap
     error := wasmtime_func_call(game.ctx, function, raw_data(args), uint(len(args)), raw_data(result), uint(len(result)), &trap)
@@ -265,6 +266,7 @@ sine :: proc "c" (_environment, _caller: rawptr, args: [^]Val, _nargs: uint, res
 }
 
 update :: proc(game: ^Game, input: abi.Input) -> bool {
+    if !deliver_resources(game) {return false}
     args: [4]Val
     args[0].kind, args[0].of.i32 = 0, i32(input.buttons)
     args[1].kind, args[1].of.i32 = 0, i32(input.pointer)
@@ -279,10 +281,18 @@ initialize :: proc(game:^Game) -> bool {
         protocol,configure:Func
         result:[1]Val
         if !function(game,"game_resource_protocol",&protocol) || !call(game,&protocol,nil,result[:]) {return false}
-        if result[0].kind!=0 || result[0].of.i32!=1 {return fail(game,"unsupported internal resource protocol")}
+        if result[0].kind!=0 || (result[0].of.i32!=1 && result[0].of.i32!=2) {return fail(game,"unsupported internal resource protocol")}
+        game.resource_protocol=u32(result[0].of.i32)
+        if game.resource_protocol>=2 {
+            mailbox:Func
+            names:=[3]string{"game_resource_mailbox","game_resource_mailbox_capacity","game_resource_mailbox_size"}
+            for name in names {if !function(game,name,&mailbox) {return false}}
+            if !function(game,"game_resource_mailbox_capacity",&mailbox) || !call(game,&mailbox,nil,result[:]) {return false}
+            if result[0].kind!=0 || result[0].of.i32<resources.MAILBOX_CAPACITY || result[0].of.i32>abi.MAX_MEMORY_BYTES {return fail(game,"invalid completion mailbox capacity")}
+        }
         if resource_session==max(u32) {return fail(game,"resource session counter exhausted")}
         resource_session+=1
-        if !resources.reset(&game.resources,resource_session) {return fail(game,game.resources.error)}
+        if !resources.reset(&game.resources,resource_session,game.resource_protocol) {return fail(game,game.resources.error)}
         if len(game.resource_packet)==0 {
             packet,allocation_error:=make([]u8,resources.PACKET_BYTES)
             if allocation_error!=nil {return fail(game,"cannot allocate resource packet snapshot")}
@@ -309,13 +319,31 @@ commit_resources :: proc(game:^Game) -> bool {
     if offset>size || uint(length)>size-offset {return fail(game,"resource packet outside guest memory")}
     packet:=game.resource_packet[:length]
     mem.copy(raw_data(packet),&wasmtime_memory_data(game.ctx,&game.memory)[offset],length)
-    if !resources.submit(&game.resources,packet) {return fail(game,fmt.tprintf("resource command %d: %s",game.resources.command,game.resources.error))}
+    mode:=game.display_mode if abi.valid_display(game.display_mode) else abi.DISPLAY_HIGH
+    if !resources.submit(&game.resources,packet,display=mode) {return fail(game,fmt.tprintf("resource command %d: %s",game.resources.command,game.resources.error))}
     args:=[1]Val{{kind=0,of={i32=i32(game.resources.sequence)}}}
     if !function(game,"game_commit_ack",&ack) || !call(game,&ack,args[:],result[:]) {return false}
     return (result[0].kind==0 && result[0].of.i32==1) || fail(game,"resource acknowledgement rejected")
 }
 
 resource_hash :: proc(game:^Game) -> u32 {return resources.hash(&game.resources)}
+apply_graphics :: proc(game:^Game) {resources.apply_output(&game.resources)}
+deliver_resources :: proc(game:^Game) -> bool {
+    if game.resource_protocol<2 {return true}
+    size:=resources.mailbox(&game.resources,game.resource_packet)
+    offset_fn,capacity_fn,setter:Func
+    result:[1]Val
+    if !function(game,"game_resource_mailbox_capacity",&capacity_fn) || !call(game,&capacity_fn,nil,result[:]) {return false}
+    if result[0].kind!=0 || result[0].of.i32<i32(size) {return fail(game,"completion exceeds guest mailbox capacity")}
+    if !function(game,"game_resource_mailbox",&offset_fn) || !call(game,&offset_fn,nil,result[:]) {return false}
+    if result[0].kind!=0 {return fail(game,"invalid guest mailbox offset")}
+    offset:=uint(u32(result[0].of.i32));memory_size:=wasmtime_memory_data_size(game.ctx,&game.memory)
+    if offset>memory_size || uint(size)>memory_size-offset {return fail(game,"completion mailbox outside guest memory")}
+    mem.copy(&wasmtime_memory_data(game.ctx,&game.memory)[offset],raw_data(game.resource_packet),size)
+    args:=[1]Val{{kind=0,of={i32=i32(size)}}}
+    if !function(game,"game_resource_mailbox_size",&setter) || !call(game,&setter,args[:],result[:]) {return false}
+    return (result[0].kind==0 && result[0].of.i32==1) || fail(game,"completion mailbox rejected")
+}
 
 draw :: proc(game: ^Game, frame: ^abi.Frame) -> bool {
     result: [1]Val
@@ -356,5 +384,6 @@ draw :: proc(game: ^Game, frame: ^abi.Frame) -> bool {
             game.text_size = length
         }
     }
+    if game.resource_protocol>=2 {return commit_resources(game)}
     return true
 }

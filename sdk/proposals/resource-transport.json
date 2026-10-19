@@ -1,6 +1,6 @@
 {
-  "status": "internal-milestone-4a",
-  "version": 1,
+  "status": "internal-milestone-4b",
+  "version": 2,
   "abi": 2,
   "magic": 827348545,
   "headerBytes": 64,
@@ -17,9 +17,34 @@
     "write_texture": 3,
     "write_sample": 4,
     "destroy_texture": 5,
-    "destroy_sample": 6
+    "destroy_sample": 6,
+    "create_target": 7,
+    "create_palette": 8,
+    "create_color_table": 9,
+    "create_row_table": 10,
+    "create_pipeline": 11,
+    "write_buffer": 12,
+    "destroy_resource": 13,
+    "begin_pass": 16,
+    "end_pass": 17,
+    "clip": 18,
+    "transform": 19,
+    "bind": 20,
+    "rect": 21,
+    "clear": 22,
+    "draw": 23,
+    "copy": 24,
+    "present": 25,
+    "readback": 26,
+    "text": 27,
+    "sprite": 28
   },
-  "formats": { "index8": 1, "rgba8": 2, "f32": 3 },
+  "formats": {
+    "index8": 1,
+    "rgba8": 2,
+    "f32": 3,
+    "stencil8": 4
+  },
   "header": {
     "magic": 0,
     "abi": 4,
@@ -87,7 +112,117 @@
       "reserved"
     ],
     "destroy_texture": [],
-    "destroy_sample": []
+    "destroy_sample": [],
+    "create_target": [
+      "format",
+      "width",
+      "height",
+      "stencil",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved"
+    ],
+    "create_palette": [
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved"
+    ],
+    "create_color_table": [
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved"
+    ],
+    "create_row_table": [
+      "rows",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved"
+    ],
+    "create_pipeline": [
+      "format",
+      "blend",
+      "colorTable",
+      "writeMask",
+      "stencilCompare",
+      "stencilMasks",
+      "stencilOps",
+      "transparentIndexPlusOne"
+    ],
+    "write_buffer": [
+      "offsetBytes",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved"
+    ],
+    "destroy_resource": [],
+    "begin_pass": [
+      "pipeline",
+      "clearEnabled",
+      "clearColor",
+      "clearStencilEnabled",
+      "clearStencil",
+      "reserved",
+      "reserved",
+      "reserved"
+    ],
+    "end_pass": [],
+    "clip": ["x", "y", "width", "height", "reserved", "reserved", "reserved", "reserved"],
+    "transform": ["aQ16", "bQ16", "cQ16", "dQ16", "txQ16", "tyQ16", "reserved", "reserved"],
+    "bind": [],
+    "rect": ["xQ16", "yQ16", "widthQ16", "heightQ16", "color", "reserved", "reserved", "reserved"],
+    "clear": [
+      "color",
+      "stencilEnabled",
+      "stencil",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved"
+    ],
+    "draw": [
+      "srcX",
+      "srcY",
+      "srcWidth",
+      "srcHeight",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved"
+    ],
+    "copy": ["destination", "srcX", "srcY", "width", "height", "dstX", "dstY", "reserved"],
+    "present": [
+      "palette",
+      "rows",
+      "repeat",
+      "background",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved"
+    ],
+    "readback": ["source", "x", "y", "width", "height", "reserved", "reserved", "reserved"],
+    "text": ["xQ16", "yQ16", "color", "reserved", "reserved", "reserved", "reserved", "reserved"],
+    "sprite": ["sprite", "xQ16", "yQ16", "widthQ16", "heightQ16", "tint", "reserved", "reserved"]
   },
   "configuration": {
     "exports": {
@@ -95,10 +230,41 @@
       "game_resource_configure": "(session:u32)->u32",
       "game_commit": "()->u32",
       "game_commit_size": "()->u32",
-      "game_commit_ack": "(sequence:u32)->u32"
+      "game_commit_ack": "(sequence:u32)->u32",
+      "game_resource_mailbox": "()->u32",
+      "game_resource_mailbox_capacity": "()->u32",
+      "game_resource_mailbox_size": "(bytes:u32)->u32"
     },
-    "capabilities": "fixed by version 1; only texture/sample lifecycle, no render or playback",
-    "input": "existing ABI-1 input arguments; no asynchronous completions in this slice",
+    "capabilities": "version 2: texture/sample ownership plus software graphics, reserved RGBA screen, 8 offscreen targets, 4 readbacks",
+    "input": "ABI-1 input arguments plus bounded readback mailbox before each update",
     "acknowledgement": "accepted packet sequence, synchronous before next callback; failure terminates session"
+  },
+  "maxTargets": 8,
+  "maxReadbacks": 4,
+  "maxReadbackBytes": 1048576,
+  "maxCompletionPayload": 1048576,
+  "maxPixelWork": 16777216,
+  "drawData": ["xQ16", "yQ16", "widthQ16", "heightQ16", "palette", "tint", "flags", "reserved"],
+  "mailbox": {
+    "magic": 827867725,
+    "headerBytes": 16,
+    "recordBytes": 32,
+    "maxRecords": 4,
+    "record": [
+      "id",
+      "format",
+      "width",
+      "height",
+      "offsetBytes",
+      "lengthBytes",
+      "reserved",
+      "reserved"
+    ],
+    "header": {
+      "magic": 0,
+      "count": 4,
+      "bytes": 8,
+      "session": 12
+    }
   }
 }
