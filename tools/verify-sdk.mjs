@@ -1,0 +1,101 @@
+import assert from 'node:assert/strict';
+import {readFile,writeFile,mkdir,copyFile} from 'node:fs/promises';
+import {resolve} from 'node:path';
+import {randomUUID} from 'node:crypto';
+import {spawnSync} from 'node:child_process';
+import {once} from 'node:events';
+import {chromium} from 'playwright';
+import {createProject,buildProject,checkProject} from './sdk/project.mjs';
+import {bundleLuau} from './sdk/bundle.mjs';
+import {graphicsPacket} from './sdk/assets.mjs';
+import {serve} from './serve.mjs';
+import {loadSource,checkExecutor,uploadGraphics,submitDrawing,rasterizeDrawing} from '../runtime/odin/web/policy.js';
+const contract=JSON.parse(await readFile('sdk/contract.json','utf8'));
+const root=resolve('build/sdk-verification',randomUUID());await mkdir(root,{recursive:true});
+const paths={};
+for(const language of ['luau','odin']) {
+ const path=resolve(root,language);await createProject(path,language);
+ await copyFile(`tests/sdk/game.${language}`,resolve(path,`src/main.${language}`));
+ await buildProject(path);paths[language]=path;
+}
+const imports={env:{sin:Math.sin}};
+const inputs=Array.from({length:120},(_,i)=>({buttons:(i>=5&&i<15||i>=45&&i<48?16:0)|(i>=10&&i<30?2:0),pointer:i>=22&&i<28||i===70,x:i===70?500:80.5,y:60.75}));
+const masks=inputs.map(input=>input.buttons);
+async function pair(language) {
+ const base=resolve(paths[language],'build/web');
+ const bytes=await readFile(resolve(base,language==='luau'?'luau-executor.wasm':'game.wasm'));
+ const module=new WebAssembly.Module(bytes);
+ assert.deepEqual(WebAssembly.Module.imports(module),[],'SDK guest has no host imports');
+ for(const name of Object.keys(contract.requiredExports))assert.ok(WebAssembly.Module.exports(module).some(item=>item.kind==='function'&&item.name===name),name);
+ const game=(await WebAssembly.instantiate(module,imports)).exports;
+ const runtime=(await WebAssembly.instantiate(await readFile(resolve(base,'runtime.wasm')),imports)).instance.exports;
+ game._initialize?.();if(language==='luau')loadSource(game,await readFile(resolve(base,'game.luau')));
+ game.game_init();checkExecutor(game);runtime.runtime_init();uploadGraphics(game,runtime);
+ assert.equal(game.game_sdk_version(),contract.sdkVersionWord);assert.equal(game.game_abi(),contract.abiVersion);assert.equal(game.game_frame_size(),contract.records.frame.bytes);assert.equal(game.game_command_stride(),contract.records.command.bytes);
+ return {game,runtime};
+}
+function draw({game,runtime}) {
+ const drawing=submitDrawing(game,runtime);rasterizeDrawing(runtime,drawing);
+ return {hash:runtime.runtime_hash()>>>0,sounds:drawing.record.sounds,x:drawing.record.x,y:drawing.record.y,width:drawing.width,height:drawing.height,count:drawing.count};
+}
+const expected=[];
+for(const language of ['odin','luau']) {
+ const p=await pair(language);assert.equal(draw(p).sounds,1);
+ for(let i=0;i<inputs.length;i++) {
+  const input=inputs[i];p.game.game_update(input.buttons,Number(input.pointer),input.x,input.y);checkExecutor(p.game);
+  const frame=draw(p);assert.deepEqual(draw(p),frame,'draw is stable without another update');
+  assert.equal(frame.width,i>=19&&i<39||i>=59?320:640);
+  assert.equal(frame.y,i<5?0:i<15?1:i<45?11:i<48?12:22,'pressed/released edges and held keys');
+  if(i<3)assert.equal(frame.x,[31682556,4018661298,2101636938][i]%1000,'known xorshift32 vector');
+  if(language==='odin')expected.push(frame);else assert.deepEqual(frame,expected[i],`SDK frame ${i}`);
+ }
+ p.game.game_init();checkExecutor(p.game);assert.equal(draw(p).sounds,1,'reload resets sound events');
+ assert.equal(draw(p).width,640,'reload resets display');
+ // Native replay tests the actual Wasmtime adapter; pointer delivery is covered above and in the browser.
+ const nativeInputs=resolve(root,`${language}.inputs`);await writeFile(nativeInputs,masks.join('\n')+'\n');
+ const replayPair=await pair(language);const nativeExpected=masks.map(mask=>{replayPair.game.game_update(mask,0,0,0);const f=draw(replayPair);return {hash:f.hash,sounds:f.sounds};});
+ const base=resolve(paths[language],'build/native');
+ const flags=language==='luau'?['--game',resolve(base,'luau-executor.wasm'),'--source',resolve(base,'game.luau')]:[];
+ const result=spawnSync(resolve(base,'player.exe'),[...flags,'--replay',nativeInputs],{encoding:'utf8',timeout:30000,cwd:base});
+ assert.equal(result.status,0,result.stderr);assert.deepEqual(result.stdout.trim().split(/\r?\n/).map(JSON.parse),nativeExpected);
+ const smoke=spawnSync(resolve(base,'player.exe'),[...flags,'--smoke'],{encoding:'utf8',timeout:30000,cwd:base,env:{...process.env,SDL_VIDEODRIVER:'dummy',SDL_AUDIODRIVER:'dummy',SDL_RENDER_DRIVER:'software'}});
+ assert.equal(smoke.status,0,smoke.stderr);assert.ok(JSON.parse(smoke.stdout).audioQueuedFrames>0);
+}
+const server=serve(root,0);await once(server,'listening');
+const browser=await chromium.launch({channel:process.env.PLAYER_BROWSER_CHANNEL||'chrome',headless:true});
+try {
+ const page=await browser.newPage();
+ for(const language of ['luau','odin']) {
+  await page.goto(`http://127.0.0.1:${server.address().port}/${language}/build/web/player.html`);
+  await page.waitForFunction(()=>playerStatus.ready||playerStatus.error);assert.equal(await page.evaluate(()=>playerStatus.error),'');
+  const frames=await page.evaluate(async({language,inputs})=>{
+   const worker=new Worker('./worker.js',{type:'module'});
+   const next=()=>new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('Worker deadline')),10000);worker.onmessage=({data})=>{if(data.type==='executing')return;clearTimeout(timer);if(data.type==='error')reject(new Error(data.error));else resolve(data);};worker.onerror=reject;});
+   let pending=next();worker.postMessage({type:'load',gameUrl:language==='luau'?'./game.luau':'./game.wasm'});await pending;
+   const frames=[];
+   for(const input of inputs) {pending=next();worker.postMessage({type:'step',steps:1,input});const f=await pending;frames.push({hash:f.hash,sounds:f.sounds,x:f.x,y:f.y,width:f.width,height:f.height});}
+   worker.terminate();return frames;
+  },{language,inputs});
+  assert.deepEqual(frames,expected.map(({count,...frame})=>frame));
+ }
+} finally {await browser.close();await new Promise(r=>server.close(r));}
+// SDK error behavior, caught independently of rendering and reset on reload.
+const luau=await pair('luau');
+for(const statement of ['console.sprite(0,0,0,0)','console.text("é",0,0,console.rgb(1,2,3))','console.rect(0,0,-1,1,console.rgb(1,2,3))']) {
+ const main=resolve(paths.luau,'src/main.luau');
+ await writeFile(main,`local console=require("@console")\nreturn {init=function() end,update=function() end,draw=function() ${statement} end}\n`);
+ const {packet}=graphicsPacket(JSON.parse(await readFile(resolve(paths.luau,'assets.json'),'utf8')));
+ const source=await bundleLuau({entry:main,project:paths.luau,sdkRoot:resolve('sdk/luau'),assets:packet});
+ loadSource(luau.game,source);luau.game.game_init();checkExecutor(luau.game);luau.game.game_draw();assert.throws(()=>checkExecutor(luau.game));
+ const length=luau.game.game_error_length();luau.game.game_update(0,0,0,0);assert.equal(luau.game.game_error_length(),length);
+}
+// Static checking catches language API misuse before creating a cartridge.
+await writeFile(resolve(paths.luau,'src/main.luau'),'--!strict\nlocal console=require("@console")\nconsole.button("jump")\nreturn {}\n');
+await assert.rejects(()=>checkProject(paths.luau),/failed/);
+await writeFile(resolve(paths.odin,'src/main.odin'),'package main\nimport console "sdk:console"\ninit :: proc(){_=console.button(.Jump)}\nupdate :: proc(dt:f64){}\ndraw :: proc(){}\n');
+await assert.rejects(()=>checkProject(paths.odin),/failed/);
+const sample=JSON.parse(await readFile(resolve(paths.luau,'assets.json'),'utf8'));
+sample.sprites[0][0]='bad';assert.throws(()=>graphicsPacket(sample),/width/);
+await writeFile(resolve(paths.luau,'src/main.luau'),'local m=require("../outside")\nreturn m');
+await assert.rejects(()=>bundleLuau({entry:resolve(paths.luau,'src/main.luau'),project:paths.luau,sdkRoot:resolve('sdk/luau'),assets:Buffer.alloc(0)}),/Missing module|escapes/);
+console.log('SDK conformance passed: strict authoring, ABI exports, 120-frame native/browser parity, input edges, pointer, random vectors, modes, drawing, audio, reload and validation.');

@@ -105,7 +105,7 @@ async function load(restart = false) {
     if (autoStart) { autoStart = false; start().catch(error => fail(error.message)); }
   };
   try {
-    const gameUrl=parameters.get('game')||'./game.wasm';
+    const gameUrl=parameters.get('game')||globalThis.playerCartridge||'./game.wasm';
     const executor=new URL(gameUrl,location.href).pathname.endsWith('.luau')?await prepareExecutor('./luau-executor.wasm'):null;
     if(currentGeneration!==generation)return;
     worker.postMessage({type:'load',gameUrl,smoke,executor});
