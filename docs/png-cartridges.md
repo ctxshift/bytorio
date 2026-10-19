@@ -9,7 +9,7 @@ Luau executor, renderer and audio; these are runtime components, not game data.
 
 From the repository root:
 
-```powershell
+```text
 npm run console -- pack my-game
 npm run console -- pack my-game --output dist/my-game.png --cover art/cover.png
 ```

@@ -19,7 +19,7 @@ The native Odin player and browser Odin/Wasm runtime load the identical game mod
 
 See [building and running Odin](docs/odin-development.md) for prerequisites, build commands, and verification. **[PNG cartridges](docs/png-cartridges.md) are implemented** for both languages: `npm run console -- pack my-game`. Native and browser players load the same viewable PNG; the current 2D preview has a 2 MiB container limit. Larger ROMs and graphics/audio features remain planned.
 
-**The sprite RPG comparison is playable in both Luau and Odin.** Explore a village, accept a quest, fight a slime, and return a sunleaf. See [the RPG guide](docs/rpg-comparison.md) for builds, the comparison launcher, both game sources, and replay verification. Build both with `./tools/build-rpg.ps1`.
+**The sprite RPG comparison is playable in both Luau and Odin.** Explore a village, accept a quest, fight a slime, and return a sunleaf. See [the RPG guide](docs/rpg-comparison.md) for builds, the comparison launcher, both game sources, and replay verification. Build both with `mise run build:rpg`.
 
 An [experimental Luau Wasm executor](experiments/luau-executor/README.md) runs both cartridges through the same Odin native/browser player. Its [RPG benchmark results](experiments/luau-executor/BATCHED-RESULTS.md) describe the earlier 384×216 prototype. The original RPG layout and historical comparison checks predate the two display modes.
 
@@ -35,9 +35,9 @@ An [experimental Luau Wasm executor](experiments/luau-executor/README.md) runs b
 
 The current recommendation is to retain the agreed 2D-first scope while leaving room for richer 3D later. A move to a 3DS-level fidelity target remains an open product decision.
 
-All project JavaScript uses ESLint and Prettier, including tooling, browser players,
-examples, and benchmark scripts. After `npm ci`, run `npm run format` to apply the
-shared formatting and `npm run lint:fix` for automatic lint fixes. Before committing,
-run `npm run lint` and `npm run format:check`; CI enforces both. Generated builds,
-downloaded tools, and dependencies are excluded. Project tools use Node.js and
-PowerShell; no additional Python installation is required for project scripts.
+Run `mise install` and `mise exec -- npm ci` to prepare the pinned development tools.
+`mise run format` formats JavaScript/HTML with Prettier, Odin with odinfmt, and Luau
+with StyLua. `mise run lint` runs ESLint, `odin check -vet`, and `luau-analyze`.
+CI enforces both lint and `mise run format:check`. Dependency build tasks live in
+`.mise/tasks/`; project commands live in `mise.toml`. Project scripts use JavaScript.
+See [development](docs/development.md) for setup, editor settings and task details.

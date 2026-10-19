@@ -1,6 +1,7 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { bundleLuau, odinEntry } from "./sdk/bundle.mjs";
+import { formatSource } from "./code-tools.mjs";
 import { graphicsPacket } from "./sdk/assets.mjs";
 
 const source = JSON.parse(await readFile("examples/rpg-shared/assets.json", "utf8"));
@@ -26,7 +27,7 @@ for (const [c, rows] of Object.entries(assets.font)) {
   lines.push(`case ${c.charCodeAt(0)}: return {${rows.map(json).join(",")}}`);
 }
 lines.push("}", "return {}", "}");
-await writeFile(`${dir}/assets.odin`, lines.join("\n") + "\n");
+await writeFile(`${dir}/assets.odin`, formatSource(lines.join("\n") + "\n", `${dir}/assets.odin`));
 const luaValue = (value) =>
   Array.isArray(value)
     ? `{${value.map(luaValue).join(",")}}`
@@ -38,7 +39,10 @@ const luaValue = (value) =>
 await mkdir("build/rpg", { recursive: true });
 await writeFile(
   "examples/rpg-luau/assets.luau",
-  `--!strict\n-- Generated shared palette and map.\nreturn ${luaValue({ palette, world: assets.world })}\n`,
+  formatSource(
+    `--!strict\n-- Generated shared palette and map.\nreturn ${luaValue({ palette, world: assets.world })}\n`,
+    "examples/rpg-luau/assets.luau",
+  ),
 );
 await writeFile("examples/rpg-odin/cartridge.odin", odinEntry());
 await writeFile(

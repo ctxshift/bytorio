@@ -6,18 +6,20 @@ The native player is an Odin executable using SDL3 and Wasmtime's C API. It has 
 
 ## Build and run on Windows
 
-Prerequisites: PowerShell 7, Git, native linker prerequisites described by [Odin's installation guide](https://odin-lang.org/docs/install/), and Node.js 24 for the local server and tests. A Visual Studio C++ desktop workload is available in the tested environment; that is a build prerequisite, not a player dependency.
+Prerequisites: mise 2026.10.15 or newer, Git, and the native linker prerequisites described by [Odin's installation guide](https://odin-lang.org/docs/install/). A Visual Studio C++ desktop workload is available in the tested environment; that is a build prerequisite, not a player dependency.
 
 From the repository root:
 
-```powershell
-./tools/build-odin.ps1 all -Fixtures
+```text
+mise install
+mise exec -- npm ci
+mise run build:odin
 ./build/odin-player/native/player.exe
 ```
 
-The script uses Odin `dev-2026-10` revision `84bc3fc`, preferring an existing local/compiler installation. On Windows, if none is available, it downloads the pinned compiler to ignored `.tools/odin`. Wasmtime **49.0.3** is downloaded to `.tools/wasmtime` when needed. Downloads are checked against pinned SHA-256 hashes. No global PATH, profile, or installed version is changed. The build uses basename-only source locations to avoid embedding machine paths in exported binaries.
+Mise installs Odin `dev-2026-10` revision `84bc3fc` and Wasmtime C API **49.0.3**, with download verification handled by mise. Build commands resolve these managed installations rather than downloading tools themselves. The build uses basename-only source locations to avoid embedding machine paths in exported binaries.
 
-`-Target native` and `-Target web` build one host; `-Odin` selects a compiler executable explicitly. Native currently targets Windows x64. Other native hosts remain unvalidated.
+`mise exec -- node tools/build-odin.mjs --target native` and `--target web` build one host. Use `--game rpg` or `--game racing` for an example cartridge. Native currently targets Windows x64. Other native hosts remain unvalidated.
 
 The native player finds `game.wasm` beside its executable, independent of the working directory. Distribute `player.exe`, `game.wasm`, `SDL3.dll`, `wasmtime.dll`, and `licenses/` together. An import-table inspection found only those bundled libraries and Windows system dependencies; a clean-machine packaging test remains outstanding.
 
@@ -25,16 +27,13 @@ Use arrows/WASD or a controller D-pad to move; Space, the controller's south but
 
 ## Browser
 
-```powershell
+```text
 npm run serve:odin
 ```
 
 Open [the local player](http://127.0.0.1:8080/player.html) and click **Start game**. The default port is 8080; stop another preview on that port first, or select another port:
 
-```powershell
-$env:PORT = '8081'
-npm run serve:odin
-```
+Set the `PORT` environment variable to `8081` before starting the server.
 
 Serve the files in `build/odin-player/web/` together over localhost HTTP or hosted HTTPS. Wasm must use `application/wasm`, and JavaScript module files must use a JavaScript MIME type. No SharedArrayBuffer or cross-origin isolation headers are required. The browser uses a 2D canvas to present the software framebuffer; WebGL/mesh rendering remains future work.
 
@@ -46,13 +45,13 @@ Browser focus loss pauses the game; **Resume game** resumes it. Audio is gesture
 
 Install the pinned browser test dependency and test browser once:
 
-```powershell
+```text
 npm ci
 npx playwright install chromium
 npm run test:odin
 ```
 
-To use an installed Chrome instead, set `PLAYER_BROWSER_CHANNEL=chrome`. The test creates and closes its own loopback HTTP server. `-Fixtures` must have been supplied to the build for failure tests.
+To use an installed Chrome instead, set `PLAYER_BROWSER_CHANNEL=chrome`. The test creates and closes its own loopback HTTP server. `mise run build:odin` includes failure-test fixtures.
 
 The verifier runs a real native SDL smoke scenario, checks byte-identical game modules, then checks browser movement, held-action behavior, pointer placement, sound data, audio-clock progression through a 500 ms UI stall, and a matching 120-tick replay. Both hosts reject unsupported ABI versions, out-of-range frame offsets, invalid drawing commands, and traps; the loop fixture exercises native fuel exhaustion and browser Worker termination/restart.
 

@@ -12,20 +12,21 @@ Prerequisites: Odin compiler, native linker prerequisites from the [Odin install
 
 With `odin` on PATH, run from the repository root:
 
-```powershell
+```text
 npm ci
 npx playwright install chromium
 node experiments/odin/verify.mjs
 ```
 
-An optional compiler path argument supports a local installation. The evaluation used:
+An optional compiler path argument supports a local installation. Set
+`PLAYER_BROWSER_CHANNEL=chrome` in the environment to use installed Chrome:
 
-```powershell
-$env:PLAYER_BROWSER_CHANNEL = 'chrome'
-node experiments/odin/verify.mjs .tools/odin/dist/odin.exe
+```text
+mise exec -- node experiments/odin/verify.mjs
 ```
 
-That second command assumes the downloaded compiler has already been extracted to the stated local directory. It uses an installed Chrome instead of Playwright's Chromium. Compiler installation is not automated by this probe and does not change the accepted player's prerequisites.
+The command uses the compiler installed by `mise install`, unless an explicit
+compiler path argument is supplied. The probe does not install its own compiler.
 
 Artifacts are written under ignored `build/odin/`, including `report.json`. The verifier records three sequential build wall times with `-o:minimal`; these are not cold-cache timings or an edit-to-first-frame benchmark. Each child process has a 30-second timeout. The probe requires Windows for its native executable; the generated Wasm itself was tested in Node and Chrome.
 

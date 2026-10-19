@@ -1,0 +1,10 @@
+{
+  "character_width": 100,
+  "tabs": false,
+  "spaces": 4,
+  "tabs_width": 4,
+  "newline_style": "LF",
+  "space_single_line_blocks": true,
+  "preserve_struct_blank_lines": true,
+  "multiline_composite_literals": true
+}

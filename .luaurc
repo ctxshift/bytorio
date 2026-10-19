@@ -1,0 +1,7 @@
+{
+  "languageMode": "nonstrict",
+  "lintErrors": true,
+  "aliases": {
+    "console": "./sdk/luau/console"
+  }
+}

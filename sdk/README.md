@@ -16,7 +16,7 @@ SDK 0.2.0 / ABI 2 profile. [Experimental resources](resources.md) and
 
 Run from the SDK repository root:
 
-```powershell
+```text
 npm ci
 npm run console -- new my-game
 npm run console -- check my-game
@@ -93,7 +93,7 @@ by dead stack storage, or allocating text every frame without reclaiming it.
 
 ## Verify
 
-```powershell
+```text
 npm run test:sdk
 npm run test:cartridge
 ```

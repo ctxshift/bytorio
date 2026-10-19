@@ -11,25 +11,65 @@ Module :: distinct rawptr
 Linker :: distinct rawptr
 Error :: distinct rawptr
 Trap :: distinct rawptr
-ByteVec :: struct { size: uint, data: [^]u8 }
-TypeVec :: struct { size: uint, data: [^]rawptr }
-Func :: struct { store_id: u64, private: rawptr }
+ByteVec :: struct {
+    size: uint,
+    data: [^]u8,
+}
+TypeVec :: struct {
+    size: uint,
+    data: [^]rawptr,
+}
+Func :: struct {
+    store_id: u64,
+    private:  rawptr,
+}
 // The C header has a nested anonymous struct; its trailing padding is significant.
-StoreIndex :: struct { store_id: u64, private1: u32 }
-Memory :: struct { index: StoreIndex, private2: u32 }
-Instance :: struct { store_id: u64, private: uint }
-ValUnion :: struct #raw_union { i32: i32, i64: i64, f32: f32, f64: f64, reference: [3]u64 }
-Val :: struct { kind: u8, of: ValUnion }
-ExternUnion :: struct #raw_union { function: Func, memory: Memory, storage: [3]u64 }
-Extern :: struct { kind: u8, of: ExternUnion }
-Callback :: #type proc "c" (environment, caller: rawptr, args: [^]Val, nargs: uint, results: [^]Val, nresults: uint) -> Trap
+StoreIndex :: struct {
+    store_id: u64,
+    private1: u32,
+}
+Memory :: struct {
+    index:    StoreIndex,
+    private2: u32,
+}
+Instance :: struct {
+    store_id: u64,
+    private:  uint,
+}
+ValUnion :: struct #raw_union {
+    i32:       i32,
+    i64:       i64,
+    f32:       f32,
+    f64:       f64,
+    reference: [3]u64,
+}
+Val :: struct {
+    kind: u8,
+    of:   ValUnion,
+}
+ExternUnion :: struct #raw_union {
+    function: Func,
+    memory:   Memory,
+    storage:  [3]u64,
+}
+Extern :: struct {
+    kind: u8,
+    of:   ExternUnion,
+}
+Callback :: #type proc "c" (
+    environment, caller: rawptr,
+    args: [^]Val,
+    nargs: uint,
+    results: [^]Val,
+    nresults: uint,
+) -> Trap
 #assert(size_of(Val) == 32)
 #assert(size_of(Extern) == 32)
 #assert(size_of(Func) == 16)
 #assert(size_of(Memory) == 24)
 #assert(offset_of(Memory, private2) == 16)
 
-@(default_calling_convention="c")
+@(default_calling_convention = "c")
 foreign wasmtime {
     wasm_config_new :: proc() -> Config ---
     wasm_config_delete :: proc(config: Config) ---

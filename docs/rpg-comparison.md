@@ -13,7 +13,7 @@ Attack, Guard, and one healing potion. Defeat restores the player in the village
 
 Install the [development prerequisites](development.md), then from the repository root:
 
-```powershell
+```text
 npm ci
 npm run build:rpg
 npm run serve:rpg
@@ -26,7 +26,7 @@ input path. Physical touch hardware remains unverified.
 
 Both standalone choices use the same executable:
 
-```powershell
+```text
 # Odin
 ./build/unified-player/native/player.exe --game build/unified-player/native/rpg-odin.png
 # Luau
@@ -60,7 +60,7 @@ historical performance measurements.
 
 ## Verification
 
-```powershell
+```text
 npm run test:rpg
 npm run test:display
 ```

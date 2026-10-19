@@ -14,17 +14,16 @@ The subsequent [batched drawing extension](BATCHING.md) preserves the original v
 
 From the repository root, with the existing Odin, Emscripten, CMake, Node, and Playwright prerequisites installed:
 
-```powershell
+```text
 npm run build:unified
 npm run bench:unified
 ```
 
 Set `PLAYER_BROWSER_CHANNEL=chrome` to use installed Chrome instead of Playwright Chromium. Measurements run serially. Avoid running other builds or benchmarks at the same time. `UNIFIED_BENCH_SAMPLES` optionally selects 1–9 fresh processes/workers per variant; the recorded run used five. Current raw timings, memory reports, parity traces, and screenshots go under `build/unified-player/benchmark-batched/`; the original rectangle run used `benchmark/`.
 
-Interactive browser:
+Interactive browser (set `PORT=8081` in the environment first):
 
-```powershell
-$env:PORT = '8081'
+```text
 npm run serve:unified
 ```
 
@@ -32,7 +31,7 @@ Open `http://127.0.0.1:8081/comparison.html`. Both choices open the same HTML pl
 
 Interactive standalone Windows player:
 
-```powershell
+```text
 # Odin cartridge
 ./build/unified-player/native/player.exe
 

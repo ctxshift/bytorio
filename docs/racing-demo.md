@@ -14,7 +14,7 @@ and the existing bitmap font are packed into one shared atlas by the build tool.
 
 From the repository root, with the [Odin toolchain prerequisites](odin-development.md):
 
-```powershell
+```text
 npm run build:racing
 npm run serve:racing
 ```
@@ -25,7 +25,7 @@ Space boosts. Release Space after finishing and press it again to restart.
 The browser includes touch controls and a Fullscreen button. Native fullscreen
 is F11. Native builds are standalone applications without a webview.
 
-```powershell
+```text
 ./build/racing-player/native/player.exe --game build/racing-player/native/racing-odin.png
 ./build/racing-player/native/player.exe --game build/racing-player/native/racing-luau.png
 ```
@@ -61,7 +61,7 @@ to any width/height from 1 to 128 pixels. The sprite ID occupies the command's
 
 ## Verification and measurements
 
-```powershell
+```text
 npm run test:racing
 npm run bench:racing
 ```
@@ -82,8 +82,8 @@ frame before opening a native window. Results are in the [benchmark report](../e
 
 For display regression checks, build the RPG runtime and executor first, then run:
 
-```powershell
-./tools/build-odin.ps1 -Game rpg
+```text
+mise exec -- node tools/build-odin.mjs --game rpg
 npm run test:display
 ```
 

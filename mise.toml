@@ -1,0 +1,109 @@
+min_version = "2026.10.15"
+
+[env]
+MISE_BIN = "{{ mise_bin }}"
+_.path = ["{{ mise_bin | dirname }}"]
+
+[tools]
+node = "24.19.0"
+luau = "0.743"
+stylua = "2.6.0"
+odin = { version = "dev-2026-10", strip_components = 1, bin_path = "." }
+"github:DanielGavin/ols" = { version = "dev-2026-10", rename_exe = { "ols-*" = "ols", "odinfmt-*" = "odinfmt" } }
+# Used only by the upstream Emscripten SDK, not by project scripts.
+python = "3.13.3"
+cmake = "4.3.3"
+ninja = "1.13.1"
+"vfox:jdx/vfox-emsdk" = { version = "6.0.12", depends = ["python"] }
+"github:bytecodealliance/wasmtime" = { version = "49.0.3", asset_pattern = "wasmtime-v49.0.3-x86_64-windows-c-api.zip", os = ["windows"] }
+
+[task_config]
+includes = [".mise/tasks/*.toml"]
+
+[tasks.format]
+description = "Format JavaScript, Odin and Luau"
+run = ["npm run format:js", "node tools/format-code.mjs"]
+
+[tasks."format:check"]
+description = "Check formatting in every project language"
+run = ["npm run format:js:check", "node tools/format-code.mjs --check"]
+
+[tasks.lint]
+description = "Lint JavaScript, Odin and Luau"
+run = ["npm run lint:js", "node tools/lint-code.mjs odin", "node tools/lint-code.mjs luau"]
+
+[tasks."build:odin"]
+description = "Build standalone native/browser players and fixtures"
+sources = [
+  "runtime/odin/**/*",
+  "sdk/odin/**/*.odin",
+  "examples/hello-odin/**/*.odin",
+  "tests/odin/fixtures/**/*.odin",
+  "tools/build-odin.mjs",
+  "tools/toolchain.mjs",
+  "mise.toml",
+]
+outputs = [
+  "build/odin-player/native/player.exe",
+  "build/odin-player/native/wasmtime.dll",
+  "build/odin-player/native/SDL3.dll",
+  "build/odin-player/web/runtime.wasm",
+  "build/odin-player/web/game.wasm",
+  "build/odin-player/web/fixtures/loop.wasm",
+]
+run = "node tools/build-odin.mjs --fixtures"
+
+[tasks."build:rpg"]
+description = "Build and package both RPG cartridges"
+depends = ["deps:luau"]
+run = ["node tools/build-odin.mjs --game rpg --fixtures", "node experiments/luau-executor/stage.mjs"]
+
+[tasks."build:racing"]
+description = "Build and package both racing cartridges"
+depends = ["deps:luau"]
+run = [
+  "node tools/build-odin.mjs --game racing",
+  "node experiments/luau-executor/stage.mjs build/racing-player racing",
+]
+
+[tasks."test:sdk"]
+run = ["node tools/verify-sdk.mjs", "node tools/verify-sdk-cli.mjs"]
+
+[tasks."test:cartridge"]
+run = "node tools/verify-cartridge.mjs"
+
+[tasks."test:resources"]
+run = "node tools/verify-resources.mjs"
+
+[tasks."test:graphics"]
+run = "node tools/verify-graphics.mjs"
+
+[tasks."test:odin"]
+depends = ["build:odin"]
+env = { SDL_VIDEODRIVER = "dummy", SDL_AUDIODRIVER = "dummy", SDL_RENDER_DRIVER = "software" }
+run = "node tools/verify-odin.mjs"
+
+[tasks."test:display"]
+depends = ["build:rpg"]
+run = "node tools/verify-display.mjs"
+
+[tasks."test:rpg"]
+depends = ["build:rpg"]
+run = "node experiments/luau-executor/benchmark.mjs --verify"
+
+[tasks."test:racing"]
+depends = ["build:racing"]
+run = "node tools/verify-racing.mjs"
+
+[tasks.test]
+description = "Run the conformance suites sequentially"
+run = [
+  { task = "test:sdk" },
+  { task = "test:cartridge" },
+  { task = "test:resources" },
+  { task = "test:graphics" },
+  { task = "test:odin" },
+  { task = "test:display" },
+  { task = "test:rpg" },
+  { task = "test:racing" },
+]

@@ -1,5 +1,6 @@
 import { readFile, realpath, stat } from "node:fs/promises";
 import { resolve, dirname, relative, sep } from "node:path";
+import { formatSource } from "../code-tools.mjs";
 
 // Only literal require("@console") and relative module paths are supported.
 // Tokenization protects comments and strings from accidental source rewriting.
@@ -180,7 +181,7 @@ export async function bundleLuau({ entry, project, sdkRoot, assets, display = [6
   output.push(
     `local __sdk=__require(${JSON.stringify(sdkId)})\n__sdk.assets(${JSON.stringify(assets.toString("base64"))})\nreturn __sdk._wrap(__require(${JSON.stringify(mainId)}),${display[0]},${display[1]})\n`,
   );
-  const bytes = Buffer.from(output.join("\n"), "utf8");
+  const bytes = Buffer.from(formatSource(output.join("\n"), "game.luau"), "utf8");
   if (bytes.length > 256 * 1024) {
     throw new Error("Bundled Luau source exceeds 256 KiB");
   }
@@ -190,5 +191,8 @@ export function odinEntry({ graphicsImport = '"assets"', display = "High" } = {}
   if (!["High", "Low"].includes(display)) {
     throw new Error("Invalid display mode");
   }
-  return `// Generated SDK entry point.\npackage main\nimport "base:runtime"\nimport console "sdk:console"\nimport ${graphicsImport}\n@(export) game_init :: proc "c" () {\n context=runtime.default_context()\n console.start(console.Callbacks{init=init,update=update,draw=draw},console.Config{graphics=assets.raster[:],display=.${display}})\n}\n`;
+  return formatSource(
+    `// Generated SDK entry point.\npackage main\nimport "base:runtime"\nimport console "sdk:console"\nimport ${graphicsImport}\n@(export) game_init :: proc "c" () {\n context=runtime.default_context()\n console.start(console.Callbacks{init=init,update=update,draw=draw},console.Config{graphics=assets.raster[:],display=.${display}})\n}\n`,
+    "console_entry.odin",
+  );
 }

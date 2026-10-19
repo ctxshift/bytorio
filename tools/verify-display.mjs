@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 import { once } from "node:events";
 import { chromium } from "playwright";
 import { serve } from "./serve.mjs";
+import { tool } from "./toolchain.mjs";
 import {
   submitDrawing,
   rasterizeDrawing,
@@ -16,7 +17,7 @@ const root = "build/rpg-odin",
 await mkdir(`${web}/display`, { recursive: true });
 for (const invalid of [false, true]) {
   const result = spawnSync(
-    resolve(".tools/odin/dist/odin.exe"),
+    tool("odin"),
     [
       "build",
       "tests/odin/display",

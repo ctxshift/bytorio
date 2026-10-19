@@ -1,6 +1,8 @@
 import { readFile, writeFile, copyFile, mkdir, readdir } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { encodeCartridge } from "../../tools/sdk/cartridge.mjs";
+import { emscriptenRoot } from "../../tools/toolchain.mjs";
+import { resolve } from "node:path";
 const root = process.argv[2] || "build/unified-player";
 const racing = process.argv[3] === "racing";
 const cartridge = racing ? "racing" : "rpg";
@@ -56,16 +58,13 @@ for (const platform of ["web", "native"]) {
   for (const file of await readdir(`${source}/licenses`)) {
     await copyFile(`${source}/licenses/${file}`, `${target}/licenses/${file}`);
   }
-  await copyFile(".tools/emsdk/upstream/emscripten/LICENSE", `${target}/licenses/emscripten.txt`);
+  await copyFile(resolve(emscriptenRoot(), "LICENSE"), `${target}/licenses/emscripten.txt`);
   for (const [path, name] of [
     ["libcxx/LICENSE.TXT", "libcxx.txt"],
     ["libcxxabi/LICENSE.TXT", "libcxxabi.txt"],
     ["libc/musl/COPYRIGHT", "musl.txt"],
   ]) {
-    await copyFile(
-      `.tools/emsdk/upstream/emscripten/system/lib/${path}`,
-      `${target}/licenses/${name}`,
-    );
+    await copyFile(resolve(emscriptenRoot(), `system/lib/${path}`), `${target}/licenses/${name}`);
   }
   await copyFile("build/luau-executor/_deps/luau-src/LICENSE.txt", `${target}/licenses/luau.txt`);
 }

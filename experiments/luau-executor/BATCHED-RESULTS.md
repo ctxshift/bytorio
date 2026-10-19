@@ -55,7 +55,7 @@ The current executables/source bundles are about 14.1 KiB for the Odin cartridge
 
 ## Reproduce and interpret
 
-```powershell
+```text
 npm run build:unified
 node experiments/luau-executor/verify-drawing.mjs
 node experiments/luau-executor/verify-cache.mjs

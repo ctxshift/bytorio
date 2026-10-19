@@ -3,9 +3,10 @@ import { spawnSync } from "node:child_process";
 import { readFile, mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { chromium } from "playwright";
+import { tool } from "../../tools/toolchain.mjs";
 
 // Run from the repository root. Keep this probe independent of the current player.
-const compiler = process.argv[2] ? resolve(process.argv[2]) : "odin";
+const compiler = process.argv[2] ? resolve(process.argv[2]) : tool("odin");
 await mkdir("build/odin", { recursive: true });
 
 function run(program, args) {

@@ -7,6 +7,7 @@ import { once } from "node:events";
 import { chromium } from "playwright";
 import { createProject, buildProject } from "./sdk/project.mjs";
 import { serve } from "./serve.mjs";
+import { tool, dependencyRoot } from "./toolchain.mjs";
 import {
   configureResources,
   submitResources,
@@ -29,8 +30,8 @@ function run(exe, args, expected = 0) {
   assert.equal(result.status, expected, result.stderr || result.stdout || String(result.error));
   return result;
 }
-const odin = resolve(".tools/odin/dist/odin.exe");
-const deps = resolve(".tools/wasmtime/wasmtime-v49.0.3-x86_64-windows-c-api/lib");
+const odin = tool("odin");
+const deps = dependencyRoot();
 run(odin, ["test", "tests/graphics", `-out:${resolve(root, "renderer-tests.exe")}`]);
 run(odin, [
   "build",

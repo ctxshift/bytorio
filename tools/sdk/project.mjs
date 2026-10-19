@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir, readdir, copyFile, stat, realpath } from "node:fs/promises";
+import { readFile, writeFile, mkdir, readdir, copyFile, realpath } from "node:fs/promises";
 import { resolve, dirname, relative, sep } from "node:path";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -9,6 +9,8 @@ import { bundleLuau, odinEntry } from "./bundle.mjs";
 import { inspectGuest } from "../../runtime/odin/web/policy.js";
 import { encodeCartridge } from "./cartridge.mjs";
 import { decodeCartridge } from "../../runtime/odin/web/cartridge.js";
+import { formatSource } from "../code-tools.mjs";
+import { tool, emscriptenRoot, task } from "../toolchain.mjs";
 
 export const repo = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const contract = JSON.parse(await readFile(resolve(repo, "sdk/contract.json"), "utf8"));
@@ -22,18 +24,6 @@ export function command(exe, args, options = {}) {
   }
   return result;
 }
-const ps = (file) => command("pwsh", ["-NoProfile", "-File", resolve(repo, "tools", file)]);
-const exists = async (path) => {
-  try {
-    await stat(path);
-    return true;
-  } catch (error) {
-    if (error.code === "ENOENT") {
-      return false;
-    }
-    throw error;
-  }
-};
 export async function files(root, extensions) {
   const found = [];
   async function visit(dir) {
@@ -157,10 +147,7 @@ export async function createProject(path, language = "luau") {
   return project;
 }
 async function odinCompiler() {
-  const exe = resolve(repo, ".tools/odin/dist/odin.exe");
-  if (!(await exists(exe))) {
-    ps("build-odin.ps1");
-  }
+  const exe = tool("odin");
   const version = spawnSync(exe, ["version"], { encoding: "utf8" });
   if (!version.stdout?.includes("84bc3fc")) {
     throw new Error("Odin dev-2026-10 (84bc3fc) is required");
@@ -168,11 +155,7 @@ async function odinCompiler() {
   return exe;
 }
 async function analyzer() {
-  const exe = resolve(repo, ".tools/luau-tools/Release/luau-analyze.exe");
-  if (!(await exists(exe))) {
-    ps("build-luau-tools.ps1");
-  }
-  return exe;
+  return tool("luau-analyze");
 }
 async function prepare(path) {
   const spec = await manifest(path);
@@ -219,7 +202,10 @@ async function prepare(path) {
     await mkdir(resolve(destination, "console_assets"));
     await writeFile(
       resolve(destination, "console_assets/assets.odin"),
-      `package assets\nraster := [${packet.length}]u8{${[...packet]}}\npalette := [16]u32{${palette}}\n`,
+      formatSource(
+        `package assets\nraster := [${packet.length}]u8{${[...packet]}}\npalette := [16]u32{${palette}}\n`,
+        "assets.odin",
+      ),
     );
     await writeFile(
       resolve(destination, "console_entry.odin"),
@@ -256,49 +242,10 @@ async function prepare(path) {
   return { ...spec, generated };
 }
 async function player() {
-  const sources = [
-    ...(await files(resolve(repo, "runtime/odin"), [".odin", ".js", ".html"])),
-    resolve(repo, "tools/build-odin.ps1"),
-  ];
-  await cachedBuild(
-    "sdk-player-hash",
-    sources,
-    [
-      "build/odin-player/native/player.exe",
-      "build/odin-player/native/SDL3.dll",
-      "build/odin-player/native/wasmtime.dll",
-      "build/odin-player/web/runtime.wasm",
-    ],
-    "build-odin.ps1",
-  );
+  task("build:odin");
 }
 async function executor() {
-  const sources = [
-    ...(await files(resolve(repo, "experiments/luau-executor"), [".cpp", ".h", "CMakeLists.txt"])),
-    resolve(repo, "tools/build-luau-executor.ps1"),
-  ];
-  await cachedBuild(
-    "sdk-executor-hash",
-    sources,
-    ["build/luau-executor/luau-executor.wasm", "build/luau-executor/_deps/luau-src/LICENSE.txt"],
-    "build-luau-executor.ps1",
-  );
-}
-async function cachedBuild(name, sources, required, script) {
-  const hash = createHash("sha256");
-  for (const file of sources) {
-    hash.update(relative(repo, file)).update(await readFile(file));
-  }
-  const key = hash.digest("hex"),
-    stamp = resolve(repo, "build", name);
-  if (
-    !(await exists(stamp)) ||
-    (await readFile(stamp, "utf8")) !== key ||
-    !(await Promise.all(required.map((file) => exists(resolve(repo, file))))).every(Boolean)
-  ) {
-    ps(script);
-    await writeFile(stamp, key);
-  }
+  task("deps:luau");
 }
 async function smoke(spec) {
   const luau = spec.language === "luau";
@@ -416,10 +363,10 @@ export async function buildProject(path, options = {}) {
       );
       for (const [source, name] of [
         ["build/luau-executor/_deps/luau-src/LICENSE.txt", "luau.txt"],
-        [".tools/emsdk/upstream/emscripten/LICENSE", "emscripten.txt"],
-        [".tools/emsdk/upstream/emscripten/system/lib/libcxx/LICENSE.TXT", "libcxx.txt"],
-        [".tools/emsdk/upstream/emscripten/system/lib/libcxxabi/LICENSE.TXT", "libcxxabi.txt"],
-        [".tools/emsdk/upstream/emscripten/system/lib/libc/musl/COPYRIGHT", "musl.txt"],
+        [resolve(emscriptenRoot(), "LICENSE"), "emscripten.txt"],
+        [resolve(emscriptenRoot(), "system/lib/libcxx/LICENSE.TXT"), "libcxx.txt"],
+        [resolve(emscriptenRoot(), "system/lib/libcxxabi/LICENSE.TXT"), "libcxxabi.txt"],
+        [resolve(emscriptenRoot(), "system/lib/libc/musl/COPYRIGHT"), "musl.txt"],
       ]) {
         await copyFile(resolve(repo, source), resolve(target, "licenses", name));
       }

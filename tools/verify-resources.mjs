@@ -7,6 +7,7 @@ import { once } from "node:events";
 import { chromium } from "playwright";
 import { createProject, buildProject } from "./sdk/project.mjs";
 import { serve } from "./serve.mjs";
+import { tool, dependencyRoot } from "./toolchain.mjs";
 import {
   configureResources,
   submitResources,
@@ -26,8 +27,8 @@ function run(exe, args) {
   return result.stdout;
 }
 run(process.execPath, ["tools/generate-resource-schema.mjs", "--check"]);
-const odin = resolve(".tools/odin/dist/odin.exe");
-const dependency = resolve(".tools/wasmtime/wasmtime-v49.0.3-x86_64-windows-c-api/lib");
+const odin = tool("odin");
+const dependency = dependencyRoot();
 run(odin, ["test", "tests/resources", `-out:${resolve(root, "registry-tests.exe")}`]);
 run(odin, [
   "build",

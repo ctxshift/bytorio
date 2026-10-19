@@ -1,5 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
+import { formatSource } from "./code-tools.mjs";
 const root = new URL("../", import.meta.url);
 const schema = JSON.parse(await readFile(new URL("sdk/proposals/resource-transport.json", root)));
 const constants = Object.fromEntries(
@@ -32,12 +33,13 @@ const files = {
 };
 for (const [file, content] of Object.entries(files)) {
   const target = new URL(file, root);
+  const formatted = formatSource(content, file);
   if (process.argv.includes("--check")) {
-    if ((await readFile(target, "utf8")).replaceAll("\r\n", "\n") !== content) {
+    if ((await readFile(target, "utf8")).replaceAll("\r\n", "\n") !== formatted) {
       throw new Error(`Stale generated resource schema: ${fileURLToPath(target)}`);
     }
   } else {
-    await writeFile(target, content);
+    await writeFile(target, formatted);
   }
 }
 console.log(`Resource schema ${process.argv.includes("--check") ? "checked" : "generated"}.`);

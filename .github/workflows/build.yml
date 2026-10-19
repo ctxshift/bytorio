@@ -17,61 +17,36 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npm run lint
-      - run: npm run format:check
-      - run: node tools/generate-resource-schema.mjs --check
+      - run: npm run lint:js
+      - run: npm run format:js:check
 
   sdk:
     runs-on: windows-latest
+    defaults:
+      run:
+        shell: cmd
+    env:
+      PLAYER_BROWSER_CHANNEL: chrome
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: jdx/mise-action@v4
         with:
-          node-version: 24
-          cache: npm
-      - name: Install pinned Emscripten
-        shell: pwsh
-        run: |
-          git clone https://github.com/emscripten-core/emsdk.git .tools/emsdk
-          git -C .tools/emsdk checkout 3b3963d86a5c97adaf6eaa845cdfe0b811c2f960
-          ./.tools/emsdk/emsdk.bat install 6.0.12
-          ./.tools/emsdk/emsdk.bat activate 6.0.12
-      - name: Install browser verifier
-        run: npm ci
-      - name: Verify both SDKs and project tools
-        env:
-          PLAYER_BROWSER_CHANNEL: chrome
-        run: npm run test:sdk
-      - name: Verify PNG cartridges on native and browser
-        env:
-          PLAYER_BROWSER_CHANNEL: chrome
-        run: npm run test:cartridge
-      - name: Verify typed resource transport on both hosts
-        env:
-          PLAYER_BROWSER_CHANNEL: chrome
-        run: npm run test:resources
-      - name: Verify explicit graphics and upload budgets
-        env:
-          PLAYER_BROWSER_CHANNEL: chrome
-        run: npm run test:graphics
-      - name: Build and verify both game languages on both hosts
-        env:
-          PLAYER_BROWSER_CHANNEL: chrome
-        run: |
-          npm run build:rpg
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          npm run test:display
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node experiments/luau-executor/verify-drawing.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node experiments/luau-executor/verify-cache.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          npm run test:rpg
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          npm run build:racing
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          npm run test:racing
-          exit $LASTEXITCODE
+          version: 2026.10.15
+      - run: npm ci
+      - name: Lint and type check all project languages
+        run: mise run lint
+      - name: Check formatting in all project languages
+        run: mise run format:check
+      - name: Check generated resource schema
+        run: node tools/generate-resource-schema.mjs --check
+      - name: Verify SDKs, cartridges, resources, graphics and game replays
+        run: mise run test
+      - name: Verify drawing batches
+        run: node experiments/luau-executor/verify-drawing.mjs
+      - name: Verify executor cache
+        run: node experiments/luau-executor/verify-cache.mjs
+      - name: Ensure asset rebuilds preserve formatting
+        run: mise run format:check
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -81,30 +56,4 @@ jobs:
             build/cartridge-verification/
             build/resource-verification/
             build/graphics-verification/
-
-  odin:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-      - name: Build pinned Odin native and browser players
-        shell: pwsh
-        run: ./tools/build-odin.ps1 all -Fixtures
-      - name: Install browser verifier
-        run: |
-          npm ci
-          npx playwright install chromium
-      - name: Verify Odin reproduction and recovery
-        env:
-          SDL_VIDEODRIVER: dummy
-          SDL_AUDIODRIVER: dummy
-          SDL_RENDER_DRIVER: software
-        run: npm run test:odin
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: odin-verification
-          path: build/odin-player/verification/
+            build/odin-player/verification/
