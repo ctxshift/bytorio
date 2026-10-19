@@ -26,9 +26,8 @@ unsigned char assets[max_assets],text[max_text];
 std::uint32_t assets_size,text_size;
 Frame frame;
 std::uint32_t display_mode=(640u<<16)|360u;
-int integer(lua_State* L,int arg,int low,int high);
 int display(lua_State* L) {
-    const int w=integer(L,1,1,640),h=integer(L,2,1,360);
+    const double w=luaL_checknumber(L,1),h=luaL_checknumber(L,2);
     if(!((w==640&&h==360)||(w==320&&h==180)))luaL_error(L,"unsupported display mode");
     display_mode=(std::uint32_t(w)<<16)|std::uint32_t(h);return 0;
 }
@@ -84,6 +83,11 @@ int draw_sprite(lua_State* L) {
     if(command_count==max_commands)luaL_error(L,"display list limit exceeded");
     commands[command_count++]={1,x,y,id,scale,0,0,0};return 0;
 }
+int draw_sprite_size(lua_State* L) {
+    const int id=integer(L,1,0,255),x=integer(L,2,-4096,4096),y=integer(L,3,-4096,4096),w=integer(L,4,1,128),h=integer(L,5,1,128);
+    if(command_count==max_commands)luaL_error(L,"display list limit exceeded");
+    commands[command_count++]={3,x,y,w,h,static_cast<std::uint32_t>(id),0,0};return 0;
+}
 int draw_text(lua_State* L) {
     std::size_t size;const char* value=luaL_checklstring(L,1,&size);
     const int x=integer(L,2,-4096,4096),y=integer(L,3,-4096,4096);
@@ -131,7 +135,7 @@ EMSCRIPTEN_KEEPALIVE void game_init(){
     state=lua_newstate(allocate,nullptr);
     if(!state){fail("cannot allocate Luau VM");return;}
     luaL_openlibs(state);
-    const luaL_Reg api[]={{"display",display},{"clear",clear},{"rect",rect},{"button",button},{"sound",sound},{"graphics_assets",graphics_assets},{"draw_sprite",draw_sprite},{"draw_text",draw_text},{nullptr,nullptr}};
+    const luaL_Reg api[]={{"display",display},{"clear",clear},{"rect",rect},{"button",button},{"sound",sound},{"graphics_assets",graphics_assets},{"draw_sprite",draw_sprite},{"draw_sprite_size",draw_sprite_size},{"draw_text",draw_text},{nullptr,nullptr}};
     luaL_register(state,"console",api);lua_setreadonly(state,-1,true);lua_pop(state,1);
     luaL_sandbox(state);luaL_sandboxthread(state);
     std::size_t size=0;

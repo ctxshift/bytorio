@@ -10,10 +10,16 @@ count: u32
 overflow: bool
 text_bytes: [abi.MAX_TEXT_BYTES]u8
 text_count: u32
+display_mode: u32 = abi.DISPLAY_HIGH
+set_display :: proc(mode:u32) -> bool {
+    if !abi.valid_display(mode) {return false}
+    display_mode=mode
+    return true
+}
 
 begin :: proc() { count = 0; text_count = 0; overflow = false }
 rect :: proc(x, y, w, h: int, color: u32) {
-    if w <= 0 || h <= 0 || x >= abi.WIDTH || y >= abi.HEIGHT || x+w <= 0 || y+h <= 0 { return }
+    if w <= 0 || h <= 0 || x >= int(display_mode>>16) || y >= int(display_mode&65535) || x+w <= 0 || y+h <= 0 { return }
     if count == MAX_COMMANDS { overflow = true; return }
     commands[count] = Command{kind=0,x=i32(x),y=i32(y),w=i32(w),h=i32(h),color=color}
     count += 1
@@ -22,6 +28,11 @@ sprite :: proc(id, x, y: int, scale := 1) {
     if count == MAX_COMMANDS { overflow = true; return }
     commands[count] = Command{kind=1,x=i32(x),y=i32(y),w=i32(id),h=i32(scale)}
     count += 1
+}
+sprite_size :: proc(id,x,y,w,h:int) {
+    if count == MAX_COMMANDS {overflow=true;return}
+    commands[count]=Command{kind=3,x=i32(x),y=i32(y),w=i32(w),h=i32(h),color=u32(id)}
+    count+=1
 }
 text :: proc(value: string, x, y: int, color: u32) {
     if count == MAX_COMMANDS || len(value) > abi.MAX_TEXT_BYTES-int(text_count) { overflow = true; return }

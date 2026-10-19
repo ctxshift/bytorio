@@ -28,6 +28,8 @@ function native(path) {return spawnSync(resolve(`${root}/native/player.exe`),['-
 const report=native(`${web}/display/switch.wasm`);assert.equal(report.status,0,report.stderr);
 assert.deepEqual(report.stdout.trim().split(/\r?\n/).map(JSON.parse),expected);
 const bad=native(`${web}/display/invalid.wasm`);assert.notEqual(bad.status,0);assert.match(bad.stderr,/unsupported display mode/);
+const presented=spawnSync(resolve(`${root}/native/player.exe`),['--game',`${web}/display/switch.wasm`,'--smoke'],{encoding:'utf8',timeout:30000,env:{...process.env,SDL_VIDEODRIVER:'dummy',SDL_AUDIODRIVER:'dummy',SDL_RENDER_DRIVER:'software'}});
+assert.equal(presented.status,0,presented.stderr);assert.equal(JSON.parse(presented.stdout).hash,expected.at(-1).hash,'SDL recreates textures across switches');
 // The source executor exposes the same mode request, reset and validation rules.
 const executor=(await WebAssembly.instantiate(await readFile('build/luau-executor/luau-executor.wasm'),imports)).instance.exports;
 executor._initialize();
@@ -35,11 +37,19 @@ loadSource(executor,Buffer.from('return {init=function() console.display(320,180
 executor.game_init();checkExecutor(executor);assert.equal(executor.game_display_mode(),(320<<16)|180);
 executor.game_update(0,0,0,0);checkExecutor(executor);assert.equal(executor.game_display_mode(),(640<<16)|360);
 loadSource(executor,Buffer.from('return {init=function() console.display(384,216) end}'));executor.game_init();assert.throws(()=>checkExecutor(executor),/unsupported display mode/);
+loadSource(executor,Buffer.from('return {init=function() console.display(320.5,180) end}'));executor.game_init();assert.throws(()=>checkExecutor(executor),/unsupported display mode/);
 const server=serve(web,0);await once(server,'listening');
 const browser=await chromium.launch({channel:process.env.PLAYER_BROWSER_CHANNEL||'chrome',headless:true});
 try {
- const page=await browser.newPage();await page.goto(`http://127.0.0.1:${server.address().port}/player.html?game=./display/switch.wasm`);
+ const page=await browser.newPage({viewport:{width:1366,height:768}});await page.goto(`http://127.0.0.1:${server.address().port}/player.html?game=./display/switch.wasm`);
  await page.waitForFunction(()=>playerStatus.ready||playerStatus.error);assert.equal(await page.evaluate(()=>playerStatus.error),'');
+ assert.deepEqual(await page.locator('canvas').evaluate(c=>[c.width,c.height]),[640,360]);
+ await page.locator('#fullscreen').click();await page.waitForFunction(()=>document.fullscreenElement?.id==='screen');
+ const bounds=await page.locator('canvas').boundingBox();assert.equal(bounds.width,1280);assert.equal(bounds.height,720);
+ await page.evaluate(()=>document.exitFullscreen());
+ await page.locator('#start').click();await page.waitForFunction(()=>playerStatus.ticks>=35&&playerStatus.ticks<85);
+ assert.deepEqual(await page.locator('canvas').evaluate(c=>[c.width,c.height]),[320,180]);
+ await page.waitForFunction(()=>playerStatus.ticks>=95);
  assert.deepEqual(await page.locator('canvas').evaluate(c=>[c.width,c.height]),[640,360]);
  const traces=await page.evaluate(async()=>{
   const worker=new Worker('./worker.js',{type:'module'});

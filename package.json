@@ -12,7 +12,12 @@
     "serve:rpg": "node tools/serve.mjs build/rpg/site",
     "build:unified": "pwsh -NoProfile -File tools/build-unified-prototype.ps1",
     "bench:unified": "node experiments/luau-executor/benchmark.mjs",
-    "serve:unified": "node tools/serve.mjs build/unified-player/web"
+    "serve:unified": "node tools/serve.mjs build/unified-player/web",
+    "test:display": "node tools/verify-display.mjs",
+    "build:racing": "pwsh -NoProfile -File tools/build-racing.ps1",
+    "test:racing": "node tools/verify-racing.mjs",
+    "bench:racing": "node experiments/racing/benchmark.mjs",
+    "serve:racing": "node tools/serve.mjs build/racing-player/web"
   },
   "devDependencies": {
     "playwright": "1.64.1"

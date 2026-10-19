@@ -132,6 +132,14 @@ render_batch :: proc(commands: []abi.Draw_Command, text: []u8) -> bool {
                     } else {fill_rect(x+col*scale,y+row*scale,scale,scale,color)}
                 }
             }
+        case 3:
+            if c.color >= u32(sprite_count) || c.w < 1 || c.w > 128 || c.h < 1 || c.h > 128 {return false}
+            for py:=max(0,y);py<min(height,y+int(c.h));py+=1 {
+                for px:=max(0,x);px<min(width,x+int(c.w));px+=1 {
+                    color:=atlas[c.color][(py-y)*16/int(c.h)*16+(px-x)*16/int(c.w)]
+                    if color != 0 {pixels[py*width+px]=color}
+                }
+            }
         case 2:
             if sprite_count == 0 || c.offset > u32(len(text)) || c.length > u32(len(text))-c.offset || c.length > 1024 { return false }
             px,py := x,y

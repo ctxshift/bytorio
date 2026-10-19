@@ -162,7 +162,7 @@ run :: proc() -> int {
 
     if !check_only {
         if !sdl.Init({.VIDEO, .AUDIO, .GAMEPAD}) { return error(string(sdl.GetError())) }
-        app.window = sdl.CreateWindow("Console player â€” Odin", i32(core.width * 2), i32(core.height * 2), {.RESIZABLE})
+        app.window = sdl.CreateWindow("Console player — Odin", i32(core.width * 2), i32(core.height * 2), {.RESIZABLE})
         if app.window == nil { return error(string(sdl.GetError())) }
         app.renderer = sdl.CreateRenderer(app.window, nil)
         if app.renderer == nil { return error(string(sdl.GetError())) }
@@ -247,4 +247,3 @@ main :: proc() {
     status := run()
     if status != 0 { os.exit(status) }
 }
-

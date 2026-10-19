@@ -3,7 +3,7 @@ param(
     [ValidateSet('all', 'native', 'web')][string]$Target = 'all',
     [string]$Odin = '',
     [switch]$Fixtures,
-    [ValidateSet('hello', 'rpg')][string]$Game = 'hello'
+    [ValidateSet('hello', 'rpg', 'racing')][string]$Game = 'hello'
 )
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
@@ -41,6 +41,14 @@ try {
         $web = 'build/rpg-odin/web'
         $native = 'build/rpg-odin/native'
         $gameSource = 'examples/rpg-odin'
+        $common = @('-o:speed', '-source-code-locations:filename')
+    }
+    if ($Game -eq 'racing') {
+        & node tools/build-racing-assets.mjs
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        $web = 'build/racing-odin/web'
+        $native = 'build/racing-odin/native'
+        $gameSource = 'examples/racing-odin'
         $common = @('-o:speed', '-source-code-locations:filename')
     }
     New-Item -ItemType Directory -Force $web, $native | Out-Null

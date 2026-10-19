@@ -20,7 +20,10 @@ Luau games call `console.display(320, 180)` or `console.display(640, 360)`.
 The initial mode is 640×360. A request is applied when the next frame is submitted.
 Call it during initialization or before drawing a frame in the new mode.
 
-Odin/Wasm cartridges may export `game_display_mode() -> u32`, returning
+Odin games using the graphics SDK call `g.set_display(abi.DISPLAY_LOW)` or
+`g.set_display(abi.DISPLAY_HIGH)` and export `game_display_mode` returning
+`g.display_mode`. This keeps SDK command clipping and host rendering in sync.
+Other Odin/Wasm cartridges may export `game_display_mode() -> u32`, returning
 `abi.DISPLAY_HIGH` or `abi.DISPLAY_LOW`. Width occupies the high 16 bits and
 height the low 16 bits. The player queries it after `game_draw`, before rendering.
 An omitted export selects 640×360. Other values stop the cartridge with an error.

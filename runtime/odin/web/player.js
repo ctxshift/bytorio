@@ -76,7 +76,7 @@ async function load(restart = false) {
   soundsPlayed = 0;
   globalThis.playerAudio.buffer = null;
   globalThis.playerStatus = { ready: false, error: '', ticks: 0 };
-  status.textContent = 'Loading Odin playerâ€¦';
+  status.textContent = 'Loading Odin player…';
   button.disabled = true;
   worker = new Worker('./worker.js', { type: 'module' });
   armWatchdog(10000);
@@ -100,7 +100,7 @@ async function load(restart = false) {
     const { ticks, sounds, spriteX, spriteY, x, y, hash, width, height } = data;
     globalThis.playerStatus = { ...globalThis.playerStatus,ready: true, error: '', ticks, sounds, spriteX, spriteY, x, y, hash, width, height };
     if(data.startup)globalThis.playerStatus.startup=data.startup;
-    status.textContent = globalThis.playerInstructions || 'Arrows / WASD: move Â· Space / tap: sound';
+    status.textContent = globalThis.playerInstructions || 'Arrows / WASD: move · Space / tap: sound';
     maybePlay();
     if (autoStart) { autoStart = false; start().catch(error => fail(error.message)); }
   };
@@ -168,14 +168,14 @@ canvas.addEventListener('pointermove', point);
 for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) canvas.addEventListener(name, () => { pointer.pointer = false; });
 button.addEventListener('click', () => start().catch(error => fail(error.message)));
 function resize() {
-  const full=document.fullscreenElement===canvas;
+  const full=document.fullscreenElement===document.getElementById('screen');
   const density=devicePixelRatio||1;
   const available = Math.min((innerWidth - (full?0:32))*density / canvas.width, (innerHeight - (full?0:150))*density / canvas.height);
   const scale = available >= 1 ? Math.floor(available) : Math.max(0.25, available);
   canvas.style.width = `${canvas.width * scale / density}px`;
   canvas.style.height = `${canvas.height * scale / density}px`;
 }
-document.getElementById('fullscreen').addEventListener('click',()=>canvas.requestFullscreen().catch(error=>{status.textContent=error.message;}));
+document.getElementById('fullscreen').addEventListener('click',()=>document.getElementById('screen').requestFullscreen().catch(error=>{status.textContent=error.message;}));
 document.addEventListener('fullscreenchange',resize);
 window.addEventListener('resize', resize);
 resize(); load(); requestAnimationFrame(animate);

@@ -17,7 +17,7 @@ frame: abi.Frame
 
 @(export)
 game_init :: proc "c" () {
-    state = State{x = 184, y = 100, sounds = 1}
+    state = State{x = abi.WIDTH/2-8, y = abi.HEIGHT/2-8, sounds = 1}
 }
 
 @(export)
@@ -30,8 +30,8 @@ game_update :: proc "c" (buttons, pressed: u32, px, py: f64) {
     if buttons & 4 != 0 { state.y -= speed }
     if buttons & 8 != 0 { state.y += speed }
     if pressed != 0 { state.x, state.y = px - 8, py - 8 }
-    state.x = clamp(state.x, 0, 368)
-    state.y = clamp(state.y, 0, 200)
+    state.x = clamp(state.x, 0, abi.WIDTH-16)
+    state.y = clamp(state.y, 0, abi.HEIGHT-16)
     action := buttons & 16 != 0 || pressed != 0
     if action && !state.previous_action { state.sounds += 1 }
     state.previous_action = action

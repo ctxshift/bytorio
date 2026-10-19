@@ -14,7 +14,7 @@ Accepted decisions:
 - Runtime implementation: Odin, sharing platform-independent code between native and browser targets.
 - Native execution: a standalone runtime without a webview; playing games must not require Node.js or a developer toolchain.
 - Browser execution: compile the runtime to WebAssembly; use JavaScript only where browser integration requires it.
-- Display: one 384 x 216 logical screen.
+- Display: one logical screen with 640×360 and 320×180 modes.
 - Content emphasis: mostly 2D, with occasional 3D.
 - Distribution: approximately 128 MB typical game size, approximately 512 MB maximum.
 - Distribution includes a self-contained ROM encoded in a PNG cartridge, with visible cover art, loadable by both native and browser players.
@@ -29,7 +29,7 @@ Everything in this section beyond the accepted display and package-size intent i
 | --- | --- |
 | Simulation | Fixed 60 Hz ticks |
 | Presentation | 60 FPS target; explicit 30 FPS rendering option |
-| Display | 384 x 216, nearest-neighbor presentation, integer scaling and letterboxing |
+| Display | 640×360 default or 320×180, nearest-neighbor presentation, integer scaling and letterboxing |
 | Colors | RGBA rendering with optional palette-indexed assets and palette swaps |
 | 2D | Sprites, tilemaps, transforms, clipping, blending, text, render targets |
 | 3D | Textured meshes, depth testing, vertex colors, basic lighting and fog |

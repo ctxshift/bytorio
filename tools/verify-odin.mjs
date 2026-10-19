@@ -18,7 +18,7 @@ await mkdir(`${root}/verification`, { recursive: true });
 const report = JSON.parse(native(['--smoke', '--capture', `${root}/verification/native.bmp`]).stdout);
 assert.equal(report.ticks, 120);
 assert.equal(report.sounds, 2);
-assert.equal(report.hash, 219667909, 'matches the existing reference framebuffer');
+assert.equal(report.hash, 3747813061, 'matches the 640×360 reference framebuffer');
 assert.equal(report.audioQueuedFrames, 32000);
 await writeFile(`${root}/verification/native.json`, JSON.stringify(report, null, 2) + '\n');
 assert.deepEqual(await readFile(`${root}/native/game.wasm`), await readFile(`${root}/web/game.wasm`), 'identical game binary on both hosts');
@@ -59,13 +59,13 @@ try {
   const bounds = await canvas.boundingBox();
   await page.mouse.move(bounds.x + bounds.width / 4, bounds.y + bounds.height / 2);
   await page.mouse.down();
-  await page.waitForFunction(() => Math.abs(globalThis.playerStatus.x - 88) < 0.01 && globalThis.playerAudio.played === 3);
+  await page.waitForFunction(() => Math.abs(globalThis.playerStatus.x - 152) < 0.01 && globalThis.playerAudio.played === 3);
   const pointerTick = await page.evaluate(() => globalThis.playerStatus.ticks);
   await page.mouse.move(bounds.x - 20, bounds.y + bounds.height / 2);
   await page.waitForFunction(tick => globalThis.playerStatus.ticks > tick + 3, pointerTick);
-  assert.equal(await page.evaluate(() => globalThis.playerStatus.x), 88, 'captured pointer outside the screen is ignored');
+  assert.equal(await page.evaluate(() => globalThis.playerStatus.x), 152, 'captured pointer outside the screen is ignored');
   await page.mouse.up();
-  assert.equal(await page.evaluate(() => globalThis.playerStatus.y), 100);
+  assert.equal(await page.evaluate(() => globalThis.playerStatus.y), 172);
 
   const audio = await page.evaluate(async () => {
     const audio = globalThis.playerAudio;

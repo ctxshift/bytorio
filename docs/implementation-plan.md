@@ -2,7 +2,7 @@
 
 Status: updated 2026-10-19. **Odin is the target language for both games and the runtime**, per [the accepted decision](adr/0001-use-odin-for-games-and-runtime.md). The first native/browser [Odin reproduction](odin-development.md) passes its local sprite/sound and failure checks. The Luau/C++ reference is retained; full profile validation and retirement remain later work. This document supersedes the initial Luau/C++ roadmap.
 
-Keep the standalone native requirement, browser target, single 384 x 216 display, mostly 2D scope, approximate 128/512 MB package goals, and complete PNG cartridges. The [DS/3DS comparison](target-comparison.md) is advisory; the language change does not expand fidelity scope. The product name remains undecided; use neutral terminology and treat `sdk` command names as placeholders.
+Keep the standalone native requirement, browser target, single display with 640×360 and 320×180 modes, mostly 2D scope, approximate 128/512 MB package goals, and complete PNG cartridges. The [DS/3DS comparison](target-comparison.md) is advisory; the language change does not expand fidelity scope. The product name remains undecided; use neutral terminology and treat `sdk` command names as placeholders.
 
 ## Current evidence
 
@@ -54,7 +54,7 @@ Implemented and checked locally on Windows/Chrome. The identical game module, sh
 - Compile the shared Odin runtime for browser execution. Supply only the necessary JavaScript bridge to drawing, input, audio, loading, and storage.
 - Run browser game code in a Worker, with bounded command messages and an external watchdog. Keep presentation responsive during runaway code; do not silently require shared memory or cross-origin isolation.
 - Recreate the existing example's sprite, movement, bobbing, pointer interaction, action edge, and sound using the shared Odin console behavior.
-- Preserve logical 384 x 216 rendering, fixed ticks, bounded catch-up, gesture-unlocked browser audio, pause/resume, and controlled errors.
+- Preserve both logical display modes, fixed ticks, bounded catch-up, gesture-unlocked browser audio, pause/resume, and controlled errors.
 
 Exit: a standalone Odin native player and browser player run one identical game module with real graphics/audio. Scripted positions, sound requests, and rendered output match the reference where specified. Native users need no compiler, Node.js, or webview.
 

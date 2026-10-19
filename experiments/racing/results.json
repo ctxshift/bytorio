@@ -1,0 +1,111 @@
+{
+  "environment": {
+    "platform": "win32",
+    "arch": "x64",
+    "cpu": "11th Gen Intel(R) Core(TM) i7-11700K @ 3.60GHz",
+    "browser": "155.0.8059.41",
+    "samples": 3,
+    "display": [
+      320,
+      180
+    ],
+    "replayFrames": 720,
+    "warmupPasses": 2,
+    "measuredPasses": 5,
+    "nativeFuel": true
+  },
+  "bytes": {
+    "odin": 160354,
+    "executor": 711359,
+    "luau": 10269,
+    "renderer": 6382
+  },
+  "native": {
+    "odin": {
+      "startupMedianMs": 50.1555,
+      "frameMeanMs": 0.04612399074074049,
+      "frameP95Ms": 0.0782,
+      "updateMeanMs": 0.0003184814814815153,
+      "submitMeanMs": 0.012061824074073857,
+      "renderMeanMs": 0.03374368518518523,
+      "pixelCopyMeanMs": null,
+      "guestLinearBytes": 1638400,
+      "rendererLinearBytes": null,
+      "heapPeakBytes": 0,
+      "workingSetMedianBytes": 23162880,
+      "measuredFrames": 10800
+    },
+    "luauCold": {
+      "startupMedianMs": 168.9428,
+      "frameMeanMs": 0.2138286203703717,
+      "frameP95Ms": 0.525,
+      "updateMeanMs": 0.002699277777778132,
+      "submitMeanMs": 0.177415787037037,
+      "renderMeanMs": 0.03371355555555567,
+      "pixelCopyMeanMs": null,
+      "guestLinearBytes": 2097152,
+      "rendererLinearBytes": null,
+      "heapPeakBytes": 686341,
+      "workingSetMedianBytes": 29827072,
+      "measuredFrames": 10800
+    },
+    "luauCached": {
+      "startupMedianMs": 11.6951,
+      "frameMeanMs": 0.21160234259259297,
+      "frameP95Ms": 0.5155000000000001,
+      "updateMeanMs": 0.00272829629629665,
+      "submitMeanMs": 0.17512535185185218,
+      "renderMeanMs": 0.033748694444444616,
+      "pixelCopyMeanMs": null,
+      "guestLinearBytes": 2097152,
+      "rendererLinearBytes": null,
+      "heapPeakBytes": 686341,
+      "workingSetMedianBytes": 18014208,
+      "measuredFrames": 10800
+    }
+  },
+  "browser": {
+    "odin": {
+      "startupMedianMs": 7.700000047683716,
+      "frameMeanMs": 0.09343518487833165,
+      "frameP95Ms": 0.20000004768371582,
+      "updateMeanMs": 0.0005833333509939688,
+      "submitMeanMs": 0.01253703699067787,
+      "renderMeanMs": 0.08031481453665981,
+      "pixelCopyMeanMs": 0.07407407418445304,
+      "guestLinearBytes": 1638400,
+      "rendererLinearBytes": 3276800,
+      "heapPeakBytes": 0,
+      "workingSetMedianBytes": null,
+      "measuredFrames": 10800
+    },
+    "luauCold": {
+      "startupMedianMs": 30.5,
+      "frameMeanMs": 0.22900925834973654,
+      "frameP95Ms": 0.5,
+      "updateMeanMs": 0.00251851851189578,
+      "submitMeanMs": 0.14638888824869084,
+      "renderMeanMs": 0.0801018515891499,
+      "pixelCopyMeanMs": 0.07206481556097666,
+      "guestLinearBytes": 2097152,
+      "rendererLinearBytes": 3276800,
+      "heapPeakBytes": 686341,
+      "workingSetMedianBytes": null,
+      "measuredFrames": 10800
+    },
+    "luauCached": {
+      "startupMedianMs": 9.199999928474426,
+      "frameMeanMs": 0.23126851869954004,
+      "frameP95Ms": 0.5,
+      "updateMeanMs": 0.0028796297091024893,
+      "submitMeanMs": 0.14871296317489058,
+      "renderMeanMs": 0.07967592581554696,
+      "pixelCopyMeanMs": 0.07250925911797418,
+      "guestLinearBytes": 2097152,
+      "rendererLinearBytes": 3276800,
+      "heapPeakBytes": 686341,
+      "workingSetMedianBytes": null,
+      "measuredFrames": 10800
+    }
+  }
+}
