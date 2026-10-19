@@ -8,7 +8,7 @@ if (!["odin", "luau"].includes(language)) {
 }
 const files = sourceFiles(`.${language}`);
 if (language === "luau") {
-  const output = run(tool("luau-analyze"), ["--formatter=gnu", ...files]);
+  const output = run(tool("luau-analyze"), ["--solver=new", "--formatter=gnu", ...files]);
   if (output) {
     console.log(output);
   }

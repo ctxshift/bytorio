@@ -127,6 +127,13 @@ export async function createProject(path, language = "luau") {
       2,
     ) + "\n",
   );
+  if (language === "luau") {
+    await mkdir(resolve(project, ".vscode"));
+    await copyFile(
+      resolve(repo, "sdk/templates/luau-settings.json"),
+      resolve(project, ".vscode/settings.json"),
+    );
+  }
   await copyFile(
     resolve(repo, `sdk/templates/main.${language === "luau" ? "luau" : "odin"}`),
     resolve(project, `src/main.${language === "luau" ? "luau" : "odin"}`),
@@ -165,7 +172,7 @@ async function prepare(path) {
   if (spec.language === "luau") {
     await syncEditor(spec.project);
     const sources = await files(spec.project, [".luau"]);
-    command(await analyzer(), sources, { cwd: spec.project });
+    command(await analyzer(), ["--solver=new", ...sources], { cwd: spec.project });
     const source = await bundleLuau({
       entry: spec.entry,
       project: spec.project,

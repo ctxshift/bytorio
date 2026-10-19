@@ -18,6 +18,14 @@ function cli(args, status = 0) {
   return result;
 }
 cli(["new", project]);
+const editorSettings = JSON.parse(await readFile(".vscode/settings.json", "utf8"));
+assert.equal(editorSettings["luau-lsp.fflags.enableNewSolver"], true);
+assert.equal(editorSettings["luau-lsp.platform.type"], "standard");
+assert.deepEqual(
+  JSON.parse(await readFile(resolve(project, ".vscode/settings.json"), "utf8")),
+  editorSettings,
+  "new Luau projects align editor analysis with the SDK analyzer",
+);
 const main = resolve(project, "src/main.luau"),
   original = await readFile(main, "utf8");
 cli(["new", project], 1);

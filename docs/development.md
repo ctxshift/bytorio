@@ -98,6 +98,16 @@ Odin formatting; the StyLua extension supplies Luau formatting. `mise exec --
 <editor>` gives an editor the pinned executables. No global PATH changes are
 required.
 
+The Luau SDK requires the new type solver for `read` table properties. Repository
+lint and SDK checks explicitly select `--solver=new`. The checked-in VS Code
+settings enable `luau-lsp.fflags.enableNewSolver`, select the standard Luau
+platform, and disable automatic upstream flag synchronization and sourcemaps.
+New Luau projects receive the same settings. Existing projects should use
+`sdk/templates/luau-settings.json` as a reference when merging their own settings.
+If the editor still reports `read keyword is illegal here`, run **Luau: Reload
+Language Server** after the workspace settings load. Do not remove the `read`
+annotations to silence these errors: they protect the SDK's immutable metadata.
+
 Indentation uses spaces in every language. `.editorconfig` specifies four spaces
 for Odin, Luau and C++, and two for JavaScript, HTML and configuration files.
 Neither Odin nor Luau requires tabs; the optional Odin `-vet-tabs` rule is not

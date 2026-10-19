@@ -17,10 +17,11 @@ SDK 0.2.0 / ABI 2 profile. [Experimental resources](resources.md) and
 Run from the SDK repository root:
 
 ```text
-npm ci
-npm run console -- new my-game
-npm run console -- check my-game
-npm run console -- run my-game --web
+mise install
+mise exec -- npm ci
+mise exec -- npm run console -- new my-game
+mise exec -- npm run console -- check my-game
+mise exec -- npm run console -- run my-game --web
 ```
 
 For Odin, create with `new my-game --language odin`. Projects are ordinary folders;
@@ -29,9 +30,15 @@ The CLI currently supports **Windows x64** native development and browser builds
 from Windows, using the repository's pinned Odin, Wasmtime and Emscripten toolchains.
 See [toolchain setup](../docs/odin-development.md); Luau executor builds additionally
 require the [Luau CMake/C++ setup](../docs/development.md). Odin-only SDK projects
-do not build the Luau executor or analyzer. For Luau projects, `check` bootstraps the native Luau analyzer
-from the same pinned source used by the executor when needed. Builds of a fresh
-toolchain require network access; subsequent project builds reuse it.
+do not build the Luau executor. For Luau projects, `check` uses the prebuilt Luau
+analyzer installed by mise, matching the executor's pinned Luau version. Preparing
+a fresh toolchain requires network access; subsequent builds reuse it.
+
+New Luau projects include VS Code settings for the standard Luau platform and the
+new type solver, matching command-line checks. The SDK's `read` table properties
+require that solver. For an existing project, merge the settings from
+[the editor template](templates/luau-settings.json). If diagnostics remain after
+the settings load, run **Luau: Reload Language Server** in the command palette.
 
 | Command | Behavior |
 | --- | --- |
