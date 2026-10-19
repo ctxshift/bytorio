@@ -38,10 +38,11 @@ self.onmessage = async ({ data }) => {
       if (url.origin !== location.origin) throw new Error('Game URL must use the player origin.');
       const start=performance.now();
       const isSource=url.pathname.endsWith('.luau');
-      const [gameBytes, runtimeBytes, source] = await Promise.all([fetchBytes(isSource?'./luau-executor.wasm':url), fetchBytes('./runtime.wasm'),isSource?fetchBytes(url):null]);
+      const executor=isSource?data.executor:null;
+      const [gameBytes, runtimeBytes, source] = await Promise.all([executor?executor.bytes:fetchBytes(isSource?'./luau-executor.wasm':url), fetchBytes('./runtime.wasm'),isSource?fetchBytes(url):null]);
       const fetched=performance.now();
       self.postMessage({ type: 'executing' });
-      const gameModule=inspectGuest(gameBytes),runtimeModule=new WebAssembly.Module(runtimeBytes);
+      const gameModule=inspectGuest(gameBytes,executor?.module),runtimeModule=new WebAssembly.Module(runtimeBytes);
       const compiled=performance.now();
       game = (await WebAssembly.instantiate(gameModule, imports)).exports;
       runtime = (await WebAssembly.instantiate(runtimeModule, imports)).exports;
@@ -59,7 +60,7 @@ self.onmessage = async ({ data }) => {
       smoke = !!data.smoke;
       const sample = new Float32Array(runtime.memory.buffer, runtime.runtime_sample(), 16000).slice();
       const output = frame();
-      startup={fetchMs:fetched-start,compileMs:compiled-fetched,instantiateMs:instantiated-compiled,runtimeInitMs:runtimeInitialized-instantiated,gameInitMs:initialized-runtimeInitialized,firstFrameMs:performance.now()-initialized,totalMs:performance.now()-start};
+      startup={fetchMs:fetched-start,compileMs:compiled-fetched,instantiateMs:instantiated-compiled,runtimeInitMs:runtimeInitialized-instantiated,gameInitMs:initialized-runtimeInitialized,firstFrameMs:performance.now()-initialized,totalMs:performance.now()-start+(executor?.cache.prepareMs||0),executorCache:executor?.cache||{enabled:false,hit:false}};
       self.postMessage({ type: 'ready', ...output, startup, memory:memoryReport(), sample: sample.buffer }, [output.pixels, sample.buffer]);
     } else if (data.type === 'step') {
       if (!game || !Number.isInteger(data.steps) || data.steps < 1 || data.steps > 5) throw new Error('Invalid step request.');

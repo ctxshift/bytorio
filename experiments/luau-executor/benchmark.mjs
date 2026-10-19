@@ -1,6 +1,7 @@
 // PROTOTYPE: serial measurements of the same replay through the same player.
 import assert from 'node:assert/strict';
-import {readFile,writeFile,mkdir,stat} from 'node:fs/promises';
+import {readFile,writeFile,mkdir,stat,readdir} from 'node:fs/promises';
+import {randomUUID} from 'node:crypto';
 import {spawnSync} from 'node:child_process';
 import {resolve} from 'node:path';
 import {cpus,platform,arch,release} from 'node:os';
@@ -9,7 +10,7 @@ import {chromium} from 'playwright';
 import {serve} from '../../tools/serve.mjs';
 import {loadSource,checkExecutor,uploadGraphics,submitDrawing,rasterizeDrawing} from '../../runtime/odin/web/policy.js';
 
-const root='build/unified-player',out=`${root}/benchmark`;
+const root='build/unified-player',out=`${root}/benchmark-batched`;
 await mkdir(out,{recursive:true});
 const samples=Number(process.env.UNIFIED_BENCH_SAMPLES||5);
 assert.ok(Number.isInteger(samples)&&samples>=1&&samples<=9);
@@ -57,9 +58,9 @@ assert.deepEqual(defeatExpected,golden.defeat,'batching preserves the original d
 assert.deepEqual(await reference('luau',masks),expected);
 assert.deepEqual(await reference('luau',defeat),defeatExpected);
 
-function native(language,flags) {
+function native(language,flags,cacheConfig) {
     const args=['--game',`${root}/native/${language==='odin'?'game':'luau-executor'}.wasm`];
-    if(language==='luau')args.push('--source',`${root}/native/rpg.luau`);
+    if(language==='luau')args.push('--source',`${root}/native/rpg.luau`,...(cacheConfig?['--executor-cache',cacheConfig]:['--no-executor-cache']));
     const result=spawnSync(resolve(`${root}/native/player.exe`),[...args,...flags],{encoding:'utf8',timeout:120000,maxBuffer:4*1024*1024});
     if(result.error)throw result.error;
     assert.equal(result.status,0,`${language}: ${result.stderr}`);
@@ -77,20 +78,42 @@ for(const language of ['odin','luau']) {
     assert.equal(report.ticks,120);assert.equal(report.hash,808241555);assert.ok(report.audioQueuedFrames>0);
 }
 console.log('Parity and native SDL checks passed for both cartridges.');
-const nativeResults={metered:{odin:[],luau:[]},unmetered:{odin:[],luau:[]}};
+const nativeResults={metered:{odin:[],luau:[],luauCached:[]},unmetered:{odin:[],luau:[],luauCached:[]}};
+const cacheRun=resolve(out,'cache',randomUUID());
+let invalidationConfig;
 for(const mode of ['metered','unmetered'])for(let i=0;i<samples;i++)for(const language of i%2?['luau','odin']:['odin','luau']) {
     const flags=['--benchmark',`${out}/quest.inputs`];
     if(mode==='unmetered')flags.push('--benchmark-unmetered');
-    const report=JSON.parse(native(language,flags));
+    let config;
+    if(language==='luau') {
+        const directory=resolve(cacheRun,`${mode}-${i}`),artifacts=resolve(directory,'artifacts');
+        await mkdir(artifacts,{recursive:true});config=resolve(directory,'cache.toml');
+        await writeFile(config,`[cache]\ndirectory = ${JSON.stringify(artifacts.replaceAll('\\','/'))}\n`);
+        invalidationConfig=config;
+    }
+    const report=JSON.parse(native(language,flags,config));
     assert.deepEqual(report.traces,expected,`${language} native ${mode} quest parity`);
     assert.equal(report.timings.length,masks.length*5);
     nativeResults[mode][language].push(report);
     console.log(`Native ${mode} ${language} sample ${i+1}/${samples}: ${report.startup.totalMs.toFixed(1)} ms startup.`);
+    if(language==='luau') {
+        const cached=JSON.parse(native(language,flags,config));
+        assert.deepEqual(cached.traces,expected,'cached native quest parity');
+        const directory=resolve(cacheRun,`${mode}-${i}`,'artifacts');
+        const files=await readdir(directory,{recursive:true});
+        const counts=await Promise.all(files.filter(name=>name.endsWith('.stats')).map(async name=>Number((await readFile(resolve(directory,name),'utf8')).match(/usages\s*=\s*(\d+)/)?.[1]||0)));
+        cached.cacheUsageCount=Math.max(0,...counts);
+        assert.ok(cached.executorCacheEnabled&&cached.cacheUsageCount>=2,'Wasmtime cache metadata confirms a reused artifact');
+        nativeResults[mode].luauCached.push(cached);
+        console.log(`Native ${mode} luau cached sample ${i+1}/${samples}: ${cached.startup.totalMs.toFixed(1)} ms startup.`);
+    }
 }
+const changed=spawnSync(resolve(`${root}/native/player.exe`),['--game','build/rpg-odin/web/fixtures/abi.wasm','--source',`${root}/native/rpg.luau`,'--executor-cache',invalidationConfig,'--check'],{encoding:'utf8',timeout:10000});
+assert.equal(changed.status,1);assert.match(changed.stderr,/unsupported game ABI/,'native cache does not substitute old code for a different module');
 
 const server=serve(`${root}/web`,0);await once(server,'listening');
 let browser;
-const browserResults={odin:[],luau:[]};
+const browserResults={odin:[],luau:[],luauCached:[]};
 try {
     browser=await chromium.launch({channel:process.env.PLAYER_BROWSER_CHANNEL||undefined});
     const page=await browser.newPage({viewport:{width:1200,height:850}}),errors=[];
@@ -108,9 +131,15 @@ try {
         await page.screenshot({path:`${out}/${language}-browser.png`});
     }
     await page.goto(`${base}/comparison.html`);
-    for(let i=0;i<samples;i++)for(const language of i%2?['luau','odin']:['odin','luau']) {
-        const result=await page.evaluate(async ({language,masks,defeat})=>{
-            const started=performance.now(),worker=new Worker('./worker.js',{type:'module'});
+    const primed=await page.evaluate(async()=>{const {prepareExecutor}=await import('./executor-cache.js');return (await prepareExecutor('./luau-executor.wasm')).cache;});
+    console.log(`Browser executor cache scope: ${primed.scope}; ${primed.fallback||'ready'}`);
+    for(let i=0;i<samples;i++)for(const variant of i%2?['luauCached','luau','odin']:['odin','luau','luauCached']) {
+        const language=variant==='odin'?'odin':'luau';
+        const result=await page.evaluate(async ({language,variant,masks,defeat})=>{
+            const started=performance.now();
+            const {prepareExecutor}=await import('./executor-cache.js');
+            const executor=language==='luau'?await prepareExecutor('./luau-executor.wasm',{bypass:variant==='luau'}):null;
+            const worker=new Worker('./worker.js',{type:'module'});
             try {
                 const exchange=data=>new Promise((resolve,reject)=>{
                     const timeout=setTimeout(()=>reject(new Error('Unified Worker benchmark timeout')),90000);
@@ -118,19 +147,35 @@ try {
                     worker.onmessage=({data})=>{if(data.type==='executing')return;clearTimeout(timeout);data.type==='error'?reject(new Error(data.error)):resolve(data);};
                     worker.postMessage(data);
                 });
-                const ready=await exchange({type:'load',gameUrl:language==='luau'?'./rpg.luau':'./game.wasm'});
+                const ready=await exchange({type:'load',gameUrl:language==='luau'?'./rpg.luau':'./game.wasm',executor});
+                if(ready.ticks!==0||ready.sounds!==1)throw new Error('Cartridge state leaked across cached instances.');
                 const workerReadyMs=performance.now()-started;
                 const benchmark=await exchange({type:'benchmark',masks});
                 // Restart the same instance, then check the separate defeat route.
                 const recovered=await exchange({type:'benchmark',masks:defeat});
                 return {...benchmark,workerReadyMs,initialMemory:ready.memory,defeatTraces:recovered.traces};
             }finally{worker.terminate();}
-        },{language,masks,defeat});
+        },{language,variant,masks,defeat});
         assert.deepEqual(result.traces,expected,`${language} browser quest parity`);
         assert.deepEqual(result.defeatTraces,defeatExpected,`${language} browser defeat parity`);
-        browserResults[language].push(result);
-        console.log(`Browser ${language} sample ${i+1}/${samples}: ${result.startup.totalMs.toFixed(1)} ms startup.`);
+        if(variant==='luauCached'){
+            assert.equal(result.startup.executorCache.hit,true,'fresh game Worker reuses compiled executor');
+            assert.equal(result.startup.executorCache.downloadedExecutor,false,'cache hit does not download the executor again');
+        }
+        if(variant==='luau')assert.equal(result.startup.executorCache.hit,false,'cold control bypasses the module cache');
+        browserResults[variant].push(result);
+        console.log(`Browser ${variant} sample ${i+1}/${samples}: ${result.startup.totalMs.toFixed(1)} ms startup.`);
     }
+    const browserInvalidation=await page.evaluate(async()=>{
+        const {prepareExecutor}=await import('./executor-cache.js');
+        const first=await prepareExecutor('./luau-executor.wasm');
+        const response=await fetch('./luau-executor.wasm');const bytes=new Uint8Array(await response.arrayBuffer());
+        const changed=new Uint8Array(bytes.length+3);changed.set(bytes);changed.set([0,1,0],bytes.length);
+        const url=URL.createObjectURL(new Blob([changed]));
+        try{const next=await prepareExecutor(url);return {old:first.cache.key,next:next.cache.key,hit:next.cache.hit,scope:next.cache.scope};}
+        finally{URL.revokeObjectURL(url);}
+    });
+    assert.notEqual(browserInvalidation.old,browserInvalidation.next);assert.equal(browserInvalidation.hit,false,'changed bytes invalidate browser module cache');
     // Diagnostics must survive the C++ -> Wasm -> player boundary.
     const bad='return {init=function() error("prototype diagnostic") end, update=function() end, draw=function() end}';
     await writeFile(`${root}/web/diagnostic.luau`,bad);
@@ -149,8 +194,8 @@ try {
         return {startupMedianMs:median(r=>r.startup.totalMs),compileMedianMs:median(r=>r.startup.compileMs),gameInitMedianMs:median(r=>r.startup.gameInitMs),frameMeanMs:frames.reduce((a,b)=>a+b,0)/frames.length,frameP50Ms:percentile(frames,0.5),frameP95Ms:percentile(frames,0.95),updateMeanMs:mean(0),submitMeanMs:mean(1),renderMeanMs:mean(2),pixelCopyMeanMs:rows[0].length>3?mean(3):null,guestLinearBytes:median(r=>r.memory.currentLinear),heapPeakBytes:!reports[0].memory.heapBytes?null:Math.max(...reports.map(r=>r.memory.heapPeak)),workingSetMedianBytes:reports[0].memory.working?median(r=>r.memory.working):null,peakWorkingSetBytes:reports[0].memory.peakWorking?Math.max(...reports.map(r=>r.memory.peakWorking)):null,frameSamples:rows.length};
     };
     const summary={environment:report.environment,bytes:report.bytes,native:{metered:{},unmetered:{}},browser:{}};
-    for(const mode of ['metered','unmetered'])for(const language of ['odin','luau'])summary.native[mode][language]=summarize(nativeResults[mode][language]);
-    for(const language of ['odin','luau'])summary.browser[language]=summarize(browserResults[language]);
+    for(const mode of ['metered','unmetered'])for(const language of ['odin','luau','luauCached'])summary.native[mode][language]=summarize(nativeResults[mode][language]);
+    for(const language of ['odin','luau','luauCached'])summary.browser[language]=summarize(browserResults[language]);
     await writeFile(`${out}/summary.json`,JSON.stringify(summary,null,2)+'\n');
     console.log(JSON.stringify(summary,null,2));
 }finally{await browser?.close();await new Promise(resolve=>server.close(resolve));}

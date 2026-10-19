@@ -2,7 +2,7 @@ export const FRAME_BYTES = 40;
 export const MAX_GAME_BYTES = 1024 * 1024;
 export const MAX_PAGES = 128;
 
-export function inspectGuest(bytes) {
+export function inspectGuest(bytes,compiledModule) {
   const data = new Uint8Array(bytes);
   if (data.length > MAX_GAME_BYTES) throw new Error('Game module exceeds prototype size limit.');
   if (data.length < 8 || data.slice(0, 8).some((v, i) => v !== [0, 97, 115, 109, 1, 0, 0, 0][i])) {
@@ -37,7 +37,7 @@ export function inspectGuest(bytes) {
     cursor = end;
   }
   if (!hasMemory) throw new Error('Game must define bounded memory.');
-  const module = new WebAssembly.Module(data);
+  const module = compiledModule || new WebAssembly.Module(data);
   for (const item of WebAssembly.Module.imports(module)) {
     if (item.module !== 'env' || item.name !== 'sin' || item.kind !== 'function') throw new Error('Unsupported game import.');
   }

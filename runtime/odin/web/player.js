@@ -1,3 +1,4 @@
+import {prepareExecutor} from './executor-cache.js';
 const canvas = document.getElementById('canvas');
 const display = canvas.getContext('2d', { alpha: false });
 const button = document.getElementById('start');
@@ -67,7 +68,7 @@ async function start() {
   maybePlay();
 }
 
-function load(restart = false) {
+async function load(restart = false) {
   const currentGeneration = ++generation;
   worker?.terminate();
   pending = started = false;
@@ -96,12 +97,18 @@ function load(restart = false) {
     if (data.type !== 'ready' && data.type !== 'frame') { fail('Invalid player response.'); return; }
     display.putImageData(new ImageData(new Uint8ClampedArray(data.pixels), 384, 216), 0, 0);
     const { ticks, sounds, spriteX, spriteY, x, y, hash } = data;
-    globalThis.playerStatus = { ready: true, error: '', ticks, sounds, spriteX, spriteY, x, y, hash };
+    globalThis.playerStatus = { ...globalThis.playerStatus,ready: true, error: '', ticks, sounds, spriteX, spriteY, x, y, hash };
+    if(data.startup)globalThis.playerStatus.startup=data.startup;
     status.textContent = globalThis.playerInstructions || 'Arrows / WASD: move · Space / tap: sound';
     maybePlay();
     if (autoStart) { autoStart = false; start().catch(error => fail(error.message)); }
   };
-  worker.postMessage({ type: 'load', gameUrl: parameters.get('game') || './game.wasm', smoke });
+  try {
+    const gameUrl=parameters.get('game')||'./game.wasm';
+    const executor=new URL(gameUrl,location.href).pathname.endsWith('.luau')?await prepareExecutor('./luau-executor.wasm'):null;
+    if(currentGeneration!==generation)return;
+    worker.postMessage({type:'load',gameUrl,smoke,executor});
+  }catch(error){if(currentGeneration===generation)fail(error.message||String(error));}
 }
 
 function input() {

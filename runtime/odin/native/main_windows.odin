@@ -84,18 +84,22 @@ run :: proc() -> int {
     source_path := ""
     benchmark_path := ""
     unmetered := false
+    no_executor_cache := false
+    cache_config := ""
     smoke, check_only := false, false
     for i := 1; i < len(os.args); i += 1 {
         switch os.args[i] {
         case "--smoke": smoke = true
         case "--check": check_only = true
         case "--benchmark-unmetered": unmetered = true
-        case "--game", "--capture", "--replay", "--source", "--benchmark":
+        case "--no-executor-cache": no_executor_cache = true
+        case "--game", "--capture", "--replay", "--source", "--benchmark", "--executor-cache":
             option := os.args[i]
             i += 1
             if i >= len(os.args) { return error("missing option argument") }
             if option == "--game" { game_path = os.args[i]
             } else if option == "--source" { source_path = os.args[i]
+            } else if option == "--executor-cache" {cache_config = os.args[i]
             } else if option == "--benchmark" { benchmark_path = os.args[i]; check_only = true
             } else if option == "--replay" { replay_path = os.args[i]; check_only = true
             } else { capture = os.args[i] }
@@ -116,7 +120,15 @@ run :: proc() -> int {
         if len(source) == 0 { return error("Luau source is empty") }
     }
     defer delete(source)
-    if !guest.load(&app.game, bytes, source, !unmetered) { return error(app.game.error) }
+    if len(source) > 0 && !no_executor_cache && cache_config == "" {
+        directory := fmt.tprintf("%sexecutor-cache",base)
+        if os.make_directory_all(directory) != nil {return error("cannot create executor cache directory")}
+        cache_config = fmt.tprintf("%sexecutor-cache.toml",base)
+        config_text := fmt.tprintf("[cache]\ndirectory = %q\nfiles-total-size-soft-limit = \"64Mi\"\n",directory)
+        if os.write_entire_file(cache_config,config_text) != nil {return error("cannot write executor cache configuration")}
+    }
+    if no_executor_cache {cache_config = ""}
+    if !guest.load(&app.game, bytes, source, !unmetered, cache_config) { return error(app.game.error) }
     core.init()
     asset_size,graphics_ok := guest.read_graphics(&app.game)
     if !graphics_ok {return error(app.game.error)}

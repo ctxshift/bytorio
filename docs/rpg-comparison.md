@@ -40,6 +40,8 @@ The two gameplay implementations are handwritten. Asset generation does not tran
 
 The console interface now supports opaque, clipped RGBA rectangles. Guest helpers build sprites and text from those primitives. Odin exposes an optional bounded display list: `game_commands()` returns its guest-memory offset and `game_command_count()` its length. Each command contains five little-endian 32-bit fields: signed x/y/width/height and an unsigned RGBA color. The player allows at most 16,384 commands, validates guest-memory bounds and coordinates, and copies the commands before rendering. The original 40-byte frame contract remains supported. Coordinates range from -4096 to 4096; width and height range from 0 to 4096. Sprites use horizontal runs of palette pixels, rather than one command per pixel. This simple software path is sufficient for the experiment; it is not the final graphics architecture.
 
+The subsequent [unified-player prototype](../experiments/luau-executor/README.md) adds a [32-byte sprite/text batch extension](../experiments/luau-executor/BATCHING.md), while retaining the rectangle path for the legacy C++ reference. Its comparison guide records the newer protocol and performance results.
+
 ## Verification
 
 ```powershell

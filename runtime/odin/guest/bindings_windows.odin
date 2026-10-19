@@ -32,6 +32,8 @@ Callback :: #type proc "c" (environment, caller: rawptr, args: [^]Val, nargs: ui
 @(default_calling_convention="c")
 foreign wasmtime {
     wasm_config_new :: proc() -> Config ---
+    wasm_config_delete :: proc(config: Config) ---
+    wasmtime_config_cache_config_load :: proc(config: Config, path: cstring) -> Error ---
     wasm_engine_new_with_config :: proc(config: Config) -> Engine ---
     wasm_engine_delete :: proc(engine: Engine) ---
     wasmtime_config_consume_fuel_set :: proc(config: Config, enabled: bool) ---

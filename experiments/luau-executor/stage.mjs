@@ -1,9 +1,10 @@
 import {readFile,writeFile,copyFile,mkdir,readdir} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
 const root=process.argv[2]||'build/unified-player';
 for(const platform of ['web','native']) {
     const target=`${root}/${platform}`,source=`build/rpg-odin/${platform}`;
     await mkdir(`${target}/licenses`,{recursive:true});
-    const files=platform==='web'?['player.html','player.js','policy.js','worker.js','runtime.wasm','game.wasm']:['player.exe','SDL3.dll','wasmtime.dll','game.wasm'];
+    const files=platform==='web'?['player.html','player.js','policy.js','worker.js','executor-cache.js','executor-cache-core.js','runtime.wasm','game.wasm']:['player.exe','SDL3.dll','wasmtime.dll','game.wasm'];
     for(const file of files)await copyFile(`${source}/${file}`,`${target}/${file}`);
     await copyFile('build/luau-executor/luau-executor.wasm',`${target}/luau-executor.wasm`);
     await copyFile('build/rpg/batched.luau',`${target}/rpg.luau`);
@@ -18,6 +19,8 @@ for(const platform of ['web','native']) {
     });
 }
 const html=await readFile(`${root}/web/player.html`,'utf8');
+const executor=await readFile(`${root}/web/luau-executor.wasm`);
+await writeFile(`${root}/web/executor-version.json`,JSON.stringify({sha256:createHash('sha256').update(executor).digest('hex')})+'\n');
 await writeFile(`${root}/web/player.html`,html.replace('</body>','<script type="module" src="./controls.js"></script>\n</body>'));
 const controls=await readFile('examples/rpg-shared/controls.js','utf8');
 await writeFile(`${root}/web/controls.js`,controls.replace("back.href='../player.html'","back.href='./comparison.html'"));

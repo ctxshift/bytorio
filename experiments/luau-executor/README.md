@@ -8,6 +8,8 @@ See [measured results](RESULTS.md) and [the numeric snapshot](results.json).
 
 The subsequent [batched drawing extension](BATCHING.md) preserves the original visuals while moving sprite and font expansion into the shared renderer. The original results above are the rectangle-path baseline.
 
+[Updated results](BATCHED-RESULTS.md) cover batching plus [compiled executor caching](CACHING.md), with [a separate numeric snapshot](results-batched.json).
+
 ## Reproduce
 
 From the repository root, with the existing Odin, Emscripten, CMake, Node, and Playwright prerequisites installed:
@@ -17,7 +19,7 @@ npm run build:unified
 npm run bench:unified
 ```
 
-Set `PLAYER_BROWSER_CHANNEL=chrome` to use installed Chrome instead of Playwright Chromium. Measurements run serially. Avoid running other builds or benchmarks at the same time. `UNIFIED_BENCH_SAMPLES` optionally selects 1–9 fresh processes/workers per variant; the recorded run used five. Raw timings, memory reports, parity traces, and screenshots go under `build/unified-player/benchmark/`.
+Set `PLAYER_BROWSER_CHANNEL=chrome` to use installed Chrome instead of Playwright Chromium. Measurements run serially. Avoid running other builds or benchmarks at the same time. `UNIFIED_BENCH_SAMPLES` optionally selects 1–9 fresh processes/workers per variant; the recorded run used five. Current raw timings, memory reports, parity traces, and screenshots go under `build/unified-player/benchmark-batched/`; the original rectangle run used `benchmark/`.
 
 Interactive browser:
 
@@ -50,7 +52,7 @@ No C++ native player is used by either option. Luau itself remains implemented i
 
 The source upload functions are `game_source_buffer`, `game_source_capacity`, and `game_source_size`. The shared lifecycle remains `game_abi`, `game_frame_size`, `game_init`, `game_update`, and `game_draw`; display lists use `game_commands` and `game_command_count`. `game_error`/`game_error_length` and `game_heap_bytes`/`game_heap_peak` are executor-specific diagnostics.
 
-The executor is stored once with the player, not inside each cartridge. The prototype still fetches/compiles a fresh executor for each load; a shared compiled-module cache is **not** implemented. There is no PNG manifest or package loader yet. The Luau console surface is deliberately limited to the operations used by this RPG: clear, rectangle, buttons, and sound.
+The executor is stored once with the player, not inside each cartridge. Native caches compiled code on disk; browser caches compiled modules for the player page's lifetime. There is no PNG package loader yet. The small executor-version manifest identifies player code, not cartridge packaging. The Luau console surface covers this RPG's clear, rectangle, atlas, sprite, text, buttons, and sound operations.
 
 ## Measurement boundaries
 

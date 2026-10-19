@@ -25,6 +25,7 @@ Game :: struct {
     text_size, stride: int,
     count: int,
     has_source, metered: bool,
+    cache_enabled: bool,
     compile_ms, instantiate_ms, initialize_ms: f64,
     error: string,
 }
@@ -99,12 +100,19 @@ read_graphics :: proc(game: ^Game) -> (int,bool) {
     return read_blob(game,"game_assets","game_assets_size",game.assets[:])
 }
 
-load :: proc(game: ^Game, bytes: []u8, source: []u8 = nil, metered := true) -> bool {
+load :: proc(game: ^Game, bytes: []u8, source: []u8 = nil, metered := true, cache_config := "") -> bool {
     if len(bytes) == 0 || len(bytes) > abi.MAX_GAME_BYTES { return fail(game, "game module exceeds prototype size limit") }
     config := wasm_config_new()
     game.has_source, game.metered = len(source) > 0, metered
     wasmtime_config_consume_fuel_set(config, metered)
     wasmtime_config_max_wasm_stack_set(config, 256 * 1024)
+    if game.has_source && cache_config != "" {
+        path := strings.clone_to_cstring(cache_config)
+        cache_error := wasmtime_config_cache_config_load(config,path)
+        delete(path)
+        if !check(game,cache_error,nil) {wasm_config_delete(config);return false}
+        game.cache_enabled = true
+    }
     game.engine = wasm_engine_new_with_config(config)
     game.store = wasmtime_store_new(game.engine, nil, nil)
     game.ctx = wasmtime_store_context(game.store)

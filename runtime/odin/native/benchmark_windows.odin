@@ -54,7 +54,7 @@ benchmark :: proc(app: ^App, path: string, startup_ms: f64, baseline_working: ui
     working,peak_working := process_memory()
     fmt.printf("{{\"startup\":{{\"totalMs\":%.6f,\"compileMs\":%.6f,\"instantiateMs\":%.6f,\"gameInitMs\":%.6f}},",startup_ms,app.game.compile_ms,app.game.instantiate_ms,app.game.initialize_ms)
     fmt.printf("\"memory\":{{\"currentLinear\":%d,\"heapBytes\":%d,\"heapPeak\":%d,\"baselineWorking\":%d,\"working\":%d,\"peakWorking\":%d}},",guest.memory_bytes(&app.game),guest.heap_query(&app.game,"game_heap_bytes"),peak_heap,baseline_working,working,peak_working)
-    fmt.printf("\"metered\":%t,\"timings\":[",app.game.metered)
+    fmt.printf("\"metered\":%t,\"executorCacheEnabled\":%t,\"commandCount\":%d,\"timings\":[",app.game.metered,app.game.cache_enabled,app.game.count)
     for row,i in timings {
         if i > 0 {fmt.print(",")}
         fmt.printf("[%.6f,%.6f,%.6f]",row[0],row[1],row[2])
