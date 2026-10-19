@@ -36,8 +36,9 @@ An [experimental Luau Wasm executor](experiments/luau-executor/README.md) runs b
 The current recommendation is to retain the agreed 2D-first scope while leaving room for richer 3D later. A move to a 3DS-level fidelity target remains an open product decision.
 
 Run `mise install` and `mise exec -- npm ci` to prepare the pinned development tools.
-`mise run format` formats JavaScript/HTML with Prettier, Odin with odinfmt, and Luau
-with StyLua. `mise run lint` runs ESLint, `odin check -vet`, and `luau-analyze`.
+`mise run format` formats JavaScript/HTML with Prettier, Odin with odinfmt, Luau
+with StyLua, and C++ with clang-format. `mise run lint` runs ESLint, `odin check -vet`,
+`luau-analyze`, and clang-tidy.
 CI enforces both lint and `mise run format:check`. Dependency build tasks live in
 `.mise/tasks/`; project commands live in `mise.toml`. Project scripts use JavaScript.
 See [development](docs/development.md) for setup, editor settings and task details.

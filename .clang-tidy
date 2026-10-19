@@ -1,0 +1,18 @@
+Checks: >-
+  -*,
+  clang-analyzer-*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  performance-*,
+  portability-*,
+  -portability-avoid-pragma-once,
+  readability-misleading-indentation
+# All supported C++ toolchains support pragma once; keep the existing header convention.
+WarningsAsErrors: '*'
+HeaderFilterRegex: '.*'
+ExcludeHeaderFilterRegex: '(^|[\\/])(build|\.tools|node_modules|\.console)[\\/]'
+# This is an Emscripten driver option, not a Clang frontend option.
+RemovedArgs: ['-sWASM_LEGACY_EXCEPTIONS=0']
+CheckOptions:
+  # These externally linked names are required by the WASI libc ABI.
+  bugprone-reserved-identifier.AllowedIdentifiers: '^__wasi_(fd_close|fd_write|clock_time_get|environ_sizes_get|environ_get)$'

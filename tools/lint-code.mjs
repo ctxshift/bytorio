@@ -1,13 +1,43 @@
-import { dirname, resolve } from "node:path";
-import { sourceFiles } from "./code-tools.mjs";
-import { repo, run, tool, dependencyRoot } from "./toolchain.mjs";
+import { readdirSync } from "node:fs";
+import { dirname, resolve, extname } from "node:path";
+import { languageFiles } from "./code-tools.mjs";
+import { repo, run, tool, dependencyRoot, emscriptenRoot, task } from "./toolchain.mjs";
 
 const language = process.argv[2];
-if (!["odin", "luau"].includes(language)) {
-  throw new Error("Specify odin or luau");
+if (!["odin", "luau", "cpp"].includes(language)) {
+  throw new Error("Specify odin, luau or cpp");
 }
-const files = sourceFiles(`.${language}`);
-if (language === "luau") {
+const files = languageFiles(language);
+if (language === "cpp") {
+  task("deps:luau:configure");
+  const emscripten = emscriptenRoot();
+  const resourceRoot = resolve(emscripten, "../lib/clang");
+  const versions = readdirSync(resourceRoot).filter((name) => /^\d+$/.test(name));
+  if (versions.length !== 1) {
+    throw new Error("Expected one Clang resource directory in the pinned Emscripten SDK");
+  }
+  const sources = files.filter((file) => [".cpp", ".cc", ".cxx"].includes(extname(file)));
+  if (!sources.length) {
+    throw new Error("No C++ translation units found");
+  }
+  // Keep CMake's real includes/defines; use the SDK's Wasm target and system headers
+  // because the standalone clang-tidy executable otherwise assumes the host target.
+  run(
+    tool("clang-tidy"),
+    [
+      ...sources,
+      "-p=build/luau-executor",
+      "--quiet",
+      "--extra-arg=--target=wasm32-unknown-emscripten",
+      `--extra-arg=--sysroot=${resolve(emscripten, "cache/sysroot")}`,
+      `--extra-arg=-resource-dir=${resolve(resourceRoot, versions[0])}`,
+    ],
+    { stdio: "inherit" },
+  );
+  console.log(
+    `C++ clang-tidy passed: ${sources.length} translation units and their project headers.`,
+  );
+} else if (language === "luau") {
   const output = run(tool("luau-analyze"), ["--solver=new", "--formatter=gnu", ...files]);
   if (output) {
     console.log(output);

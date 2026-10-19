@@ -76,25 +76,39 @@ with multiple samples for performance measurement. Old C++-specific CTest and
 `mise run format` applies every formatter. `mise run format:check` checks without
 writing. `mise run lint` runs all analyzers. Matching npm aliases remain available;
 use `mise exec -- npm run <command>` without shell activation. Language-specific
-npm commands include `format:odin`, `format:luau`, `lint:odin` and `lint:luau`.
+npm commands include `format:odin`, `format:luau`, `format:cpp`, `lint:odin`,
+`lint:luau` and `lint:cpp`. The C++ commands also have dedicated mise tasks:
+`mise run format:cpp` and `mise run lint:cpp`.
 
 | Language | Formatter | Analyzer |
 | --- | --- | --- |
 | JavaScript and HTML scripts | Prettier | ESLint |
 | Odin | [odinfmt from OLS](https://github.com/DanielGavin/ols), `odinfmt.json` | Compiler `odin check -vet` |
+| C++ | [clang-format](https://clang.llvm.org/docs/ClangFormat.html), `.clang-format` | [clang-tidy](https://clang.llvm.org/extra/clang-tidy/), `.clang-tidy` |
 | Luau | [StyLua](https://github.com/JohnnyMorganz/StyLua), `stylua.toml` | Official [luau-analyze](https://luau.org/getting-started/), `.luaurc` |
 
-All repository Odin/Luau sources, examples, tests, templates and tracked generated
+All repository Odin/Luau/C++ sources, examples, tests, templates and tracked generated
 code are included. Downloaded dependencies, build outputs and editor SDK mirrors
 are excluded. Odin packages are checked for their actual native or Wasm target;
 native players also check the shared packages on Windows. Luau SDKs and typed
 cartridges retain `--!strict`; the older demos use nonstrict inference. Enabled
 Luau lint warnings fail the command through `lintErrors`, including in nonstrict
-files. Formatter wrappers only invoke the community formatters and compare their
-output; a bounded stable-layout check keeps generated files reproducible.
+files.
+
+C++ warnings are errors; clang-tidy checks the bridge translation units and
+the project headers they include. It reads CMake's compilation database with the
+pinned Emscripten target, sysroot and resource headers. `mise run lint:cpp`
+automatically configures those dependencies without building them. Required WASI
+symbol names are allowed explicitly, and the supported toolchains use
+`#pragma once`. Both LLVM tools are pinned through mise using prebuilt binaries from
+[cpp-linter](https://github.com/cpp-linter/clang-tools-static-binaries); no local LLVM
+build is needed. `.clang-format` uses four spaces, a 100-column limit and separate
+function definitions. Formatter wrappers only invoke the community formatters and
+compare their output; a bounded stable-layout check keeps generated files reproducible.
 
 Configure editors to use the same `odinfmt.json` and `stylua.toml`. OLS supplies
-Odin formatting; the StyLua extension supplies Luau formatting. `mise exec --
+Odin formatting; the StyLua extension supplies Luau formatting. C++ formatter
+extensions should read the repository's `.clang-format`. `mise exec --
 <editor>` gives an editor the pinned executables. No global PATH changes are
 required.
 

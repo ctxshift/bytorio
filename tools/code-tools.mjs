@@ -1,7 +1,15 @@
 import { readdirSync } from "node:fs";
 import { resolve, extname, relative } from "node:path";
 import { repo, run, tool } from "./toolchain.mjs";
+const cppExtensions = [".cpp", ".cc", ".cxx", ".h", ".hpp", ".hh", ".hxx"];
 function formatOnce(source, filename) {
+  if (cppExtensions.includes(extname(filename))) {
+    return run(
+      tool("clang-format"),
+      ["--style=file", "--Werror", `--assume-filename=${resolve(repo, filename)}`],
+      { input: source },
+    );
+  }
   if (extname(filename) === ".odin") {
     return run(tool("odinfmt"), ["-stdin", `-config:${resolve(repo, "odinfmt.json")}`], {
       input: source,
@@ -42,6 +50,7 @@ export function formatSource(source, filename) {
   throw new Error(`Formatter did not converge: ${filename}`);
 }
 export function sourceFiles(extension) {
+  const extensions = Array.isArray(extension) ? extension : [extension];
   const files = [];
   function visit(directory) {
     for (const entry of readdirSync(directory, { withFileTypes: true })) {
@@ -54,7 +63,7 @@ export function sourceFiles(extension) {
       }
       if (entry.isDirectory()) {
         visit(path);
-      } else if (entry.name.endsWith(extension)) {
+      } else if (extensions.includes(extname(entry.name))) {
         files.push(relative(repo, path).replaceAll("\\", "/"));
       }
     }
@@ -62,3 +71,5 @@ export function sourceFiles(extension) {
   visit(repo);
   return files.sort();
 }
+export const languageFiles = (language) =>
+  sourceFiles(language === "cpp" ? cppExtensions : `.${language}`);

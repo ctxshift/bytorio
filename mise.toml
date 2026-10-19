@@ -4,6 +4,10 @@ min_version = "2026.10.15"
 MISE_BIN = "{{ mise_bin }}"
 _.path = ["{{ mise_bin | dirname }}"]
 
+[tool_alias]
+clang-format = "github:cpp-linter/clang-tools-static-binaries"
+clang-tidy = "github:cpp-linter/clang-tools-static-binaries"
+
 [tools]
 node = "24.19.0"
 luau = "0.743"
@@ -14,6 +18,8 @@ odin = { version = "dev-2026-10", strip_components = 1, bin_path = "." }
 python = "3.13.3"
 cmake = "4.3.3"
 ninja = "1.13.1"
+clang-format = { version = "llvm-23.1.3", matching = "clang-format-23_", bin = "clang-format", format = "raw" }
+clang-tidy = { version = "llvm-23.1.3", matching = "clang-tidy-23_", bin = "clang-tidy", format = "raw" }
 "vfox:jdx/vfox-emsdk" = { version = "6.0.12", depends = ["python"] }
 "github:bytecodealliance/wasmtime" = { version = "49.0.3", asset_pattern = "wasmtime-v49.0.3-x86_64-windows-c-api.zip", os = ["windows"] }
 
@@ -21,7 +27,7 @@ ninja = "1.13.1"
 includes = [".mise/tasks/*.toml"]
 
 [tasks.format]
-description = "Format JavaScript, Odin and Luau"
+description = "Format JavaScript, Odin, Luau and C++"
 run = ["npm run format:js", "node tools/format-code.mjs"]
 
 [tasks."format:check"]
@@ -38,8 +44,16 @@ run = "node tools/generate-constants.mjs --check"
 
 [tasks.lint]
 depends = ["generate:check"]
-description = "Lint JavaScript, Odin and Luau"
-run = ["npm run lint:js", "node tools/lint-code.mjs odin", "node tools/lint-code.mjs luau"]
+description = "Lint JavaScript, Odin, Luau and C++"
+run = ["npm run lint:js", "node tools/lint-code.mjs odin", "node tools/lint-code.mjs luau", "node tools/lint-code.mjs cpp"]
+
+[tasks."lint:cpp"]
+description = "Run clang-tidy on the Luau C++ bridge for its Wasm target"
+run = "node tools/lint-code.mjs cpp"
+
+[tasks."format:cpp"]
+description = "Format all project C++ sources and headers"
+run = "node tools/format-code.mjs cpp"
 
 [tasks."build:odin"]
 description = "Build standalone native/browser players and fixtures"
