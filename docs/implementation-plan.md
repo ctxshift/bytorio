@@ -1,6 +1,6 @@
 # Implementation plan
 
-Status: updated 2026-10-19. **Luau is the default cartridge language; Odin cartridges are also supported.** The runtime remains Odin. [SDK 0.1.0](../sdk/README.md) implements the shared [2D preview contract](cartridge-spec.md), superseding the earlier Odin-only authoring direction. The Luau/C++ reference is retained; full machine-profile validation and retirement remain later work.
+Status: updated 2026-10-19. **Luau is the default cartridge language; Odin cartridges are also supported.** The runtime remains Odin. [SDK 0.1.0](../sdk/README.md) implements the shared [2D preview contract](cartridge-spec.md), superseding the earlier Odin-only authoring direction. The C++ reference player is retired; C++ remains only for Luau support. Full machine-profile validation remains later work.
 
 Keep the standalone native requirement, browser target, single display with 640×360 and 320×180 modes, mostly 2D scope, approximate 128/512 MB package goals, and complete PNG cartridges. The [DS/3DS comparison](target-comparison.md) is advisory; the language change does not expand fidelity scope. The product name remains undecided; use neutral terminology and treat `sdk` command names as placeholders.
 
@@ -12,15 +12,15 @@ drawing, input, timing, deterministic random numbers and cue audio. The shared C
 creates, checks, builds, runs and watches projects; see [the SDK guide](../sdk/README.md).
 This supersedes the earlier Odin-only authoring direction. The runtime remains Odin.
 
-- The Luau/C++ reference player runs on Windows and in Chrome, with a sprite, sound, input, memory/error handling, and matching scripted output.
+- The removed Luau/C++ reference established the original sprite, sound, input and replay baseline. Its RPG golden traces remain in tests; current checks run both languages through the Odin player.
 - The [Odin probe](../experiments/odin/README.md) compiles scalar game-state logic to Windows native code and an identical import-free Wasm module executed in Node and Chrome. It verifies movement, sound-event counts, and one bounds trap.
 - The probe does not render, play sound, allocate game data dynamically, load guests in the native player, meter runaway code, or load PNGs.
 - The subsequent reproduction does render and play the shared Odin sample on both hosts. Native Wasmtime fuel and browser Worker watchdog/restart paths pass, as do unsupported-ABI, bad-offset, invalid-command, and trap fixtures. A 120-tick replay matches the reference framebuffer hash. See the Odin development guide for exact scope and remaining gaps.
-- Existing CI targets the reference player and has not been verified remotely. The [development guide](development.md) documents the reference build.
+- CI checks JavaScript quality, both SDKs, the Odin native/browser player, display modes, and both RPG/racing cartridges. Local verification is recorded separately from remote CI execution. The [development guide](development.md) documents current builds.
 
 ## Migration approach
 
-Keep the current player runnable while replacing one responsibility at a time. Implement maintained game and runtime code in Odin; use third-party C interfaces for SDL and the selected guest engine. Do not rewrite those dependencies or introduce permanent Luau compatibility as part of this migration.
+Both languages now use the Odin player. Keep runtime implementation in Odin and use third-party C interfaces for SDL and Wasmtime. The C++ Luau compiler/VM compiles to the shared Wasm executor; its analyzer is a development tool. No C++ player or renderer is maintained.
 
 Proposed boundaries, created only when needed:
 
@@ -37,7 +37,7 @@ experiments/odin/      Existing isolated compiler probe
 tests/                 Contracts, integration, and conformance
 ```
 
-The current C++ files are still the reference implementation, not evidence that these Odin boundaries already exist. Keep migration code/build commands distinct until parity is demonstrated, then retire the old implementation in a focused change.
+These are proposed module boundaries; implemented runtime packages currently live under `runtime/odin/`. C++ source lives only in `experiments/luau-executor/`, alongside its Luau-specific CMake target.
 
 ## Milestone 0: define the guest contract and measurement baseline
 
@@ -81,7 +81,7 @@ Exit: useful diagnostics and bounded recovery on both players, measured edit-to-
 - Verify clean-checkout builds and standalone distributions, including required native libraries and license notices.
 - Replay the sprite/sound scenario, inspect actual captures, test browser audio through a UI-thread stall, and exercise suspend/resume and focus changes.
 - Validate controller/touch support on physical devices and report platform coverage honestly.
-- When checks pass, retire Luau, maintained C++ runtime code, and their build dependencies in a focused change. Preserve useful reference fixtures and update build instructions.
+- Completed: retire the C++ reference player, its tests, and build dependencies. Preserve replay goldens and keep C++ only for the supported Luau executor and analyzer.
 - Keep Node/Playwright development utilities where useful; they are not player runtime requirements.
 
 Exit: the supported Odin build replaces the reference player and its documented commands. A compile-only proof or headless state test is insufficient.

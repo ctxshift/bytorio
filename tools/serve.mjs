@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { resolve, extname, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 
-export function serve(root = "build/web", port = 8080) {
+export function serve(root = "build/odin-player/web", port = 8080) {
   const base = resolve(root);
   const types = {
     ".html": "text/html; charset=utf-8",

@@ -255,30 +255,45 @@ async function prepare(path) {
 async function player() {
   const sources = [
     ...(await files(resolve(repo, "runtime/odin"), [".odin", ".js", ".html"])),
-    resolve(repo, "experiments/luau-executor/executor.cpp"),
-    resolve(repo, "experiments/luau-executor/capabilities.cpp"),
-    resolve(repo, "experiments/luau-executor/CMakeLists.txt"),
+    resolve(repo, "tools/build-odin.ps1"),
   ];
+  await cachedBuild(
+    "sdk-player-hash",
+    sources,
+    [
+      "build/odin-player/native/player.exe",
+      "build/odin-player/native/SDL3.dll",
+      "build/odin-player/native/wasmtime.dll",
+      "build/odin-player/web/runtime.wasm",
+    ],
+    "build-odin.ps1",
+  );
+}
+async function executor() {
+  const sources = [
+    ...(await files(resolve(repo, "experiments/luau-executor"), [".cpp", "CMakeLists.txt"])),
+    resolve(repo, "tools/build-luau-executor.ps1"),
+  ];
+  await cachedBuild(
+    "sdk-executor-hash",
+    sources,
+    ["build/luau-executor/luau-executor.wasm", "build/luau-executor/_deps/luau-src/LICENSE.txt"],
+    "build-luau-executor.ps1",
+  );
+}
+async function cachedBuild(name, sources, required, script) {
   const hash = createHash("sha256");
   for (const file of sources) {
     hash.update(relative(repo, file)).update(await readFile(file));
   }
   const key = hash.digest("hex"),
-    stamp = resolve(repo, "build/sdk-player-hash");
-  const required = [
-    "build/odin-player/native/player.exe",
-    "build/odin-player/native/SDL3.dll",
-    "build/odin-player/native/wasmtime.dll",
-    "build/odin-player/web/runtime.wasm",
-    "build/luau-executor/luau-executor.wasm",
-  ];
+    stamp = resolve(repo, "build", name);
   if (
     !(await exists(stamp)) ||
     (await readFile(stamp, "utf8")) !== key ||
     !(await Promise.all(required.map((file) => exists(resolve(repo, file))))).every(Boolean)
   ) {
-    ps("build-odin.ps1");
-    ps("build-luau-executor.ps1");
+    ps(script);
     await writeFile(stamp, key);
   }
 }
@@ -332,6 +347,9 @@ async function smoke(spec) {
 export async function checkProject(path) {
   const spec = await prepare(path);
   await player();
+  if (spec.language === "luau") {
+    await executor();
+  }
   await smoke(spec);
   console.log(
     `Checked ${spec.language} SDK ${contract.sdkVersion}: types, assets, ABI and first frames.`,
@@ -374,17 +392,13 @@ export async function buildProject(path) {
         JSON.stringify({ sha256: createHash("sha256").update(executor).digest("hex") }) + "\n",
       );
       for (const [source, name] of [
-        ["build/native/_deps/luau-src/LICENSE.txt", "luau.txt"],
+        ["build/luau-executor/_deps/luau-src/LICENSE.txt", "luau.txt"],
         [".tools/emsdk/upstream/emscripten/LICENSE", "emscripten.txt"],
         [".tools/emsdk/upstream/emscripten/system/lib/libcxx/LICENSE.TXT", "libcxx.txt"],
         [".tools/emsdk/upstream/emscripten/system/lib/libcxxabi/LICENSE.TXT", "libcxxabi.txt"],
         [".tools/emsdk/upstream/emscripten/system/lib/libc/musl/COPYRIGHT", "musl.txt"],
       ]) {
-        let file = resolve(repo, source);
-        if (name === "luau.txt" && !(await exists(file))) {
-          file = resolve(repo, "build/luau-executor/_deps/luau-src/LICENSE.txt");
-        }
-        await copyFile(file, resolve(target, "licenses", name));
+        await copyFile(resolve(repo, source), resolve(target, "licenses", name));
       }
     }
     await writeFile(

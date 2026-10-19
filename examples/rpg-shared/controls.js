@@ -51,16 +51,16 @@ for (const [code, label] of [
 }
 document.querySelector("main").append(controls);
 const back = document.createElement("a");
-back.href = "../player.html";
+back.href = "./comparison.html";
 back.textContent = "← Compare versions";
 back.style.cssText = "display:block;color:#b2bfcc;margin:18px";
 document.querySelector("main").append(back);
 function fit() {
   const canvas = document.getElementById("canvas");
-  const available = Math.min((innerWidth - 48) / 384, (innerHeight - 300) / 216);
+  const available = Math.min((innerWidth - 48) / 640, (innerHeight - 300) / 360);
   const scale = available >= 1 ? Math.floor(available) : Math.max(0.25, available);
-  canvas.style.width = `${384 * scale}px`;
-  canvas.style.height = `${216 * scale}px`;
+  canvas.style.width = `${640 * scale}px`;
+  canvas.style.height = `${360 * scale}px`;
   canvas.style.margin = "auto";
 }
 window.addEventListener("resize", fit);

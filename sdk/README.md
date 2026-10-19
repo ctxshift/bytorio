@@ -22,7 +22,8 @@ they may live outside this repository. The `new` command refuses existing folder
 The CLI currently supports **Windows x64** native development and browser builds
 from Windows, using the repository's pinned Odin, Wasmtime and Emscripten toolchains.
 See [toolchain setup](../docs/odin-development.md); Luau executor builds additionally
-require the existing CMake/C++ setup. `check` bootstraps the native Luau analyzer
+require the [Luau CMake/C++ setup](../docs/development.md). Odin-only SDK projects
+do not build the Luau executor or analyzer. For Luau projects, `check` bootstraps the native Luau analyzer
 from the same pinned source used by the executor when needed. Builds of a fresh
 toolchain require network access; subsequent project builds reuse it.
 

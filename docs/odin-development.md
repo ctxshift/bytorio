@@ -6,7 +6,7 @@ The native player is an Odin executable using SDL3 and Wasmtime's C API. It has 
 
 ## Build and run on Windows
 
-Prerequisites: PowerShell 7, Git, native linker prerequisites described by [Odin's installation guide](https://odin-lang.org/docs/install/), and Node.js 20+ for the local server and tests. A Visual Studio C++ desktop workload is available in the tested environment; that is a build prerequisite, not a player dependency.
+Prerequisites: PowerShell 7, Git, native linker prerequisites described by [Odin's installation guide](https://odin-lang.org/docs/install/), and Node.js 24 for the local server and tests. A Visual Studio C++ desktop workload is available in the tested environment; that is a build prerequisite, not a player dependency.
 
 From the repository root:
 
@@ -58,8 +58,8 @@ The verifier runs a real native SDL smoke scenario, checks byte-identical game m
 
 Captures and reports are saved under ignored `build/odin-player/verification/`. The checked local Windows/Chrome replay has:
 
-- 120 updates, two sound events, sprite position `(283, 99)` after integer conversion.
-- Framebuffer hash `219667909`, matching the existing Luau/C++ reference.
+- 120 updates, two sound events, sprite position `(412, 171)` after integer conversion.
+- Framebuffer hash `3747813061` at the current 640×360 default mode.
 - 32,000 sample frames queued by the native audio path.
 - Browser sample peak approximately `0.21316`, with the audio clock advancing approximately half a second through the UI stall.
 
@@ -84,4 +84,4 @@ The native adapter validates function calls through Wasmtime's typed API. The br
 
 ## Remaining work
 
-The [RPG comparison](rpg-comparison.md) adds guest-owned palette sprites, a tile map, text, a bounded rectangle display list, and matching Luau gameplay. PNG/ROM loading, general texture imports, allocation-heavy games, full Wasm feature policy, runtime source-line diagnostics, state-preserving reload, streaming audio, and other desktop platforms remain later milestones. The reference C++/Luau implementation is retained independently. The Odin reproduction is not a claim that the whole machine profile or untrusted-cartridge security review is complete.
+The [RPG comparison](rpg-comparison.md) adds guest-owned palette sprites, a tile map, text, a bounded rectangle display list, and matching Luau gameplay. PNG/ROM loading, general texture imports, allocation-heavy games, full Wasm feature policy, runtime source-line diagnostics, state-preserving reload, streaming audio, and other desktop platforms remain later milestones. The C++ reference player has been removed; both cartridge languages use this Odin player. The Odin reproduction is not a claim that the whole machine profile or untrusted-cartridge security review is complete.

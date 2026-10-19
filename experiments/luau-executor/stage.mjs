@@ -42,15 +42,7 @@ for (const platform of ["web", "native"]) {
       `${target}/licenses/${name}`,
     );
   }
-  await copyFile(
-    "build/luau-executor/_deps/luau-src/LICENSE.txt",
-    `${target}/licenses/luau.txt`,
-  ).catch(async (error) => {
-    if (error.code !== "ENOENT") {
-      throw error;
-    }
-    await copyFile("build/native/_deps/luau-src/LICENSE.txt", `${target}/licenses/luau.txt`);
-  });
+  await copyFile("build/luau-executor/_deps/luau-src/LICENSE.txt", `${target}/licenses/luau.txt`);
 }
 const html = await readFile(`${root}/web/player.html`, "utf8");
 const executor = await readFile(`${root}/web/luau-executor.wasm`);
@@ -63,24 +55,10 @@ await writeFile(
   html.replace("</body>", '<script type="module" src="./controls.js"></script>\n</body>'),
 );
 const controls = await readFile(`examples/${racing ? "racing" : "rpg"}-shared/controls.js`, "utf8");
-const stagedControls = controls.replace(
-  /back\.href\s*=\s*["']\.\.\/player\.html["']/,
-  'back.href = "./comparison.html"',
-);
-if (!racing && stagedControls === controls) {
-  throw new Error("Could not configure the comparison link in game controls.");
-}
-await writeFile(`${root}/web/controls.js`, stagedControls);
+await writeFile(`${root}/web/controls.js`, controls);
 const launcher = await readFile(
   `examples/${racing ? "racing" : "rpg"}-shared/launcher.html`,
   "utf8",
 );
-await writeFile(
-  `${root}/web/comparison.html`,
-  launcher
-    .replace("./luau/player.html", "./player.html?game=./rpg.luau")
-    .replace("./odin/player.html", "./player.html")
-    .replace("Luau game · C++ player", "Luau game · Wasm executor · Odin player")
-    .replace("Odin game · Odin player", "Odin game · Wasm cartridge · Odin player"),
-);
+await writeFile(`${root}/web/comparison.html`, launcher);
 console.log(`Unified prototype staged in ${root}.`);

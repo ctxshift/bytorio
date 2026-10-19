@@ -1,6 +1,6 @@
 # Architecture
 
-Status: target design, updated 2026-10-19. The runtime is Odin, with Luau as the default cartridge language and Odin also supported. The [SDK specification](cartridge-spec.md) supersedes the earlier Odin-only authoring direction in [the language decision](adr/0001-use-odin-for-games-and-runtime.md). The native/browser RPG and racing examples use the shared SDKs. The earlier Luau/C++ slice remains a reference. Broader profile features below are still proposed.
+Status: target design, updated 2026-10-19. The runtime is Odin, with Luau as the default cartridge language and Odin also supported. The [SDK specification](cartridge-spec.md) supersedes the earlier Odin-only authoring direction in [the language decision](adr/0001-use-odin-for-games-and-runtime.md). The native/browser RPG and racing examples use the shared SDKs. The original C++ player has been removed. C++ remains only for the Luau compiler/VM executor and analyzer. Broader profile features below are still proposed.
 
 ## Product intent and accepted decisions
 
@@ -68,9 +68,9 @@ The shared Odin core owns observable console behavior. The host owns delivery to
 
 Suggested implementation choices, subject to the first integration milestone:
 
-- A pinned Odin compiler for game and runtime builds. The evaluated compiler is `dev-2026-10-nightly:84bc3fc`; a production pin still needs the integration checks. Retain CMake only for the reference build and dependencies that need it.
+- A pinned Odin compiler for game and runtime builds. The evaluated compiler is `dev-2026-10-nightly:84bc3fc`; a production pin still needs the integration checks. CMake and C++ are used only to build the Luau executor and development analyzer.
 - SDL3 for native windows, input, controller mapping, and audio-device integration. SDL supports these services and works with C++: [SDL3 documentation](https://wiki.libsdl.org/SDL3/FrontPage).
-- Desktop OpenGL 3.3 and WebGL 2 backends sharing a constrained renderer and shader templates. Validate Odin bindings and browser glue during migration; the existing Emscripten/SDL renderer is a reference, not an automatically reusable Odin backend.
+- Desktop OpenGL 3.3 and WebGL 2 backends sharing a constrained renderer and shader templates. These remain proposed; the implemented renderer is the shared Odin software framebuffer.
 - Wasmtime 49.0.3 through its C interface for the initial native Odin host. Its reproduction is validated locally; compare footprint/startup and validate further platforms before freezing the final engine dependency.
 - Prefer Odin for maintained SDK/build tooling as practical. Existing Node/Playwright utilities may remain as development helpers; JavaScript remains necessary for browser integration. No Node.js or compiler is required by a native player.
 

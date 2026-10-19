@@ -10,7 +10,6 @@ const palette = source.palette.map(
 );
 const assets = { ...source, palette };
 const { packet } = graphicsPacket(source);
-assets.raster64 = packet.toString("base64");
 const dir = "examples/rpg-odin/assets";
 await mkdir(dir, { recursive: true });
 const lines = [
@@ -37,21 +36,6 @@ const luaValue = (value) =>
           .join(",")}}`
       : json(value);
 await mkdir("build/rpg", { recursive: true });
-const helpers = await readFile("examples/rpg-luau/graphics.luau", "utf8");
-const game = await readFile("examples/rpg-luau/main.luau", "utf8");
-// Preserve the earlier C++ reference player's standalone source bundle.
-const legacy = game
-  .replace(/^local (?:console|assets) = require\([^\n]+\)\n/gm, "")
-  .replace("local g = console", "local g = graphics")
-  .replace("console.clear(console.rgb(21,32,50))", "console.clear(21,32,50)")
-  .replace(
-    "local buttons = console.buttons()",
-    `local buttons = 0\n        for i, name in {"left","right","up","down","action"} do\n            if console.button(name) then buttons = bit32.bor(buttons,2^(i-1)) end\n        end`,
-  );
-await writeFile(
-  "build/rpg/main.luau",
-  `-- Generated reference cartridge.\nlocal assets = ${luaValue(assets)}\n${helpers}\n${legacy}`,
-);
 await writeFile(
   "examples/rpg-luau/assets.luau",
   `--!strict\n-- Generated shared palette and map.\nreturn ${luaValue({ palette, world: assets.world })}\n`,

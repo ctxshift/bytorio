@@ -4,7 +4,7 @@ This is an isolated language-evaluation experiment. It leaves the Luau player an
 
 `game.odin` exports scalar C-style procedures for initialization, input-driven movement, state inspection, and a bounds-check probe. It models the existing example's initial position, movement, action edge, and sound-event count. It does not draw a sprite, play audio, or reproduce the example's pointer input and visual bobbing.
 
-`main_windows.odin` is a small native console driver, selected only for Windows. `verify.mjs` builds both variants, runs the Windows driver, and instantiates the identical freestanding Wasm binary in Node and a real browser through Playwright. It compares 120 updates and checks an intentional out-of-bounds trap. Native execution here means a separate Odin executable; the C++ player does not yet load Wasm guests.
+`main_windows.odin` is a small native console driver, selected only for Windows. `verify.mjs` builds both variants, runs the Windows driver, and instantiates the identical freestanding Wasm binary in Node and a real browser through Playwright. It compares 120 updates and checks an intentional out-of-bounds trap. Native execution here means a separate Odin executable. This historical probe predates the current Odin player, which embeds Wasmtime and runs both cartridge languages; the original C++ player has been removed.
 
 ## Reproduce on Windows
 

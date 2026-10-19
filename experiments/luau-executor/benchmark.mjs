@@ -19,7 +19,9 @@ import {
 const root = "build/unified-player",
   out = `${root}/benchmark-batched`;
 await mkdir(out, { recursive: true });
-const samples = Number(process.env.UNIFIED_BENCH_SAMPLES || 5);
+const samples = process.argv.includes("--verify")
+  ? 1
+  : Number(process.env.UNIFIED_BENCH_SAMPLES || 5);
 assert.ok(Number.isInteger(samples) && samples >= 1 && samples <= 9);
 const masks = [];
 const tap = (mask) => masks.push(mask, 0),

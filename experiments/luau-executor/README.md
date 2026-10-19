@@ -2,7 +2,7 @@
 
 Question: can Luau and Odin cartridges run through the **same Odin player**, natively and in a browser, without a separate native Luau backend?
 
-**Yes.** The Luau compiler and interpreter compile to a standalone Wasm module implementing the existing cartridge lifecycle and rectangle display-list ABI. The Odin player supplies Luau source to that module. Both cartridge types submit commands to the same Odin renderer and use the same audio/input paths. This is an integration and measurement prototype on `prototype/luau-wasm-executor`, not a finalized cartridge format or SDK.
+**Yes.** The Luau compiler and interpreter compile to a standalone Wasm module implementing the existing cartridge lifecycle and rectangle display-list ABI. The Odin player supplies Luau source to that module. Both cartridge types submit commands to the same Odin renderer and use the same audio/input paths. This executor now supports both SDKs through the shared player; the [SDK specification](../../docs/cartridge-spec.md) defines the implemented preview profile. Historical measurements below predate that specification.
 
 See [measured results](RESULTS.md) and [the numeric snapshot](results.json).
 

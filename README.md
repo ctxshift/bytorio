@@ -15,7 +15,7 @@ The [cartridge specification](docs/cartridge-spec.md) formalizes the implemented
 
 Distribution includes **self-contained PNG cartridges**: a viewable cartridge image carrying the complete game ROM. Native and browser players will load the original PNG file. The proposed encoding uses private PNG chunks; image resizing or re-encoding may discard the payload.
 
-The **Odin reproduction is implemented**: a native Odin player and browser Odin/Wasm runtime load the identical game module with a movable sprite and sound. Use arrows/WASD to move and Space or click/tap for sound. The browser requires **Start game** to unlock audio. The earlier Luau/C++ slice remains available as a reference.
+The native Odin player and browser Odin/Wasm runtime load the identical game module with a movable sprite and sound. Use arrows/WASD to move and Space or click/tap for sound. The browser requires **Start game** to unlock audio. Both cartridge languages use this player; C++ is limited to the Luau compiler/VM executor and development analyzer. The original C++ reference player has been removed.
 
 See [building and running Odin](docs/odin-development.md) for prerequisites, build commands, and verification. Packed ROM/PNG loading and larger graphics/audio features remain planned.
 
@@ -28,7 +28,7 @@ An [experimental Luau Wasm executor](experiments/luau-executor/README.md) runs b
 - [Architecture](docs/architecture.md): accepted decisions, proposed machine profile, runtime boundaries, and open questions.
 - [Implementation plan](docs/implementation-plan.md): milestones, acceptance criteria, and validation.
 - [Odin development guide](docs/odin-development.md): build, run, controls, tests, and prototype limitations.
-- [Reference development guide](docs/development.md): retained Luau/C++ build and checks.
+- [Development guide](docs/development.md): current player, SDK, and Luau toolchain commands.
 - [DS versus 3DS target](docs/target-comparison.md): recommendation and supporting research.
 - [Odin decision](docs/adr/0001-use-odin-for-games-and-runtime.md): Odin for games and runtime, with migration constraints.
 - [Odin evaluation](docs/odin-evaluation.md): supporting research, an isolated compiler probe, and remaining integration risks.

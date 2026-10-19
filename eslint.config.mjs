@@ -40,8 +40,4 @@ export default [
       globals: { ...globals.browser, playerStatus: "readonly", playerAudio: "readonly" },
     },
   },
-  {
-    files: ["tools/verify-rpg.mjs"],
-    languageOptions: { globals: { Module: "readonly" } },
-  },
 ];
