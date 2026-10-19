@@ -17,7 +17,7 @@ Distribution includes **self-contained PNG cartridges**: a viewable cartridge im
 
 The **Odin reproduction is implemented**: a native Odin player and browser Odin/Wasm runtime load the identical game module with a movable sprite and sound. Use arrows/WASD to move and Space or click/tap for sound. The browser requires **Start game** to unlock audio. The earlier Luau/C++ slice remains available as a reference.
 
-See [building and running Odin](docs/odin-development.md) for prerequisites, build commands, and verification. The SDK CLI, packed ROM/PNG loading, and larger graphics/audio features remain planned.
+See [building and running Odin](docs/odin-development.md) for prerequisites, build commands, and verification. Packed ROM/PNG loading and larger graphics/audio features remain planned.
 
 **The sprite RPG comparison is playable in both Luau and Odin.** Explore a village, accept a quest, fight a slime, and return a sunleaf. See [the RPG guide](docs/rpg-comparison.md) for builds, the comparison launcher, both game sources, and replay verification. Build both with `./tools/build-rpg.ps1`.
 
@@ -34,3 +34,10 @@ An [experimental Luau Wasm executor](experiments/luau-executor/README.md) runs b
 - [Odin evaluation](docs/odin-evaluation.md): supporting research, an isolated compiler probe, and remaining integration risks.
 
 The current recommendation is to retain the agreed 2D-first scope while leaving room for richer 3D later. A move to a 3DS-level fidelity target remains an open product decision.
+
+All project JavaScript uses ESLint and Prettier, including tooling, browser players,
+examples, and benchmark scripts. After `npm ci`, run `npm run format` to apply the
+shared formatting and `npm run lint:fix` for automatic lint fixes. Before committing,
+run `npm run lint` and `npm run format:check`; CI enforces both. Generated builds,
+downloaded tools, and dependencies are excluded. Project tools use Node.js and
+PowerShell; no additional Python installation is required for project scripts.
