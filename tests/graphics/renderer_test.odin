@@ -1,6 +1,7 @@
 package graphics_test
 
 import abi "../../runtime/odin/abi"
+import w "../../runtime/odin/resource_protocol"
 import r "../../runtime/odin/resources"
 import data "../../sdk/odin/data"
 import gfx "../../sdk/odin/gfx"
@@ -108,7 +109,11 @@ software_composition :: proc(test: ^testing.T) {
     testing.expect_value(test, registry.output[5 * 320 + 60], u32(0xff1e140a))
     testing.expect_value(test, registry.output[5 * 320 + 125], u32(0xffff0000))
     testing.expect_value(test, registry.output[10 * 320 + 10], u32(0xff00ff00))
-    testing.expect_value(test, registry.slots[(indexed.id & 65535) - 1].data[16], u8(3))
+    testing.expect_value(
+        test,
+        registry.slots[(indexed.id & w.handleIndexMask) - 1].data[16],
+        u8(3),
+    )
     t.mailbox_size = u32(r.mailbox(&registry, t.packet[:]))
     t.begin(1)
     result, ready := gfx.poll(ticket)
@@ -128,7 +133,7 @@ software_composition :: proc(test: ^testing.T) {
     previous := make([]u32, len(registry.output))
     defer delete(previous)
     copy(previous, registry.output)
-    old := r.u32le(registry.slots[(target.id & 65535) - 1].data, 0)
+    old := r.u32le(registry.slots[(target.id & w.handleIndexMask) - 1].data, 0)
     t.begin_draw(1)
     p = gfx.begin_pass(target)
     gfx.rect(p, 0, 0, 10, 10, 0xffffffff)
@@ -150,7 +155,11 @@ software_composition :: proc(test: ^testing.T) {
         !r.submit(&registry, t.packet[:int(t.packet_size())], display = abi.DISPLAY_LOW),
         "feedback rejected after earlier mutations",
     )
-    testing.expect_value(test, r.u32le(registry.slots[(target.id & 65535) - 1].data, 0), old)
+    testing.expect_value(
+        test,
+        r.u32le(registry.slots[(target.id & w.handleIndexMask) - 1].data, 0),
+        old,
+    )
     for pixel, i in previous {
 
         testing.expect_value(test, registry.output[i], pixel)

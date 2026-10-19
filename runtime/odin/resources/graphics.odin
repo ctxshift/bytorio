@@ -28,7 +28,7 @@ lookup :: proc(t: ^Transaction, id: u32, kind: Kind = .Empty) -> ^Slot {
 
         slot = t.screen
     } else {
-        index, gen := id & 65535, id >> 16
+        index, gen := id & w.handleIndexMask, id >> w.handleIndexBits
         if index == 0 || index > w.maxSlots || gen == 0 {
 
             return nil
@@ -54,7 +54,7 @@ image :: proc(t: ^Transaction, id: u32) -> ^Slot {
     return slot
 }
 unused :: proc(t: ^Transaction, id: u32) -> ^Slot {
-    index, gen := id & 65535, id >> 16
+    index, gen := id & w.handleIndexMask, id >> w.handleIndexBits
     if index == 0 || index > w.maxSlots || gen == 0 {
 
         return nil
@@ -111,7 +111,7 @@ owned :: proc(t: ^Transaction, id: u32) -> ^Slot {
         fail(t.registry, "invalid image handle")
         return nil
     }
-    original := &t.registry.screen if id == 0 else &t.registry.slots[(id & 65535) - 1]
+    original := &t.registry.screen if id == 0 else &t.registry.slots[(id & w.handleIndexMask) - 1]
     size := int(slot.width) * int(slot.height) * (4 if slot.format == w.format_rgba8 else 1)
     if raw_data(slot.data) == raw_data(original.data) || len(slot.data) != size {
         data, ok := allocate(t, size)
@@ -209,7 +209,7 @@ graphics_control :: proc(t: ^Transaction, op, id: u32, descriptor: [8]u32, data:
 
             return fail(r, "resource is still referenced")
         }
-        original := &r.slots[(id & 65535) - 1]
+        original := &r.slots[(id & w.handleIndexMask) - 1]
         if raw_data(slot.data) != raw_data(original.data) {
 
             t.retained -= len(slot.data)
@@ -263,7 +263,7 @@ graphics_control :: proc(t: ^Transaction, op, id: u32, descriptor: [8]u32, data:
 
             return true
         }
-        original := &r.slots[(id & 65535) - 1]
+        original := &r.slots[(id & w.handleIndexMask) - 1]
         if raw_data(slot.data) == raw_data(original.data) {
             buffer, ok := allocate(t, len(slot.data))
             if !ok {

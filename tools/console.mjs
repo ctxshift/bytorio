@@ -4,6 +4,8 @@ import { watch } from "node:fs";
 import { createProject, checkProject, buildProject, packProject } from "./sdk/project.mjs";
 import { serve } from "./serve.mjs";
 
+const MAX_TCP_PORT = 65535;
+
 const [action, path, ...args] = process.argv.slice(2);
 const help =
   "Usage: node tools/console.mjs new <directory> [--language luau|odin]\n       node tools/console.mjs check|build <directory>\n       node tools/console.mjs pack <directory> [--output game.png] [--cover cover.png]\n       node tools/console.mjs run|watch <directory> [--web|--native] [--port 8080]";
@@ -51,7 +53,7 @@ try {
         launch();
       } else {
         const port = Number(options.port || 8080);
-        if (!Number.isInteger(port) || port < 1 || port > 65535) {
+        if (!Number.isInteger(port) || port < 1 || port > MAX_TCP_PORT) {
           throw new Error("Invalid port");
         }
         const server = serve(resolve(spec.project, "build/web"), port);

@@ -115,7 +115,7 @@ upload :: proc(target: $Image, rect: Rect, pixels: data.Pixel_Buffer, opts := Up
         return
     }
     if !t.valid(
-        u32(pixels.format) == t.slots[(handle.id & 65535) - 1].format &&
+        u32(pixels.format) == t.slots[(handle.id & w.handleIndexMask) - 1].format &&
         pixels.width > 0 &&
         pixels.height > 0 &&
         len(pixels.bytes) > 0,
@@ -199,7 +199,7 @@ target :: proc(desc: Target_Desc) -> Target {
     }
     if desc.stencil.id != 0 &&
        !t.valid(
-               t.slots[(desc.stencil.id & 65535) - 1].format == w.format_stencil8,
+               t.slots[(desc.stencil.id & w.handleIndexMask) - 1].format == w.format_stencil8,
                "attachment requires a stencil target",
            ) {
 
@@ -313,8 +313,8 @@ image_valid :: proc(value: $Image) -> bool {
     return(
         t.check(handle, 0) &&
         t.valid(
-            t.slots[(handle.id & 65535) - 1].kind == 1 ||
-            t.slots[(handle.id & 65535) - 1].kind == 3,
+            t.slots[(handle.id & w.handleIndexMask) - 1].kind == 1 ||
+            t.slots[(handle.id & w.handleIndexMask) - 1].kind == 3,
             "invalid image kind",
         ) \
     )
@@ -486,12 +486,12 @@ poll :: proc(ticket: Readback) -> (data.Pixel_Buffer, bool) {
 
         return {}, false
     }
-    result := t.results[(ticket.id & 65535) - 1]
+    result := t.results[(ticket.id & w.handleIndexMask) - 1]
     if len(result.bytes) == 0 {
 
         return {}, false
     }
-    t.results[(ticket.id & 65535) - 1] = {}
+    t.results[(ticket.id & w.handleIndexMask) - 1] = {}
     t.destroy(t.Handle(ticket), 8)
     return {
             data.Pixel_Format(result.format),
@@ -516,7 +516,7 @@ destroy :: proc(target: $Resource) {
 
         return
     }
-    t.destroy(handle, t.slots[(handle.id & 65535) - 1].kind)
+    t.destroy(handle, t.slots[(handle.id & w.handleIndexMask) - 1].kind)
 }
 text :: proc(pass: Pass, value: string, x, y: f64, color: u32) {
     if !check_pass(pass) {

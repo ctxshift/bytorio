@@ -1,6 +1,8 @@
 export const FRAME_BYTES = 40;
 export const MAX_GAME_BYTES = 1024 * 1024;
 export const MAX_PAGES = 128;
+const DISPLAY_DIMENSION_BITS = 16;
+const DISPLAY_DIMENSION_MASK = 2 ** DISPLAY_DIMENSION_BITS - 1;
 const resourceProtocols = new WeakMap();
 
 // Internal resource transport. This does not advertise the unfinished ABI-2 profile.
@@ -262,11 +264,14 @@ export function uploadGraphics(game, runtime) {
   }
 }
 export function displayMode(game) {
-  const mode = game.game_display_mode?.() ?? (640 << 16) | 360;
-  if (mode !== ((640 << 16) | 360) && mode !== ((320 << 16) | 180)) {
+  const mode = game.game_display_mode?.() ?? (640 << DISPLAY_DIMENSION_BITS) | 360;
+  if (
+    mode !== ((640 << DISPLAY_DIMENSION_BITS) | 360) &&
+    mode !== ((320 << DISPLAY_DIMENSION_BITS) | 180)
+  ) {
     throw new Error("Unsupported display mode.");
   }
-  return { mode, width: mode >>> 16, height: mode & 65535 };
+  return { mode, width: mode >>> DISPLAY_DIMENSION_BITS, height: mode & DISPLAY_DIMENSION_MASK };
 }
 export function submitDrawing(game, runtime) {
   const record = readFrame(game);

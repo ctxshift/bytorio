@@ -29,8 +29,8 @@ begin :: proc() {
 rect :: proc(x, y, w, h: int, color: u32) {
     if w <= 0 ||
        h <= 0 ||
-       x >= int(display_mode >> 16) ||
-       y >= int(display_mode & 65535) ||
+       x >= int(display_mode >> abi.DISPLAY_DIMENSION_BITS) ||
+       y >= int(display_mode & abi.DISPLAY_DIMENSION_MASK) ||
        x + w <= 0 ||
        y + h <= 0 {
 

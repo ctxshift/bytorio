@@ -41,7 +41,7 @@ write :: proc(target: Sample, range: Frame_Range, pcm: data.PCM_Buffer) {
     }
     if !t.valid(
         pcm.frames > 0 &&
-        pcm.channels == int(t.slots[(handle.id & 65535) - 1].channels) &&
+        pcm.channels == int(t.slots[(handle.id & w.handleIndexMask) - 1].channels) &&
         range.frames == u32(pcm.frames) &&
         len(pcm.samples) == pcm.frames * pcm.channels,
         "PCM descriptor does not match buffer",

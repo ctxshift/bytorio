@@ -177,8 +177,8 @@ submit :: proc(
     screen := r.screen
     if phase == 2 {
 
-        screen.width = display >> 16
-        screen.height = display & 65535
+        screen.width = display >> abi.DISPLAY_DIMENSION_BITS
+        screen.height = display & abi.DISPLAY_DIMENSION_MASK
     }
     txn := Transaction {
         registry = r,
@@ -186,8 +186,8 @@ submit :: proc(
         screen   = &screen,
         retained = r.bytes + len(packet),
         budget   = budget,
-        width    = int(display >> 16),
-        height   = int(display & 65535),
+        width    = int(display >> abi.DISPLAY_DIMENSION_BITS),
+        height   = int(display & abi.DISPLAY_DIMENSION_MASK),
         output   = r.output,
     }
     committed := false
@@ -270,8 +270,8 @@ submit :: proc(
 
             return fail(r, "resource control operation in draw packet")
         }
-        slot_index := id & 65535
-        generation := id >> 16
+        slot_index := id & w.handleIndexMask
+        generation := id >> w.handleIndexBits
         if slot_index == 0 || slot_index > w.maxSlots || generation == 0 {
 
             return fail(r, "invalid resource handle")
@@ -368,7 +368,7 @@ submit :: proc(
                     txn.retained -= len(slot.data)
                     delete(slot.data)
                 }
-                // Generation 65536 retires this slot for the session.
+                // Exceeding maxHandleGeneration retires this slot for the session.
                 slot^ = Slot {
                     generation = generation + 1,
                 }
@@ -506,7 +506,7 @@ hash :: proc(r: ^Registry) -> u32 {
             continue
         }
         values := [7]u32 {
-            u32(i + 1) | slot.generation << 16,
+            u32(i + 1) | slot.generation << w.handleIndexBits,
             u32(slot.kind),
             slot.format,
             slot.width,

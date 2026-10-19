@@ -125,12 +125,12 @@ reserve :: proc(kind: u32, format: u32, channels: u32 = 0) -> Handle {
     }
     for &slot, i in slots {
 
-        if slot.kind == 0 && slot.generation <= 65535 {
+        if slot.kind == 0 && slot.generation <= w.maxHandleGeneration {
 
             slot.kind = kind
             slot.format = format
             slot.channels = channels
-            return {session, u32(i + 1) | slot.generation << 16}
+            return {session, u32(i + 1) | slot.generation << w.handleIndexBits}
         }
     }
     fail("resource slot capacity exceeded")
@@ -145,14 +145,15 @@ check :: proc(handle: Handle, kind: u32) -> bool {
 
         return true
     }
-    index := handle.id & 65535
+    index := handle.id & w.handleIndexMask
     if !valid(index > 0 && index <= w.maxSlots, "invalid resource slot") {
 
         return false
     }
     slot := slots[index - 1]
     return valid(
-        (slot.kind == kind || (kind == 0 && slot.kind != 0)) && slot.generation == handle.id >> 16,
+        (slot.kind == kind || (kind == 0 && slot.kind != 0)) &&
+        slot.generation == handle.id >> w.handleIndexBits,
         "wrong resource kind or stale generation",
     )
 }
@@ -209,14 +210,14 @@ destroy :: proc(handle: Handle, kind: u32) {
     )
     if kind == 8 {
 
-        result := &results[(handle.id & 65535) - 1]
+        result := &results[(handle.id & w.handleIndexMask) - 1]
         if len(result.bytes) > 0 {
 
             delete(result.bytes, result.allocator)
         }
         result^ = {}
     }
-    slot := &slots[(handle.id & 65535) - 1]
+    slot := &slots[(handle.id & w.handleIndexMask) - 1]
     slot.kind = 0
     slot.generation += 1
 }
@@ -293,12 +294,12 @@ receive :: proc() {
     for i in 0 ..< int(r.u32le(bytes, 4)) {
         at := 16 + i * 32
         id := r.u32le(bytes, at)
-        index := id & 65535
+        index := id & w.handleIndexMask
         offset, size := r.u32le(bytes, at + 16), r.u32le(bytes, at + 20)
         if index == 0 ||
            index > w.maxSlots ||
            slots[index - 1].kind != 8 ||
-           slots[index - 1].generation != id >> 16 ||
+           slots[index - 1].generation != id >> w.handleIndexBits ||
            offset < 144 ||
            !r.within(offset, size, len(bytes)) {
 

@@ -119,7 +119,9 @@ display :: proc(mode: Display) {
 }
 size :: proc() -> (int, int) {
 
-    return int(g.display_mode >> 16), int(g.display_mode & 65535)
+    return int(
+        g.display_mode >> abi.DISPLAY_DIMENSION_BITS,
+    ), int(g.display_mode & abi.DISPLAY_DIMENSION_MASK)
 }
 rgb :: proc(r, g, b: int) -> u32 {
     if !valid(

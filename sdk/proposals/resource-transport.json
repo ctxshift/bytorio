@@ -9,6 +9,8 @@
   "maxCommands": 16384,
   "maxPayload": 1048576,
   "maxSlots": 1024,
+  "handleIndexBits": 16,
+  "handleGenerationBits": 16,
   "maxResourceBytes": 67108864,
   "maxImageAxis": 1024,
   "opcodes": {

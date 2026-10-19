@@ -1,5 +1,6 @@
 package resources_test
 
+import w "../../runtime/odin/resource_protocol"
 import r "../../runtime/odin/resources"
 import audio "../../sdk/odin/audio"
 import data "../../sdk/odin/data"
@@ -99,8 +100,8 @@ transactions :: proc(test: ^testing.T) {
     testing.expect_value(test, registry.bytes, 0)
     testing.expect(test, t.ack(4))
     // Both registry and SDK retire a slot rather than wrapping its generation.
-    registry.slots[0].generation = 65535
-    t.slots[0].generation = 65535
+    registry.slots[0].generation = w.maxHandleGeneration
+    t.slots[0].generation = w.maxHandleGeneration
     t.begin(4)
     last := gfx.texture({.Index8, 1, 1})
     gfx.destroy(last)
@@ -109,8 +110,8 @@ transactions :: proc(test: ^testing.T) {
     _ = t.commit()
     packet = t.packet[:64 + int(t.count) * 32 + int(t.payload_size)]
     testing.expect(test, r.submit(&registry, packet))
-    testing.expect_value(test, (t.Handle(next).id & 65535), u32(2))
-    testing.expect_value(test, registry.slots[0].generation, u32(65536))
+    testing.expect_value(test, (t.Handle(next).id & w.handleIndexMask), u32(2))
+    testing.expect_value(test, registry.slots[0].generation, u32(w.maxHandleGeneration + 1))
     testing.expect(test, t.ack(5))
     testing.expect(test, t.configure(8))
     t.begin(0)

@@ -6,6 +6,16 @@ const schema = JSON.parse(await readFile(new URL("sdk/proposals/resource-transpo
 const constants = Object.fromEntries(
   Object.entries(schema).filter(([, value]) => typeof value === "number"),
 );
+// Resource IDs pack a slot index below a generation counter in one u32.
+constants.handleIndexMask = 2 ** schema.handleIndexBits - 1;
+constants.handleGenerationStride = 2 ** schema.handleIndexBits;
+constants.maxHandleGeneration = 2 ** schema.handleGenerationBits - 1;
+if (
+  schema.handleIndexBits + schema.handleGenerationBits !== 32 ||
+  schema.maxSlots > constants.handleIndexMask
+) {
+  throw new Error("Invalid resource handle layout.");
+}
 for (const [name, value] of Object.entries(schema.opcodes)) {
   constants[`op_${name}`] = value;
 }

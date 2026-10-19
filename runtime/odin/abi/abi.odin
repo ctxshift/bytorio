@@ -4,8 +4,10 @@ VERSION :: u32(1)
 WIDTH :: 640
 HEIGHT :: 360
 // Optional game_display_mode export: high 16 bits width, low 16 bits height.
-DISPLAY_HIGH :: u32(640 << 16 | 360)
-DISPLAY_LOW :: u32(320 << 16 | 180)
+DISPLAY_DIMENSION_BITS :: 16
+DISPLAY_DIMENSION_MASK :: (1 << DISPLAY_DIMENSION_BITS) - 1
+DISPLAY_HIGH :: u32(640 << DISPLAY_DIMENSION_BITS | 360)
+DISPLAY_LOW :: u32(320 << DISPLAY_DIMENSION_BITS | 180)
 valid_display :: proc(mode: u32) -> bool {
 
     return mode == DISPLAY_HIGH || mode == DISPLAY_LOW

@@ -36,7 +36,7 @@ set_display :: proc(mode: u32) -> bool {
 
         return false
     }
-    width, height = int(mode >> 16), int(mode & 65535)
+    width, height = int(mode >> abi.DISPLAY_DIMENSION_BITS), int(mode & abi.DISPLAY_DIMENSION_MASK)
     return true
 }
 

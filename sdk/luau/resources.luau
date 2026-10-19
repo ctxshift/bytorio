@@ -49,12 +49,12 @@ local function reserve(kind: string, format: number, channels: number): Handle
             slot = { generation = 1, live = false }
             slots[i] = slot
         end
-        if not slot.live and slot.generation <= 65535 then
+        if not slot.live and slot.generation <= schema.maxHandleGeneration then
             slot.live = true
             local handle = table.freeze({ _resourceKind = kind }) :: any
             records[handle] = {
                 session = session,
-                id = slot.generation * 65536 + i,
+                id = slot.generation * schema.handleGenerationStride + i,
                 kind = kind,
                 format = format,
                 channels = channels,
@@ -83,9 +83,11 @@ local function check(handle: Handle, kind: string): Record
     if record.id >= 4294967293 and record.kind == "pipeline" then
         return record
     end
-    local slot = slots[record.id % 65536]
+    local slot = slots[record.id % schema.handleGenerationStride]
     assert(
-        slot and slot.live and slot.generation == math.floor(record.id / 65536),
+        slot
+            and slot.live
+            and slot.generation == math.floor(record.id / schema.handleGenerationStride),
         "stale resource generation"
     )
     return record
@@ -113,7 +115,7 @@ local function destroy(handle: Handle, kind: string)
         record.id
     )
     results[record.id] = nil
-    local slot = slots[record.id % 65536]
+    local slot = slots[record.id % schema.handleGenerationStride]
     slot.live = false
     slot.generation += 1
 end

@@ -28,11 +28,13 @@ constexpr std::size_t max_assets=16+64+256*256+128*7, max_text=16384;
 unsigned char assets[max_assets],text[max_text];
 std::uint32_t assets_size,text_size;
 Frame frame;
-std::uint32_t display_mode=(640u<<16)|360u;
+constexpr unsigned display_dimension_bits = 16;
+constexpr std::uint32_t display_dimension_mask = (1u << display_dimension_bits) - 1;
+std::uint32_t display_mode=(640u<<display_dimension_bits)|360u;
 int display(lua_State* L) {
     const double w=luaL_checknumber(L,1),h=luaL_checknumber(L,2);
     if(!((w==640&&h==360)||(w==320&&h==180)))luaL_error(L,"unsupported display mode");
-    display_mode=(std::uint32_t(w)<<16)|std::uint32_t(h);return 0;
+    display_mode=(std::uint32_t(w)<<display_dimension_bits)|std::uint32_t(h);return 0;
 }
 lua_State* state;
 int module=-1;
@@ -61,7 +63,7 @@ int rect(lua_State* L) {
     const auto x=integer(L,1,-4096,4096),y=integer(L,2,-4096,4096),w=integer(L,3,0,4096),h=integer(L,4,0,4096);
     const double color=luaL_checknumber(L,5);
     if(!std::isfinite(color)||color<0||color>4294967295.0)luaL_argerror(L,5,"invalid RGBA color");
-    if(w==0||h==0||x>=int(display_mode>>16)||y>=int(display_mode&65535)||x+w<=0||y+h<=0)return 0;
+    if(w==0||h==0||x>=int(display_mode>>display_dimension_bits)||y>=int(display_mode&display_dimension_mask)||x+w<=0||y+h<=0)return 0;
     if(command_count==max_commands)luaL_error(L,"display list limit exceeded");
     commands[command_count++]={0,x,y,w,h,static_cast<std::uint32_t>(color),0,0};
     return 0;
@@ -141,7 +143,7 @@ EMSCRIPTEN_KEEPALIVE void game_init(){
     resource_transport::begin(0,0);
     if(state)lua_close(state);
     state=nullptr;module=-1;heap_bytes=peak_heap_bytes=0;buttons=command_count=assets_size=text_size=0;error[0]=0;
-    display_mode=(640u<<16)|360u;
+    display_mode=(640u<<display_dimension_bits)|360u;
     pointer_active=false;pointer_x=pointer_y=0;
     frame={1,0xff322015,-4096,-4096,0,0,0,0};
     if(!source_size||source_size>source_capacity){fail("invalid Luau source size");return;}
