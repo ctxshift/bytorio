@@ -101,7 +101,7 @@ export async function manifest(path) {
 export async function syncEditor(project) {
   const target = resolve(project, ".console");
   await mkdir(target, { recursive: true });
-  for (const file of ["console.luau", "native.luau"]) {
+  for (const file of ["console.luau", "native.luau", "resources.luau", "resource_schema.luau"]) {
     await copyFile(resolve(repo, "sdk/luau", file), resolve(target, file));
   }
 }
@@ -274,7 +274,7 @@ async function player() {
 }
 async function executor() {
   const sources = [
-    ...(await files(resolve(repo, "experiments/luau-executor"), [".cpp", "CMakeLists.txt"])),
+    ...(await files(resolve(repo, "experiments/luau-executor"), [".cpp", ".h", "CMakeLists.txt"])),
     resolve(repo, "tools/build-luau-executor.ps1"),
   ];
   await cachedBuild(

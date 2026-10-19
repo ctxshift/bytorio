@@ -19,6 +19,7 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run format:check
+      - run: node tools/generate-resource-schema.mjs --check
 
   sdk:
     runs-on: windows-latest
@@ -45,6 +46,10 @@ jobs:
         env:
           PLAYER_BROWSER_CHANNEL: chrome
         run: npm run test:cartridge
+      - name: Verify typed resource transport on both hosts
+        env:
+          PLAYER_BROWSER_CHANNEL: chrome
+        run: npm run test:resources
       - name: Build and verify both game languages on both hosts
         env:
           PLAYER_BROWSER_CHANNEL: chrome
@@ -70,6 +75,7 @@ jobs:
           path: |
             build/sdk-verification/
             build/cartridge-verification/
+            build/resource-verification/
 
   odin:
     runs-on: windows-latest

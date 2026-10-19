@@ -2,6 +2,8 @@
 -- Editor declarations. The bundler replaces this module with the executor bridge.
 local function unavailable(): never error("The console native bridge is provided by the player") end
 return {
+    resource_session=function():number return unavailable() end,
+    resource_emit=function(_op:number,_id:number,_args:buffer,_data:buffer) unavailable() end,
     display=function(_w:number,_h:number) unavailable() end,
     clear=function(_r:number,_g:number,_b:number) unavailable() end,
     rect=function(_x:number,_y:number,_w:number,_h:number,_color:number) unavailable() end,

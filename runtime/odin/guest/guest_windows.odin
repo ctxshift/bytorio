@@ -4,8 +4,10 @@ import "core:mem"
 import "core:strings"
 import "core:math"
 import "core:time"
+import "core:fmt"
 import "base:runtime"
 import abi "../abi"
+import resources "../resources"
 
 Game :: struct {
     engine: Engine,
@@ -29,9 +31,16 @@ Game :: struct {
     cache_enabled: bool,
     compile_ms, instantiate_ms, initialize_ms: f64,
     error: string,
+    resources: resources.Registry,
+    resource_packet: []u8,
+    resource_enabled: bool,
 }
 
+resource_session:u32
+
 close :: proc(game: ^Game) {
+    resources.close(&game.resources)
+    delete(game.resource_packet)
     if game.store != nil { wasmtime_store_delete(game.store) }
     if game.linker != nil { wasmtime_linker_delete(game.linker) }
     if game.module != nil { wasmtime_module_delete(game.module) }
@@ -217,13 +226,13 @@ load :: proc(game: ^Game, bytes: []u8, source: []u8 = nil, metered := true, cach
         args := [1]Val{{kind=0, of={i32=i32(len(source))}}}
         if !call(game, &setter, args[:], nil) { return false }
     }
-    if !call(game, &game.init, nil, nil) || !executor_ok(game) { return false }
+    if !initialize(game) { return false }
     game.initialize_ms = time.duration_seconds(time.tick_since(initialize_start))*1000
     return true
 }
 
 executor_ok :: proc(game: ^Game) -> bool {
-    if !game.has_source { return true }
+    if !has_export(game,"game_error_length") { return true }
     length_fn, offset_fn: Func
     result: [1]Val
     if !function(game, "game_error_length", &length_fn) || !call(game, &length_fn, nil, result[:]) { return false }
@@ -231,6 +240,7 @@ executor_ok :: proc(game: ^Game) -> bool {
     length := uint(result[0].of.i32)
     if length == 0 { return true }
     if !function(game, "game_error", &offset_fn) || !call(game, &offset_fn, nil, result[:]) { return false }
+    if result[0].kind!=0 {return fail(game,"invalid executor diagnostic offset")}
     offset := uint(u32(result[0].of.i32))
     size := wasmtime_memory_data_size(game.ctx, &game.memory)
     if offset > size || length > size-offset { return fail(game, "executor diagnostic outside memory") }
@@ -260,8 +270,52 @@ update :: proc(game: ^Game, input: abi.Input) -> bool {
     args[1].kind, args[1].of.i32 = 0, i32(input.pointer)
     args[2].kind, args[2].of.f64 = 3, input.x
     args[3].kind, args[3].of.f64 = 3, input.y
-    return call(game, &game.update, args[:], nil)
+    return call(game, &game.update, args[:], nil) && executor_ok(game) && commit_resources(game)
 }
+
+initialize :: proc(game:^Game) -> bool {
+    game.resource_enabled=has_export(game,"game_resource_protocol")
+    if game.resource_enabled {
+        protocol,configure:Func
+        result:[1]Val
+        if !function(game,"game_resource_protocol",&protocol) || !call(game,&protocol,nil,result[:]) {return false}
+        if result[0].kind!=0 || result[0].of.i32!=1 {return fail(game,"unsupported internal resource protocol")}
+        if resource_session==max(u32) {return fail(game,"resource session counter exhausted")}
+        resource_session+=1
+        if !resources.reset(&game.resources,resource_session) {return fail(game,game.resources.error)}
+        if len(game.resource_packet)==0 {
+            packet,allocation_error:=make([]u8,resources.PACKET_BYTES)
+            if allocation_error!=nil {return fail(game,"cannot allocate resource packet snapshot")}
+            game.resource_packet=packet
+        }
+        args:=[1]Val{{kind=0,of={i32=i32(resource_session)}}}
+        if !function(game,"game_resource_configure",&configure) || !call(game,&configure,args[:],result[:]) {return false}
+        if result[0].kind!=0 || result[0].of.i32!=1 {return fail(game,"resource configuration rejected")}
+    }
+    return call(game,&game.init,nil,nil) && executor_ok(game) && commit_resources(game)
+}
+
+commit_resources :: proc(game:^Game) -> bool {
+    if !game.resource_enabled {return true}
+    commit,size_fn,ack:Func
+    result:[1]Val
+    if !function(game,"game_commit",&commit) || !call(game,&commit,nil,result[:]) || !executor_ok(game) {return false}
+    if result[0].kind!=0 {return fail(game,"invalid resource packet offset")}
+    offset:=uint(u32(result[0].of.i32))
+    if !function(game,"game_commit_size",&size_fn) || !call(game,&size_fn,nil,result[:]) {return false}
+    if result[0].kind!=0 || result[0].of.i32<64 || result[0].of.i32>resources.PACKET_BYTES {return fail(game,"invalid resource packet size")}
+    length:=int(result[0].of.i32)
+    size:=wasmtime_memory_data_size(game.ctx,&game.memory)
+    if offset>size || uint(length)>size-offset {return fail(game,"resource packet outside guest memory")}
+    packet:=game.resource_packet[:length]
+    mem.copy(raw_data(packet),&wasmtime_memory_data(game.ctx,&game.memory)[offset],length)
+    if !resources.submit(&game.resources,packet) {return fail(game,fmt.tprintf("resource command %d: %s",game.resources.command,game.resources.error))}
+    args:=[1]Val{{kind=0,of={i32=i32(game.resources.sequence)}}}
+    if !function(game,"game_commit_ack",&ack) || !call(game,&ack,args[:],result[:]) {return false}
+    return (result[0].kind==0 && result[0].of.i32==1) || fail(game,"resource acknowledgement rejected")
+}
+
+resource_hash :: proc(game:^Game) -> u32 {return resources.hash(&game.resources)}
 
 draw :: proc(game: ^Game, frame: ^abi.Frame) -> bool {
     result: [1]Val

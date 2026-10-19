@@ -3,6 +3,7 @@ package console
 import "base:runtime"
 import abi "../../../runtime/odin/abi"
 import g "../../../runtime/odin/graphics"
+import resources "../resource"
 
 VERSION :: "0.1.0"
 VERSION_WORD :: u32(256)
@@ -35,6 +36,7 @@ coordinates :: proc(x,y:int) -> bool {return valid(x>=-4096 && x<=4096 && y>=-40
 
 // Called by the generated entry point. Game authors provide ordinary callbacks.
 start :: proc(hooks:Callbacks,config:Config) {
+    when ODIN_ARCH==.wasm32 {context.allocator=runtime.default_wasm_allocator()}
     callbacks,graphics=hooks,config.graphics
     diagnostic_size=0
     held,down,up,clock=0,0,0,0
@@ -46,7 +48,9 @@ start :: proc(hooks:Callbacks,config:Config) {
     if !valid(g.set_display(mode),"unsupported display mode") {return}
     if !valid(len(graphics)>0 && len(graphics)<=abi.MAX_GRAPHICS_BYTES,"invalid graphics packet length") {return}
     if !valid(hooks.init!=nil && hooks.update!=nil && hooks.draw!=nil,"missing game callback") {return}
+    resources.begin(0)
     callbacks.init()
+    resources.end()
 }
 display :: proc(mode:Display) {
     if diagnostic_size==0 && !g.set_display(u32(mode)) {fail("unsupported display mode")}
@@ -95,6 +99,7 @@ debug_position :: proc(x,y:f64) {
 @(export) game_display_mode :: proc "c" () -> u32 {return g.display_mode}
 @(export) game_update :: proc "c" (mask,active:u32,x,y:f64) {
     context=runtime.default_context()
+    when ODIN_ARCH==.wasm32 {context.allocator=runtime.default_wasm_allocator()}
     if diagnostic_size!=0 {return}
     next:=mask&31
     down,up=next&~held,held&~next
@@ -104,11 +109,14 @@ debug_position :: proc(x,y:f64) {
     pointer_x,pointer_y=0,0
     if pointer_active {pointer_x,pointer_y=x,y}
     clock+=1
+    resources.begin(u64(clock))
     callbacks.update(DT)
+    resources.end()
     frame.ticks=clock
 }
 @(export) game_draw :: proc "c" () -> u32 {
     context=runtime.default_context()
+    when ODIN_ARCH==.wasm32 {context.allocator=runtime.default_wasm_allocator()}
     g.begin()
     if diagnostic_size==0 {callbacks.draw()}
     if g.overflow {fail("graphics batch capacity exceeded")}
@@ -122,4 +130,9 @@ debug_position :: proc(x,y:f64) {
 @(export) game_assets :: proc "c" () -> u32 {return u32(uintptr(raw_data(graphics)))}
 @(export) game_assets_size :: proc "c" () -> u32 {return u32(len(graphics))}
 @(export) game_error :: proc "c" () -> u32 {return u32(uintptr(&diagnostic))}
-@(export) game_error_length :: proc "c" () -> u32 {return diagnostic_size}
+@(export) game_error_length :: proc "c" () -> u32 {context=runtime.default_context();if resources.error!="" {fail(resources.error)};return diagnostic_size}
+@(export) game_resource_protocol :: proc "c" () -> u32 {return resources.VERSION}
+@(export) game_resource_configure :: proc "c" (session:u32) -> u32 {context=runtime.default_context();return u32(resources.configure(session))}
+@(export) game_commit :: proc "c" () -> u32 {context=runtime.default_context();return resources.commit()}
+@(export) game_commit_size :: proc "c" () -> u32 {return resources.packet_size()}
+@(export) game_commit_ack :: proc "c" (sequence:u32) -> u32 {context=runtime.default_context();return u32(resources.ack(sequence))}

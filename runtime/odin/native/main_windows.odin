@@ -277,8 +277,8 @@ run :: proc() -> int {
         if !saved { return error(string(sdl.GetError())) }
     }
     // Double braces escape Odin's formatting syntax in the JSON report.
-    fmt.printf("{{\"ticks\":%d,\"sounds\":%d,\"hash\":%d,\"spriteX\":%d,\"spriteY\":%d,\"audioQueuedFrames\":%d}}\n",
-        app.frame.ticks, app.frame.sounds, core.hash(), app.frame.sprite_x, app.frame.sprite_y, app.audio_queued)
+    fmt.printf("{{\"ticks\":%d,\"sounds\":%d,\"hash\":%d,\"spriteX\":%d,\"spriteY\":%d,\"audioQueuedFrames\":%d,\"resourceHash\":%d,\"resourceBytes\":%d}}\n",
+        app.frame.ticks, app.frame.sounds, core.hash(), app.frame.sprite_x, app.frame.sprite_y, app.audio_queued,guest.resource_hash(&app.game),app.game.resources.bytes)
     return 0
 }
 

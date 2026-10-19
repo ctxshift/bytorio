@@ -23,7 +23,9 @@
     "serve:racing": "node tools/serve.mjs build/racing-player/web",
     "console": "node tools/console.mjs",
     "test:sdk": "node tools/verify-sdk.mjs && node tools/verify-sdk-cli.mjs",
-    "test:cartridge": "node tools/verify-cartridge.mjs"
+    "test:cartridge": "node tools/verify-cartridge.mjs",
+    "generate:resources": "node tools/generate-resource-schema.mjs",
+    "test:resources": "node tools/verify-resources.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

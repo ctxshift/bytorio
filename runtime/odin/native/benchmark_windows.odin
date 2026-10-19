@@ -37,7 +37,7 @@ benchmark :: proc(app: ^App, path: string, startup_ms: f64, baseline_working: ui
     defer delete(hashes); defer delete(sounds)
     peak_heap: u32
     for pass in 0..<7 {
-        if !guest.call(&app.game,&app.game.init,nil,nil) || !guest.executor_ok(&app.game) { return error(app.game.error) }
+        if !guest.initialize(&app.game) { return error(app.game.error) }
         for mask in masks {
             t0 := clock_ms()
             if !guest.update(&app.game,abi.Input{buttons=mask}) { return error(app.game.error) }

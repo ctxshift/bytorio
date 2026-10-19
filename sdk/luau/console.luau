@@ -1,8 +1,16 @@
 --!strict
 local host = require("./native")
+local resources = require("./resources")
+export type Texture = resources.Texture
+export type Sample = resources.Sample
+export type PixelBuffer = resources.PixelBuffer
+export type PCMBuffer = resources.PCMBuffer
 export type Button = "left" | "right" | "up" | "down" | "action"
 export type Game = {init:()->(),update:(number)->(),draw:()->()}
 local api = {version="0.1.0"}
+api.gfx = resources.gfx
+api.audio = resources.audio
+api.data = resources.data
 local masks = {left=1,right=2,up=4,down=8,action=16}
 local held,down,up,clock,randomState=0,0,0,0,1
 local width,height=640,360
@@ -69,13 +77,17 @@ function api._wrap(game:Game,initialWidth:number?,initialHeight:number?):Game
         init=function()
             held,down,up,clock,randomState=0,0,0,0,1
             width,height=initialWidth or 640,initialHeight or 360;host.display(width,height)
+            resources._begin(0)
             phase="init";game.init();phase="ready"
+            resources._end()
         end,
         update=function(dt:number)
             local nextHeld=bit32.band(host.buttons(),31)
             down,up=bit32.band(nextHeld,bit32.bnot(held)),bit32.band(held,bit32.bnot(nextHeld))
             held=nextHeld;clock=(clock+1)%4294967296
+            resources._begin(clock)
             phase="update";game.update(dt);phase="ready"
+            resources._end()
         end,
         draw=function() phase="draw";game.draw();phase="ready" end,
     }

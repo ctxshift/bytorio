@@ -57,7 +57,7 @@ try {
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
     if ($Target -in @('all', 'web')) {
-        & $Odin build runtime/odin/web -target:freestanding_wasm32 -no-entry-point @common "-out:$web/runtime.wasm" '-extra-linker-flags:--max-memory=8388608'
+        & $Odin build runtime/odin/web -target:freestanding_wasm32 -no-entry-point @common "-out:$web/runtime.wasm" '-extra-linker-flags:--max-memory=83886080'
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         foreach ($file in @('player.html','player.js','worker.js','policy.js','cartridge.js','executor-cache.js','executor-cache-core.js')) {
             Copy-Item -LiteralPath "runtime/odin/web/$file" -Destination "$web/$file"

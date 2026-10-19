@@ -2,6 +2,63 @@ export const FRAME_BYTES = 40;
 export const MAX_GAME_BYTES = 1024 * 1024;
 export const MAX_PAGES = 128;
 
+// Internal 4a transport. This does not advertise the unfinished ABI-2 profile.
+export function configureResources(game, runtime) {
+  if (!game.game_resource_protocol) {
+    return;
+  }
+  if (game.game_resource_protocol() !== 1 || !runtime.runtime_resource_reset) {
+    throw new Error("Unsupported internal resource protocol.");
+  }
+  for (const name of [
+    "game_resource_configure",
+    "game_commit",
+    "game_commit_size",
+    "game_commit_ack",
+  ]) {
+    if (typeof game[name] !== "function") {
+      throw new Error(`Missing resource export: ${name}.`);
+    }
+  }
+  const session = runtime.runtime_resource_reset();
+  if (!session || game.game_resource_configure(session) !== 1) {
+    throw new Error("Resource configuration rejected.");
+  }
+}
+
+export function submitResources(game, runtime) {
+  if (!game.game_resource_protocol) {
+    return;
+  }
+  const offset = game.game_commit() >>> 0;
+  checkExecutor(game);
+  const size = game.game_commit_size() >>> 0;
+  const memory = game.memory.buffer;
+  if (
+    size < 64 ||
+    size > runtime.runtime_resource_capacity() ||
+    offset > memory.byteLength - size
+  ) {
+    throw new Error("Resource packet outside guest memory or capacity.");
+  }
+  // No guest calls between snapshot and validation. Reacquire runtime memory after
+  // each Odin call because allocation can grow it.
+  const source = new Uint8Array(memory, offset, size);
+  const sequence = new DataView(memory, offset, size).getUint32(28, true);
+  const destination = runtime.runtime_resource_packet() >>> 0;
+  new Uint8Array(runtime.memory.buffer, destination, size).set(source);
+  if (runtime.runtime_resource_submit(size) !== 1) {
+    const start = runtime.runtime_resource_error() >>> 0;
+    const length = runtime.runtime_resource_error_size() >>> 0;
+    const message = new TextDecoder().decode(new Uint8Array(runtime.memory.buffer, start, length));
+    throw new Error(`Resource command ${runtime.runtime_resource_error_command()}: ${message}`);
+  }
+  if (game.game_commit_ack(sequence) !== 1) {
+    throw new Error("Resource acknowledgement rejected.");
+  }
+  checkExecutor(game);
+}
+
 export function inspectGuest(bytes, compiledModule) {
   const data = new Uint8Array(bytes);
   if (data.length > MAX_GAME_BYTES) {

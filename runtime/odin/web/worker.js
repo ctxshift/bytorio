@@ -6,6 +6,8 @@ import {
   submitDrawing,
   rasterizeDrawing,
   FRAME_BYTES,
+  configureResources,
+  submitResources,
 } from "./policy.js";
 import { decodeCartridge } from "./cartridge.js";
 
@@ -14,6 +16,7 @@ let smoke = false;
 let lastTick = 0;
 const imports = { env: { sin: Math.sin } };
 let startup;
+let resourceTrace = false;
 let initialMemory;
 let executorRequest;
 function requestExecutor() {
@@ -83,6 +86,12 @@ function frame() {
     x: record.x,
     y: record.y,
     hash: runtime.runtime_hash() >>> 0,
+    ...(resourceTrace
+      ? {
+          resourceHash: runtime.runtime_resource_hash() >>> 0,
+          resourceBytes: runtime.runtime_resource_bytes() >>> 0,
+        }
+      : {}),
   };
 }
 
@@ -95,6 +104,7 @@ self.onmessage = async ({ data }) => {
       return;
     }
     if (data.type === "load") {
+      resourceTrace = !!data.resourceTrace;
       const url = new URL(data.gameUrl, location.href);
       if (url.origin !== location.origin) {
         throw new Error("Game URL must use the player origin.");
@@ -137,8 +147,10 @@ self.onmessage = async ({ data }) => {
       if (source) {
         loadSource(game, source);
       }
+      configureResources(game, runtime);
       game.game_init();
       checkExecutor(game);
+      submitResources(game, runtime);
       if (cartridge && game.game_display_mode?.() !== cartridge.display) {
         throw new Error("Cartridge initial display does not match its metadata.");
       }
@@ -187,6 +199,8 @@ self.onmessage = async ({ data }) => {
           smoke ? 0 : data.input.x,
           smoke ? 0 : data.input.y,
         );
+        checkExecutor(game);
+        submitResources(game, runtime);
         output = frame();
       }
       if (output) {
@@ -207,11 +221,15 @@ self.onmessage = async ({ data }) => {
       let peakLinear = game.memory.buffer.byteLength,
         peakHeap = 0;
       for (let pass = 0; pass < 7; pass++) {
+        configureResources(game, runtime);
         game.game_init();
         checkExecutor(game);
+        submitResources(game, runtime);
         for (const mask of data.masks) {
           const t0 = performance.now();
           game.game_update(mask, 0, 0, 0);
+          checkExecutor(game);
+          submitResources(game, runtime);
           const t1 = performance.now();
           const drawing = submit();
           const { record } = drawing;
@@ -245,6 +263,8 @@ self.onmessage = async ({ data }) => {
       throw new Error("Unknown player request.");
     }
   } catch (error) {
+    runtime?.runtime_resource_close?.();
+    game = runtime = null;
     self.postMessage({ type: "error", error: error.message || String(error) });
   }
 };

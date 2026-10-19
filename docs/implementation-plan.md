@@ -89,12 +89,20 @@ Exit: the supported Odin build replaces the reference player and its documented 
 ## Milestone 4: typed graphics and audio resources
 
 Design: [resource interface proposal](resource-av-spec.md), proposed SDK 0.2.0 /
-ABI 2 / `resource-av-1`. Status: **design-only**. Current SDK 0.1.0 remains the
+ABI 2 / `resource-av-1`. Status: **4a resource slice implemented; full profile not published**. Current SDK 0.1.0 remains the
 implemented contract. Complete the stages in order; do not expose partial calls
 as supported profile features. [Proposal budgets](../sdk/proposals/resource-av-1.json)
 are targets to validate, not constants to apply to today's player.
 
 ### 4a. Resource ownership, transport and both SDKs
+
+Implemented: [experimental resource transport and SDKs](../sdk/resources.md),
+with texture/PCM lifecycles, shared transactional registry, typed staging,
+session/generation validation, control commits on every update and four-way
+native/browser verification. The generated internal version-1 subset uses fixed
+capabilities and existing input arguments. Full negotiated configuration/input
+records, asynchronous completions and draw packets are not frozen by this slice;
+extend the schema as their consumers arrive, before profile publication in 4e.
 
 - Generate one schema for capability/configuration/input records, packet headers,
   opcodes, typed descriptors, acknowledgements and completion messages. Freeze

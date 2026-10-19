@@ -10,6 +10,7 @@
 #include <cstring>
 #include <cstdio>
 #include <cstddef>
+#include "resource_transport.h"
 
 namespace {
 struct Frame { std::uint32_t version, clear; std::int32_t sprite_x,sprite_y; std::uint32_t ticks,sounds; double x,y; };
@@ -132,11 +133,12 @@ EMSCRIPTEN_KEEPALIVE std::uint32_t game_frame_size(){return sizeof(Frame);}
 EMSCRIPTEN_KEEPALIVE char* game_source_buffer(){return source;}
 EMSCRIPTEN_KEEPALIVE std::uint32_t game_source_capacity(){return source_capacity;}
 EMSCRIPTEN_KEEPALIVE void game_source_size(std::uint32_t size){source_size=size;}
-EMSCRIPTEN_KEEPALIVE std::uint32_t game_error_length(){return std::strlen(error);}
+EMSCRIPTEN_KEEPALIVE std::uint32_t game_error_length(){if(resource_transport::error()[0])fail(resource_transport::error());return std::strlen(error);}
 EMSCRIPTEN_KEEPALIVE const char* game_error(){return error;}
 EMSCRIPTEN_KEEPALIVE std::uint32_t game_heap_bytes(){return heap_bytes;}
 EMSCRIPTEN_KEEPALIVE std::uint32_t game_heap_peak(){return peak_heap_bytes;}
 EMSCRIPTEN_KEEPALIVE void game_init(){
+    resource_transport::begin(0);
     if(state)lua_close(state);
     state=nullptr;module=-1;heap_bytes=peak_heap_bytes=0;buttons=command_count=assets_size=text_size=0;error[0]=0;
     display_mode=(640u<<16)|360u;
@@ -146,7 +148,7 @@ EMSCRIPTEN_KEEPALIVE void game_init(){
     state=lua_newstate(allocate,nullptr);
     if(!state){fail("cannot allocate Luau VM");return;}
     luaL_openlibs(state);
-    const luaL_Reg api[]={{"display",display},{"clear",clear},{"rect",rect},{"button",button},{"buttons",input_buttons},{"pointer",input_pointer},{"debug_position",debug_position},{"sound",sound},{"graphics_assets",graphics_assets},{"draw_sprite",draw_sprite},{"draw_sprite_size",draw_sprite_size},{"draw_text",draw_text},{nullptr,nullptr}};
+    const luaL_Reg api[]={{"resource_session",resource_transport::session},{"resource_emit",resource_transport::emit},{"display",display},{"clear",clear},{"rect",rect},{"button",button},{"buttons",input_buttons},{"pointer",input_pointer},{"debug_position",debug_position},{"sound",sound},{"graphics_assets",graphics_assets},{"draw_sprite",draw_sprite},{"draw_sprite_size",draw_sprite_size},{"draw_text",draw_text},{nullptr,nullptr}};
     luaL_register(state,"console",api);lua_setreadonly(state,-1,true);lua_pop(state,1);
     luaL_sandbox(state);luaL_sandboxthread(state);
     std::size_t size=0;
@@ -156,9 +158,9 @@ EMSCRIPTEN_KEEPALIVE void game_init(){
     const int status=luau_load(state,"main.luau",bytecode,size,0);std::free(bytecode);
     if(status||lua_pcall(state,0,1,0)){fail(lua_tostring(state,-1));return;}
     if(!lua_istable(state,-1)){fail("game module must return a table");return;}
-    module=lua_ref(state,-1);lua_pop(state,1);call("init");
+    module=lua_ref(state,-1);lua_pop(state,1);call("init");resource_transport::end();
 }
-EMSCRIPTEN_KEEPALIVE void game_update(std::uint32_t mask,std::uint32_t active,double x,double y){buttons=mask;pointer_active=active!=0;pointer_x=x;pointer_y=y;if(call("update",true))++frame.ticks;}
+EMSCRIPTEN_KEEPALIVE void game_update(std::uint32_t mask,std::uint32_t active,double x,double y){resource_transport::begin(std::uint64_t(frame.ticks)+1);buttons=mask;pointer_active=active!=0;pointer_x=x;pointer_y=y;if(call("update",true))++frame.ticks;resource_transport::end();}
 EMSCRIPTEN_KEEPALIVE std::uint32_t game_display_mode(){return display_mode;}
 EMSCRIPTEN_KEEPALIVE const Frame* game_draw(){command_count=text_size=0;call("draw");return &frame;}
 EMSCRIPTEN_KEEPALIVE const Command* game_commands(){return commands;}

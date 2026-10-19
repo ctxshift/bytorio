@@ -1,0 +1,104 @@
+{
+  "status": "internal-milestone-4a",
+  "version": 1,
+  "abi": 2,
+  "magic": 827348545,
+  "headerBytes": 64,
+  "commandBytes": 32,
+  "descriptorBytes": 32,
+  "maxCommands": 16384,
+  "maxPayload": 1048576,
+  "maxSlots": 1024,
+  "maxResourceBytes": 67108864,
+  "maxImageAxis": 1024,
+  "opcodes": {
+    "create_texture": 1,
+    "create_sample": 2,
+    "write_texture": 3,
+    "write_sample": 4,
+    "destroy_texture": 5,
+    "destroy_sample": 6
+  },
+  "formats": { "index8": 1, "rgba8": 2, "f32": 3 },
+  "header": {
+    "magic": 0,
+    "abi": 4,
+    "headerBytes": 8,
+    "session": 12,
+    "tick": 16,
+    "phase": 24,
+    "sequence": 28,
+    "count": 32,
+    "commandsOffset": 36,
+    "commandsBytes": 40,
+    "payloadOffset": 44,
+    "payloadBytes": 48
+  },
+  "command": {
+    "opcode": 0,
+    "recordBytes": 2,
+    "flags": 4,
+    "id": 8,
+    "argsOffset": 12,
+    "argsBytes": 16,
+    "dataOffset": 20,
+    "dataBytes": 24,
+    "reserved": 28
+  },
+  "descriptor": {
+    "create_texture": [
+      "format",
+      "width",
+      "height",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved"
+    ],
+    "create_sample": [
+      "format",
+      "frames",
+      "channels",
+      "rate",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved"
+    ],
+    "write_texture": [
+      "x",
+      "y",
+      "width",
+      "height",
+      "offsetBytes",
+      "strideBytes",
+      "reserved",
+      "reserved"
+    ],
+    "write_sample": [
+      "firstFrame",
+      "frames",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved"
+    ],
+    "destroy_texture": [],
+    "destroy_sample": []
+  },
+  "configuration": {
+    "exports": {
+      "game_resource_protocol": "()->u32",
+      "game_resource_configure": "(session:u32)->u32",
+      "game_commit": "()->u32",
+      "game_commit_size": "()->u32",
+      "game_commit_ack": "(sequence:u32)->u32"
+    },
+    "capabilities": "fixed by version 1; only texture/sample lifecycle, no render or playback",
+    "input": "existing ABI-1 input arguments; no asynchronous completions in this slice",
+    "acknowledgement": "accepted packet sequence, synchronous before next callback; failure terminates session"
+  }
+}

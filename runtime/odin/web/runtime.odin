@@ -4,6 +4,31 @@ import "base:runtime"
 import abi "../abi"
 import core "../core"
 import cartridge "../cartridge"
+import resources "../resources"
+
+resource_registry:resources.Registry
+resource_packet:[resources.PACKET_BYTES]u8
+resource_session:u32
+@(export) runtime_resource_close :: proc "c" () {context=runtime.default_context();resources.close(&resource_registry)}
+@(export) runtime_resource_reset :: proc "c" () -> u32 {
+    context=runtime.default_context()
+    if resource_session==max(u32) {return 0}
+    resource_session+=1
+    if !resources.reset(&resource_registry,resource_session) {return 0}
+    return resource_session
+}
+@(export) runtime_resource_packet :: proc "c" () -> u32 {return u32(uintptr(&resource_packet))}
+@(export) runtime_resource_capacity :: proc "c" () -> u32 {return resources.PACKET_BYTES}
+@(export) runtime_resource_submit :: proc "c" (size:u32) -> u32 {
+    context=runtime.default_context()
+    if size>resources.PACKET_BYTES {resource_registry.error="resource packet too large";return 0}
+    return u32(resources.submit(&resource_registry,resource_packet[:size]))
+}
+@(export) runtime_resource_error :: proc "c" () -> u32 {return u32(uintptr(raw_data(resource_registry.error)))}
+@(export) runtime_resource_error_size :: proc "c" () -> u32 {return u32(len(resource_registry.error))}
+@(export) runtime_resource_error_command :: proc "c" () -> i32 {return i32(resource_registry.command)}
+@(export) runtime_resource_hash :: proc "c" () -> u32 {context=runtime.default_context();return resources.hash(&resource_registry)}
+@(export) runtime_resource_bytes :: proc "c" () -> u32 {return u32(resource_registry.bytes)}
 
 cartridge_buffer: [cartridge.MAX_BYTES]u8
 cartridge_info: cartridge.Cartridge

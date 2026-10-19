@@ -7,6 +7,8 @@ import {
   uploadGraphics,
   submitDrawing,
   rasterizeDrawing,
+  configureResources,
+  submitResources,
 } from "../../runtime/odin/web/policy.js";
 try {
   const imports = { env: { sin: Math.sin } };
@@ -28,12 +30,16 @@ try {
   ) {
     throw new Error("Unsupported SDK/ABI version");
   }
+  configureResources(game, runtime);
   game.game_init();
   checkExecutor(game);
+  submitResources(game, runtime);
   runtime.runtime_init();
   uploadGraphics(game, runtime);
   for (let i = 0; i < 3; i++) {
     game.game_update(0, 0, 0, 0);
+    checkExecutor(game);
+    submitResources(game, runtime);
     const drawing = submitDrawing(game, runtime);
     rasterizeDrawing(runtime, drawing);
   }
