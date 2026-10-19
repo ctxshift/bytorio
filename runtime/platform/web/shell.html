@@ -45,7 +45,7 @@
   };
   var Module = {
     canvas,
-    arguments: new URLSearchParams(location.search).has('smoke') ? ['--smoke'] : [],
+    arguments: new URLSearchParams(location.search).has('replay') ? ['--manual'] : new URLSearchParams(location.search).has('smoke') ? ['--smoke'] : [],
     onAbort(reason) {
       globalThis.playerStatus = { ready: false, error: String(reason) };
       document.getElementById('status').textContent = String(reason);

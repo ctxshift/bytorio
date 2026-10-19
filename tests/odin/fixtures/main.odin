@@ -3,6 +3,7 @@ package main
 import abi "../../../runtime/odin/abi"
 FAULT :: #config(TEST_FAULT, 0)
 frame: abi.Frame
+command: abi.Command
 
 @(export) game_abi :: proc "c" () -> u32 {
     when FAULT == 2 { return 99 } else { return 1 }
@@ -21,4 +22,15 @@ frame: abi.Frame
     when FAULT == 3 { return 0x7ffffff0 }
     when FAULT == 4 { frame.sprite_x = 1000000 }
     return u32(uintptr(&frame))
+}
+when FAULT >= 6 {
+    @(export) game_commands :: proc "c" () -> u32 {
+        when FAULT == 7 { return 0x7ffffff0 }
+        when FAULT == 8 { command.w = 5000 }
+        return u32(uintptr(&command))
+    }
+    @(export) game_command_count :: proc "c" () -> u32 {
+        when FAULT == 6 { return abi.MAX_COMMANDS+1 }
+        return 1
+    }
 }

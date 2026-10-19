@@ -5,6 +5,13 @@ import abi "../abi"
 import core "../core"
 
 frame: abi.Frame
+commands: [abi.MAX_COMMANDS]abi.Command
+@(export) runtime_commands :: proc "c" () -> u32 { return u32(uintptr(&commands)) }
+@(export) runtime_render_commands :: proc "c" (count: u32) -> u32 {
+    context = runtime.default_context()
+    if count > abi.MAX_COMMANDS { return 0 }
+    return u32(core.render_commands(commands[:count]))
+}
 @(export) runtime_init :: proc "c" () {
     context = runtime.default_context()
     core.init()

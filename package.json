@@ -6,7 +6,10 @@
     "serve": "node tools/serve.mjs",
     "test:web": "node tools/verify-web.mjs",
     "test:odin": "node tools/verify-odin.mjs",
-    "serve:odin": "node tools/serve.mjs build/odin-player/web"
+    "serve:odin": "node tools/serve.mjs build/odin-player/web",
+    "build:rpg": "pwsh -NoProfile -File tools/build-rpg.ps1",
+    "test:rpg": "node tools/verify-rpg.mjs",
+    "serve:rpg": "node tools/serve.mjs build/rpg/site"
   },
   "devDependencies": {
     "playwright": "1.64.1"

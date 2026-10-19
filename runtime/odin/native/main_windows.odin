@@ -3,6 +3,7 @@ package main
 import "core:fmt"
 import "core:os"
 import "core:strings"
+import "core:strconv"
 import sdl "vendor:sdl3"
 import abi "../abi"
 import core "../core"
@@ -62,7 +63,7 @@ input :: proc(app: ^App) -> abi.Input {
 
 draw :: proc(app: ^App) -> bool {
     if !guest.draw(&app.game, &app.frame) { return false }
-    if !core.render(app.frame) { return guest.fail(&app.game, "invalid frame command") }
+    if !core.render(app.frame) || !core.render_commands(app.game.commands[:app.game.count]) { return guest.fail(&app.game, "invalid frame command") }
     return true
 }
 
@@ -74,16 +75,19 @@ run :: proc() -> int {
     if base == nil { return error("cannot locate player directory") }
     game_path := fmt.tprintf("%sgame.wasm", base)
     capture := ""
+    replay_path := ""
     smoke, check_only := false, false
     for i := 1; i < len(os.args); i += 1 {
         switch os.args[i] {
         case "--smoke": smoke = true
         case "--check": check_only = true
-        case "--game", "--capture":
+        case "--game", "--capture", "--replay":
             option := os.args[i]
             i += 1
             if i >= len(os.args) { return error("missing option argument") }
-            if option == "--game" { game_path = os.args[i] } else { capture = os.args[i] }
+            if option == "--game" { game_path = os.args[i]
+            } else if option == "--replay" { replay_path = os.args[i]; check_only = true
+            } else { capture = os.args[i] }
         case: return error("usage: player [--smoke] [--check] [--game file.wasm] [--capture output.bmp]")
         }
     }
@@ -93,6 +97,18 @@ run :: proc() -> int {
     if !guest.load(&app.game, bytes) { return error(app.game.error) }
     core.init()
     if !draw(app) { return error(app.game.error) }
+    if replay_path != "" {
+        data, replay_error := os.read_entire_file(replay_path, context.allocator)
+        if replay_error != nil { return error("cannot read input replay") }
+        defer delete(data)
+        for field in strings.fields(string(data)) {
+            mask, ok := strconv.parse_u64(field)
+            if !ok || mask > 31 { return error("invalid input replay") }
+            if !guest.update(&app.game, abi.Input{buttons=u32(mask)}) || !draw(app) { return error(app.game.error) }
+            fmt.printf("{{\"hash\":%d,\"sounds\":%d}}\n", core.hash(), app.frame.sounds)
+        }
+        return 0
+    }
 
     if !check_only {
         if !sdl.Init({.VIDEO, .AUDIO, .GAMEPAD}) { return error(string(sdl.GetError())) }

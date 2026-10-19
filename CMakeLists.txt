@@ -7,6 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 include(FetchContent)
 include(CTest)
+set(CONSOLE_GAME_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/examples/hello/main.luau" CACHE FILEPATH "Luau cartridge source")
 
 set(LUAU_BUILD_CLI OFF CACHE BOOL "" FORCE)
 set(LUAU_BUILD_TESTS OFF CACHE BOOL "" FORCE)
@@ -54,23 +55,25 @@ if(EMSCRIPTEN)
     target_link_options(player PRIVATE
         -fexceptions
         "--shell-file=${CMAKE_CURRENT_SOURCE_DIR}/runtime/platform/web/shell.html"
-        "--preload-file=${CMAKE_CURRENT_SOURCE_DIR}/examples/hello/main.luau@/game/main.luau"
+        "--preload-file=${CONSOLE_GAME_SOURCE}@/game/main.luau"
         "-sMIN_WEBGL_VERSION=2" "-sMAX_WEBGL_VERSION=2"
         "-sALLOW_MEMORY_GROWTH=1" "-sMAXIMUM_MEMORY=134217728"
         "-sASSERTIONS=1" "-sENVIRONMENT=web" "-sEXIT_RUNTIME=1")
     set_property(TARGET player APPEND PROPERTY LINK_DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/runtime/platform/web/shell.html"
-        "${CMAKE_CURRENT_SOURCE_DIR}/examples/hello/main.luau")
+        "${CONSOLE_GAME_SOURCE}")
 else()
     add_custom_target(player_game
         COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:player>/game"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${CMAKE_CURRENT_SOURCE_DIR}/examples/hello/main.luau"
+            "${CONSOLE_GAME_SOURCE}"
             "$<TARGET_FILE_DIR:player>/game/main.luau")
     add_dependencies(player player_game)
     if(BUILD_TESTING)
         add_executable(core_tests tests/core_tests.cpp)
         target_link_libraries(core_tests PRIVATE console_core)
+        add_executable(rpg_replay tests/rpg_replay.cpp)
+        target_link_libraries(rpg_replay PRIVATE console_core)
         add_test(NAME core_contract COMMAND core_tests
             "${CMAKE_CURRENT_SOURCE_DIR}/examples/hello/main.luau")
         set_tests_properties(core_contract PROPERTIES TIMEOUT 15)

@@ -56,6 +56,7 @@ private:
     static int button(lua_State* state);
     static int pointer(lua_State* state);
     static int sound(lua_State* state);
+    static int rect(lua_State* state);
     bool call(const char* callback, bool with_delta = false);
     bool fail(const char* fallback);
 

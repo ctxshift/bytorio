@@ -50,3 +50,14 @@ hash :: proc() -> u32 {
     }
     return result
 }
+
+render_commands :: proc(commands: []abi.Command) -> bool {
+    if len(commands) > abi.MAX_COMMANDS { return false }
+    for c in commands {
+        if c.x < -4096 || c.x > 4096 || c.y < -4096 || c.y > 4096 || c.w < 0 || c.w > 4096 || c.h < 0 || c.h > 4096 { return false }
+        for y := max(0, int(c.y)); y < min(abi.HEIGHT, int(c.y+c.h)); y += 1 {
+            for x := max(0, int(c.x)); x < min(abi.WIDTH, int(c.x+c.w)); x += 1 { pixels[y*abi.WIDTH+x] = c.color }
+        }
+    }
+    return true
+}

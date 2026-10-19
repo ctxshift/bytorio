@@ -2,7 +2,8 @@
 param(
     [ValidateSet('all', 'native', 'web')][string]$Target = 'all',
     [string]$Odin = '',
-    [switch]$Fixtures
+    [switch]$Fixtures,
+    [ValidateSet('hello', 'rpg')][string]$Game = 'hello'
 )
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
@@ -33,8 +34,17 @@ try {
     $common = @('-o:minimal', '-source-code-locations:filename')
     $web = 'build/odin-player/web'
     $native = 'build/odin-player/native'
+    $gameSource = 'examples/hello-odin'
+    if ($Game -eq 'rpg') {
+        & node tools/build-rpg-assets.mjs
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        $web = 'build/rpg-odin/web'
+        $native = 'build/rpg-odin/native'
+        $gameSource = 'examples/rpg-odin'
+        $common = @('-o:speed', '-source-code-locations:filename')
+    }
     New-Item -ItemType Directory -Force $web, $native | Out-Null
-    & $Odin build examples/hello-odin -target:freestanding_wasm32 -no-entry-point @common "-out:$web/game.wasm" '-extra-linker-flags:--max-memory=8388608'
+    & $Odin build $gameSource -target:freestanding_wasm32 -no-entry-point @common "-out:$web/game.wasm" '-extra-linker-flags:--max-memory=8388608'
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
     if ($Target -in @('all', 'web')) {
@@ -72,11 +82,12 @@ try {
     }
     if ($Fixtures) {
         New-Item -ItemType Directory -Force "$web/fixtures" | Out-Null
-        foreach ($kind in @('loop','abi','offset','command','trap')) {
-            $fault = @('loop','abi','offset','command','trap').IndexOf($kind) + 1
+        $kinds = @('loop','abi','offset','command','trap','list-count','list-offset','list-command')
+        foreach ($kind in $kinds) {
+            $fault = $kinds.IndexOf($kind) + 1
             & $Odin build tests/odin/fixtures -target:freestanding_wasm32 -no-entry-point @common "-define:TEST_FAULT=$fault" "-out:$web/fixtures/$kind.wasm" '-extra-linker-flags:--max-memory=8388608'
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         }
     }
-    Write-Output "Odin $Target build ready under build/odin-player."
+    Write-Output "Odin $Game $Target build ready in $web and $native."
 } finally { Pop-Location }

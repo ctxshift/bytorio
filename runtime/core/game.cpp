@@ -79,7 +79,7 @@ bool Game::load(std::string_view source, const char* name) {
     lua_callbacks(state_)->interrupt = interrupt;
     luaL_openlibs(state_);
     const luaL_Reg api[] = {{"clear", clear}, {"sprite", sprite}, {"button", button},
-        {"pointer", pointer}, {"sound", sound}, {nullptr, nullptr}};
+        {"pointer", pointer}, {"sound", sound}, {"rect", rect}, {nullptr, nullptr}};
     luaL_register(state_, "console", api);
     lua_setreadonly(state_, -1, true);
     lua_pop(state_, 1);
@@ -180,6 +180,20 @@ int Game::pointer(lua_State* state) {
 int Game::sound(lua_State* state) {
     self(state).sound_pending_ = true;
     ++self(state).sound_calls_;
+    return 0;
+}
+
+int Game::rect(lua_State* state) {
+    auto& game = self(state);
+    const int x = bounded_integer(state, 1, -4096, 4096);
+    const int y = bounded_integer(state, 2, -4096, 4096);
+    const int w = bounded_integer(state, 3, 0, 4096);
+    const int h = bounded_integer(state, 4, 0, 4096);
+    const double color = luaL_checknumber(state, 5);
+    if (!std::isfinite(color) || color < 0 || color > 4294967295.0) luaL_argerror(state, 5, "invalid RGBA color");
+    const auto value = static_cast<std::uint32_t>(color);
+    for (int row = std::max(0,y); row < std::min(height,y+h); ++row)
+        for (int col = std::max(0,x); col < std::min(width,x+w); ++col) game.pixels_[row*width+col] = value;
     return 0;
 }
 

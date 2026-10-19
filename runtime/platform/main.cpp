@@ -17,12 +17,13 @@ EM_JS(void, web_sound, (const float* samples, int count), {
     globalThis.playerAudio.play(HEAPF32.subarray(samples >> 2, (samples >> 2) + count));
 });
 EM_JS(void, web_status, (const char* error, unsigned ticks, unsigned sprites, unsigned sounds, unsigned hash, int spriteX), {
-    globalThis.playerStatus = { ready: true, error: UTF8ToString(error), ticks, sprites, sounds, hash, spriteX };
+    globalThis.playerStatus = { ready: true, error: UTF8ToString(error), ticks, sprites, sounds, hash: hash >>> 0, spriteX };
     document.getElementById('status').textContent = error && UTF8ToString(error)
-        ? UTF8ToString(error) : 'Arrows / WASD: move · Space / tap: sound';
+        ? UTF8ToString(error) : (globalThis.playerInstructions || 'Arrows / WASD: move · Space / tap: sound');
     document.getElementById('start').disabled = !!UTF8ToString(error);
 });
 static bool started = false;
+static bool manual = false;
 extern "C" EMSCRIPTEN_KEEPALIVE void player_start() { started = true; }
 #else
 static bool started = true;
@@ -176,7 +177,11 @@ struct App {
         const double now = static_cast<double>(SDL_GetTicksNS()) / 1e9;
         const double delta = std::clamp(now - previous, 0.0, 0.1);
         previous = now;
-        if (running && started && (focused || smoke)) {
+        if (running && started && (focused || smoke)
+#ifdef __EMSCRIPTEN__
+            && !manual
+#endif
+        ) {
             accumulator += smoke ? 1.0 / 60.0 : delta;
             int steps = 0;
             while (accumulator >= 1.0 / 60.0 && steps++ < 5) {
@@ -216,6 +221,20 @@ struct App {
 };
 }
 
+#ifdef __EMSCRIPTEN__
+static App* browser_app = nullptr;
+extern "C" EMSCRIPTEN_KEEPALIVE void player_step(unsigned mask) {
+    if (!manual || !browser_app || !browser_app->running || mask > 31) return;
+    console::Input input;
+    input.left=mask&1; input.right=mask&2; input.up=mask&4; input.down=mask&8; input.action=mask&16;
+    if (!browser_app->game.update(input) || !browser_app->game.draw()) browser_app->fail(browser_app->game.error());
+    if (browser_app->game.take_sound()) web_sound(browser_app->game.sample().data(), console::sample_count);
+    web_status(browser_app->platform_error.c_str(), static_cast<unsigned>(browser_app->game.ticks()),
+        static_cast<unsigned>(browser_app->game.sprite_calls()), static_cast<unsigned>(browser_app->game.sound_calls()),
+        browser_app->game.frame_hash(), browser_app->game.sprite_x());
+}
+#endif
+
 int main(int argc, char** argv) {
     auto app = std::make_unique<App>();
 #ifdef __EMSCRIPTEN__
@@ -226,6 +245,9 @@ int main(int argc, char** argv) {
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
         if (arg == "--smoke") { app->smoke = true; app->frame_limit = 120; }
+#ifdef __EMSCRIPTEN__
+        else if (arg == "--manual") manual = true;
+#endif
         else if (arg == "--script" && i + 1 < argc) script = argv[++i];
         else if (arg == "--capture" && i + 1 < argc) app->capture = argv[++i];
         else { std::cerr << "Usage: player [--script file] [--smoke] [--capture output.bmp]\n"; return 2; }
@@ -237,7 +259,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 #ifdef __EMSCRIPTEN__
-    auto* browser_app = app.release();
+    browser_app = app.release();
     emscripten_set_main_loop_arg([](void* context) {
         auto* current = static_cast<App*>(context);
         current->frame();

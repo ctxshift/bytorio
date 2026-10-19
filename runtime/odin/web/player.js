@@ -97,7 +97,7 @@ function load(restart = false) {
     display.putImageData(new ImageData(new Uint8ClampedArray(data.pixels), 384, 216), 0, 0);
     const { ticks, sounds, spriteX, spriteY, x, y, hash } = data;
     globalThis.playerStatus = { ready: true, error: '', ticks, sounds, spriteX, spriteY, x, y, hash };
-    status.textContent = 'Arrows / WASD: move · Space / tap: sound';
+    status.textContent = globalThis.playerInstructions || 'Arrows / WASD: move · Space / tap: sound';
     maybePlay();
     if (autoStart) { autoStart = false; start().catch(error => fail(error.message)); }
   };

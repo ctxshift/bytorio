@@ -12,6 +12,8 @@ The **Odin reproduction is implemented**: a native Odin player and browser Odin/
 
 See [building and running Odin](docs/odin-development.md) for prerequisites, build commands, and verification. The SDK CLI, packed ROM/PNG loading, and larger graphics/audio features remain planned.
 
+**The sprite RPG comparison is playable in both Luau and Odin.** Explore a village, accept a quest, fight a slime, and return a sunleaf. See [the RPG guide](docs/rpg-comparison.md) for builds, the comparison launcher, both game sources, and replay verification. Build both with `./tools/build-rpg.ps1`.
+
 - [Architecture](docs/architecture.md): accepted decisions, proposed machine profile, runtime boundaries, and open questions.
 - [Implementation plan](docs/implementation-plan.md): milestones, acceptance criteria, and validation.
 - [Odin development guide](docs/odin-development.md): build, run, controls, tests, and prototype limitations.

@@ -15,6 +15,10 @@ Game :: struct {
     instance: Instance,
     memory: Memory,
     init, update, draw: Func,
+    command_offset, command_count: Func,
+    has_commands: bool,
+    commands: [abi.MAX_COMMANDS]abi.Command,
+    count: int,
     error: string,
 }
 
@@ -46,7 +50,7 @@ check :: proc(game: ^Game, error: Error, trap: Trap) -> bool {
 }
 
 call :: proc(game: ^Game, function: ^Func, args: []Val, result: []Val) -> bool {
-    if !check(game, wasmtime_context_set_fuel(game.ctx, 2_000_000), nil) { return false }
+    if !check(game, wasmtime_context_set_fuel(game.ctx, 10_000_000), nil) { return false }
     trap: Trap
     error := wasmtime_func_call(game.ctx, function, raw_data(args), uint(len(args)), raw_data(result), uint(len(result)), &trap)
     return check(game, error, trap)
@@ -120,6 +124,12 @@ load :: proc(game: ^Game, bytes: []u8) -> bool {
         wasmtime_memorytype_page_size(memory_type) != 65536 {
         return fail(game, "game memory must declare an 8 MiB maximum or less")
     }
+    extension: Extern
+    if wasmtime_instance_export_get(game.ctx, &game.instance, raw_data(string("game_commands")), 13, &extension) {
+        wasmtime_extern_delete(&extension)
+        if !function(game, "game_commands", &game.command_offset) || !function(game, "game_command_count", &game.command_count) { return false }
+        game.has_commands = true
+    }
     return call(game, &game.init, nil, nil)
 }
 
@@ -147,5 +157,20 @@ draw :: proc(game: ^Game, frame: ^abi.Frame) -> bool {
     if offset > size || size - offset < abi.FRAME_BYTES { return fail(game, "frame offset outside guest memory") }
     data := wasmtime_memory_data(game.ctx, &game.memory)
     mem.copy(frame, &data[offset], abi.FRAME_BYTES)
+    game.count = 0
+    if game.has_commands {
+        if !call(game, &game.command_count, nil, result[:]) { return false }
+        if result[0].kind != 0 || result[0].of.i32 < 0 || result[0].of.i32 > abi.MAX_COMMANDS { return fail(game, "invalid display list length") }
+        game.count = int(result[0].of.i32)
+        if !call(game, &game.command_offset, nil, result[:]) { return false }
+        if result[0].kind != 0 { return fail(game, "invalid display list offset") }
+        command_offset := uint(u32(result[0].of.i32))
+        command_bytes := uint(game.count * size_of(abi.Command))
+        // Reacquire memory after guest calls, which may grow it.
+        size = wasmtime_memory_data_size(game.ctx, &game.memory)
+        data = wasmtime_memory_data(game.ctx, &game.memory)
+        if command_offset > size || command_bytes > size-command_offset { return fail(game, "display list outside guest memory") }
+        if command_bytes > 0 { mem.copy(&game.commands, &data[command_offset], int(command_bytes)) }
+    }
     return true
 }

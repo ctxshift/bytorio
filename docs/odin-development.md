@@ -38,7 +38,7 @@ npm run serve:odin
 
 Serve the files in `build/odin-player/web/` together over localhost HTTP or hosted HTTPS. Wasm must use `application/wasm`, and JavaScript module files must use a JavaScript MIME type. No SharedArrayBuffer or cross-origin isolation headers are required. The browser uses a 2D canvas to present the software framebuffer; WebGL/mesh rendering remains future work.
 
-The game Worker is watched externally: loading gets a ten-second network allowance, then guest instantiation/execution and frame requests get a one-second watchdog. A runaway game is terminated and the UI offers **Restart game**. Native guest calls use a fresh two-million-fuel allowance, a 256 KiB Wasm stack limit, and store resource limits. These are recovery controls, not equal CPU quotas or a performance guarantee across hosts.
+The game Worker is watched externally: loading gets a ten-second network allowance, then guest instantiation/execution and frame requests get a one-second watchdog. A runaway game is terminated and the UI offers **Restart game**. Native guest calls use a fresh ten-million-fuel allowance, a 256 KiB Wasm stack limit, and store resource limits. Instantiation retains a two-million-fuel allowance. These are recovery controls, not equal CPU quotas or a performance guarantee across hosts.
 
 Browser focus loss pauses the game; **Resume game** resumes it. Audio is gesture-unlocked and uses a static AudioBufferSourceNode copied from the Odin-generated sample. The native host queues the same generated PCM through SDL. This proves single-sample playback, not the future streaming mixer or worklet design.
 
@@ -67,7 +67,7 @@ The native executable is approximately 636 KiB, bundled Wasmtime DLL 21.4 MiB, a
 
 ## Prototype guest ABI
 
-[The ABI package](../runtime/odin/abi/abi.odin) defines a 40-byte little-endian frame record. Its fields are version, clear RGBA, sprite x/y, tick count, cumulative sound count, and logical x/y. The frame is a minimal one-sprite prototype, not the eventual general command-buffer API.
+[The ABI package](../runtime/odin/abi/abi.odin) defines a 40-byte little-endian frame record. Its fields are version, clear RGBA, sprite x/y, tick count, cumulative sound count, and logical x/y. The frame preserves the initial one-sprite prototype. The [RPG display-list extension](rpg-comparison.md) adds optional `game_commands()` and `game_command_count()` exports for general rectangle drawing, with sprites and text supplied by guest helpers.
 
 Required exports:
 
@@ -84,4 +84,4 @@ The native adapter validates function calls through Wasmtime's typed API. The br
 
 ## Remaining work
 
-PNG/ROM loading, asset imports, multiple sprites and textures, allocation-heavy games, richer host-command validation, full Wasm feature policy, runtime source-line diagnostics, state-preserving reload, streaming audio, and other desktop platforms remain later milestones. The reference C++/Luau implementation is retained independently. The Odin reproduction is not a claim that the whole machine profile or untrusted-cartridge security review is complete.
+The [RPG comparison](rpg-comparison.md) adds guest-owned palette sprites, a tile map, text, a bounded rectangle display list, and matching Luau gameplay. PNG/ROM loading, general texture imports, allocation-heavy games, full Wasm feature policy, runtime source-line diagnostics, state-preserving reload, streaming audio, and other desktop platforms remain later milestones. The reference C++/Luau implementation is retained independently. The Odin reproduction is not a claim that the whole machine profile or untrusted-cartridge security review is complete.

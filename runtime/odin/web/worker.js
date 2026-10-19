@@ -18,6 +18,16 @@ function frame() {
   const target = runtime.runtime_frame();
   new Uint8Array(runtime.memory.buffer, target, FRAME_BYTES).set(record.bytes);
   if (runtime.runtime_render() !== 1) throw new Error('Invalid frame command.');
+  if (game.game_commands) {
+    if (typeof game.game_command_count !== 'function') throw new Error('Missing display list length.');
+    const count = game.game_command_count(), offset = game.game_commands();
+    const bytes = count * 20;
+    if (!Number.isInteger(count) || count < 0 || count > 16384 || !Number.isInteger(offset) || offset < 0 || offset > game.memory.buffer.byteLength - bytes) {
+      throw new Error('Invalid display list bounds.');
+    }
+    new Uint8Array(runtime.memory.buffer, runtime.runtime_commands(), bytes).set(new Uint8Array(game.memory.buffer, offset, bytes));
+    if (runtime.runtime_render_commands(count) !== 1) throw new Error('Invalid display list command.');
+  }
   const pixels = new Uint8ClampedArray(runtime.memory.buffer, runtime.runtime_pixels(), 384 * 216 * 4).slice();
   lastTick = record.ticks;
   return { pixels: pixels.buffer, ticks: record.ticks, sounds: record.sounds, spriteX: record.spriteX,
