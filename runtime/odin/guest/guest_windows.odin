@@ -24,6 +24,7 @@ Game :: struct {
     assets: [abi.MAX_GRAPHICS_BYTES]u8,
     text_size, stride: int,
     count: int,
+    display_mode: u32,
     has_source, metered: bool,
     cache_enabled: bool,
     compile_ms, instantiate_ms, initialize_ms: f64,
@@ -263,6 +264,13 @@ draw :: proc(game: ^Game, frame: ^abi.Frame) -> bool {
     if offset > size || size - offset < abi.FRAME_BYTES { return fail(game, "frame offset outside guest memory") }
     data := wasmtime_memory_data(game.ctx, &game.memory)
     mem.copy(frame, &data[offset], abi.FRAME_BYTES)
+    game.display_mode = abi.DISPLAY_HIGH
+    if has_export(game,"game_display_mode") {
+        mode_fn: Func
+        if !function(game,"game_display_mode",&mode_fn) || !call(game,&mode_fn,nil,result[:]) {return false}
+        if result[0].kind != 0 || !abi.valid_display(u32(result[0].of.i32)) {return fail(game,"unsupported display mode")}
+        game.display_mode = u32(result[0].of.i32)
+    }
     game.count = 0
     if game.has_commands {
         if !call(game, &game.command_count, nil, result[:]) { return false }

@@ -4,7 +4,7 @@ A fantasy game console focused on small, mostly 2D games with occasional low-pol
 
 `free-machine` is a temporary repository codename. The product name is undecided; use neutral terminology in documentation, code comments, APIs, and identifiers so renaming does not become a project-wide migration.
 
-The target language is **Odin for both games and the runtime**. The planned standalone native player has no webview; the browser player uses **WebAssembly**. Games are proposed to compile into portable Wasm cartridge modules. The agreed display is one **384 x 216** screen. Games should generally fit around **128 MB**, with a maximum around **512 MB**.
+The target language is **Odin for both games and the runtime**. The standalone native player has no webview; the browser player uses **WebAssembly**. Games compile into portable Wasm cartridge modules, with an experimental Luau executor available as well. The display supports **640×360** (default) and **320×180**, with runtime switching and crisp scaling. See [display modes](docs/display-modes.md) for the cartridge interface. Games should generally fit around **128 MB**, with a maximum around **512 MB**.
 
 Distribution includes **self-contained PNG cartridges**: a viewable cartridge image carrying the complete game ROM. Native and browser players will load the original PNG file. The proposed encoding uses private PNG chunks; image resizing or re-encoding may discard the payload.
 

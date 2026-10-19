@@ -76,7 +76,7 @@ async function load(restart = false) {
   soundsPlayed = 0;
   globalThis.playerAudio.buffer = null;
   globalThis.playerStatus = { ready: false, error: '', ticks: 0 };
-  status.textContent = 'Loading Odin player…';
+  status.textContent = 'Loading Odin playerâ€¦';
   button.disabled = true;
   worker = new Worker('./worker.js', { type: 'module' });
   armWatchdog(10000);
@@ -95,11 +95,12 @@ async function load(restart = false) {
       button.textContent = 'Start game';
     }
     if (data.type !== 'ready' && data.type !== 'frame') { fail('Invalid player response.'); return; }
-    display.putImageData(new ImageData(new Uint8ClampedArray(data.pixels), 384, 216), 0, 0);
-    const { ticks, sounds, spriteX, spriteY, x, y, hash } = data;
-    globalThis.playerStatus = { ...globalThis.playerStatus,ready: true, error: '', ticks, sounds, spriteX, spriteY, x, y, hash };
+    if(canvas.width!==data.width||canvas.height!==data.height){canvas.width=data.width;canvas.height=data.height;resize();}
+    display.putImageData(new ImageData(new Uint8ClampedArray(data.pixels), data.width, data.height), 0, 0);
+    const { ticks, sounds, spriteX, spriteY, x, y, hash, width, height } = data;
+    globalThis.playerStatus = { ...globalThis.playerStatus,ready: true, error: '', ticks, sounds, spriteX, spriteY, x, y, hash, width, height };
     if(data.startup)globalThis.playerStatus.startup=data.startup;
-    status.textContent = globalThis.playerInstructions || 'Arrows / WASD: move · Space / tap: sound';
+    status.textContent = globalThis.playerInstructions || 'Arrows / WASD: move Â· Space / tap: sound';
     maybePlay();
     if (autoStart) { autoStart = false; start().catch(error => fail(error.message)); }
   };
@@ -126,7 +127,7 @@ function input() {
     if (pad.buttons[13]?.pressed) buttons |= 8;
     if (pad.buttons[0]?.pressed) buttons |= 16;
   }
-  return { buttons, ...pointer, pointer: pointer.pointer && pointer.x >= 0 && pointer.x < 384 && pointer.y >= 0 && pointer.y < 216 };
+  return { buttons, ...pointer, pointer: pointer.pointer && pointer.x >= 0 && pointer.x < canvas.width && pointer.y >= 0 && pointer.y < canvas.height };
 }
 
 function animate(now) {
@@ -157,8 +158,8 @@ window.addEventListener('keydown', event => {
 window.addEventListener('keyup', event => keys.delete(event.code));
 function point(event) {
   const rect = canvas.getBoundingClientRect();
-  pointer.x = (event.clientX - rect.left) * 384 / rect.width;
-  pointer.y = (event.clientY - rect.top) * 216 / rect.height;
+  pointer.x = (event.clientX - rect.left) * canvas.width / rect.width;
+  pointer.y = (event.clientY - rect.top) * canvas.height / rect.height;
 }
 canvas.addEventListener('pointerdown', event => {
   canvas.focus(); canvas.setPointerCapture(event.pointerId); point(event); pointer.pointer = true;
@@ -167,10 +168,14 @@ canvas.addEventListener('pointermove', point);
 for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) canvas.addEventListener(name, () => { pointer.pointer = false; });
 button.addEventListener('click', () => start().catch(error => fail(error.message)));
 function resize() {
-  const available = Math.min((innerWidth - 32) / 384, (innerHeight - 150) / 216);
+  const full=document.fullscreenElement===canvas;
+  const density=devicePixelRatio||1;
+  const available = Math.min((innerWidth - (full?0:32))*density / canvas.width, (innerHeight - (full?0:150))*density / canvas.height);
   const scale = available >= 1 ? Math.floor(available) : Math.max(0.25, available);
-  canvas.style.width = `${384 * scale}px`;
-  canvas.style.height = `${216 * scale}px`;
+  canvas.style.width = `${canvas.width * scale / density}px`;
+  canvas.style.height = `${canvas.height * scale / density}px`;
 }
+document.getElementById('fullscreen').addEventListener('click',()=>canvas.requestFullscreen().catch(error=>{status.textContent=error.message;}));
+document.addEventListener('fullscreenchange',resize);
 window.addEventListener('resize', resize);
 resize(); load(); requestAnimationFrame(animate);

@@ -25,9 +25,9 @@ function frame() {
   const drawing=submit();
   const {record}=drawing;
   rasterize(drawing);
-  const pixels = new Uint8ClampedArray(runtime.memory.buffer, runtime.runtime_pixels(), 384 * 216 * 4).slice();
+  const pixels = new Uint8ClampedArray(runtime.memory.buffer, runtime.runtime_pixels(), drawing.width * drawing.height * 4).slice();
   lastTick = record.ticks;
-  return { pixels: pixels.buffer, ticks: record.ticks, sounds: record.sounds, spriteX: record.spriteX,
+  return { width:drawing.width,height:drawing.height,pixels: pixels.buffer, ticks: record.ticks, sounds: record.sounds, spriteX: record.spriteX,
     spriteY: record.spriteY, x: record.x, y: record.y, hash: runtime.runtime_hash() >>> 0 };
 }
 
@@ -82,7 +82,7 @@ self.onmessage = async ({ data }) => {
           const t1=performance.now();const drawing=submit();const {record}=drawing;
           const t2=performance.now();rasterize(drawing);
           const t3=performance.now();
-          new Uint8Array(runtime.memory.buffer,runtime.runtime_pixels(),384*216*4).slice();
+          new Uint8Array(runtime.memory.buffer,runtime.runtime_pixels(),drawing.width*drawing.height*4).slice();
           const t4=performance.now();
           if(pass>=2)timings.push([t1-t0,t2-t1,t3-t2,t4-t3]);
           if(pass===2)traces.push({hash:runtime.runtime_hash()>>>0,sounds:record.sounds});

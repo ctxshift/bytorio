@@ -94,8 +94,15 @@ export function uploadGraphics(game,runtime) {
   new Uint8Array(runtime.memory.buffer,runtime.runtime_assets(),bytes.length).set(bytes);
   if(runtime.runtime_load_graphics(bytes.length)!==1)throw new Error('Invalid graphics assets.');
 }
+export function displayMode(game) {
+  const mode=game.game_display_mode?.()??((640<<16)|360);
+  if(mode!==((640<<16)|360)&&mode!==((320<<16)|180))throw new Error("Unsupported display mode.");
+  return {mode,width:mode>>>16,height:mode&65535};
+}
 export function submitDrawing(game,runtime) {
   const record=readFrame(game);
+  const display=displayMode(game);
+  if(runtime.runtime_display(display.mode)!==1)throw new Error("Unsupported display mode.");
   new Uint8Array(runtime.memory.buffer,runtime.runtime_frame(),FRAME_BYTES).set(record.bytes);
   let count=0,stride=20,textSize=0;
   if(game.game_commands) {
@@ -110,7 +117,7 @@ export function submitDrawing(game,runtime) {
       new Uint8Array(runtime.memory.buffer,runtime.runtime_text(),textSize).set(bytes);
     }
   }
-  return {record,count,stride,textSize};
+  return {record,count,stride,textSize,...display};
 }
 export function rasterizeDrawing(runtime,{count,stride,textSize}) {
   if(runtime.runtime_render()!==1)throw new Error('Invalid frame command.');

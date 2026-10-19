@@ -18,6 +18,7 @@ App :: struct {
     audio: ^sdl.AudioStream,
     gamepad: ^sdl.Gamepad,
     focused: bool,
+    texture_width, texture_height: int,
     sounds_played, audio_queued: u32,
 }
 
@@ -55,7 +56,7 @@ input :: proc(app: ^App) -> abi.Input {
     x, y, lx, ly: f32
     buttons := sdl.GetMouseState(&x, &y)
     if sdl.RenderCoordinatesFromWindow(app.renderer, x, y, &lx, &ly) {
-        result.pointer = .LEFT in buttons && lx >= 0 && lx < abi.WIDTH && ly >= 0 && ly < abi.HEIGHT
+        result.pointer = .LEFT in buttons && lx >= 0 && lx < f32(core.width) && ly >= 0 && ly < f32(core.height)
         result.x, result.y = f64(lx), f64(ly)
     }
     return result
@@ -66,9 +67,20 @@ draw :: proc(app: ^App) -> bool {
     return render_current(app)
 }
 render_current :: proc(app: ^App) -> bool {
+    if !core.set_display(app.game.display_mode) {return guest.fail(&app.game,"unsupported display mode")}
     if !core.render(app.frame) {return guest.fail(&app.game,"invalid frame command")}
     valid := core.render_batch(app.game.batch[:app.game.count],app.game.text[:app.game.text_size]) if app.game.stride == 32 else core.render_commands(app.game.commands[:app.game.count])
     if !valid {return guest.fail(&app.game,"invalid frame command")}
+    return true
+}
+
+display_texture :: proc(app: ^App) -> bool {
+    if app.texture != nil && app.texture_width == core.width && app.texture_height == core.height {return true}
+    if app.texture != nil {sdl.DestroyTexture(app.texture); app.texture = nil}
+    if !sdl.SetRenderLogicalPresentation(app.renderer,i32(core.width),i32(core.height),.INTEGER_SCALE) {return false}
+    app.texture = sdl.CreateTexture(app.renderer,.RGBA32,.STREAMING,i32(core.width),i32(core.height))
+    if app.texture == nil || !sdl.SetTextureScaleMode(app.texture,.NEAREST) {return false}
+    app.texture_width,app.texture_height = core.width,core.height
     return true
 }
 
@@ -150,14 +162,12 @@ run :: proc() -> int {
 
     if !check_only {
         if !sdl.Init({.VIDEO, .AUDIO, .GAMEPAD}) { return error(string(sdl.GetError())) }
-        app.window = sdl.CreateWindow("Console player — Odin", abi.WIDTH * 3, abi.HEIGHT * 3, {.RESIZABLE})
+        app.window = sdl.CreateWindow("Console player â€” Odin", i32(core.width * 2), i32(core.height * 2), {.RESIZABLE})
         if app.window == nil { return error(string(sdl.GetError())) }
         app.renderer = sdl.CreateRenderer(app.window, nil)
         if app.renderer == nil { return error(string(sdl.GetError())) }
         _ = sdl.SetRenderVSync(app.renderer, 1)
-        if !sdl.SetRenderLogicalPresentation(app.renderer, abi.WIDTH, abi.HEIGHT, .INTEGER_SCALE) { return error(string(sdl.GetError())) }
-        app.texture = sdl.CreateTexture(app.renderer, .RGBA32, .STREAMING, abi.WIDTH, abi.HEIGHT)
-        if app.texture == nil || !sdl.SetTextureScaleMode(app.texture, .NEAREST) { return error(string(sdl.GetError())) }
+        if !display_texture(app) {return error(string(sdl.GetError()))}
         spec := sdl.AudioSpec{format = .F32, channels = 1, freq = core.SAMPLE_RATE}
         app.audio = sdl.OpenAudioDeviceStream(sdl.AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, nil, nil)
         if app.audio == nil || !sdl.ResumeAudioStreamDevice(app.audio) { return error(string(sdl.GetError())) }
@@ -177,6 +187,8 @@ run :: proc() -> int {
             for sdl.PollEvent(&event) {
                 #partial switch event.type {
                 case .QUIT: running = false
+                case .KEY_DOWN:
+                    if event.key.scancode == .F11 && !event.key.repeat { _ = sdl.SetWindowFullscreen(app.window, !(.FULLSCREEN in sdl.GetWindowFlags(app.window))) }
                 case .WINDOW_FOCUS_LOST: app.focused = false; accumulator = 0
                 case .WINDOW_FOCUS_GAINED: app.focused = true; accumulator = 0
                 case .GAMEPAD_ADDED:
@@ -209,7 +221,7 @@ run :: proc() -> int {
                 app.audio_queued += core.SAMPLE_COUNT
                 app.sounds_played = app.frame.sounds
             }
-            if !sdl.UpdateTexture(app.texture, nil, &core.pixels, abi.WIDTH * 4) ||
+            if !display_texture(app) || !sdl.UpdateTexture(app.texture, nil, &core.pixels, i32(core.width * 4)) ||
                 !sdl.SetRenderDrawColor(app.renderer, 0, 0, 0, 255) || !sdl.RenderClear(app.renderer) ||
                 !sdl.RenderTexture(app.renderer, app.texture, nil, nil) || !sdl.RenderPresent(app.renderer) {
                 return error(string(sdl.GetError()))
@@ -219,7 +231,7 @@ run :: proc() -> int {
         if (smoke || check_only) && app.frame.ticks >= 120 { running = false }
     }
     if capture != "" && !check_only {
-        surface := sdl.CreateSurfaceFrom(abi.WIDTH, abi.HEIGHT, .RGBA32, &core.pixels, abi.WIDTH * 4)
+        surface := sdl.CreateSurfaceFrom(i32(core.width), i32(core.height), .RGBA32, &core.pixels, i32(core.width * 4))
         if surface == nil { return error(string(sdl.GetError())) }
         saved := sdl.SaveBMP(surface, strings.clone_to_cstring(capture, context.temp_allocator))
         sdl.DestroySurface(surface)
@@ -235,3 +247,4 @@ main :: proc() {
     status := run()
     if status != 0 { os.exit(status) }
 }
+

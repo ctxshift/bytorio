@@ -6,6 +6,7 @@ import abi "../abi"
 SAMPLE_RATE :: 48000
 SAMPLE_COUNT :: SAMPLE_RATE / 3
 pixels: [abi.WIDTH * abi.HEIGHT]u32
+width, height: int = abi.WIDTH, abi.HEIGHT
 sample: [SAMPLE_COUNT]f32
 sprite_count: int
 atlas: [256][256]u32
@@ -18,7 +19,14 @@ sprite_rows: [16]string = {
     "....########....", "...###....###...", "..###......###..", "................",
 }
 
+set_display :: proc(mode: u32) -> bool {
+    if !abi.valid_display(mode) {return false}
+    width, height = int(mode>>16), int(mode&65535)
+    return true
+}
+
 init :: proc() {
+    width, height = abi.WIDTH, abi.HEIGHT
     sprite_count = 0
     font = {}
     for i in 0..<SAMPLE_COUNT {
@@ -36,12 +44,12 @@ valid :: proc(frame: abi.Frame) -> bool {
 
 render :: proc(frame: abi.Frame) -> bool {
     if !valid(frame) { return false }
-    for &pixel in pixels { pixel = frame.clear }
+    for &pixel in pixels[:width*height] { pixel = frame.clear }
     for row in 0..<16 {
         for col in 0..<16 {
             x, y := int(frame.sprite_x) + col, int(frame.sprite_y) + row
-            if sprite_rows[row][col] == '#' && x >= 0 && x < abi.WIDTH && y >= 0 && y < abi.HEIGHT {
-                pixels[y * abi.WIDTH + x] = 0xffc0f070
+            if sprite_rows[row][col] == '#' && x >= 0 && x < width && y >= 0 && y < height {
+                pixels[y * width + x] = 0xffc0f070
             }
         }
     }
@@ -50,7 +58,7 @@ render :: proc(frame: abi.Frame) -> bool {
 
 hash :: proc() -> u32 {
     result := u32(2166136261)
-    for pixel in pixels {
+    for pixel in pixels[:width*height] {
         for shift in 0..<4 { result = (result ~ ((pixel >> u32(shift * 8)) & 255)) * 16777619 }
     }
     return result
@@ -60,8 +68,8 @@ render_commands :: proc(commands: []abi.Command) -> bool {
     if len(commands) > abi.MAX_COMMANDS { return false }
     for c in commands {
         if c.x < -4096 || c.x > 4096 || c.y < -4096 || c.y > 4096 || c.w < 0 || c.w > 4096 || c.h < 0 || c.h > 4096 { return false }
-        for y := max(0, int(c.y)); y < min(abi.HEIGHT, int(c.y+c.h)); y += 1 {
-            for x := max(0, int(c.x)); x < min(abi.WIDTH, int(c.x+c.w)); x += 1 { pixels[y*abi.WIDTH+x] = c.color }
+        for y := max(0, int(c.y)); y < min(height, int(c.y+c.h)); y += 1 {
+            for x := max(0, int(c.x)); x < min(width, int(c.x+c.w)); x += 1 { pixels[y*width+x] = c.color }
         }
     }
     return true
@@ -98,8 +106,8 @@ load_graphics :: proc(bytes: []u8) -> bool {
     return true
 }
 fill_rect :: proc(x, y, w, h: int, color: u32) {
-    for py := max(0,y); py < min(abi.HEIGHT,y+h); py += 1 {
-        for px := max(0,x); px < min(abi.WIDTH,x+w); px += 1 { pixels[py*abi.WIDTH+px] = color }
+    for py := max(0,y); py < min(height,y+h); py += 1 {
+        for px := max(0,x); px < min(width,x+w); px += 1 { pixels[py*width+px] = color }
     }
 }
 render_batch :: proc(commands: []abi.Draw_Command, text: []u8) -> bool {
@@ -115,12 +123,12 @@ render_batch :: proc(commands: []abi.Draw_Command, text: []u8) -> bool {
             if c.w < 0 || int(c.w) >= sprite_count || c.h < 1 || c.h > 8 { return false }
             scale := int(c.h)
             for row in 0..<16 {
-                if scale == 1 && (y+row < 0 || y+row >= abi.HEIGHT) {continue}
+                if scale == 1 && (y+row < 0 || y+row >= height) {continue}
                 for col in 0..<16 {
                     color := atlas[c.w][row*16+col]
                     if color == 0 {continue}
                     if scale == 1 {
-                        if x+col >= 0 && x+col < abi.WIDTH {pixels[(y+row)*abi.WIDTH+x+col] = color}
+                        if x+col >= 0 && x+col < width {pixels[(y+row)*width+x+col] = color}
                     } else {fill_rect(x+col*scale,y+row*scale,scale,scale,color)}
                 }
             }
@@ -132,7 +140,7 @@ render_batch :: proc(commands: []abi.Draw_Command, text: []u8) -> bool {
                 if char >= 128 {return false}
                 for row in 0..<7 {
                     for col in 0..<5 {
-                        if font[char][row] & u8(1<<u32(4-col)) != 0 && px+col >= 0 && px+col < abi.WIDTH && py+row >= 0 && py+row < abi.HEIGHT {pixels[(py+row)*abi.WIDTH+px+col] = c.color}
+                        if font[char][row] & u8(1<<u32(4-col)) != 0 && px+col >= 0 && px+col < width && py+row >= 0 && py+row < height {pixels[(py+row)*width+px+col] = c.color}
                     }
                 }
                 px += 6

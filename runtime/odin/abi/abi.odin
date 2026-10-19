@@ -1,8 +1,12 @@
 package abi
 
 VERSION :: u32(1)
-WIDTH :: 384
-HEIGHT :: 216
+WIDTH :: 640
+HEIGHT :: 360
+// Optional game_display_mode export: high 16 bits width, low 16 bits height.
+DISPLAY_HIGH :: u32(640<<16 | 360)
+DISPLAY_LOW :: u32(320<<16 | 180)
+valid_display :: proc(mode: u32) -> bool { return mode == DISPLAY_HIGH || mode == DISPLAY_LOW }
 FRAME_BYTES :: 40
 MAX_GAME_BYTES :: 1024 * 1024
 MAX_MEMORY_BYTES :: 8 * 1024 * 1024

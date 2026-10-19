@@ -43,3 +43,6 @@ assets: [abi.MAX_GRAPHICS_BYTES]u8
     context = runtime.default_context()
     return core.hash()
 }
+
+@(export) runtime_display :: proc "c" (mode: u32) -> u32 { context = runtime.default_context(); return u32(core.set_display(mode)) }
+
