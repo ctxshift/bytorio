@@ -2,7 +2,7 @@ package gfx
 
 import data "../data"
 import t "../resource"
-import w "../../../runtime/odin/resourcewire"
+import w "../../../runtime/odin/resource_protocol"
 import r "../../../runtime/odin/resources"
 import "core:math"
 import "base:runtime"

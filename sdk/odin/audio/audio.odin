@@ -2,7 +2,7 @@ package audio
 
 import data "../data"
 import t "../resource"
-import w "../../../runtime/odin/resourcewire"
+import w "../../../runtime/odin/resource_protocol"
 Sample :: distinct t.Handle
 Sample_Desc :: struct {frames,channels:u32,rate:u32}
 Frame_Range :: struct {first,frames:u32}

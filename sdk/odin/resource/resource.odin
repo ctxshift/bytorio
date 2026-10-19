@@ -1,6 +1,6 @@
 package resource
 
-import w "../../../runtime/odin/resourcewire"
+import w "../../../runtime/odin/resource_protocol"
 import r "../../../runtime/odin/resources"
 import "base:runtime"
 VERSION :: w.version

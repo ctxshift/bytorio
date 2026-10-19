@@ -3,7 +3,7 @@ package resources
 import "core:mem"
 import "core:math"
 import core "../core"
-import w "../resourcewire"
+import w "../resource_protocol"
 
 Transaction :: struct {
     registry:^Registry,

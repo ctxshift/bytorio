@@ -1,6 +1,6 @@
 package resources
 
-import w "../resourcewire"
+import w "../resource_protocol"
 MAILBOX_MAGIC :: u32(0x3158424d)
 MAILBOX_HEADER :: 16+4*32
 MAILBOX_CAPACITY :: MAILBOX_HEADER+w.maxCompletionPayload

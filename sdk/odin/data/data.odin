@@ -1,6 +1,6 @@
 package data
 
-import w "../../../runtime/odin/resourcewire"
+import w "../../../runtime/odin/resource_protocol"
 import "base:runtime"
 import transport "../resource"
 import r "../../../runtime/odin/resources"

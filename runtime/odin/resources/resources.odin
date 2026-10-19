@@ -3,7 +3,7 @@ package resources
 import "core:mem"
 import "core:math"
 import "base:runtime"
-import w "../resourcewire"
+import w "../resource_protocol"
 import abi "../abi"
 
 Kind :: enum {Empty, Texture, Sample, Target, Palette, Color_Table, Row_Table, Pipeline, Readback}
