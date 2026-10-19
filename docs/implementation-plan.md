@@ -1,6 +1,8 @@
 # Implementation plan
 
-Status: proposed milestones, 2026-10-19. This document describes future work; none of these commands or runtime features are implemented yet.
+Status: updated 2026-10-19. The first Milestone 1 slice is implemented: a standalone native player and browser Wasm build run the same Luau example with one sprite and one sound. SDK commands and later milestones remain planned. See [the development guide](development.md) for actual build/run commands.
+
+Current evidence: native core contracts and a live SDL smoke scenario pass on Windows; browser loading, keyboard movement, audio startup/stall behavior, and matching scripted framebuffer output have been checked in Chrome. Runaway execution, memory exhaustion, and source/runtime errors have explicit checks. CI configuration is included but has not yet run remotely. Physical controller/touch-device validation, a named minimum-device benchmark, streaming audio, and other desktop platforms remain open; this slice does not declare the entire machine profile complete.
 
 Follow the [architecture](architecture.md). Preserve the accepted Luau/C++ stack, standalone native host, browser target, 384 x 216 screen, and 2D-first emphasis. The [3DS comparison](target-comparison.md) is advisory until a different scope is explicitly selected.
 

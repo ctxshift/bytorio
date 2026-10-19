@@ -1,6 +1,6 @@
 # Architecture
 
-Status: initial design, 2026-10-19. No implementation has been validated yet.
+Status: initial design, updated 2026-10-19. The first native/browser sprite-and-sound slice is implemented; see [the development guide](development.md). The broader profile and remaining subsystems below are still proposed.
 
 ## Product intent and accepted decisions
 
@@ -106,7 +106,7 @@ Custom game shaders, advanced shadows, PBR, general scene editing, full physics,
 
 Share the mixer, voice rules, and sample interpretation between hosts. Start with 16 voices including music voices; define voice stealing and priority. Use a stable internal sample rate with host conversion as required. Add compressed music streaming only after selecting and profiling a decoder. Do not expand whole music tracks into PCM at startup.
 
-Audio callbacks must not allocate, fetch files, compile scripts, or wait for game execution. Browser audio must survive brief main-thread stalls and require the appropriate user gesture to begin. The first integration milestone must select and prove an AudioWorklet delivery approach, buffer ownership, latency, and underrun behavior. A baseline deployment must not require SharedArrayBuffer or cross-origin isolation; if that baseline fails the audio requirements, explicitly revisit the deployment contract rather than adding the requirement silently.
+Audio callbacks must not allocate, fetch files, compile scripts, or wait for game execution. Browser audio must survive brief main-thread stalls and require the appropriate user gesture to begin. The initial slice plays the shared C++ PCM sample with a browser AudioBufferSourceNode and an SDL native audio callback. This proves static sample playback independently of the UI thread; it does not yet implement the full mixer. Before sustained/streaming audio, select and prove an AudioWorklet delivery approach, buffer ownership, latency, and underrun behavior. A baseline deployment must not require SharedArrayBuffer or cross-origin isolation; if that baseline fails the audio requirements, explicitly revisit the deployment contract rather than adding the requirement silently.
 
 ## Assets and cartridge format
 
