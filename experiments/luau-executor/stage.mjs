@@ -1,18 +1,43 @@
 import { readFile, writeFile, copyFile, mkdir, readdir } from "node:fs/promises";
 import { createHash } from "node:crypto";
+import { encodeCartridge } from "../../tools/sdk/cartridge.mjs";
 const root = process.argv[2] || "build/unified-player";
 const racing = process.argv[3] === "racing";
 const cartridge = racing ? "racing" : "rpg";
+const assets = JSON.parse(
+  await readFile(
+    racing ? "build/racing/cover-assets.json" : "examples/rpg-shared/assets.json",
+    "utf8",
+  ),
+);
+const cartridges = {};
+for (const language of ["luau", "odin"]) {
+  cartridges[language] = encodeCartridge({
+    title: assets.title || "Mossglen: The Sunleaf",
+    language,
+    display: racing ? [320, 180] : [640, 360],
+    assets,
+    code: await readFile(
+      language === "luau"
+        ? `build/${cartridge}/${racing ? "racing" : "batched"}.luau`
+        : `build/${cartridge}-odin/web/game.wasm`,
+    ),
+  });
+}
 for (const platform of ["web", "native"]) {
   const target = `${root}/${platform}`,
     source = `build/${cartridge}-odin/${platform}`;
   await mkdir(`${target}/licenses`, { recursive: true });
+  for (const language of ["luau", "odin"]) {
+    await writeFile(`${target}/${cartridge}-${language}.png`, cartridges[language]);
+  }
   const files =
     platform === "web"
       ? [
           "player.html",
           "player.js",
           "policy.js",
+          "cartridge.js",
           "worker.js",
           "executor-cache.js",
           "executor-cache-core.js",

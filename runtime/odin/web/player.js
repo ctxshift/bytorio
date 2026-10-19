@@ -12,6 +12,8 @@ let worker,
   pending = false,
   started = false,
   autoStart = false;
+let selectedCartridge = null;
+let selection = 0;
 let previous = performance.now(),
   accumulator = 0,
   generation = 0,
@@ -48,9 +50,21 @@ globalThis.playerAudio = {
   },
 };
 
+function stopOutput() {
+  keys.clear();
+  pointer.pointer = false;
+  const audio = globalThis.playerAudio;
+  if (audio.source) {
+    audio.source.onended = null;
+    audio.source.stop();
+    audio.source = null;
+  }
+}
+
 function fail(message) {
   clearTimeout(watchdog);
   worker?.terminate();
+  stopOutput();
   worker = null;
   pending = started = false;
   globalThis.playerStatus = { ...globalThis.playerStatus, ready: false, error: message };
@@ -102,6 +116,7 @@ async function start() {
 async function load(restart = false) {
   const currentGeneration = ++generation;
   worker?.terminate();
+  stopOutput();
   pending = started = false;
   autoStart = restart;
   soundsPlayed = 0;
@@ -113,10 +128,27 @@ async function load(restart = false) {
   armWatchdog(10000);
   worker.onerror = (event) => {
     event.preventDefault();
-    fail(event.message || "Player worker failed.");
+    if (currentGeneration === generation) {
+      fail(event.message || "Player worker failed.");
+    }
   };
   worker.onmessage = ({ data }) => {
     if (currentGeneration !== generation) {
+      return;
+    }
+    if (data.type === "executor") {
+      armWatchdog(10000);
+      prepareExecutor("./luau-executor.wasm")
+        .then((executor) => {
+          if (currentGeneration === generation) {
+            worker.postMessage({ type: "executor", executor });
+          }
+        })
+        .catch((error) => {
+          if (currentGeneration === generation) {
+            fail(error.message);
+          }
+        });
       return;
     }
     if (data.type === "executing") {
@@ -130,6 +162,9 @@ async function load(restart = false) {
       return;
     }
     if (data.type === "ready") {
+      if (data.title) {
+        document.title = data.title;
+      }
       const audio = globalThis.playerAudio;
       audio.samples = new Float32Array(data.sample);
       audio.peak = audio.samples.reduce((peak, value) => Math.max(peak, Math.abs(value)), 0);
@@ -178,19 +213,53 @@ async function load(restart = false) {
   };
   try {
     const gameUrl = parameters.get("game") || globalThis.playerCartridge || "./game.wasm";
-    const executor = new URL(gameUrl, location.href).pathname.endsWith(".luau")
-      ? await prepareExecutor("./luau-executor.wasm")
-      : null;
+    const executor =
+      !selectedCartridge && new URL(gameUrl, location.href).pathname.endsWith(".luau")
+        ? await prepareExecutor("./luau-executor.wasm")
+        : null;
     if (currentGeneration !== generation) {
       return;
     }
-    worker.postMessage({ type: "load", gameUrl, smoke, executor });
+    worker.postMessage({ type: "load", gameUrl, smoke, executor, cartridge: selectedCartridge });
   } catch (error) {
     if (currentGeneration === generation) {
       fail(error.message || String(error));
     }
   }
 }
+
+async function openCartridge(file) {
+  if (!file) {
+    return;
+  }
+  const currentSelection = ++selection;
+  if (!file.size || file.size > 2 * 1024 * 1024) {
+    fail("PNG cartridge must be at most 2 MiB for the current preview.");
+    return;
+  }
+  try {
+    const bytes = await file.arrayBuffer();
+    if (currentSelection !== selection) {
+      return;
+    }
+    selectedCartridge = bytes;
+    await load();
+  } catch (error) {
+    if (currentSelection === selection) {
+      fail(error.message);
+    }
+  }
+}
+document.getElementById("cartridge").addEventListener("change", (event) => {
+  const file = event.target.files[0];
+  event.target.value = "";
+  openCartridge(file);
+});
+window.addEventListener("dragover", (event) => event.preventDefault());
+window.addEventListener("drop", (event) => {
+  event.preventDefault();
+  openCartridge(event.dataTransfer.files[0]);
+});
 
 function input() {
   let buttons = 0;

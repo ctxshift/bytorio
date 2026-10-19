@@ -7,6 +7,8 @@ import { Worker } from "node:worker_threads";
 import { readGraphics } from "./assets.mjs";
 import { bundleLuau, odinEntry } from "./bundle.mjs";
 import { inspectGuest } from "../../runtime/odin/web/policy.js";
+import { encodeCartridge } from "./cartridge.mjs";
+import { decodeCartridge } from "../../runtime/odin/web/cartridge.js";
 
 export const repo = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const contract = JSON.parse(await readFile(resolve(repo, "sdk/contract.json"), "utf8"));
@@ -93,6 +95,7 @@ export async function manifest(path) {
     project,
     entry: await inside(project, value.entry),
     assets: await inside(project, value.assets),
+    cover: value.cover ? await inside(project, value.cover) : null,
   };
 }
 export async function syncEditor(project) {
@@ -356,13 +359,32 @@ export async function checkProject(path) {
   );
   return spec;
 }
-export async function buildProject(path) {
+export async function buildProject(path, options = {}) {
   const spec = await checkProject(path),
     luau = spec.language === "luau";
+  const coverPath = options.cover ? resolve(options.cover) : spec.cover;
+  const png = encodeCartridge({
+    title: spec.title || "Console game",
+    language: spec.language,
+    display: spec.display,
+    code: await readFile(resolve(spec.generated, luau ? "game.luau" : "game.wasm")),
+    assets: JSON.parse(await readFile(spec.assets, "utf8")),
+    cover: coverPath ? await readFile(coverPath) : null,
+  });
+  // Validate generated and user-provided covers with the actual player parser.
+  const runtime = (
+    await WebAssembly.instantiate(
+      await readFile(resolve(repo, "build/odin-player/web/runtime.wasm")),
+      { env: { sin: Math.sin } },
+    )
+  ).instance.exports;
+  decodeCartridge(runtime, png);
+  await writeFile(resolve(spec.project, "build/game.png"), png);
   for (const platform of ["web", "native"]) {
     const target = resolve(spec.project, "build", platform),
       base = resolve(repo, "build/odin-player", platform);
     await mkdir(resolve(target, "licenses"), { recursive: true });
+    await writeFile(resolve(target, "game.png"), png);
     const names =
       platform === "web"
         ? [
@@ -370,6 +392,7 @@ export async function buildProject(path) {
             "player.js",
             "worker.js",
             "policy.js",
+            "cartridge.js",
             "executor-cache.js",
             "executor-cache-core.js",
             "runtime.wasm",
@@ -423,14 +446,32 @@ export async function buildProject(path) {
       await writeFile(
         resolve(target, "player.html"),
         html
-          .replace(/<title>.*?<\/title>/, `<title>${title}</title>`)
+          .replace(/<title>.*?<\/title>/, () => `<title>${title}</title>`)
           .replace(
             '<script type="module"',
-            `<script>globalThis.playerCartridge=${JSON.stringify(luau ? "./game.luau" : "./game.wasm")}</script>\n<script type="module"`,
+            '<script>globalThis.playerCartridge="./game.png"</script>\n<script type="module"',
           ),
       );
     }
   }
   console.log(`Built ${spec.language}: ${relative(process.cwd(), resolve(spec.project, "build"))}`);
   return spec;
+}
+
+export async function packProject(path, options = {}) {
+  if (options.output && !/\.png$/i.test(options.output)) {
+    throw new Error("Cartridge output must end in .png");
+  }
+  if (options.output && options.cover && resolve(options.output) === resolve(options.cover)) {
+    throw new Error("Output cannot overwrite the cover image");
+  }
+  const spec = await buildProject(path, options);
+  const source = resolve(spec.project, "build/game.png");
+  const target = options.output ? resolve(options.output) : source;
+  if (target !== source) {
+    await mkdir(dirname(target), { recursive: true });
+    await copyFile(source, target);
+  }
+  console.log(`Packed cartridge: ${relative(process.cwd(), target)}`);
+  return { ...spec, cartridge: target };
 }

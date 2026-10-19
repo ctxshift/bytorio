@@ -26,8 +26,8 @@ The browser includes touch controls and a Fullscreen button. Native fullscreen
 is F11. Native builds are standalone applications without a webview.
 
 ```powershell
-./build/racing-player/native/player.exe
-./build/racing-player/native/player.exe --game build/racing-player/native/luau-executor.wasm --source build/racing-player/native/racing.luau
+./build/racing-player/native/player.exe --game build/racing-player/native/racing-odin.png
+./build/racing-player/native/player.exe --game build/racing-player/native/racing-luau.png
 ```
 
 Sources:
@@ -90,5 +90,7 @@ npm run test:display
 That suite checks both resolutions, frame-boundary switches, bounded transfers,
 SDL texture recreation, fullscreen integer scaling and invalid mode rejection.
 Artifacts, replays, screenshots and complete measurement logs are under ignored
-`build/racing-player/`. Distribution currently stages loose Wasm/Luau files;
-the planned PNG cartridge packaging is not part of this demo.
+`build/racing-player/`. Builds also produce `racing-luau.png` and `racing-odin.png`
+for both hosts; the comparison launcher loads these self-contained PNGs.
+Loose source/module files remain available for development benchmarks. See
+[PNG cartridges](png-cartridges.md) for packaging and loading other games.

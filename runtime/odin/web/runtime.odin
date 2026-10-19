@@ -3,6 +3,27 @@ package main
 import "base:runtime"
 import abi "../abi"
 import core "../core"
+import cartridge "../cartridge"
+
+cartridge_buffer: [cartridge.MAX_BYTES]u8
+cartridge_info: cartridge.Cartridge
+cartridge_error: string
+@(export) runtime_cartridge_buffer :: proc "c" () -> u32 {return u32(uintptr(&cartridge_buffer))}
+@(export) runtime_cartridge_capacity :: proc "c" () -> u32 {return cartridge.MAX_BYTES}
+@(export) runtime_cartridge_parse :: proc "c" (size:u32) -> u32 {
+    context=runtime.default_context()
+    cartridge_info={}; cartridge_error="invalid PNG cartridge size"
+    if size>cartridge.MAX_BYTES {return 0}
+    cartridge_info,cartridge_error=cartridge.parse(cartridge_buffer[:size])
+    return cartridge_info.language
+}
+@(export) runtime_cartridge_code :: proc "c" () -> u32 {return u32(uintptr(raw_data(cartridge_info.code)))}
+@(export) runtime_cartridge_code_size :: proc "c" () -> u32 {return u32(len(cartridge_info.code))}
+@(export) runtime_cartridge_title :: proc "c" () -> u32 {return u32(uintptr(raw_data(cartridge_info.title)))}
+@(export) runtime_cartridge_title_size :: proc "c" () -> u32 {return u32(len(cartridge_info.title))}
+@(export) runtime_cartridge_display :: proc "c" () -> u32 {return cartridge_info.display}
+@(export) runtime_cartridge_error :: proc "c" () -> u32 {return u32(uintptr(raw_data(cartridge_error)))}
+@(export) runtime_cartridge_error_size :: proc "c" () -> u32 {return u32(len(cartridge_error))}
 
 frame: abi.Frame
 commands: [abi.MAX_COMMANDS]abi.Command

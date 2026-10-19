@@ -8,6 +8,19 @@ import sdl "vendor:sdl3"
 import abi "../abi"
 import core "../core"
 import guest "../guest"
+import cartridge "../cartridge"
+
+read_bounded :: proc(path:string, limit:int) -> (data:[]u8, message:string) {
+    file,open_error:=os.open(path)
+    if open_error!=nil {return nil,"cannot open cartridge or source file"}
+    defer os.close(file)
+    size,size_error:=os.file_size(file)
+    if size_error!=nil || size<=0 || size>i64(limit) {return nil,"cartridge or source file exceeds size limit or is empty"}
+    data=make([]u8,int(size))
+    count,read_error:=os.read_full(file,data)
+    if read_error!=nil || count!=len(data) {delete(data);return nil,"cannot read complete cartridge or source file"}
+    return data,""
+}
 
 App :: struct {
     game: guest.Game,
@@ -91,6 +104,8 @@ run :: proc() -> int {
     base := sdl.GetBasePath()
     if base == nil { return error("cannot locate player directory") }
     game_path := fmt.tprintf("%sgame.wasm", base)
+    if os.exists(fmt.tprintf("%sgame.png",base)) {game_path=fmt.tprintf("%sgame.png",base)}
+    executor_path:=fmt.tprintf("%sluau-executor.wasm",base)
     capture := ""
     replay_path := ""
     source_path := ""
@@ -105,33 +120,53 @@ run :: proc() -> int {
         case "--check": check_only = true
         case "--benchmark-unmetered": unmetered = true
         case "--no-executor-cache": no_executor_cache = true
-        case "--game", "--capture", "--replay", "--source", "--benchmark", "--executor-cache":
+        case "--game", "--capture", "--replay", "--source", "--benchmark", "--executor-cache", "--executor":
             option := os.args[i]
             i += 1
             if i >= len(os.args) { return error("missing option argument") }
             if option == "--game" { game_path = os.args[i]
+            } else if option == "--executor" {executor_path=os.args[i]
             } else if option == "--source" { source_path = os.args[i]
             } else if option == "--executor-cache" {cache_config = os.args[i]
             } else if option == "--benchmark" { benchmark_path = os.args[i]; check_only = true
             } else if option == "--replay" { replay_path = os.args[i]; check_only = true
             } else { capture = os.args[i] }
-        case: return error("usage: player [--game file.wasm] [--source game.luau] [--smoke|--check|--replay inputs|--benchmark inputs [--benchmark-unmetered]] [--capture output.bmp]")
+        case:
+            if len(os.args[i])>0 && os.args[i][0]!='-' && i==1 {game_path=os.args[i];continue}
+            return error("usage: player [cartridge.png | --game cartridge.png|file.wasm] [--source game.luau] [--executor luau-executor.wasm] [--smoke|--check|--replay inputs|--benchmark inputs [--benchmark-unmetered]] [--capture output.bmp]")
         }
     }
     if unmetered && benchmark_path == "" { return error("unmetered execution is limited to the development benchmark") }
     startup_start := clock_ms()
     baseline_working,_ := process_memory()
-    bytes, read_error := os.read_entire_file(game_path, context.allocator)
-    if read_error != nil { return error("cannot read game module") }
-    defer delete(bytes)
+    file_bytes,read_error:=read_bounded(game_path,cartridge.MAX_BYTES)
+    if read_error!="" {return error(read_error)}
+    defer delete(file_bytes)
+    bytes:=file_bytes
     source: []u8
-    if source_path != "" {
-        source_error: os.Error
-        source, source_error = os.read_entire_file(source_path, context.allocator)
-        if source_error != nil { return error("cannot read Luau source") }
-        if len(source) == 0 { return error("Luau source is empty") }
+    executor_bytes,source_owned:[]u8
+    defer delete(executor_bytes)
+    defer delete(source_owned)
+    cart:cartridge.Cartridge
+    packaged:=cartridge.is_png(bytes)||strings.has_suffix(strings.to_lower(game_path),".png")
+    if packaged {
+        if source_path!="" {return error("PNG cartridges cannot use an external source file")}
+        parse_error:string
+        cart,parse_error=cartridge.parse(bytes)
+        if parse_error!="" {return error(parse_error)}
+        if cart.language==cartridge.LUAU {
+            source=cart.code
+            executor_error:string
+            executor_bytes,executor_error=read_bounded(executor_path,abi.MAX_GAME_BYTES)
+            if executor_error!="" {return error("cannot load player-supplied Luau executor")}
+            bytes=executor_bytes
+        } else {bytes=cart.code}
+    } else if source_path!="" {
+        source_error:string
+        source_owned,source_error=read_bounded(source_path,256*1024)
+        if source_error!="" {return error(source_error)}
+        source=source_owned
     }
-    defer delete(source)
     if len(source) > 0 && !no_executor_cache && cache_config == "" {
         directory := fmt.tprintf("%sexecutor-cache",base)
         if os.make_directory_all(directory) != nil {return error("cannot create executor cache directory")}
@@ -141,11 +176,13 @@ run :: proc() -> int {
     }
     if no_executor_cache {cache_config = ""}
     if !guest.load(&app.game, bytes, source, !unmetered, cache_config) { return error(app.game.error) }
+    if packaged && !guest.validate_sdk(&app.game,cartridge.SDK_VERSION) {return error(app.game.error)}
     core.init()
     asset_size,graphics_ok := guest.read_graphics(&app.game)
     if !graphics_ok {return error(app.game.error)}
     if asset_size > 0 && !core.load_graphics(app.game.assets[:asset_size]) {return error("invalid graphics assets")}
     if !draw(app) { return error(app.game.error) }
+    if packaged && app.game.display_mode!=cart.display {return error("cartridge initial display does not match its metadata")}
     if benchmark_path != "" { return benchmark(app,benchmark_path,clock_ms()-startup_start,baseline_working) }
     if replay_path != "" {
         data, replay_error := os.read_entire_file(replay_path, context.allocator)
@@ -162,7 +199,9 @@ run :: proc() -> int {
 
     if !check_only {
         if !sdl.Init({.VIDEO, .AUDIO, .GAMEPAD}) { return error(string(sdl.GetError())) }
-        app.window = sdl.CreateWindow("Console player — Odin", i32(core.width * 2), i32(core.height * 2), {.RESIZABLE})
+        title:="Console player — Odin"
+        if packaged {title=cart.title}
+        app.window = sdl.CreateWindow(strings.clone_to_cstring(title,context.temp_allocator), i32(core.width * 2), i32(core.height * 2), {.RESIZABLE})
         if app.window == nil { return error(string(sdl.GetError())) }
         app.renderer = sdl.CreateRenderer(app.window, nil)
         if app.renderer == nil { return error(string(sdl.GetError())) }

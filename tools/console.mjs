@@ -1,12 +1,12 @@
 import { resolve } from "node:path";
 import { spawn } from "node:child_process";
 import { watch } from "node:fs";
-import { createProject, checkProject, buildProject } from "./sdk/project.mjs";
+import { createProject, checkProject, buildProject, packProject } from "./sdk/project.mjs";
 import { serve } from "./serve.mjs";
 
 const [action, path, ...args] = process.argv.slice(2);
 const help =
-  "Usage: node tools/console.mjs new <directory> [--language luau|odin]\n       node tools/console.mjs check|build <directory>\n       node tools/console.mjs run|watch <directory> [--web|--native] [--port 8080]";
+  "Usage: node tools/console.mjs new <directory> [--language luau|odin]\n       node tools/console.mjs check|build <directory>\n       node tools/console.mjs pack <directory> [--output game.png] [--cover cover.png]\n       node tools/console.mjs run|watch <directory> [--web|--native] [--port 8080]";
 try {
   if (action === "--help" || action === "help" || !action) {
     console.log(help);
@@ -16,7 +16,7 @@ try {
     }
     const options = {};
     for (let i = 0; i < args.length; i++) {
-      if (args[i] === "--language" || args[i] === "--port") {
+      if (["--language", "--port", "--output", "--cover"].includes(args[i])) {
         if (!args[i + 1]) {
           throw new Error("Missing option value");
         }
@@ -36,20 +36,14 @@ try {
       await checkProject(path);
     } else if (action === "build") {
       await buildProject(path);
+    } else if (action === "pack") {
+      await packProject(path, options);
     } else if (action === "run" || action === "watch") {
       let spec = await buildProject(path),
         child;
       const launch = () => {
         const base = resolve(spec.project, "build/native");
-        const flags =
-          spec.language === "luau"
-            ? [
-                "--game",
-                resolve(base, "luau-executor.wasm"),
-                "--source",
-                resolve(base, "game.luau"),
-              ]
-            : [];
+        const flags = ["--game", resolve(base, "game.png")];
         child = spawn(resolve(base, "player.exe"), flags, { stdio: "inherit" });
         child.on("error", (error) => console.error(error.message));
       };
@@ -109,7 +103,7 @@ try {
           ) {
             return;
           }
-          if (!/\.(odin|luau|json)$/.test(name)) {
+          if (!/\.(odin|luau|json|png)$/i.test(name)) {
             return;
           }
           clearTimeout(timer);

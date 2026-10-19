@@ -136,7 +136,12 @@ Define a small startup asset set. Prefetch levels explicitly and deliver asset r
 
 Accepted requirement: a single valid PNG containing a viewable cover and the complete game ROM. Opening the image displays its cover; opening or dropping the original file into a player loads the game. A cover containing only a URL or requiring external game assets does not satisfy this requirement. The container format and limits are defined independently in this project's specification.
 
-Proposed encoding, to prove before freezing the format:
+The [implemented version-1 preview container](png-cartridges.md) uses one `caRt`
+chunk containing versioned metadata and the complete bundled program. Both
+players share an Odin parser; SDK packaging creates viewable covers. Current
+limits are 2 MiB per PNG, 256 KiB of Luau source or 1 MiB of Odin Wasm. This
+implements sharing for current games, while the indexed large-ROM design below
+remains proposed:
 
 - Use normal PNG image data for modest-sized cover art and private ancillary chunks for the indexed ROM payload. PNG defines private and ancillary chunk conventions: [PNG specification](https://www.w3.org/TR/png-3/#5ChunkNamingConventions).
 - Include an early versioned cartridge directory and a bounded sequence of payload chunks before IEND, respecting PNG ordering rules. Define exact chunk names, copy-safety flags, sizes, and ordering during the format milestone; do not bake the temporary codename into them.

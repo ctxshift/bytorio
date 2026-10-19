@@ -6,6 +6,20 @@
   "tickRate": 60,
   "displayModes": [[640, 360], [320, 180]],
   "defaultDisplayMode": [640, 360],
+  "cartridge": {
+    "containerVersion": 1,
+    "pngChunk": "caRt",
+    "payloadMagic": "CART",
+    "profileId": 1,
+    "headerBytes": 32,
+    "maxPngBytes": 2097152,
+    "maxCoverWidth": 1024,
+    "maxCoverHeight": 1024,
+    "maxTitleBytes": 128,
+    "maxChunks": 4096,
+    "languages": {"luau": 1, "odin": 2},
+    "fields": {"magic": 0, "version": 4, "language": 6, "profile": 7, "sdkVersion": 8, "abiVersion": 12, "width": 16, "height": 18, "titleBytes": 20, "codeBytes": 24, "flags": 28}
+  },
   "limits": {
     "moduleBytes": 1048576,
     "guestMemoryBytes": 8388608,

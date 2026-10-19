@@ -7,6 +7,7 @@ import {
   rasterizeDrawing,
   FRAME_BYTES,
 } from "./policy.js";
+import { decodeCartridge } from "./cartridge.js";
 
 let game, runtime;
 let smoke = false;
@@ -14,17 +15,45 @@ let lastTick = 0;
 const imports = { env: { sin: Math.sin } };
 let startup;
 let initialMemory;
+let executorRequest;
+function requestExecutor() {
+  return new Promise((resolve) => {
+    executorRequest = resolve;
+    self.postMessage({ type: "executor" });
+  });
+}
 
-async function fetchBytes(url) {
+async function fetchBytes(url, limit = 1024 * 1024) {
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`Could not load ${new URL(url, location.href).pathname}.`);
   }
-  const bytes = await response.arrayBuffer();
-  if (bytes.byteLength > 1024 * 1024) {
-    throw new Error("Module exceeds prototype size limit.");
+  const reader = response.body.getReader(),
+    chunks = [];
+  let size = 0;
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) {
+        break;
+      }
+      size += value.byteLength;
+      if (size > limit) {
+        await reader.cancel();
+        throw new Error("Module or PNG exceeds prototype size limit.");
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
   }
-  return bytes;
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const part of chunks) {
+    bytes.set(part, offset);
+    offset += part.length;
+  }
+  return bytes.buffer;
 }
 
 function submit() {
@@ -59,6 +88,12 @@ function frame() {
 
 self.onmessage = async ({ data }) => {
   try {
+    if (data.type === "executor" && executorRequest) {
+      const resolve = executorRequest;
+      executorRequest = null;
+      resolve(data.executor);
+      return;
+    }
     if (data.type === "load") {
       const url = new URL(data.gameUrl, location.href);
       if (url.origin !== location.origin) {
@@ -66,19 +101,28 @@ self.onmessage = async ({ data }) => {
       }
       const start = performance.now();
       const isSource = url.pathname.endsWith(".luau");
-      const executor = isSource ? data.executor : null;
-      const [gameBytes, runtimeBytes, source] = await Promise.all([
-        executor ? executor.bytes : fetchBytes(isSource ? "./luau-executor.wasm" : url),
+      const isPNG = !!data.cartridge || url.pathname.toLowerCase().endsWith(".png");
+      const [input, runtimeBytes] = await Promise.all([
+        data.cartridge || fetchBytes(url, isPNG ? 2 * 1024 * 1024 : 1024 * 1024),
         fetchBytes("./runtime.wasm"),
-        isSource ? fetchBytes(url) : null,
       ]);
+      runtime = (await WebAssembly.instantiate(runtimeBytes, imports)).instance.exports;
+      const cartridge = isPNG ? decodeCartridge(runtime, input) : null;
+      let executor = isSource ? data.executor : null;
+      let gameBytes = cartridge ? cartridge.code : input;
+      let source = null;
+      if (isSource || cartridge?.language === "luau") {
+        source = gameBytes;
+        executor ||= cartridge
+          ? await requestExecutor()
+          : { bytes: await fetchBytes("./luau-executor.wasm") };
+        gameBytes = executor.bytes;
+      }
       const fetched = performance.now();
       self.postMessage({ type: "executing" });
-      const gameModule = inspectGuest(gameBytes, executor?.module),
-        runtimeModule = new WebAssembly.Module(runtimeBytes);
+      const gameModule = inspectGuest(gameBytes, executor?.module);
       const compiled = performance.now();
       game = (await WebAssembly.instantiate(gameModule, imports)).exports;
-      runtime = (await WebAssembly.instantiate(runtimeModule, imports)).exports;
       const instantiated = performance.now();
       initialMemory = game.memory.buffer.byteLength;
       if (game.game_abi() !== 1 || game.game_frame_size() !== FRAME_BYTES) {
@@ -87,11 +131,17 @@ self.onmessage = async ({ data }) => {
       runtime.runtime_init();
       const runtimeInitialized = performance.now();
       game._initialize?.();
+      if (cartridge && game.game_sdk_version?.() !== 256) {
+        throw new Error("Cartridge SDK version does not match its metadata.");
+      }
       if (source) {
         loadSource(game, source);
       }
       game.game_init();
       checkExecutor(game);
+      if (cartridge && game.game_display_mode?.() !== cartridge.display) {
+        throw new Error("Cartridge initial display does not match its metadata.");
+      }
       uploadGraphics(game, runtime);
       const initialized = performance.now();
       smoke = !!data.smoke;
@@ -108,11 +158,20 @@ self.onmessage = async ({ data }) => {
         runtimeInitMs: runtimeInitialized - instantiated,
         gameInitMs: initialized - runtimeInitialized,
         firstFrameMs: performance.now() - initialized,
-        totalMs: performance.now() - start + (executor?.cache.prepareMs || 0),
+        // A PNG requests its executor during this interval. Loose-source loads
+        // may arrive with an executor prepared before the worker's clock starts.
+        totalMs: performance.now() - start + (data.executor?.cache?.prepareMs || 0),
         executorCache: executor?.cache || { enabled: false, hit: false },
       };
       self.postMessage(
-        { type: "ready", ...output, startup, memory: memoryReport(), sample: sample.buffer },
+        {
+          type: "ready",
+          ...output,
+          title: cartridge?.title,
+          startup,
+          memory: memoryReport(),
+          sample: sample.buffer,
+        },
         [output.pixels, sample.buffer],
       );
     } else if (data.type === "step") {

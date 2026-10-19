@@ -28,9 +28,9 @@ Both standalone choices use the same executable:
 
 ```powershell
 # Odin
-./build/unified-player/native/player.exe
+./build/unified-player/native/player.exe --game build/unified-player/native/rpg-odin.png
 # Luau
-./build/unified-player/native/player.exe --game build/unified-player/native/luau-executor.wasm --source build/unified-player/native/rpg.luau
+./build/unified-player/native/player.exe --game build/unified-player/native/rpg-luau.png
 ```
 
 `build:unified` remains an alias for `build:rpg`. The earlier C++ player,

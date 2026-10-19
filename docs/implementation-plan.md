@@ -9,7 +9,7 @@ Keep the standalone native requirement, browser target, single display with 640Ã
 SDK 0.1.0 formalizes the implemented 2D preview profile and supports Luau as the
 default authoring language alongside Odin. Both SDKs provide lifecycle handling,
 drawing, input, timing, deterministic random numbers and cue audio. The shared CLI
-creates, checks, builds, runs and watches projects; see [the SDK guide](../sdk/README.md).
+creates, checks, builds, packages, runs and watches projects; see [the SDK guide](../sdk/README.md).
 This supersedes the earlier Odin-only authoring direction. The runtime remains Odin.
 
 - The removed Luau/C++ reference established the original sprite, sound, input and replay baseline. Its RPG golden traces remain in tests; current checks run both languages through the Odin player.
@@ -96,6 +96,12 @@ Exit: the supported Odin build replaces the reference player and its documented 
 Exit: the mixed 2D/3D scene and sustained audio meet measured minimum-device targets. Custom shaders, advanced shadows, full physics, and complex animation remain deferred unless game needs justify them.
 
 ## Milestone 5: indexed ROMs, full PNG cartridges, loading, and saves
+
+Implemented subset: [PNG container v1](png-cartridges.md), SDK `pack`, default or
+custom covers, native/browser loading in both languages, and malformed-input
+conformance. Current games embed all assets with their code; the preview PNG
+limit is 2 MiB. The indexed 128/512 MB profile, streaming and saves below remain
+future work.
 
 - Package the game module, assets, profile requirements, and optional source/debug data under a versioned manifest.
 - Implement native indexed ROM reads, browser chunk delivery, startup sets, prefetch/readiness, cache bounds, cancellation, and corruption handling.

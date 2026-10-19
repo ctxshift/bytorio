@@ -32,21 +32,24 @@ toolchain require network access; subsequent project builds reuse it.
 | `new <directory> [--language luau\|odin]` | Create source, manifest, art and editor configuration |
 | `check <directory>` | Check types, assets, ABI and first rendered frames |
 | `build <directory>` | Check and stage standalone native/browser player folders |
+| `pack <directory> [--output game.png] [--cover cover.png]` | Build and export a viewable PNG containing the complete game |
 | `run <directory> --web [--port 8080]` | Build and serve the browser player on localhost |
 | `run <directory> --native` | Build and launch the native player |
 | `watch <directory> --web` | Rebuild after edits; reload the browser to reset the game |
 | `watch <directory> --native` | Rebuild and restart the native player after edits |
 
 `build/native` contains the executable, libraries, licenses and cartridge files.
-Copy that whole folder to run without Node.js, a compiler or a webview. For a Luau
-cartridge, launch `player.exe --game luau-executor.wasm --source game.luau` from
-that folder. An Odin cartridge runs with `player.exe` alone. `build/web` can be
-served as static files; its configured player selects the right cartridge.
-PNG cartridge loading and the larger machine profile remain later milestones.
+Copy that whole folder to run without Node.js, a compiler or a webview. Both
+languages launch with `player.exe`, loading `game.png` automatically. Share the
+single `build/game.png` file with another compatible player. `build/web` can be
+served as static files; its configured player loads the same PNG. The browser
+also accepts local PNGs through **Open cartridge** or drag-and-drop. See
+[PNG cartridges](../docs/png-cartridges.md) for the format, custom artwork,
+runtime components, loading commands and current preview limits.
 
 ## Project structure and lifecycle
 
-`console.json` declares SDK version, title, language, entry path, asset path and
+`console.json` declares SDK version, title, language, entry path, asset path, optional PNG cover path and
 initial display. Supported displays are `[640,360]` and `[320,180]`. Paths are
 relative to the project and may not escape it. `assets.json` contains exactly
 16 `#RRGGBB` palette entries, 1..256 sprites of sixteen 16-character rows, and an
@@ -86,6 +89,7 @@ by dead stack storage, or allocating text every frame without reclaiming it.
 
 ```powershell
 npm run test:sdk
+npm run test:cartridge
 ```
 
 The suite builds real projects with both SDKs and verifies native/browser parity,

@@ -54,6 +54,7 @@ npm run lint
 npm run format:check
 npm run test:odin
 npm run test:sdk
+npm run test:cartridge
 npm run test:display
 npm run test:rpg
 npm run test:racing

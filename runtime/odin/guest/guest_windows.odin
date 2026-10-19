@@ -46,6 +46,14 @@ fail :: proc(game: ^Game, message: string) -> bool {
     return false
 }
 
+validate_sdk :: proc(game:^Game, version:u32) -> bool {
+    query:Func
+    result:[1]Val
+    if !function(game,"game_sdk_version",&query)||!call(game,&query,nil,result[:]) {return false}
+    if result[0].kind!=0||u32(result[0].of.i32)!=version {return fail(game,"cartridge SDK version does not match its metadata")}
+    return true
+}
+
 check :: proc(game: ^Game, error: Error, trap: Trap) -> bool {
     if error == nil && trap == nil { return true }
     message: ByteVec

@@ -13,11 +13,11 @@ The [cartridge specification](docs/cartridge-spec.md) formalizes the implemented
 
 **Luau is the default cartridge language; Odin is also supported.** The runtime is Odin. The standalone native player has no webview; the browser player uses **WebAssembly**. Odin games compile into portable Wasm cartridge modules; Luau games run in the player-supplied Wasm executor. The display supports **640×360** (default) and **320×180**, with runtime switching and crisp scaling. See [display modes](docs/display-modes.md) for the cartridge interface. Games should generally fit around **128 MB**, with a maximum around **512 MB**; the implemented preview profile has smaller limits documented in the specification.
 
-Distribution includes **self-contained PNG cartridges**: a viewable cartridge image carrying the complete game ROM. Native and browser players will load the original PNG file. The proposed encoding uses private PNG chunks; image resizing or re-encoding may discard the payload.
+Distribution includes **self-contained PNG cartridges**: a viewable cartridge image carrying the complete game. Native and browser players load the original PNG file. The version-1 encoding uses a private PNG chunk; image resizing or re-encoding may discard the payload.
 
 The native Odin player and browser Odin/Wasm runtime load the identical game module with a movable sprite and sound. Use arrows/WASD to move and Space or click/tap for sound. The browser requires **Start game** to unlock audio. Both cartridge languages use this player; C++ is limited to the Luau compiler/VM executor and development analyzer. The original C++ reference player has been removed.
 
-See [building and running Odin](docs/odin-development.md) for prerequisites, build commands, and verification. Packed ROM/PNG loading and larger graphics/audio features remain planned.
+See [building and running Odin](docs/odin-development.md) for prerequisites, build commands, and verification. **[PNG cartridges](docs/png-cartridges.md) are implemented** for both languages: `npm run console -- pack my-game`. Native and browser players load the same viewable PNG; the current 2D preview has a 2 MiB container limit. Larger ROMs and graphics/audio features remain planned.
 
 **The sprite RPG comparison is playable in both Luau and Odin.** Explore a village, accept a quest, fight a slime, and return a sunleaf. See [the RPG guide](docs/rpg-comparison.md) for builds, the comparison launcher, both game sources, and replay verification. Build both with `./tools/build-rpg.ps1`.
 

@@ -9,6 +9,7 @@ export function serve(root = "build/odin-player/web", port = 8080) {
     ".html": "text/html; charset=utf-8",
     ".js": "text/javascript",
     ".wasm": "application/wasm",
+    ".png": "image/png",
     ".data": "application/octet-stream",
   };
   const server = createServer(async (request, response) => {

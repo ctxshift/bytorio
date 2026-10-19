@@ -9,7 +9,8 @@ the Wasm Component Model are not used.
 The preview supplies two display modes, opaque rectangle/sprite/text rendering,
 one immutable sprite/font atlas, five buttons, a pointer, fixed ticks, deterministic
 random numbers and one sound cue. Meshes, a multi-voice mixer, music, saves,
-streamed assets, large ROMs and PNG cartridge loading remain future profiles.
+streamed assets and large ROMs remain future profiles. Both languages support
+the [version-1 PNG cartridge container](png-cartridges.md).
 An SDK release is complete for this profile without claiming those features.
 
 ## Execution and compatibility
