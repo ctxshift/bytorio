@@ -1,4 +1,4 @@
-import { resourceSchema as audioLimits } from "./constants.js";
+import { INPUT_BUTTON_MASK, resourceSchema as audioLimits } from "./constants.js";
 import {
   inspectGuest,
   checkExecutor,
@@ -19,6 +19,7 @@ let gpu;
 let presentationSize = [1920, 1080];
 let smoke = false;
 let lastTick = 0;
+let logicalSize = [640, 360];
 const imports = { env: { sin: Math.sin } };
 let startup;
 let resourceTrace = false;
@@ -120,26 +121,58 @@ function submit() {
 function rasterize(drawing) {
   rasterizeDrawing(runtime, drawing);
 }
-function frame() {
+function presentFrame(width, height) {
+  if (gpu) {
+    return gpu.present(
+      runtime.memory,
+      runtime.runtime_logical_pixels(),
+      runtime.runtime_gpu_preview(),
+      runtime.runtime_gpu_mask(),
+      width,
+      height,
+      ...presentationSize,
+      runtime.runtime_gpu_dx(),
+      runtime.runtime_gpu_dy(),
+      runtime.runtime_gpu_background(),
+    );
+  }
+  const pointer = runtime.runtime_presentation(...presentationSize);
+  const presentationWidth = runtime.runtime_presentation_width();
+  const presentationHeight = runtime.runtime_presentation_height();
+  return {
+    presentationWidth,
+    presentationHeight,
+    smoothPresentation: Boolean(runtime.runtime_presentation_active()),
+    pixels: new Uint8Array(
+      runtime.memory.buffer,
+      pointer,
+      presentationWidth * presentationHeight * 4,
+    ).slice().buffer,
+  };
+}
+
+function frame(present = true) {
+  const started = performance.now();
+  const uploads = gpu ? gpu.metrics.uploadBytes + gpu.metrics.textureUploadBytes : 0;
   const drawing = submit();
   const { record } = drawing;
   rasterize(drawing);
-  const pixelPointer = runtime.runtime_presentation(...presentationSize);
-  const presentationWidth = runtime.runtime_presentation_width();
-  const presentationHeight = runtime.runtime_presentation_height();
-  const pixels = new Uint8ClampedArray(
-    runtime.memory.buffer,
-    pixelPointer,
-    presentationWidth * presentationHeight * 4,
-  ).slice();
+  logicalSize = [drawing.width, drawing.height];
   lastTick = record.ticks;
   return {
     width: drawing.width,
     height: drawing.height,
-    presentationWidth,
-    presentationHeight,
-    smoothPresentation: Boolean(runtime.runtime_presentation_active()),
-    pixels: pixels.buffer,
+    ...(present ? presentFrame(drawing.width, drawing.height) : {}),
+    metrics: {
+      renderMs: performance.now() - started,
+      gpuUploadBytes: gpu ? gpu.metrics.uploadBytes + gpu.metrics.textureUploadBytes - uploads : 0,
+      gpuCacheBytes: gpu?.metrics.cacheBytes || 0,
+      gpuTextureBytes: gpu?.metrics.textureBytes || 0,
+      meshUploads: gpu?.metrics.meshUploads || 0,
+      memory: memoryReport(),
+      resourceBytes: runtime.runtime_resource_bytes(),
+      cpuQualityBytes: runtime.runtime_cpu_bytes(),
+    },
     ticks: record.ticks,
     sounds: record.sounds,
     audioEnabled: !!runtime.runtime_audio_enabled?.(),
@@ -205,6 +238,8 @@ self.onmessage = async ({ data }) => {
     }
     if (data.type === "load") {
       const graphics = normalizeGraphics(data.graphics);
+      gpu?.close();
+      gpu = null;
       let graphicsFallback = "";
       if (graphics.backend !== "cpu") {
         try {
@@ -217,6 +252,7 @@ self.onmessage = async ({ data }) => {
         }
       }
       imports.env.raster_gpu = (...args) => gpu.raster(runtime.memory, ...args);
+      imports.env.mesh_gpu = (...args) => gpu.queueMesh(runtime.memory, ...args);
       resourceTrace = !!data.resourceTrace;
       const url = new URL(data.gameUrl, location.href);
       if (url.origin !== location.origin) {
@@ -231,8 +267,22 @@ self.onmessage = async ({ data }) => {
       ]);
       runtime = (await WebAssembly.instantiate(runtimeBytes, imports)).instance.exports;
       if (
+        !gpu &&
+        runtime.runtime_cpu_configure(
+          graphics.ssaa === "1080p" ? 6 : graphics.ssaa === "2x" ? 2 : 1,
+          Number(graphics.pixelSnap),
+          Number(graphics.smoothPan),
+        ) !== 1
+      ) {
+        throw new Error("CPU quality configuration failed.");
+      }
+      if (
         gpu &&
-        runtime.runtime_gpu_configure(Number(graphics.pixelSnap), Number(graphics.smoothPan)) !== 1
+        runtime.runtime_gpu_configure(
+          Number(graphics.pixelSnap),
+          Number(graphics.smoothPan),
+          Number(graphics.residentMeshes),
+        ) !== 1
       ) {
         throw new Error("Runtime does not support GPU execution.");
       }
@@ -304,13 +354,14 @@ self.onmessage = async ({ data }) => {
           memory: memoryReport(),
           sample: sample.buffer,
         },
-        [output.pixels, sample.buffer],
+        [output.bitmap || output.pixels, sample.buffer],
       );
     } else if (data.type === "step") {
       if (!game || !Number.isInteger(data.steps) || data.steps < 1 || data.steps > 5) {
         throw new Error("Invalid step request.");
       }
       let output;
+      const uploadsBefore = gpu ? gpu.metrics.uploadBytes + gpu.metrics.textureUploadBytes : 0;
       for (let i = 0; i < data.steps && (!smoke || lastTick < 120); i++) {
         const buttons = smoke ? (lastTick < 60 ? 2 : lastTick === 60 ? 16 : 0) : data.input.buttons;
         deliverResources(game, runtime);
@@ -323,18 +374,38 @@ self.onmessage = async ({ data }) => {
         checkExecutor(game);
         submitResources(game, runtime);
         drainAudio();
-        output = frame();
+        output = frame(false);
       }
       if (output) {
-        self.postMessage({ type: "frame", ...output }, [output.pixels]);
+        const started = performance.now();
+        const uploads = gpu ? gpu.metrics.textureUploadBytes : 0;
+        Object.assign(output, presentFrame(output.width, output.height));
+        output.metrics.renderMs += performance.now() - started;
+        output.metrics.gpuUploadBytes += gpu ? gpu.metrics.textureUploadBytes - uploads : 0;
+        output.metrics.gpuUploadBytes = gpu
+          ? gpu.metrics.uploadBytes + gpu.metrics.textureUploadBytes - uploadsBefore
+          : 0;
+        self.postMessage({ type: "frame", ...output }, [output.bitmap || output.pixels]);
       }
+    } else if (data.type === "capture") {
+      if (!game) {
+        throw new Error("No game is loaded.");
+      }
+      const pixels = new Uint8Array(
+        runtime.memory.buffer,
+        runtime.runtime_logical_pixels(),
+        logicalSize[0] * logicalSize[1] * 4,
+      ).slice().buffer;
+      self.postMessage({ type: "capture", pixels, width: logicalSize[0], height: logicalSize[1] }, [
+        pixels,
+      ]);
     } else if (data.type === "benchmark") {
       if (
         !game ||
         !Array.isArray(data.masks) ||
         !data.masks.length ||
         data.masks.length > 10000 ||
-        data.masks.some((mask) => !Number.isInteger(mask) || mask < 0 || mask > 31)
+        data.masks.some((mask) => !Number.isInteger(mask) || mask < 0 || mask > INPUT_BUTTON_MASK)
       ) {
         throw new Error("Invalid benchmark replay.");
       }
@@ -343,7 +414,7 @@ self.onmessage = async ({ data }) => {
       let peakLinear = game.memory.buffer.byteLength,
         peakHeap = 0;
       let resourceBaseline = [0, 0, 0];
-      for (let pass = 0; pass < 7; pass++) {
+      for (let pass = 0; pass < (data.diagnostic ? 1 : 7); pass++) {
         configureResources(game, runtime);
         game.game_init();
         checkExecutor(game);
@@ -362,11 +433,20 @@ self.onmessage = async ({ data }) => {
           const { record } = drawing;
           const t2 = performance.now();
           rasterize(drawing);
-          const presentationPointer = runtime.runtime_presentation(...presentationSize);
-          const presentationBytes =
-            runtime.runtime_presentation_width() * runtime.runtime_presentation_height() * 4;
-          const t3 = performance.now();
-          new Uint8Array(runtime.memory.buffer, presentationPointer, presentationBytes).slice();
+          logicalSize = [drawing.width, drawing.height];
+          let t3;
+          if (gpu) {
+            const output = presentFrame(drawing.width, drawing.height);
+            gpu.finish();
+            output.bitmap.close();
+            t3 = performance.now();
+          } else {
+            const presentationPointer = runtime.runtime_presentation(...presentationSize);
+            const presentationBytes =
+              runtime.runtime_presentation_width() * runtime.runtime_presentation_height() * 4;
+            t3 = performance.now();
+            new Uint8Array(runtime.memory.buffer, presentationPointer, presentationBytes).slice();
+          }
           const t4 = performance.now();
           if (pass >= 2) {
             timings.push([t1 - t0, t2 - t1, t3 - t2, t4 - t3]);
@@ -384,6 +464,7 @@ self.onmessage = async ({ data }) => {
         memory: { ...memoryReport(), peakLinear, peakHeap: game.game_heap_peak ? peakHeap : null },
         timings,
         traces,
+        gpuStats: gpu ? { ...gpu.metrics, gpuPresentation: true } : null,
         resourceStats: {
           packetBytes: Number(runtime.runtime_resource_stat?.(0) || 0) - resourceBaseline[0],
           hostCopyBytes: Number(runtime.runtime_resource_stat?.(1) || 0) - resourceBaseline[1],
@@ -403,6 +484,8 @@ self.onmessage = async ({ data }) => {
       throw new Error("Unknown player request.");
     }
   } catch (error) {
+    gpu?.close();
+    gpu = null;
     runtime?.runtime_resource_close?.();
     game = runtime = null;
     self.postMessage({ type: "error", error: error.message || String(error) });

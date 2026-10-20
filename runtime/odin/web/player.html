@@ -45,6 +45,21 @@
         place-items: center;
         background: #000;
       }
+      #screen {
+        position: relative;
+      }
+      #performance {
+        position: absolute;
+        top: 6px;
+        left: 6px;
+        padding: 6px 8px;
+        text-align: left;
+        white-space: pre-line;
+        font: 12px/1.5 monospace;
+        color: #fff;
+        background: #000b;
+        pointer-events: none;
+      }
       button:disabled {
         opacity: 0.5;
         cursor: default;
@@ -59,6 +74,7 @@
   <body>
     <main>
       <div id="screen">
+        <output id="performance">Waiting for frames…</output>
         <canvas
           id="canvas"
           width="640"
@@ -75,7 +91,7 @@
         <label
           >Renderer
           <select id="graphics-backend">
-            <option value="cpu">CPU reference</option>
+            <option value="cpu">CPU</option>
             <option value="gpu">GPU 3D + CPU 2D</option>
             <option value="auto">Auto</option>
           </select></label
@@ -90,6 +106,7 @@
         >
         <label><input id="graphics-snap" type="checkbox" /> Snap orthographic camera</label>
         <label><input id="graphics-smooth" type="checkbox" /> Smooth pan presentation</label>
+        <label><input id="graphics-resident" type="checkbox" /> GPU-resident meshes</label>
         <button id="graphics-apply">Apply graphics settings</button>
         <p id="graphics-status" role="status"></p>
       </fieldset>

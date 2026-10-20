@@ -65,8 +65,14 @@ presentations and bounds catch-up to five ticks. Pause does not advance game tim
 Calling user initialization to restart a round does not reset the SDK clock;
 reloading the cartridge through `game_init` does.
 
-Buttons are bits left=1, right=2, up=4, down=8, action=16. Unknown bits are ignored
-by SDK input queries. `button` means held, `pressed` means held now but not on the
+Legacy buttons are bits left=1, right=2, up=4, down=8, action=16. Optional
+movement, camera pan/rotation and reset bits occupy the additional positions
+listed in `sdk/contract.json`. The u32 input record is unchanged. The current
+SDK's `all_buttons()` exposes the full known mask while `buttons()` preserves
+the original five-bit result. Older SDKs discard the new bits; unknown bits
+remain ignored. Current keyboard bindings preserve legacy arrow/WASD aliases
+while supplying separate movement and camera controls for games that request
+them by name. `button` means held, `pressed` means held now but not on the
 previous update, and `released` means previously held but now released. Edges last
 for the current tick, including any draws after it. Before the first update all
 are false. A pointer snapshot is active plus x/y in active-display coordinates.
@@ -88,14 +94,14 @@ rasterization. See [display modes](display-modes.md) for presentation behavior.
 
 `game_draw() -> u32` returns an offset into guest memory for this 40-byte record:
 
-| Offset | Type | Meaning |
-| --- | --- | --- |
-| 0 | u32 | ABI version, 1 |
-| 4 | u32 | Clear color |
-| 8, 12 | i32, i32 | Legacy built-in sprite position; SDK uses -4096,-4096 |
-| 16 | u32 | Tick count, modulo 2³² |
-| 20 | u32 | Cumulative sound-cue event count, modulo 2³² |
-| 24, 32 | f64, f64 | Optional bounded development position, default 0,0 |
+| Offset | Type     | Meaning                                               |
+| ------ | -------- | ----------------------------------------------------- |
+| 0      | u32      | ABI version, 1                                        |
+| 4      | u32      | Clear color                                           |
+| 8, 12  | i32, i32 | Legacy built-in sprite position; SDK uses -4096,-4096 |
+| 16     | u32      | Tick count, modulo 2³²                                |
+| 20     | u32      | Cumulative sound-cue event count, modulo 2³²          |
+| 24, 32 | f64, f64 | Optional bounded development position, default 0,0    |
 
 All wire values are little-endian. Colors pack bytes R,G,B,A into a u32
 (`0xAABBGGRR`). SDK colors must have alpha 255; `rgb(r,g,b)` constructs them. Transparency
@@ -111,20 +117,20 @@ All buffers remain valid until the next guest lifecycle callback. Hosts copy the
 before subsequent guest calls and reacquire memory views after potential growth.
 SDK command/text buffers reset before each user draw. Clear color persists.
 
-| Offset | Type | Field |
-| --- | --- | --- |
-| 0 | u32 | kind |
-| 4, 8, 12, 16 | i32 | x, y, w, h |
-| 20, 24, 28 | u32 | color, text offset, text length |
+| Offset       | Type | Field                           |
+| ------------ | ---- | ------------------------------- |
+| 0            | u32  | kind                            |
+| 4, 8, 12, 16 | i32  | x, y, w, h                      |
+| 20, 24, 28   | u32  | color, text offset, text length |
 
 Commands execute in submission order, clipped to the active display:
 
-| Kind | Operation | Fields |
-| --- | --- | --- |
-| 0 | Rectangle | x/y, w/h in 0..4096, color |
-| 1 | Integer-scaled sprite | x/y, w=sprite ID, h=scale in 1..8 |
-| 2 | Text | x/y, color, offset/length into the text buffer |
-| 3 | Sized sprite | x/y, w/h in 1..128, color=sprite ID |
+| Kind | Operation             | Fields                                         |
+| ---- | --------------------- | ---------------------------------------------- |
+| 0    | Rectangle             | x/y, w/h in 0..4096, color                     |
+| 1    | Integer-scaled sprite | x/y, w=sprite ID, h=scale in 1..8              |
+| 2    | Text                  | x/y, color, offset/length into the text buffer |
+| 3    | Sized sprite          | x/y, w/h in 1..128, color=sprite ID            |
 
 Unused fields are zero in SDK output. Positions are signed integers in ±4096.
 Fractional Luau drawing coordinates truncate toward zero; display dimensions,

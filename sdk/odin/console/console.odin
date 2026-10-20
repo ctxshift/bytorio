@@ -40,11 +40,22 @@ capabilities :: proc() -> Capabilities {
     }
 }
 Button :: enum u32 {
-    Left   = 1,
-    Right  = 2,
-    Up     = 4,
-    Down   = 8,
-    Action = 16,
+    Left        = 1,
+    Right       = 2,
+    Up          = 4,
+    Down        = 8,
+    Action      = 16,
+    MoveLeft    = abi.BUTTON_MOVE_LEFT,
+    MoveRight   = abi.BUTTON_MOVE_RIGHT,
+    MoveUp      = abi.BUTTON_MOVE_UP,
+    MoveDown    = abi.BUTTON_MOVE_DOWN,
+    PanLeft     = abi.BUTTON_PAN_LEFT,
+    PanRight    = abi.BUTTON_PAN_RIGHT,
+    PanUp       = abi.BUTTON_PAN_UP,
+    PanDown     = abi.BUTTON_PAN_DOWN,
+    RotateLeft  = abi.BUTTON_ROTATE_LEFT,
+    RotateRight = abi.BUTTON_ROTATE_RIGHT,
+    Reset       = abi.BUTTON_RESET,
 }
 Display :: enum u32 {
     High = abi.DISPLAY_HIGH,
@@ -247,8 +258,9 @@ text :: proc(value: string, x, y: int, color: u32) {
 }
 buttons :: proc() -> u32 {
 
-    return held
+    return held & abi.LEGACY_BUTTON_MASK
 }
+all_buttons :: proc() -> u32 { return held }
 button :: proc(key: Button) -> bool {
 
     return held & u32(key) != 0
@@ -338,7 +350,7 @@ game_update :: proc "c" (mask, active: u32, x, y: f64) {
 
         return
     }
-    next := mask & 31
+    next := mask & abi.INPUT_BUTTON_MASK
     down, up = next &~ held, held &~ next
     held = next
     width, height := size()

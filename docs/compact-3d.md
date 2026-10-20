@@ -18,13 +18,13 @@ compile the same shader bodies from `runtime/odin/gpu/`. Both Luau and Odin
 cartridges use the existing mesh/camera/depth APIs and resource transport.
 
 CPU remains the default reference renderer. Browser graphics settings select
-**CPU reference**, **GPU 3D + CPU 2D**, or **Auto**, with supersampling off,
+**CPU**, **GPU 3D + CPU 2D**, or **Auto**, with supersampling off,
 up to 2× per axis, or up to 1080p, orthographic camera snapping and smooth pan
 presentation. Preferences persist in browser storage when available; applying
 them restarts the game. URL flags override stored settings, for example:
 
 ```text
-player.html?renderer=gpu&ssaa=1080p&smooth-pan
+player.html?renderer=gpu&gpu-meshes&ssaa=1080p&smooth-pan
 player.html?renderer=cpu
 ```
 
@@ -32,32 +32,70 @@ Native equivalents, from an exported game's native directory:
 
 ```text
 ./player.exe --renderer gpu --ssaa 1080p --smooth-pan
+./player.exe --renderer gpu --gpu-meshes --ssaa 1080p --smooth-pan
 ./player.exe --renderer gpu --ssaa 2x --pixel-snap
 ./player.exe --renderer cpu
+./player.exe --renderer cpu --ssaa 1080p --smooth-pan
 ./player.exe --renderer auto
 ```
 
-Smooth panning implies camera snapping. GPU quality options require the GPU
-path; explicit CPU/quality conflicts are rejected. Auto chooses at startup and
+Smooth panning implies camera snapping. Supersampling, snapping and smooth
+presentation work on CPU and GPU. Only resident meshes require the GPU path.
+Auto chooses at startup and
 falls back to CPU if device initialization is unavailable. Explicit GPU mode
 reports failure instead. Device failure during a draw rejects the transaction;
 it does not publish partial attachments or silently change devices mid-packet.
 The stable resource-av profile continues using its existing CPU 2D semantics.
 
+GPU-resident meshes are a separate opt-in: check **GPU-resident meshes**, use
+`gpu-meshes` in the URL, or pass `--gpu-meshes` natively. Leaving it off retains
+the streamed GPU path. CPU mode initializes no GPU device and the default browser
+Wasm module has no GPU imports. Simple games retain the same CPU requirements.
+Both GPU modes use GPU final presentation; native presents directly through its
+OpenGL window and the browser transfers an ImageBitmap to the display canvas.
+
+The optional CPU quality device uses the shared software triangle rasterizer at
+the bounded sample resolution, resolves color in linear light and depth to the
+nearest sample, and uses the CPU smooth presenter. Its generated sRGB tables
+avoid per-pixel power functions and keep native/browser transfer values stable.
+Uniform sample blocks preserve their exact source bytes; mixed premultiplied
+edges use table interpolation before 8-bit encoding. Quality buffers are reused
+by dimensions and released on device close. Default CPU rendering allocates no
+quality device. Full-scene 1080p CPU rendering can be much slower than GPU mode;
+availability of these options is not a CPU frame-rate guarantee.
+
+Live browser overlays show delivered FPS, GPU upload traffic, resident geometry,
+explicit texture storage estimates, guest/runtime linear memory and resource
+budget usage, plus CPU quality buffers when enabled. GPU upload traffic includes
+logical color/depth and presentation snapshots; static resident geometry alone
+does not eliminate it. Native window titles show delivered FPS and selected memory
+counters. Resource bytes overlap runtime storage; these domains must not be
+added into a process-memory total. Texture estimates exclude driver overhead and
+implicit presentation buffers. The independent riverside viewer reports its own
+rendered FPS and explicit GPU stores, rather than console resource usage.
+
 ### Execution and ownership
 
-The common Odin resource implementation still validates handles, phases,
-matrices, palettes, clipping and logical work limits. It transforms and lights
-triangles into bounded, host-owned staging. Consecutive 3D draws are batched;
+The common Odin resource implementation validates handles, phases,
+matrices, palettes, clipping and logical work limits. The streamed path transforms
+and lights triangles into bounded host-owned staging. The resident path keeps
+immutable mesh geometry in a device cache and applies model/view transforms and
+flat lighting in its vertex shader. Consecutive 3D draws are batched;
 before a pass/state change or 2D operation, the GPU rasterizes the batch into
 private scratch color/depth targets. Color and packed f32 depth are read back
 into transaction-owned attachments. CPU 2D composition and resource readbacks
 then observe that completed batch. Only the existing successful commit publishes
 attachments and presentation data. Rollback frees temporary staging and keeps
 the previous output and presentation snapshot. Session reset preserves the
-host's selected device, not GPU image contents.
+host's selected device. Host-only monotonic geometry versions survive registry
+reset and prevent stale cache reuse after handle recycling or voxel rebuilding.
+Palette bytes are compared exactly before reusing a voxel's GPU color snapshot.
+The cache is capped at 64 MiB and 1,024 entries; it evicts entries when full and
+releases them when the device closes. Device storage is separate from guest
+resource accounting and never retains a guest pointer.
 
-Triangle staging counts against transaction memory. If it cannot fit, that batch
+Triangle/descriptor staging and CPU accounting scratch count against transaction
+memory. If optional staging or resident accounting cannot fit, that draw
 uses the CPU rasterizer. GPU scratch textures are device-owned and reused by
 shape, never guest pointers or cartridge handles. Sample counts are capped at
 six per axis and internal dimensions at approximately 1920×1080, plus the
@@ -66,12 +104,20 @@ sample factor to fit. Optional screen presentation storage is separate from the
 cartridge resource budget: two screen-sized color/mask snapshots may coexist
 during commit, and the host presenter retains at most one 1920×1080 RGBA image.
 
-This first backend deliberately retains CPU transforms/lighting, logical
-bounding-box work accounting, 2D composition and GPU readback barriers. It is
-not the GPU-resident renderer used in the independent riverside experiment.
-No 60 fps guarantee for that scene follows from this integration. The next
-performance step is cached GPU mesh uploads and GPU-resident render targets,
-with explicit synchronization at actual CPU readback boundaries.
+Resident execution retains CPU position transforms, cached clipping outcodes and
+quantized projected bounds for exact logical work accounting. Fully contained
+triangles bypass polygon clipping; boundary triangles retain the reference
+clipping path. Fully ambient draws bypass lighting calculations. Full clears
+replace transaction-owned attachments without copying discarded old pixels;
+failed packets preserve the original attachments. Checked packed word decoding
+replaces repeated per-byte decoding, and fully overwritten scratch skips zeroing.
+
+CPU 2D composition and logical color/depth readback barriers remain. Final GPU
+presentation currently uploads these logical snapshots; it avoids constructing
+or transferring an enlarged CPU image. Persistent attachments across compatible
+passes and synchronization only at actual CPU consumers remain a later slice.
+Use [riverside measurements](riverside-console-measurements.md) for qualified
+costs; this experimental integration does not guarantee 60 fps on every device.
 
 ### Quality and presentation semantics
 
@@ -132,16 +178,16 @@ PNG cartridges remain capped at 2 MiB. Large asset streaming is still milestone 
 Luau uses `console.gfx3d`; Odin imports `sdk:gfx3d`. The SDKs expose equivalent
 resource operations:
 
-| Operation | Inputs / result |
-| --- | --- |
-| `mesh` | Vertex positions/colors plus zero-based triangle indices → `Mesh` |
-| `depth` | Width and height → `Depth` attachment |
-| `camera` | View-projection, light, ambient and fog → immutable `Camera` |
-| `voxel` | Dimensions, palette and dense indexed cells → `Voxel` |
-| `edit` | Volume, origin, extent and replacement cells |
-| `bind` | Existing graphics pass, depth, camera and clear-depth flag |
-| `draw` | Pass, mesh or volume, affine model matrix |
-| `destroy` | Explicit resource destruction, with stale/reference checks |
+| Operation | Inputs / result                                                   |
+| --------- | ----------------------------------------------------------------- |
+| `mesh`    | Vertex positions/colors plus zero-based triangle indices → `Mesh` |
+| `depth`   | Width and height → `Depth` attachment                             |
+| `camera`  | View-projection, light, ambient and fog → immutable `Camera`      |
+| `voxel`   | Dimensions, palette and dense indexed cells → `Voxel`             |
+| `edit`    | Volume, origin, extent and replacement cells                      |
+| `bind`    | Existing graphics pass, depth, camera and clear-depth flag        |
+| `draw`    | Pass, mesh or volume, affine model matrix                         |
+| `destroy` | Explicit resource destruction, with stale/reference checks        |
 
 Math helpers include `identity`, `multiply`, `pose`, `look_at`, `orthographic`
 and `perspective`. Odin's `camera_defaults(view)` supplies unlit/no-fog defaults;
@@ -239,15 +285,15 @@ All new descriptors contain eight u32 words, with unused words zero. Existing
 transaction phases, session/generation handles and canonical payload ranges apply.
 New controls run in init/update; bindings/draws run inside a draw pass.
 
-| Opcode | Primary handle | Descriptor words | Data |
-| --- | --- | --- | --- |
-| 64 create mesh | New mesh | vertex count, index count | 16-byte vertices followed by u32 indices |
-| 65 create depth | New depth | width, height | None |
-| 66 create camera | New camera | All zero | 96-byte camera |
-| 67 create volume | New volume | width, height, depth, palette | Dense cells |
-| 68 edit volume | Volume | x, y, z, width, height, depth | Dense replacement region |
-| 69 bind 3D | Depth | camera, clear-depth boolean | None |
-| 70 draw mesh/volume | Mesh or volume | All zero | 64-byte model matrix |
+| Opcode              | Primary handle | Descriptor words              | Data                                     |
+| ------------------- | -------------- | ----------------------------- | ---------------------------------------- |
+| 64 create mesh      | New mesh       | vertex count, index count     | 16-byte vertices followed by u32 indices |
+| 65 create depth     | New depth      | width, height                 | None                                     |
+| 66 create camera    | New camera     | All zero                      | 96-byte camera                           |
+| 67 create volume    | New volume     | width, height, depth, palette | Dense cells                              |
+| 68 edit volume      | Volume         | x, y, z, width, height, depth | Dense replacement region                 |
+| 69 bind 3D          | Depth          | camera, clear-depth boolean   | None                                     |
+| 70 draw mesh/volume | Mesh or volume | All zero                      | 64-byte model matrix                     |
 
 Camera bytes contain the 64-byte view-projection matrix, light XYZ at byte 64,
 ambient at 76, packed fog color at 80, fog start/end at 84/88 and zero padding
@@ -288,5 +334,6 @@ DSP stress workload is included in this 3D benchmark.
 
 See [measurements](compact-3d-measurements.md) for observed results and remaining
 work. The [riverside cartridge qualification](riverside-console-measurements.md)
-measures the first GPU backend on a larger preserved surface field. Physics,
-streaming, a scene editor and GPU residency remain separate extensions.
+measures resident meshes and GPU presentation on a larger preserved surface
+field. Physics, streaming, a scene editor and persistent GPU attachments remain
+separate extensions.

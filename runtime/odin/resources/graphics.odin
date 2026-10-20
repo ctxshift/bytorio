@@ -8,6 +8,7 @@ import "core:math"
 import "core:mem"
 
 Transaction :: struct {
+    resident_count:                                       int,
     gpu_vertices:                                         []u8,
     gpu_count:                                            int,
     gpu_ortho, preview_disabled:                          bool,
@@ -110,23 +111,23 @@ referenced :: proc(t: ^Transaction, id: u32) -> bool {
     }
     return false
 }
-allocate :: proc(t: ^Transaction, size: int) -> ([]u8, bool) {
+allocate :: proc(t: ^Transaction, size: int, zero := true, alignment := 4) -> ([]u8, bool) {
     if size < 0 || size > t.budget - t.retained {
 
         return nil, fail(t.registry, "graphics allocation exceeds resource budget")
     }
-    ptr, err := mem.alloc(size, 4)
+    ptr, err := mem.alloc(size, alignment)
     if err != nil {
 
         return nil, fail(t.registry, "graphics allocation failed")
     }
     data := (cast([^]u8)ptr)[:size]
-    mem.zero(ptr, size)
+    if zero { mem.zero(ptr, size) }
     t.retained += size
     t.peak = max(t.peak, t.retained)
     return data, true
 }
-owned :: proc(t: ^Transaction, id: u32) -> ^Slot {
+owned :: proc(t: ^Transaction, id: u32, preserve := true) -> ^Slot {
     slot := image(t, id)
     if slot == nil {
 
@@ -136,15 +137,17 @@ owned :: proc(t: ^Transaction, id: u32) -> ^Slot {
     original := &t.registry.screen if id == 0 else &t.registry.slots[(id & w.handleIndexMask) - 1]
     size := int(slot.width) * int(slot.height) * (4 if slot.format == w.format_rgba8 else 1)
     if raw_data(slot.data) == raw_data(original.data) || len(slot.data) != size {
-        data, ok := allocate(t, size)
+        data, ok := allocate(t, size, zero = false)
         if !ok {
 
             return nil
         }
-        if len(slot.data) == size {
+        if preserve && len(slot.data) == size {
 
             copy(data, slot.data)
             t.copy_bytes += u64(size)
+        } else if preserve {
+            mem.zero(raw_data(data), size)
         }
         if raw_data(slot.data) != raw_data(original.data) {
 
@@ -506,7 +509,7 @@ graphics_command :: proc(
 
             return fail(r, "invalid pass options")
         }
-        target = owned(t, id); if target == nil {
+        target = owned(t, id, preserve = args[1] == 0); if target == nil {
 
             return false
         }
@@ -1179,7 +1182,7 @@ present :: proc(t: ^Transaction, id: u32, descriptor: [8]u32) -> bool {
             return fail(t.registry, "indexed presentation requires a palette")
         }
     }
-    bytes, ok := allocate(t, t.width * t.height * 4)
+    bytes, ok := allocate(t, t.width * t.height * 4, zero = false)
     if !ok {
 
         return false
@@ -1220,7 +1223,7 @@ present :: proc(t: ^Transaction, id: u32, descriptor: [8]u32) -> bool {
                 }
                 value = u32le(palette.data, int(source.data[sy * t.width + sx]) * 4)
             }
-            t.output[y * t.width + x] = over(value, args[3])
+            t.output[y * t.width + x] = value if value >> 24 == 255 else over(value, args[3])
         }
     }
     t.present_count += 1

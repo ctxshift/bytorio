@@ -1,12 +1,17 @@
 import { PREVIEW_SAMPLE_RATE, resourceSchema as audioLimits } from "./constants.js";
 import { prepareExecutor } from "./executor-cache.js";
 import { normalizeGraphics } from "./gpu.js";
+import * as controls from "./constants.js";
 const canvas = document.getElementById("canvas");
 const display = canvas.getContext("2d", { alpha: false });
 const button = document.getElementById("start");
 const status = document.getElementById("status");
 const parameters = new URLSearchParams(location.search);
 const smoke = parameters.has("smoke");
+let statsStarted = performance.now();
+let statsFrames = 0;
+let statsUploads = 0;
+const mib = (bytes) => (bytes / 1048576).toFixed(2);
 let graphics = { backend: "cpu", ssaa: "off", pixelSnap: false, smoothPan: false };
 try {
   graphics = normalizeGraphics(JSON.parse(localStorage.getItem("graphics-v1") || "{}"));
@@ -15,15 +20,15 @@ try {
 }
 let graphicsError = "";
 try {
+  const selected =
+    parameters.get("renderer") === "cpu" ? { ...graphics, residentMeshes: false } : graphics;
   graphics = normalizeGraphics({
-    ...graphics,
-    ...(parameters.get("renderer") === "cpu"
-      ? { ssaa: "off", pixelSnap: false, smoothPan: false }
-      : {}),
-    backend: parameters.get("renderer") || graphics.backend,
-    ssaa: parameters.get("ssaa") || graphics.ssaa,
-    pixelSnap: parameters.has("pixel-snap") || graphics.pixelSnap,
-    smoothPan: parameters.has("smooth-pan") || graphics.smoothPan,
+    ...selected,
+    backend: parameters.get("renderer") || selected.backend,
+    ssaa: parameters.get("ssaa") || selected.ssaa,
+    pixelSnap: parameters.has("pixel-snap") || selected.pixelSnap,
+    smoothPan: parameters.has("smooth-pan") || selected.smoothPan,
+    residentMeshes: parameters.has("gpu-meshes") || selected.residentMeshes,
   });
 } catch (error) {
   graphicsError = error.message;
@@ -32,17 +37,17 @@ const graphicsBackend = document.getElementById("graphics-backend");
 const graphicsSsaa = document.getElementById("graphics-ssaa");
 const graphicsSnap = document.getElementById("graphics-snap");
 const graphicsSmooth = document.getElementById("graphics-smooth");
+const graphicsResident = document.getElementById("graphics-resident");
 graphicsBackend.value = graphics.backend;
 graphicsSsaa.value = graphics.ssaa;
 graphicsSnap.checked = graphics.pixelSnap;
 graphicsSmooth.checked = graphics.smoothPan;
+graphicsResident.checked = graphics.residentMeshes;
 const syncGraphicsControls = () => {
   const cpu = graphicsBackend.value === "cpu";
-  graphicsSsaa.disabled = graphicsSnap.disabled = graphicsSmooth.disabled = cpu;
+  graphicsResident.disabled = cpu;
   if (cpu) {
-    graphicsSsaa.value = "off";
-    graphicsSnap.checked = false;
-    graphicsSmooth.checked = false;
+    graphicsResident.checked = false;
   }
 };
 graphicsBackend.addEventListener("change", syncGraphicsControls);
@@ -53,6 +58,7 @@ document.getElementById("graphics-apply").addEventListener("click", () => {
     ssaa: graphicsSsaa.value,
     pixelSnap: graphicsSnap.checked,
     smoothPan: graphicsSmooth.checked,
+    residentMeshes: graphicsResident.checked,
   });
   try {
     localStorage.setItem("graphics-v1", JSON.stringify(graphics));
@@ -365,12 +371,35 @@ async function load(restart = false) {
       canvas.height = imageHeight;
       resize();
     }
-    display.putImageData(
-      new ImageData(new Uint8ClampedArray(data.pixels), imageWidth, imageHeight),
-      0,
-      0,
-    );
+    if (data.bitmap) {
+      display.drawImage(data.bitmap, 0, 0);
+      data.bitmap.close();
+    } else {
+      display.putImageData(
+        new ImageData(new Uint8ClampedArray(data.pixels), imageWidth, imageHeight),
+        0,
+        0,
+      );
+    }
     const { ticks, sounds, spriteX, spriteY, x, y, hash, width, height } = data;
+    if (data.metrics) {
+      const now = performance.now();
+      statsFrames++;
+      statsUploads += data.metrics.gpuUploadBytes;
+      const elapsed = now - statsStarted;
+      if (elapsed >= 500 || data.type === "ready") {
+        const m = data.metrics;
+        document.getElementById("performance").textContent =
+          `${started && elapsed >= 500 ? ((statsFrames * 1000) / elapsed).toFixed(1) : "—"} FPS delivered · render ${m.renderMs.toFixed(1)} ms\n` +
+          `GPU uploads ${mib((statsUploads * 1000) / Math.max(1, elapsed))} MiB/s · mesh uploads ${m.meshUploads}\n` +
+          `GPU meshes ${mib(m.gpuCacheBytes)} MiB · textures ${mib(m.gpuTextureBytes)} MiB (est.)\n` +
+          `Wasm guest ${mib(m.memory.currentLinear)} MiB · runtime ${mib(m.memory.runtimeLinear)} MiB\n` +
+          `Resources ${mib(m.resourceBytes)} MiB · CPU quality ${mib(m.cpuQualityBytes)} MiB (overlaps runtime)`;
+        statsStarted = now;
+        statsFrames = 0;
+        statsUploads = 0;
+      }
+    }
     globalThis.playerStatus = {
       ...globalThis.playerStatus,
       ready: true,
@@ -387,6 +416,7 @@ async function load(restart = false) {
       smoothPresentation: data.smoothPresentation,
       presentationWidth: imageWidth,
       presentationHeight: imageHeight,
+      metrics: data.metrics,
     };
     resize();
     if (data.startup) {
@@ -472,6 +502,23 @@ window.addEventListener("drop", (event) => {
 
 function input() {
   let buttons = 0;
+  for (const [key, mask] of [
+    ["KeyA", controls.BUTTON_MOVE_LEFT],
+    ["KeyD", controls.BUTTON_MOVE_RIGHT],
+    ["KeyW", controls.BUTTON_MOVE_UP],
+    ["KeyS", controls.BUTTON_MOVE_DOWN],
+    ["ArrowLeft", controls.BUTTON_PAN_LEFT],
+    ["ArrowRight", controls.BUTTON_PAN_RIGHT],
+    ["ArrowUp", controls.BUTTON_PAN_UP],
+    ["ArrowDown", controls.BUTTON_PAN_DOWN],
+    ["KeyQ", controls.BUTTON_ROTATE_LEFT],
+    ["KeyE", controls.BUTTON_ROTATE_RIGHT],
+    ["KeyR", controls.BUTTON_RESET],
+  ]) {
+    if (keys.has(key)) {
+      buttons |= mask;
+    }
+  }
   if (keys.has("ArrowLeft") || keys.has("KeyA")) {
     buttons |= 1;
   }
@@ -492,16 +539,16 @@ function input() {
   );
   if (pad) {
     if (pad.buttons[14]?.pressed) {
-      buttons |= 1;
+      buttons |= 1 | controls.BUTTON_MOVE_LEFT;
     }
     if (pad.buttons[15]?.pressed) {
-      buttons |= 2;
+      buttons |= 2 | controls.BUTTON_MOVE_RIGHT;
     }
     if (pad.buttons[12]?.pressed) {
-      buttons |= 4;
+      buttons |= 4 | controls.BUTTON_MOVE_UP;
     }
     if (pad.buttons[13]?.pressed) {
-      buttons |= 8;
+      buttons |= 8 | controls.BUTTON_MOVE_DOWN;
     }
     if (pad.buttons[0]?.pressed) {
       buttons |= 16;
@@ -573,6 +620,9 @@ window.addEventListener("keydown", (event) => {
       "KeyA",
       "KeyS",
       "KeyD",
+      "KeyQ",
+      "KeyE",
+      "KeyR",
     ].includes(event.code)
   ) {
     event.preventDefault();

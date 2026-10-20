@@ -12,7 +12,13 @@ const meshes = [];
 for (const name of ["world", "rabbit"]) {
   meshes.push(mergeFaces(await readFile(`build/compact-3d/resolution/river/${name}.bin`)));
 }
-const bytes = encodeScene(...meshes);
+const live = JSON.parse(await readFile("build/compact-3d/resolution/river/live-scene.json"));
+const walk = live.walk;
+assert.equal(walk.heights.length, 157 * 137);
+const bytes = Buffer.concat([
+  encodeScene(...meshes),
+  Buffer.from(walk.heights.map((height) => height + 1)),
+]);
 const compressed = compressScene(bytes);
 const encoded = compressed.toString("base64");
 const decodeUpdates = Math.floor(encoded.length / 16384) + Math.floor(bytes.length / 32768) + 1;
@@ -78,7 +84,7 @@ for (const language of ["odin", "luau"]) {
     htmlPath,
     html.replace(
       '<script type="module" src="./player.js"></script>',
-      '<script>globalThis.playerInstructions="Left: pan · Right: orbit · Up: rabbit motion · Space: 640×360 (hold)";</script>\n<script type="module" src="./player.js"></script>',
+      '<script>globalThis.playerInstructions="WASD: walk · Q/E: rotate camera · Arrows: pan · R: reset · Space: 640×360 (hold)";</script>\n<script type="module" src="./player.js"></script>',
     ),
   );
 }

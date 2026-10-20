@@ -76,6 +76,12 @@ build cache or proof that every byte stayed unchanged during execution. A report
 left `running` after interruption is incomplete and must not be treated as passed.
 Do not benchmark concurrently with heavy builds or tests.
 
+Hardware GPU checks and riverside interactive controls have separate opt-in
+gates: `mise run validate test:gpu test:riverside:controls`. The latter verifies
+WASD walking, Q/E orbit, arrow panning, reset, counters and native/browser CPU
+quality replays for both SDKs. `mise run validate bench:riverside` retains the
+resident GPU qualification report; see [measurements](riverside-console-measurements.md).
+
 Each task also retains a `*.commands.jsonl` timing journal for instrumented
 synchronous compiler, build and verifier commands. Entries include PID, start
 time, arguments, duration and exit status. A parent build command can contain
@@ -136,12 +142,12 @@ npm commands include `format:odin`, `format:luau`, `format:cpp`, `lint:odin`,
 `lint:luau` and `lint:cpp`. The C++ commands also have dedicated mise tasks:
 `mise run format:cpp` and `mise run lint:cpp`.
 
-| Language | Formatter | Analyzer |
-| --- | --- | --- |
-| JavaScript and HTML scripts | Prettier | ESLint |
-| Odin | [odinfmt from OLS](https://github.com/DanielGavin/ols), `odinfmt.json` | Compiler `odin check -vet` |
-| C++ | [clang-format](https://clang.llvm.org/docs/ClangFormat.html), `.clang-format` | [clang-tidy](https://clang.llvm.org/extra/clang-tidy/), `.clang-tidy` |
-| Luau | [StyLua](https://github.com/JohnnyMorganz/StyLua), `stylua.toml` | Official [luau-analyze](https://luau.org/getting-started/), `.luaurc` |
+| Language                    | Formatter                                                                     | Analyzer                                                              |
+| --------------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| JavaScript and HTML scripts | Prettier                                                                      | ESLint                                                                |
+| Odin                        | [odinfmt from OLS](https://github.com/DanielGavin/ols), `odinfmt.json`        | Compiler `odin check -vet`                                            |
+| C++                         | [clang-format](https://clang.llvm.org/docs/ClangFormat.html), `.clang-format` | [clang-tidy](https://clang.llvm.org/extra/clang-tidy/), `.clang-tidy` |
+| Luau                        | [StyLua](https://github.com/JohnnyMorganz/StyLua), `stylua.toml`              | Official [luau-analyze](https://luau.org/getting-started/), `.luaurc` |
 
 All repository Odin/Luau/C++ sources, examples, tests, templates and tracked generated
 code are included. Downloaded dependencies, build outputs and editor SDK mirrors

@@ -1,4 +1,7 @@
 const RASTER_VERTEX_BYTES = 7 * Float32Array.BYTES_PER_ELEMENT;
+const RESIDENT_VERTEX_FLOATS = 12;
+const GPU_CACHE_BYTES = 64 * 1024 * 1024;
+const GPU_CACHE_ENTRIES = 1024;
 
 export function normalizeGraphics(value = {}) {
   const backend = value.backend || "cpu";
@@ -6,14 +9,15 @@ export function normalizeGraphics(value = {}) {
   if (!["cpu", "gpu", "auto"].includes(backend) || !["off", "2x", "1080p"].includes(ssaa)) {
     throw new Error("Invalid graphics settings.");
   }
-  if (backend === "cpu" && (ssaa !== "off" || value.pixelSnap || value.smoothPan)) {
-    throw new Error("Supersampling and camera presentation settings require the GPU renderer.");
+  if (backend === "cpu" && value.residentMeshes) {
+    throw new Error("Resident meshes require the GPU renderer.");
   }
   return {
     backend,
     ssaa,
     pixelSnap: Boolean(value.pixelSnap || value.smoothPan),
     smoothPan: Boolean(value.smoothPan),
+    residentMeshes: Boolean(value.residentMeshes),
   };
 }
 
@@ -23,7 +27,15 @@ export async function createGpu(settings) {
   if (!gl) {
     throw new Error("WebGL 2 is unavailable.");
   }
-  const names = ["fullscreen.vert", "mesh.vert", "initialize.frag", "mesh.frag", "resolve.frag"];
+  const names = [
+    "fullscreen.vert",
+    "mesh.vert",
+    "initialize.frag",
+    "mesh.frag",
+    "resolve.frag",
+    "resident.vert",
+    "present.frag",
+  ];
   const sources = Object.fromEntries(
     await Promise.all(
       names.map(async (name) => {
@@ -64,6 +76,8 @@ export async function createGpu(settings) {
   const init = program("fullscreen.vert", "initialize.frag");
   const mesh = program("mesh.vert", "mesh.frag");
   const resolve = program("fullscreen.vert", "resolve.frag");
+  const resident = program("resident.vert", "mesh.frag");
+  const presentProgram = program("fullscreen.vert", "present.frag");
   const texture = () => {
     const t = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, t);
@@ -76,6 +90,8 @@ export async function createGpu(settings) {
     return t;
   };
   const input = [texture(), texture()];
+  const presentInput = [texture(), texture()];
+  const hud = texture();
   const high = {
     fbo: gl.createFramebuffer(),
     color: texture(),
@@ -86,25 +102,128 @@ export async function createGpu(settings) {
   const vao = gl.createVertexArray();
   gl.bindVertexArray(vao);
   const buffer = gl.createBuffer();
+  const residentVao = gl.createVertexArray();
   gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
   gl.enableVertexAttribArray(0);
   gl.vertexAttribPointer(0, 4, gl.FLOAT, false, RASTER_VERTEX_BYTES, 0);
   gl.enableVertexAttribArray(1);
   gl.vertexAttribPointer(1, 3, gl.FLOAT, false, RASTER_VERTEX_BYTES, 16);
   gl.disable(gl.DITHER);
-  const allocate = (t, w, h, depth = false, bytes = null) => {
+  const cache = new Map();
+  let cacheBytes = 0;
+  const metrics = {
+    meshUploads: 0,
+    cacheHits: 0,
+    uploadBytes: 0,
+    textureUploadBytes: 0,
+    cacheBytes: 0,
+    textureBytes: 0,
+  };
+  const textureStorage = new Map();
+  let draws = [];
+  const clearMeshes = () => {
+    for (const entry of cache.values()) {
+      gl.deleteBuffer(entry.buffer);
+    }
+    cache.clear();
+    cacheBytes = 0;
+    metrics.cacheBytes = 0;
+  };
+  const cachedMesh = (memory, draw) => {
+    const key = `${draw.high}:${draw.low}`;
+    const palette = draw.palette ? new Uint8Array(memory.buffer, draw.palette, 1024) : null;
+    let entry = cache.get(key);
+    const same =
+      entry &&
+      Boolean(palette) === Boolean(entry.palette) &&
+      (!palette || palette.every((value, i) => value === entry.palette[i]));
+    if (same) {
+      metrics.cacheHits++;
+      return entry.buffer;
+    }
+    const bytes = draw.indexCount * RESIDENT_VERTEX_FLOATS * 4;
+    if (bytes > GPU_CACHE_BYTES) {
+      throw new Error("GPU mesh cache entry exceeds its bound.");
+    }
+    if (cacheBytes + bytes > GPU_CACHE_BYTES || cache.size >= GPU_CACHE_ENTRIES) {
+      clearMeshes();
+      entry = null;
+    }
+    const data = new DataView(memory.buffer, draw.data);
+    const vertices = new Float32Array(draw.indexCount * RESIDENT_VERTEX_FLOATS);
+    for (let triangle = 0; triangle < draw.indexCount; triangle += 3) {
+      const points = [],
+        colors = [];
+      for (let i = 0; i < 3; i++) {
+        const at = data.getUint32(draw.vertexCount * 16 + (triangle + i) * 4, true) * 16;
+        points.push([0, 1, 2].map((axis) => data.getFloat32(at + axis * 4, true)));
+        const color = data.getUint32(at + 12, true);
+        colors.push(
+          palette
+            ? new DataView(palette.buffer, palette.byteOffset, palette.byteLength).getUint32(
+                color * 4,
+                true,
+              )
+            : color,
+        );
+      }
+      for (let i = 0; i < 3; i++) {
+        const at = (triangle + i) * RESIDENT_VERTEX_FLOATS;
+        for (let axis = 0; axis < 3; axis++) {
+          vertices[at + axis] = points[i][axis];
+          vertices[at + axis + 3] = ((colors[i] >>> (axis * 8)) & 255) / 255;
+          vertices[at + axis + 6] = points[1][axis] - points[0][axis];
+          vertices[at + axis + 9] = points[2][axis] - points[0][axis];
+        }
+      }
+    }
+    const buffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+    if (gl.getError() !== gl.NO_ERROR) {
+      gl.deleteBuffer(buffer);
+      throw new Error("GPU mesh upload failed.");
+    }
+    if (entry) {
+      gl.deleteBuffer(entry.buffer);
+      cacheBytes -= entry.bytes;
+    }
+    cache.set(key, { buffer, bytes, palette: palette?.slice() });
+    cacheBytes += bytes;
+    metrics.cacheBytes = cacheBytes;
+    metrics.meshUploads++;
+    metrics.uploadBytes += bytes;
+    return buffer;
+  };
+  const allocate = (t, w, h, depth = false, bytes = null, mask = false) => {
     gl.bindTexture(gl.TEXTURE_2D, t);
-    gl.texImage2D(
-      gl.TEXTURE_2D,
-      0,
-      depth ? gl.DEPTH_COMPONENT32F : gl.RGBA8,
-      w,
-      h,
-      0,
-      depth ? gl.DEPTH_COMPONENT : gl.RGBA,
-      depth ? gl.FLOAT : gl.UNSIGNED_BYTE,
-      bytes,
-    );
+    const format = mask ? gl.RED : depth ? gl.DEPTH_COMPONENT : gl.RGBA;
+    const type = depth ? gl.FLOAT : gl.UNSIGNED_BYTE;
+    const previous = textureStorage.get(t);
+    const key = `${w}/${h}/${format}`;
+    if (previous?.key === key) {
+      if (bytes) {
+        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, w, h, format, type, bytes);
+      }
+    } else {
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        mask ? gl.R8 : depth ? gl.DEPTH_COMPONENT32F : gl.RGBA8,
+        w,
+        h,
+        0,
+        format,
+        type,
+        bytes,
+      );
+      const size = w * h * (mask ? 1 : 4);
+      metrics.textureBytes += size - (previous?.size || 0);
+      textureStorage.set(t, { key, size });
+    }
+    if (bytes) {
+      metrics.textureUploadBytes += bytes.byteLength;
+    }
   };
   const target = (value, w, h) => {
     gl.bindFramebuffer(gl.FRAMEBUFFER, value.fbo);
@@ -141,6 +260,147 @@ export async function createGpu(settings) {
   };
   return {
     gl,
+    metrics,
+    queueMesh(
+      memory,
+      low,
+      high,
+      data,
+      vertexCount,
+      indexCount,
+      palette,
+      model,
+      view,
+      light,
+      ambient,
+    ) {
+      draws.push({
+        low,
+        high,
+        data,
+        vertexCount,
+        indexCount,
+        palette,
+        model: new Float32Array(memory.buffer, model, 16).slice(),
+        view: new Float32Array(memory.buffer, view, 16).slice(),
+        light: new Float32Array(memory.buffer, light, 3).slice(),
+        ambient,
+      });
+    },
+    present(
+      memory,
+      output,
+      preview,
+      mask,
+      width,
+      height,
+      availableWidth,
+      availableHeight,
+      dx,
+      dy,
+      background,
+    ) {
+      const scale = preview
+        ? Math.max(
+            1,
+            Math.min(
+              6,
+              Math.floor(1920 / width),
+              Math.floor(1080 / height),
+              Math.floor(availableWidth / width),
+              Math.floor(availableHeight / height),
+            ),
+          )
+        : 1;
+      const smooth = Boolean(preview && scale > 1);
+      const w = width * scale,
+        h = height * scale;
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+      }
+      gl.bindVertexArray(vao);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.disable(gl.DEPTH_TEST);
+      gl.disable(gl.SCISSOR_TEST);
+      gl.useProgram(presentProgram);
+      gl.activeTexture(gl.TEXTURE0);
+      allocate(
+        presentInput[0],
+        smooth ? width + 2 : width,
+        smooth ? height + 2 : height,
+        false,
+        new Uint8Array(
+          memory.buffer,
+          smooth ? preview : output,
+          (smooth ? (width + 2) * (height + 2) : width * height) * 4,
+        ),
+      );
+      gl.uniform1i(gl.getUniformLocation(presentProgram, "colorSource"), 0);
+      for (const unit of [1, 2]) {
+        gl.activeTexture(gl.TEXTURE0 + unit);
+        gl.bindTexture(gl.TEXTURE_2D, presentInput[0]);
+      }
+      gl.uniform1i(gl.getUniformLocation(presentProgram, "depthSource"), 1);
+      gl.uniform1i(gl.getUniformLocation(presentProgram, "hudSource"), 2);
+      if (smooth) {
+        gl.activeTexture(gl.TEXTURE1);
+        allocate(
+          presentInput[1],
+          width,
+          height,
+          false,
+          new Uint8Array(memory.buffer, output, width * height * 4),
+        );
+        gl.uniform1i(gl.getUniformLocation(presentProgram, "depthSource"), 1);
+        gl.activeTexture(gl.TEXTURE2);
+        allocate(
+          hud,
+          width,
+          height,
+          false,
+          new Uint8Array(memory.buffer, mask, width * height),
+          true,
+        );
+        gl.uniform1i(gl.getUniformLocation(presentProgram, "hudSource"), 2);
+      }
+      gl.uniform2i(gl.getUniformLocation(presentProgram, "logicalSize"), width, height);
+      gl.uniform1i(gl.getUniformLocation(presentProgram, "flipY"), 1);
+      gl.uniform1i(gl.getUniformLocation(presentProgram, "outputHeight"), h);
+      gl.uniform2f(
+        gl.getUniformLocation(presentProgram, "residual"),
+        Math.round(dx * scale) / scale,
+        Math.round(dy * scale) / scale,
+      );
+      gl.uniform1i(gl.getUniformLocation(presentProgram, "scale"), scale);
+      gl.uniform1i(gl.getUniformLocation(presentProgram, "useSmooth"), Number(smooth));
+      gl.uniform4f(
+        gl.getUniformLocation(presentProgram, "background"),
+        (background & 255) / 255,
+        ((background >>> 8) & 255) / 255,
+        ((background >>> 16) & 255) / 255,
+        (background >>> 24) / 255,
+      );
+      gl.viewport(0, 0, w, h);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      if (gl.getError() !== gl.NO_ERROR || gl.isContextLost()) {
+        throw new Error("GPU presentation failed.");
+      }
+      return {
+        bitmap: canvas.transferToImageBitmap(),
+        presentationWidth: w,
+        presentationHeight: h,
+        smoothPresentation: smooth,
+      };
+    },
+    finish() {
+      gl.finish();
+    },
+    close() {
+      clearMeshes();
+      const lose = gl.getExtension("WEBGL_lose_context");
+      lose?.loseContext();
+    },
     raster(
       memory,
       vertices,
@@ -158,6 +418,8 @@ export async function createGpu(settings) {
       fogEnd,
       borderOutput = 0,
     ) {
+      const batch = draws;
+      draws = [];
       if (width < 1 || height < 1 || width > 1920 || height > 1080) {
         return 0;
       }
@@ -221,23 +483,42 @@ export async function createGpu(settings) {
       if (border) {
         gl.disable(gl.SCISSOR_TEST);
       }
-      gl.useProgram(mesh);
-      gl.uniform2f(gl.getUniformLocation(mesh, "logicalSize"), width, height);
-      gl.uniform1i(gl.getUniformLocation(mesh, "border"), border);
+      const program = batch.length ? resident : mesh;
+      gl.useProgram(program);
+      gl.uniform2f(gl.getUniformLocation(program, "logicalSize"), width, height);
+      gl.uniform1i(gl.getUniformLocation(program, "border"), border);
       gl.uniform3f(
-        gl.getUniformLocation(mesh, "fogColor"),
+        gl.getUniformLocation(program, "fogColor"),
         (fogColor & 255) / 255,
         ((fogColor >>> 8) & 255) / 255,
         ((fogColor >>> 16) & 255) / 255,
       );
-      gl.uniform2f(gl.getUniformLocation(mesh, "fogRange"), fogStart, fogEnd);
-      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-      gl.bufferData(
-        gl.ARRAY_BUFFER,
-        new Uint8Array(memory.buffer, vertices, count * RASTER_VERTEX_BYTES),
-        gl.STREAM_DRAW,
-      );
-      gl.drawArrays(gl.TRIANGLES, 0, count);
+      gl.uniform2f(gl.getUniformLocation(program, "fogRange"), fogStart, fogEnd);
+      if (batch.length) {
+        gl.bindVertexArray(residentVao);
+        for (const draw of batch) {
+          gl.bindBuffer(gl.ARRAY_BUFFER, cachedMesh(memory, draw));
+          for (let i = 0; i < 4; i++) {
+            gl.enableVertexAttribArray(i);
+            gl.vertexAttribPointer(i, 3, gl.FLOAT, false, RESIDENT_VERTEX_FLOATS * 4, i * 12);
+          }
+          gl.uniformMatrix4fv(gl.getUniformLocation(program, "model"), false, draw.model);
+          gl.uniformMatrix4fv(gl.getUniformLocation(program, "view"), false, draw.view);
+          gl.uniform3fv(gl.getUniformLocation(program, "light"), draw.light);
+          gl.uniform1f(gl.getUniformLocation(program, "ambient"), draw.ambient);
+          gl.drawArrays(gl.TRIANGLES, 0, draw.indexCount);
+        }
+      } else {
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        gl.bufferData(
+          gl.ARRAY_BUFFER,
+          new Uint8Array(memory.buffer, vertices, count * RASTER_VERTEX_BYTES),
+          gl.STREAM_DRAW,
+        );
+        metrics.uploadBytes += count * RASTER_VERTEX_BYTES;
+        gl.drawArrays(gl.TRIANGLES, 0, count);
+      }
+      gl.bindVertexArray(vao);
       gl.disable(gl.SCISSOR_TEST);
       gl.disable(gl.DEPTH_TEST);
       gl.bindFramebuffer(gl.FRAMEBUFFER, low.fbo);

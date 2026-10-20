@@ -7,6 +7,7 @@ import "core:mem"
 // callbacks may write only the transaction's copy-on-write attachments.
 // The callback is synchronous and must not retain any supplied pointer.
 Raster_Job :: struct {
+    draws:              []Resident_Draw,
     vertices:           []u8,
     color, depth:       []u8,
     border:             []u8,
@@ -14,6 +15,21 @@ Raster_Job :: struct {
     clip:               [4]i32,
     fog_color:          u32,
     fog_start, fog_end: f32,
+}
+Resident_Draw :: struct {
+    version:                   u64,
+    data, palette:             []u8,
+    vertex_count, index_count: u32,
+    model, view:               [16]f32,
+    light:                     [3]f32,
+    ambient:                   f32,
+}
+
+mesh_version :: proc(r: ^Registry) -> u64 {
+    // A failed transaction may consume an ID; IDs are never reused by reset.
+    assert(r.gpu_serial != max(u64))
+    r.gpu_serial += 1
+    return r.gpu_serial
 }
 Raster_Proc :: proc(job: Raster_Job) -> bool
 RASTER_VERTEX_BYTES :: 7 * 4
@@ -26,6 +42,7 @@ flush_raster :: proc(t: ^Transaction) -> bool {
         delete(t.gpu_vertices)
         t.gpu_vertices = nil
         t.gpu_count = 0
+        t.resident_count = 0
     }
     target := owned(t, t.render.target)
     depth := mesh_owned(t, t.render.depth, .Depth)
@@ -72,6 +89,10 @@ flush_raster :: proc(t: ^Transaction) -> bool {
         fog_start = f32(f32le(camera.data, w.cameraFogStartOffset)),
         fog_end   = f32(f32le(camera.data, w.cameraFogEndOffset)),
     }
+    if t.resident_count != 0 {
+        job.vertices = nil
+        job.draws = (cast([^]Resident_Draw)raw_data(t.gpu_vertices))[:t.resident_count]
+    }
     if !t.registry.rasterizer(job) {
         return fail(t.registry, "GPU raster execution failed; transaction discarded")
     }
@@ -83,8 +104,10 @@ prepare_raster :: proc(t: ^Transaction) -> bool {
     if len(t.gpu_vertices) != 0 { return true }
     // Quality preferences must not make an otherwise valid resource packet
     // exceed its budget: use the reference rasterizer when staging cannot fit.
-    if RASTER_STAGING_BYTES > t.budget - t.retained { return false }
-    bytes, ok := allocate(t, RASTER_STAGING_BYTES)
+    size :=
+        w.maxCommands * size_of(Resident_Draw) if t.registry.resident_meshes else RASTER_STAGING_BYTES
+    if size > t.budget - t.retained { return false }
+    bytes, ok := allocate(t, size, zero = false, alignment = align_of(Resident_Draw))
     if !ok {
         t.registry.error = ""
         return false

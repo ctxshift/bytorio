@@ -47,16 +47,16 @@ require that solver. For an existing project, merge the settings from
 [the editor template](templates/luau-settings.json). If diagnostics remain after
 the settings load, run **Luau: Reload Language Server** in the command palette.
 
-| Command | Behavior |
-| --- | --- |
-| `new <directory> [--language luau\|odin]` | Create source, manifest, art and editor configuration |
-| `check <directory>` | Check types, assets, ABI and first rendered frames |
-| `build <directory>` | Check and stage standalone native/browser player folders |
+| Command                                                    | Behavior                                                     |
+| ---------------------------------------------------------- | ------------------------------------------------------------ |
+| `new <directory> [--language luau\|odin]`                  | Create source, manifest, art and editor configuration        |
+| `check <directory>`                                        | Check types, assets, ABI and first rendered frames           |
+| `build <directory>`                                        | Check and stage standalone native/browser player folders     |
 | `pack <directory> [--output game.png] [--cover cover.png]` | Build and export a viewable PNG containing the complete game |
-| `run <directory> --web [--port 8080]` | Build and serve the browser player on localhost |
-| `run <directory> --native` | Build and launch the native player |
-| `watch <directory> --web` | Rebuild after edits; reload the browser to reset the game |
-| `watch <directory> --native` | Rebuild and restart the native player after edits |
+| `run <directory> --web [--port 8080]`                      | Build and serve the browser player on localhost              |
+| `run <directory> --native`                                 | Build and launch the native player                           |
+| `watch <directory> --web`                                  | Rebuild after edits; reload the browser to reset the game    |
+| `watch <directory> --native`                               | Rebuild and restart the native player after edits            |
 
 `build/native` contains the executable, libraries, licenses and cartridge files.
 Copy that whole folder to run without Node.js, a compiler or a webview. Both
@@ -104,6 +104,18 @@ Odin retains normal explicit memory management: allocations belong to the game,
 and temporary allocations need an explicit reset strategy. The SDK itself uses
 fixed buffers for frame drawing and diagnostics. Avoid returning strings backed
 by dead stack storage, or allocating text every frame without reclaiming it.
+
+## Direction and camera input
+
+The original `left`, `right`, `up`, `down`, and `action` buttons retain their
+bindings and bits. `buttons()` still returns only those five bits. The current
+player also delivers independent `move_left/right/up/down` (WASD or gamepad
+D-pad), `pan_left/right/up/down` (arrows), `rotate_left/right` (Q/E), and `reset`
+(R). Odin uses `MoveLeft`, `PanLeft`, `RotateLeft`, and the corresponding enum
+members; Luau uses the lowercase names with underscores. `button`, `pressed`
+and `released` support every named button. `all_buttons()` returns the complete
+mask. These optional controls require the current player; older SDKs continue
+to ignore the extra bits. See the canonical values in `contract.json`.
 
 ## Verify
 

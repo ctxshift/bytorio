@@ -5,16 +5,24 @@ import gl "vendor:OpenGL"
 import sdl "vendor:sdl3"
 
 Device :: struct {
-    window:                         ^sdl.Window,
-    gl_context:                     sdl.GLContext,
-    initialize, mesh, resolve:      u32,
-    vao, vertices:                  u32,
-    input:                          [2]u32,
-    high, low:                      u32,
-    high_textures:                  [3]u32,
-    low_textures:                   [2]u32,
-    width, height, factor, quality: int,
-    color, depth:                   []u8,
+    present_program, present_fbo, present_texture, hud_texture: u32,
+    present_width, present_height:                              int,
+    resident, resident_vao:                                     u32,
+    cache:                                                      map[u64]Cached_Mesh,
+    cache_bytes:                                                int,
+    mesh_uploads, cache_hits, upload_bytes:                     u64,
+    window:                                                     ^sdl.Window,
+    gl_context:                                                 sdl.GLContext,
+    initialize, mesh, resolve:                                  u32,
+    vao, vertices:                                              u32,
+    input:                                                      [2]u32,
+    present_input:                                              [2]u32,
+    high, low:                                                  u32,
+    high_textures:                                              [3]u32,
+    low_textures:                                               [2]u32,
+    width, height, factor, quality:                             int,
+    color, depth:                                               []u8,
+    texture_storage:                                            map[u32][3]int,
 }
 device: Device
 
@@ -24,7 +32,7 @@ open :: proc(quality: int) -> bool {
     _ = sdl.GL_SetAttribute(.CONTEXT_MAJOR_VERSION, 3)
     _ = sdl.GL_SetAttribute(.CONTEXT_MINOR_VERSION, 3)
     _ = sdl.GL_SetAttribute(.CONTEXT_PROFILE_MASK, i32(sdl.GLProfile.CORE))
-    device.window = sdl.CreateWindow("GPU execution device", 1, 1, {.OPENGL, .HIDDEN})
+    device.window = sdl.CreateWindow("GPU execution device", 1, 1, {.OPENGL, .HIDDEN, .RESIZABLE})
     if device.window == nil { return false }
     device.gl_context = sdl.GL_CreateContext(device.window)
     if device.gl_context == nil {
@@ -44,6 +52,22 @@ open :: proc(quality: int) -> bool {
         close()
         return false
     }
+    device.resident, ok = gl.load_shaders_source(
+        prefix + #load("../resident.vert"),
+        prefix + #load("../mesh.frag"),
+    )
+    if !ok { close(); return false }
+    gl.GenVertexArrays(1, &device.resident_vao)
+    device.present_program, ok = gl.load_shaders_source(
+        prefix + #load("../fullscreen.vert"),
+        prefix + #load("../present.frag"),
+    )
+    if !ok { close(); return false }
+    gl.GenFramebuffers(1, &device.present_fbo)
+    gl.GenTextures(1, &device.present_texture)
+    gl.GenTextures(1, &device.hud_texture)
+    setup_texture(device.present_texture)
+    setup_texture(device.hud_texture)
     device.mesh, ok = gl.load_shaders_source(
         prefix + #load("../mesh.vert"),
         prefix + #load("../mesh.frag"),
@@ -69,9 +93,11 @@ open :: proc(quality: int) -> bool {
     gl.EnableVertexAttribArray(1)
     gl.VertexAttribPointer(1, 3, gl.FLOAT, gl.FALSE, 28, 16)
     gl.GenTextures(2, &device.input[0])
+    gl.GenTextures(2, &device.present_input[0])
     gl.GenTextures(3, &device.high_textures[0])
     gl.GenTextures(2, &device.low_textures[0])
     for texture in device.input { setup_texture(texture) }
+    for texture in device.present_input { setup_texture(texture) }
     for texture in device.high_textures { setup_texture(texture) }
     for texture in device.low_textures { setup_texture(texture) }
     gl.GenFramebuffers(1, &device.high)
@@ -83,12 +109,20 @@ open :: proc(quality: int) -> bool {
 close :: proc() {
     if device.gl_context != nil {
         _ = sdl.GL_MakeCurrent(device.window, device.gl_context)
+        clear_meshes()
+        gl.DeleteProgram(device.present_program)
+        gl.DeleteFramebuffers(1, &device.present_fbo)
+        gl.DeleteTextures(1, &device.present_texture)
+        gl.DeleteTextures(1, &device.hud_texture)
+        if device.resident != 0 { gl.DeleteProgram(device.resident) }
+        if device.resident_vao != 0 { gl.DeleteVertexArrays(1, &device.resident_vao) }
         if device.initialize != 0 { gl.DeleteProgram(device.initialize) }
         if device.mesh != 0 { gl.DeleteProgram(device.mesh) }
         if device.resolve != 0 { gl.DeleteProgram(device.resolve) }
         gl.DeleteBuffers(1, &device.vertices)
         gl.DeleteVertexArrays(1, &device.vao)
         gl.DeleteTextures(2, &device.input[0])
+        gl.DeleteTextures(2, &device.present_input[0])
         gl.DeleteTextures(3, &device.high_textures[0])
         gl.DeleteTextures(2, &device.low_textures[0])
         gl.DeleteFramebuffers(1, &device.high)
@@ -98,6 +132,7 @@ close :: proc() {
     if device.window != nil { sdl.DestroyWindow(device.window) }
     delete(device.color)
     delete(device.depth)
+    delete(device.texture_storage)
     device = {}
 }
 
@@ -109,19 +144,35 @@ setup_texture :: proc(texture: u32) {
     gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
 }
 
-allocate :: proc(texture: u32, width, height: int, depth := false, data: rawptr = nil) {
+allocate :: proc(
+    texture: u32,
+    width, height: int,
+    depth := false,
+    data: rawptr = nil,
+    mask := false,
+) {
     gl.BindTexture(gl.TEXTURE_2D, texture)
+    if device.texture_storage == nil { device.texture_storage = make(map[u32][3]int) }
+    key := [3]int{width, height, 2 if mask else 1 if depth else 0}
+    format := u32(gl.RED if mask else gl.DEPTH_COMPONENT if depth else gl.RGBA)
+    element := u32(gl.FLOAT if depth else gl.UNSIGNED_BYTE)
+    if previous, exists := device.texture_storage[texture]; exists && previous == key {
+        if data !=
+           nil { gl.TexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, i32(width), i32(height), format, element, data) }
+        return
+    }
     gl.TexImage2D(
         gl.TEXTURE_2D,
         0,
-        gl.DEPTH_COMPONENT32F if depth else gl.RGBA8,
+        gl.R8 if mask else gl.DEPTH_COMPONENT32F if depth else gl.RGBA8,
         i32(width),
         i32(height),
         0,
-        gl.DEPTH_COMPONENT if depth else gl.RGBA,
-        gl.FLOAT if depth else gl.UNSIGNED_BYTE,
+        format,
+        element,
         data,
     )
+    device.texture_storage[texture] = key
 }
 
 target :: proc(framebuffer: u32, textures: []u32, width, height: int) -> bool {
@@ -192,20 +243,25 @@ raster :: proc(job: resources.Raster_Job) -> bool {
     x1, y1 := min(w, int(job.clip[0] + job.clip[2])), min(h, int(job.clip[1] + job.clip[3]))
     if border !=
        0 { gl.Disable(gl.SCISSOR_TEST) } else { gl.Scissor(i32(x0 * factor), i32(y0 * factor), i32(max(0, x1 - x0) * factor), i32(max(0, y1 - y0) * factor)) }
-    gl.UseProgram(device.mesh)
-    gl.Uniform2f(gl.GetUniformLocation(device.mesh, "logicalSize"), f32(w), f32(h))
-    gl.Uniform1i(gl.GetUniformLocation(device.mesh, "border"), i32(border))
+    program := device.resident if len(job.draws) != 0 else device.mesh
+    gl.UseProgram(program)
+    gl.Uniform2f(gl.GetUniformLocation(program, "logicalSize"), f32(w), f32(h))
+    gl.Uniform1i(gl.GetUniformLocation(program, "border"), i32(border))
     fog := job.fog_color
     gl.Uniform3f(
-        gl.GetUniformLocation(device.mesh, "fogColor"),
+        gl.GetUniformLocation(program, "fogColor"),
         f32(fog & 255) / 255,
         f32((fog >> 8) & 255) / 255,
         f32((fog >> 16) & 255) / 255,
     )
-    gl.Uniform2f(gl.GetUniformLocation(device.mesh, "fogRange"), job.fog_start, job.fog_end)
-    gl.BindBuffer(gl.ARRAY_BUFFER, device.vertices)
-    gl.BufferData(gl.ARRAY_BUFFER, len(job.vertices), raw_data(job.vertices), gl.STREAM_DRAW)
-    gl.DrawArrays(gl.TRIANGLES, 0, i32(len(job.vertices) / resources.RASTER_VERTEX_BYTES))
+    gl.Uniform2f(gl.GetUniformLocation(program, "fogRange"), job.fog_start, job.fog_end)
+    if len(job.draws) != 0 {
+        for draw in job.draws { if !resident_draw(draw, w, h, border) { return false } }
+    } else {
+        gl.BindBuffer(gl.ARRAY_BUFFER, device.vertices)
+        gl.BufferData(gl.ARRAY_BUFFER, len(job.vertices), raw_data(job.vertices), gl.STREAM_DRAW)
+        gl.DrawArrays(gl.TRIANGLES, 0, i32(len(job.vertices) / resources.RASTER_VERTEX_BYTES))
+    }
     gl.Disable(gl.SCISSOR_TEST)
     gl.Disable(gl.DEPTH_TEST)
     gl.BindFramebuffer(gl.FRAMEBUFFER, device.low)

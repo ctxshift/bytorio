@@ -132,6 +132,50 @@ export class RiverRenderer {
       throw new Error("This interactive comparison requires WebGL 2.");
     }
     this.gl = gl;
+    // Observe explicit stores without GPU queries or readbacks in the live loop.
+    const metrics = (this.metrics = { uploadBytes: 0, bufferBytes: 0, textureBytes: 0 });
+    const buffers = new Map();
+    const textures = new Map();
+    const bindings = new Map();
+    const textureBindings = new Map();
+    let unit = gl.TEXTURE0;
+    const bindBuffer = gl.bindBuffer.bind(gl);
+    gl.bindBuffer = (target, buffer) => {
+      bindings.set(target, buffer);
+      return bindBuffer(target, buffer);
+    };
+    const bufferData = gl.bufferData.bind(gl);
+    gl.bufferData = (target, data, usage) => {
+      const bytes = typeof data === "number" ? data : data.byteLength;
+      const buffer = bindings.get(target);
+      metrics.bufferBytes += bytes - (buffers.get(buffer) || 0);
+      buffers.set(buffer, bytes);
+      if (typeof data !== "number") {
+        metrics.uploadBytes += bytes;
+      }
+      return bufferData(target, data, usage);
+    };
+    const activeTexture = gl.activeTexture.bind(gl);
+    gl.activeTexture = (value) => {
+      unit = value;
+      return activeTexture(value);
+    };
+    const bindTexture = gl.bindTexture.bind(gl);
+    gl.bindTexture = (target, texture) => {
+      textureBindings.set(unit, texture);
+      return bindTexture(target, texture);
+    };
+    const texImage2D = gl.texImage2D.bind(gl);
+    gl.texImage2D = (...args) => {
+      const texture = textureBindings.get(unit);
+      const bytes = args[3] * args[4] * 4;
+      metrics.textureBytes += bytes - (textures.get(texture) || 0);
+      textures.set(texture, bytes);
+      if (args[8]?.byteLength) {
+        metrics.uploadBytes += args[8].byteLength;
+      }
+      return texImage2D(...args);
+    };
     this.canvas = canvas;
     this.metadata = metadata;
     const program = (vertex, fragment) => {
@@ -455,6 +499,15 @@ async function start() {
       load("rabbit.bin", "arrayBuffer"),
     ]);
     const renderer = new RiverRenderer(canvas, metadata, world, rabbit);
+    const stats = document.createElement("output");
+    stats.id = "performance";
+    stats.style.cssText =
+      "position:absolute;top:8px;left:8px;white-space:pre-line;font:12px/1.5 monospace;padding:8px;background:#000b;color:white;pointer-events:none";
+    canvas.parentElement.style.position = "relative";
+    canvas.parentElement.append(stats);
+    let statsTime = performance.now(),
+      statsFrames = 0,
+      statsUploads = renderer.metrics.uploadBytes;
     state.renderer = renderer;
     state.rabbit = [...metadata.rabbitOrigin];
     state.target = [...metadata.camera.target];
@@ -625,6 +678,21 @@ async function start() {
         ];
         state.presentationWidth = canvas.clientWidth * window.devicePixelRatio;
         renderer.render(state);
+        statsFrames++;
+        if (now - statsTime >= 500) {
+          const elapsed = now - statsTime;
+          const m = renderer.metrics;
+          const mib = (bytes) => (bytes / 1048576).toFixed(2);
+          state.metrics = {
+            fps: (statsFrames * 1000) / elapsed,
+            gpuUploadBytesPerSecond: ((m.uploadBytes - statsUploads) * 1000) / elapsed,
+            ...m,
+          };
+          stats.textContent = `${state.metrics.fps.toFixed(1)} FPS rendered\nGPU uploads ${mib(state.metrics.gpuUploadBytesPerSecond)} MiB/s · total ${mib(m.uploadBytes)} MiB\nGPU buffers ${mib(m.bufferBytes)} MiB · textures ${mib(m.textureBytes)} MiB (est.)\nSource geometry ${mib(world.byteLength + rabbit.byteLength)} MiB CPU data (excludes JS heap and driver)`;
+          statsTime = now;
+          statsFrames = 0;
+          statsUploads = m.uploadBytes;
+        }
         state.frame++;
         state.internalWidth = renderer.internalWidth;
         state.internalHeight = renderer.internalHeight;

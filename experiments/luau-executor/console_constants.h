@@ -38,4 +38,17 @@ constexpr auto RANDOM_ZERO_SEED_FALLBACK = 1831565813u;
 constexpr auto COORDINATE_MIN = -4096;
 constexpr auto COORDINATE_MAX = 4096u;
 constexpr auto MAX_TEXT_BYTES_PER_COMMAND = 1024u;
+constexpr auto LEGACY_BUTTON_MASK = 31u;
+constexpr auto INPUT_BUTTON_MASK = 65535u;
+constexpr auto BUTTON_MOVE_LEFT = 32u;
+constexpr auto BUTTON_MOVE_RIGHT = 64u;
+constexpr auto BUTTON_MOVE_UP = 128u;
+constexpr auto BUTTON_MOVE_DOWN = 256u;
+constexpr auto BUTTON_PAN_LEFT = 512u;
+constexpr auto BUTTON_PAN_RIGHT = 1024u;
+constexpr auto BUTTON_PAN_UP = 2048u;
+constexpr auto BUTTON_PAN_DOWN = 4096u;
+constexpr auto BUTTON_ROTATE_LEFT = 8192u;
+constexpr auto BUTTON_ROTATE_RIGHT = 16384u;
+constexpr auto BUTTON_RESET = 32768u;
 } // namespace console_constants

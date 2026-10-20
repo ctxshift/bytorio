@@ -16,6 +16,11 @@ const replayFrames = measuredFrames + loadingFrames;
 const deadlineMs = 240000;
 const budgetMs = 1000 / 60;
 const channel = process.env.PLAYER_BROWSER_CHANNEL || "chrome";
+const imageBound = {
+  maxChangedPixelFraction: 0.001,
+  maxRms8BitChannelDelta: 0.5,
+  linearRoundingMargin: 2 / 255,
+};
 const sourceFiles = [
   "console-game.odin",
   "console-game.luau",
@@ -47,8 +52,13 @@ const report = {
     excludedLoadingFramesPerPass: loadingFrames,
     presentation: [1920, 1080],
     budgetMs,
+    residentImageBound: {
+      ...imageBound,
+      maxLinearDelta: "one supersample (1/factor²) plus linearRoundingMargin",
+      sameHostSdkParity: "exact logical hashes",
+    },
     scope:
-      "Actual cartridge update, resource transport/validation, draw, GPU synchronization/readbacks, CPU composition and smooth presentation. Browser additionally times frame-buffer copy. Excludes window/compositor/scanout, audio and Worker postMessage delivery; not pure GPU timings or physical 60 Hz proof.",
+      "Actual cartridge update, resource transport/validation, resident mesh draw, GPU synchronization/readbacks, logical CPU composition and GPU smooth presentation. GPU completion is synchronized. Excludes window/compositor/scanout, audio and Worker postMessage delivery; not pure GPU timings or physical 60 Hz proof.",
   },
   binaries: {},
   cases: [],
@@ -86,6 +96,7 @@ function summarize(record, host) {
     startup: record.startup,
     memory: record.memory,
     resourceStats: record.resourceStats,
+    gpuStats: record.gpuStats,
   };
 }
 try {
@@ -103,6 +114,10 @@ try {
           ["player", executable],
           ["cartridge", resolve(root, `${language}/build/game.png`)],
           ["browserRuntime", resolve(root, `${language}/build/web/runtime-gpu.wasm`)],
+          ["browserGpu", resolve(root, `${language}/build/web/gpu.js`)],
+          ["browserWorker", resolve(root, `${language}/build/web/worker.js`)],
+          ["residentShader", resolve(root, `${language}/build/web/gpu-shaders/resident.vert`)],
+          ["presentationShader", resolve(root, `${language}/build/web/gpu-shaders/present.frag`)],
         ].map(async ([name, path]) => [
           name,
           createHash("sha256")
@@ -124,12 +139,21 @@ try {
         const native = JSON.parse(
           run(
             executable,
-            ["--benchmark", replayPath, "--renderer", "gpu", "--ssaa", "1080p", "--smooth-pan"],
+            [
+              "--benchmark",
+              replayPath,
+              "--renderer",
+              "gpu",
+              "--gpu-meshes",
+              "--ssaa",
+              "1080p",
+              "--smooth-pan",
+            ],
             { timeout: deadlineMs },
           ),
         );
         const web = await page.evaluate(
-          async ({ base, masks, deadlineMs }) => {
+          async ({ base, masks, deadlineMs, nativeTraces }) => {
             const worker = new Worker(base + "/worker.js", { type: "module" });
             const request = (message, type) =>
               new Promise((resolve, reject) => {
@@ -160,7 +184,12 @@ try {
                 {
                   type: "load",
                   gameUrl: location.origin + base + "/game.png",
-                  graphics: { backend: "gpu", ssaa: "1080p", smoothPan: true },
+                  graphics: {
+                    backend: "gpu",
+                    ssaa: "1080p",
+                    smoothPan: true,
+                    residentMeshes: true,
+                  },
                   presentationSize: [1920, 1080],
                 },
                 "ready",
@@ -168,7 +197,28 @@ try {
               if (ready.graphics.effective !== "gpu") {
                 throw new Error("GPU was not selected");
               }
+              ready.bitmap?.close();
               const record = await request({ type: "benchmark", masks }, "benchmark");
+              const diagnostics = [];
+              for (let frame = 0; frame < record.traces.length; frame++) {
+                if (record.traces[frame].hash === nativeTraces[frame].hash) {
+                  continue;
+                }
+                await request(
+                  { type: "benchmark", masks: masks.slice(0, frame + 1), diagnostic: true },
+                  "benchmark",
+                );
+                const capture = await request({ type: "capture" }, "capture");
+                const bytes = new Uint8Array(capture.pixels);
+                let binary = "";
+                for (let offset = 0; offset < bytes.length; offset += 8192) {
+                  binary += String.fromCharCode(...bytes.subarray(offset, offset + 8192));
+                }
+                diagnostics.push({ frame, rgba: btoa(binary) });
+              }
+              if (diagnostics.length) {
+                await request({ type: "benchmark", masks, diagnostic: true }, "benchmark");
+              }
               const frame = await request(
                 {
                   type: "step",
@@ -180,7 +230,14 @@ try {
               if (!frame.smoothPresentation || frame.presentationWidth !== 1920) {
                 throw new Error("Smooth 1080p presentation inactive");
               }
-              const pixels = new Uint8ClampedArray(frame.pixels);
+              document.body.innerHTML = '<canvas id="capture" width="1920" height="1080"></canvas>';
+              const context = document.querySelector("canvas").getContext("2d");
+              if (!frame.bitmap) {
+                throw new Error("GPU bitmap presentation inactive");
+              }
+              context.drawImage(frame.bitmap, 0, 0);
+              frame.bitmap.close();
+              const pixels = context.getImageData(0, 0, 1920, 1080).data;
               const colors = new Set();
               for (let i = 0; i < pixels.length; i += 4) {
                 colors.add(`${pixels[i]},${pixels[i + 1]},${pixels[i + 2]}`);
@@ -188,13 +245,9 @@ try {
               if (colors.size < 50) {
                 throw new Error("Riverside frame is unexpectedly empty");
               }
-              document.body.innerHTML = '<canvas id="capture" width="1920" height="1080"></canvas>';
-              document
-                .querySelector("canvas")
-                .getContext("2d")
-                .putImageData(new ImageData(pixels, 1920, 1080), 0, 0);
               return {
                 ...record,
+                diagnostics,
                 visibleColors: colors.size,
                 smooth: frame.smoothPresentation,
                 width: frame.width,
@@ -203,14 +256,94 @@ try {
               worker.terminate();
             }
           },
-          { base, masks, deadlineMs },
+          { base, masks, deadlineMs, nativeTraces: native.traces },
         );
         assert.equal(web.width, width);
-        assert.deepEqual(
-          web.traces,
-          native.traces,
-          `${language}/${motion}/${width}: native/browser logical pixels`,
+        assert.equal(native.gpuStats.gpuPresentation, true);
+        assert.equal(web.gpuStats.gpuPresentation, true);
+        assert(native.gpuStats.cacheHits > 0);
+        assert(web.gpuStats.cacheHits > 0);
+        const expectedUploads = (Math.ceil(report.geometry.worldQuads / 512) + 1) * 7;
+        assert.equal(
+          native.gpuStats.meshUploads,
+          expectedUploads,
+          "Native geometry uploads only during loading",
         );
+        assert.equal(
+          web.gpuStats.meshUploads,
+          expectedUploads,
+          "Browser geometry uploads only during loading",
+        );
+        const pixelChecks = [];
+        for (const diagnostic of web.diagnostics) {
+          const path = resolve(root, `${language}-${motion}-${width}-frame-${diagnostic.frame}`);
+          await writeFile(path + ".inputs", masks.slice(0, diagnostic.frame + 1).join("\n") + "\n");
+          const replay = run(
+            executable,
+            [
+              "--replay",
+              path + ".inputs",
+              "--renderer",
+              "gpu",
+              "--gpu-meshes",
+              "--ssaa",
+              "1080p",
+              "--smooth-pan",
+              "--capture-rgba",
+              path + ".native.rgba",
+            ],
+            { timeout: deadlineMs },
+          );
+          assert.equal(
+            JSON.parse(replay.trim().split(/\r?\n/).at(-1)).hash,
+            native.traces[diagnostic.frame].hash,
+          );
+          const expected = await readFile(path + ".native.rgba");
+          const actual = Buffer.from(diagnostic.rgba, "base64");
+          await writeFile(path + ".browser.rgba", actual);
+          assert.equal(actual.length, expected.length);
+          let changedPixels = 0,
+            maxChannelDelta = 0,
+            maxLinearDelta = 0,
+            squaredError = 0;
+          const linear = (byte) => {
+            const value = byte / 255;
+            return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+          };
+          for (let i = 0; i < expected.length; i += 4) {
+            let changed = false;
+            for (let channel = 0; channel < 4; channel++) {
+              const delta = Math.abs(expected[i + channel] - actual[i + channel]);
+              maxChannelDelta = Math.max(maxChannelDelta, delta);
+              squaredError += delta * delta;
+              const componentDelta =
+                channel === 3
+                  ? delta / 255
+                  : Math.abs(linear(expected[i + channel]) - linear(actual[i + channel]));
+              maxLinearDelta = Math.max(maxLinearDelta, componentDelta);
+              changed ||= delta !== 0;
+            }
+            changedPixels += Number(changed);
+          }
+          const rmsChannelDelta = Math.sqrt(squaredError / expected.length);
+          const factor = 1920 / width;
+          const check = {
+            frame: diagnostic.frame,
+            changedPixels,
+            maxChannelDelta,
+            maxLinearDelta,
+            rmsChannelDelta,
+          };
+          pixelChecks.push(check);
+          console.log(`${language}/${motion}/${width} pixel diagnostic: ${JSON.stringify(check)}`);
+          assert(
+            maxLinearDelta <= 1 / (factor * factor) + imageBound.linearRoundingMargin &&
+              rmsChannelDelta <= imageBound.maxRms8BitChannelDelta &&
+              changedPixels <= ((width * width * 9) / 16) * imageBound.maxChangedPixelFraction,
+            "Resident GPU differences exceed the driver-rounding bound",
+          );
+        }
+        delete web.diagnostics;
         const renderedFrames = replayFrames - report.geometry.loadingUpdates + 1;
         assert.equal(web.resourceStats.triangles, report.geometry.triangles * renderedFrames);
         assert.equal(native.resourceStats.triangles, report.geometry.triangles * renderedFrames);
@@ -224,8 +357,12 @@ try {
           ssaa: "1080p",
           pixelSnap: true,
           smoothPan: true,
+          residentMeshes: true,
           visibleColors: web.visibleColors,
-          parity: "exact native/browser logical hashes for every replay frame",
+          parity: pixelChecks.length
+            ? "bounded resident GPU driver rounding; raw differing frames retained"
+            : "exact native/browser logical hashes for every replay frame",
+          pixelChecks,
           native: summarize(native, "native"),
           browser: summarize(web, "browser"),
         };
@@ -254,6 +391,11 @@ try {
         records[0].native.traces,
         records[1].native.traces,
         `${motion}/${width}: SDK parity`,
+      );
+      assert.deepEqual(
+        records[0].web.traces,
+        records[1].web.traces,
+        `${motion}/${width}: browser SDK parity`,
       );
     }
   }

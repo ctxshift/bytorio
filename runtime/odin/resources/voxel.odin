@@ -179,6 +179,7 @@ voxel_build :: proc(
     slot.link, slot.mesh_offset, slot.vertex_count, slot.index_count =
         palette, u32(offset), u32(faces * 4), u32(faces * 6)
     slot.data = bytes
+    slot.gpu_version = mesh_version(t.registry)
     t.voxel_cells += u64(count)
     t.voxel_faces += u64(faces)
     t.voxel_rebuilds += 1

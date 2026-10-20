@@ -8,6 +8,7 @@ import gpu "../gpu/native"
 import guest "../guest"
 import presentation "../presentation"
 import w "../resource_protocol"
+import resources "../resources"
 import "core:fmt"
 import "core:os"
 import "core:strconv"
@@ -38,6 +39,12 @@ read_bounded :: proc(path: string, limit: int) -> (data: []u8, message: string) 
 
 App :: struct {
     presenter:                     presentation.State,
+    gpu_enabled:                   bool,
+    gpu_window:                    bool,
+    title_base:                    string,
+    stats_started:                 f64,
+    stats_frames:                  u32,
+    title_buffer:                  [512]u8,
     present_pixels:                []u32,
     game:                          guest.Game,
     frame:                         abi.Frame,
@@ -63,6 +70,7 @@ error :: proc(message: string) -> int {
 
 cleanup :: proc(app: ^App) {
     presentation.close(&app.presenter)
+    resources.software_close()
     gpu.close()
     if app.mixer_audio != nil { sdl.DestroyAudioStream(app.mixer_audio) }
     if app.audio != nil {
@@ -81,7 +89,7 @@ cleanup :: proc(app: ^App) {
 
         sdl.DestroyRenderer(app.renderer)
     }
-    if app.window != nil {
+    if app.window != nil && !app.gpu_window {
 
         sdl.DestroyWindow(app.window)
     }
@@ -96,6 +104,17 @@ input :: proc(app: ^App) -> abi.Input {
         return result
     }
     keys := sdl.GetKeyboardState(nil)
+    if keys[sdl.Scancode.A] { result.buttons |= abi.BUTTON_MOVE_LEFT }
+    if keys[sdl.Scancode.D] { result.buttons |= abi.BUTTON_MOVE_RIGHT }
+    if keys[sdl.Scancode.W] { result.buttons |= abi.BUTTON_MOVE_UP }
+    if keys[sdl.Scancode.S] { result.buttons |= abi.BUTTON_MOVE_DOWN }
+    if keys[sdl.Scancode.LEFT] { result.buttons |= abi.BUTTON_PAN_LEFT }
+    if keys[sdl.Scancode.RIGHT] { result.buttons |= abi.BUTTON_PAN_RIGHT }
+    if keys[sdl.Scancode.UP] { result.buttons |= abi.BUTTON_PAN_UP }
+    if keys[sdl.Scancode.DOWN] { result.buttons |= abi.BUTTON_PAN_DOWN }
+    if keys[sdl.Scancode.Q] { result.buttons |= abi.BUTTON_ROTATE_LEFT }
+    if keys[sdl.Scancode.E] { result.buttons |= abi.BUTTON_ROTATE_RIGHT }
+    if keys[sdl.Scancode.R] { result.buttons |= abi.BUTTON_RESET }
     if keys[sdl.Scancode.LEFT] || keys[sdl.Scancode.A] {
 
         result.buttons |= 1
@@ -119,19 +138,19 @@ input :: proc(app: ^App) -> abi.Input {
     if app.gamepad != nil {
         if sdl.GetGamepadButton(app.gamepad, .DPAD_LEFT) {
 
-            result.buttons |= 1
+            result.buttons |= 1 | abi.BUTTON_MOVE_LEFT
         }
         if sdl.GetGamepadButton(app.gamepad, .DPAD_RIGHT) {
 
-            result.buttons |= 2
+            result.buttons |= 2 | abi.BUTTON_MOVE_RIGHT
         }
         if sdl.GetGamepadButton(app.gamepad, .DPAD_UP) {
 
-            result.buttons |= 4
+            result.buttons |= 4 | abi.BUTTON_MOVE_UP
         }
         if sdl.GetGamepadButton(app.gamepad, .DPAD_DOWN) {
 
-            result.buttons |= 8
+            result.buttons |= 8 | abi.BUTTON_MOVE_DOWN
         }
         if sdl.GetGamepadButton(app.gamepad, .SOUTH) {
 
@@ -140,7 +159,31 @@ input :: proc(app: ^App) -> abi.Input {
     }
     x, y, lx, ly: f32
     buttons := sdl.GetMouseState(&x, &y)
-    if sdl.RenderCoordinatesFromWindow(app.renderer, x, y, &lx, &ly) {
+    mapped := false
+    if app.gpu_window {
+        w, h, drawable_w, drawable_h: i32
+        if sdl.GetWindowSize(app.window, &w, &h) &&
+           sdl.GetWindowSizeInPixels(app.window, &drawable_w, &drawable_h) &&
+           w > 0 &&
+           h > 0 {
+            scale := min(f32(drawable_w) / f32(core.width), f32(drawable_h) / f32(core.height))
+            if scale >= 1 { scale = f32(int(scale)) }
+            if scale > 0 {
+                lx =
+                    (x * f32(drawable_w) / f32(w) -
+                        (f32(drawable_w) - f32(core.width) * scale) / 2) /
+                    scale
+                ly =
+                    (y * f32(drawable_h) / f32(h) -
+                        (f32(drawable_h) - f32(core.height) * scale) / 2) /
+                    scale
+                mapped = true
+            }
+        }
+    } else {
+        mapped = sdl.RenderCoordinatesFromWindow(app.renderer, x, y, &lx, &ly)
+    }
+    if mapped {
         result.pointer =
             .LEFT in buttons && lx >= 0 && lx < f32(core.width) && ly >= 0 && ly < f32(core.height)
         result.x, result.y = f64(lx), f64(ly)
@@ -154,6 +197,26 @@ draw :: proc(app: ^App) -> bool {
         return false
     }
     return render_current(app)
+}
+
+update_window_stats :: proc(app: ^App, new_frame: bool) {
+    now := clock_ms()
+    if app.stats_started == 0 { app.stats_started = now }
+    app.stats_frames += u32(new_frame)
+    elapsed := now - app.stats_started
+    if elapsed < 500 { return }
+    gpu_bytes := gpu.cached_bytes() if app.gpu_enabled else 0
+    title := fmt.bprintf(
+        app.title_buffer[:],
+        "%s | %.1f FPS delivered | guest %.2f MiB | resources %.2f MiB | GPU meshes %.2f MiB\x00",
+        app.title_base,
+        f64(app.stats_frames) * 1000 / elapsed,
+        f64(guest.memory_bytes(&app.game)) / 1048576,
+        f64(app.game.resources.bytes) / 1048576,
+        f64(gpu_bytes) / 1048576,
+    )
+    _ = sdl.SetWindowTitle(app.window, cast(cstring)raw_data(title))
+    app.stats_started, app.stats_frames = now, 0
 }
 render_current :: proc(app: ^App) -> bool {
     if !core.set_display(app.game.display_mode) {
@@ -234,6 +297,7 @@ run :: proc() -> int {
     }
     executor_path := fmt.tprintf("%sluau-executor.wasm", base)
     capture := ""
+    raw_capture := ""
     replay_path := ""
     source_path := ""
     benchmark_path := ""
@@ -245,8 +309,11 @@ run :: proc() -> int {
     ssaa := "off"
     pixel_snap := false
     smooth_pan := false
+    resident_meshes := false
     for i := 1; i < len(os.args); i += 1 {
         switch os.args[i] {
+        case "--gpu-meshes":
+            resident_meshes = true
         case "--smooth-pan":
             smooth_pan, pixel_snap = true, true
         case "--pixel-snap":
@@ -263,6 +330,7 @@ run :: proc() -> int {
              "--renderer",
              "--ssaa",
              "--capture",
+             "--capture-rgba",
              "--replay",
              "--source",
              "--benchmark",
@@ -289,6 +357,8 @@ run :: proc() -> int {
             } else if option == "--benchmark" {
                 benchmark_path = os.args[i]
                 check_only = true
+            } else if option == "--capture-rgba" {
+                raw_capture = os.args[i]
             } else if option == "--replay" {
                 replay_path = os.args[i]
                 check_only = true
@@ -318,8 +388,7 @@ run :: proc() -> int {
        ssaa != "2x" &&
        ssaa != "1080p" { return error("SSAA must be off, 2x or 1080p") }
     if renderer_choice == "cpu" &&
-       (ssaa != "off" ||
-               pixel_snap) { return error("SSAA and pixel snapping require the GPU renderer") }
+       resident_meshes { return error("Resident meshes require the GPU renderer") }
     startup_start := clock_ms()
     baseline_working, _ := process_memory()
     file_bytes, read_error := read_bounded(game_path, cartridge.MAX_BYTES)
@@ -400,9 +469,11 @@ run :: proc() -> int {
     if renderer_choice != "cpu" {
         quality := 6 if ssaa == "1080p" else 2 if ssaa == "2x" else 1
         if gpu.open(quality) {
+            app.gpu_enabled = true
             app.game.resources.rasterizer = gpu.raster
             app.game.resources.pixel_snap = pixel_snap
             app.game.resources.smooth_pan = smooth_pan
+            app.game.resources.resident_meshes = resident_meshes
             fmt.eprintln("graphics: GPU rasterization enabled")
         } else if renderer_choice == "gpu" {
             return error("cannot initialize OpenGL 3.3 GPU renderer")
@@ -410,6 +481,13 @@ run :: proc() -> int {
             gpu.close()
             fmt.eprintln("graphics: GPU unavailable; using CPU renderer")
         }
+    }
+    if !app.gpu_enabled && (ssaa != "off" || pixel_snap || smooth_pan) {
+        resources.software_configure(6 if ssaa == "1080p" else 2 if ssaa == "2x" else 1)
+        app.game.resources.rasterizer = resources.software_raster
+        app.game.resources.pixel_snap = pixel_snap
+        app.game.resources.smooth_pan = smooth_pan
+        app.game.resources.resident_meshes = false
     }
     asset_size, graphics_ok := guest.read_graphics(&app.game)
     if !graphics_ok {
@@ -441,7 +519,7 @@ run :: proc() -> int {
         defer delete(data)
         for field in strings.fields(string(data)) {
             mask, ok := strconv.parse_u64(field)
-            if !ok || mask > 31 {
+            if !ok || mask > abi.INPUT_BUTTON_MASK {
 
                 return error("invalid input replay")
             }
@@ -450,6 +528,11 @@ run :: proc() -> int {
                 return error(app.game.error)
             }
             fmt.printf("{{\"hash\":%d,\"sounds\":%d}}\n", core.hash(), app.frame.sounds)
+        }
+        if raw_capture != "" {
+            pixels := (cast([^]u8)&core.pixels[0])[:core.width * core.height * 4]
+            if os.write_entire_file(raw_capture, pixels) !=
+               nil { return error("cannot save replay RGBA capture") }
         }
         return 0
     }
@@ -464,25 +547,37 @@ run :: proc() -> int {
 
             title = cart.title
         }
-        app.window = sdl.CreateWindow(
-            strings.clone_to_cstring(title, context.temp_allocator),
-            i32(core.width * 2),
-            i32(core.height * 2),
-            {.RESIZABLE},
-        )
+        app.title_base = title
+        if app.gpu_enabled {
+            app.window = gpu.show(
+                strings.clone_to_cstring(title, context.temp_allocator),
+                core.width * 2,
+                core.height * 2,
+            )
+            app.gpu_window = true
+        } else {
+            app.window = sdl.CreateWindow(
+                strings.clone_to_cstring(title, context.temp_allocator),
+                i32(core.width * 2),
+                i32(core.height * 2),
+                {.RESIZABLE},
+            )
+        }
         if app.window == nil {
 
             return error(string(sdl.GetError()))
         }
-        app.renderer = sdl.CreateRenderer(app.window, nil)
-        if app.renderer == nil {
+        if !app.gpu_enabled {
+            app.renderer = sdl.CreateRenderer(app.window, nil)
+            if app.renderer == nil {
 
-            return error(string(sdl.GetError()))
-        }
-        _ = sdl.SetRenderVSync(app.renderer, 1)
-        if !display_texture(app) {
+                return error(string(sdl.GetError()))
+            }
+            _ = sdl.SetRenderVSync(app.renderer, 1)
+            if !display_texture(app) {
 
-            return error(string(sdl.GetError()))
+                return error(string(sdl.GetError()))
+            }
         }
         spec := sdl.AudioSpec {
             format   = .F32,
@@ -591,7 +686,21 @@ run :: proc() -> int {
                 app.audio_queued += core.SAMPLE_COUNT
                 app.sounds_played = app.frame.sounds
             }
-            if !display_texture(app) ||
+            if app.gpu_enabled {
+                w, h: i32
+                if !sdl.GetWindowSizeInPixels(app.window, &w, &h) ||
+                   !gpu.present(
+                           &app.game.resources,
+                           core.pixels[:core.width * core.height],
+                           core.width,
+                           core.height,
+                           int(w),
+                           int(h),
+                           true,
+                       ) {
+                    return error("GPU presentation failed")
+                }
+            } else if !display_texture(app) ||
                !sdl.UpdateTexture(
                        app.texture,
                        nil,
@@ -604,6 +713,7 @@ run :: proc() -> int {
                !sdl.RenderPresent(app.renderer) {
                 return error(string(sdl.GetError()))
             }
+            update_window_stats(app, steps > 0)
             sdl.Delay(1)
         }
         if (smoke || check_only) && app.frame.ticks >= 120 {

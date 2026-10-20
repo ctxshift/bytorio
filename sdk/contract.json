@@ -40,6 +40,7 @@
     "coordinateMax": 4096
   },
   "buttons": {"left": 1, "right": 2, "up": 4, "down": 8, "action": 16},
+  "extendedButtons": {"move_left": 32, "move_right": 64, "move_up": 128, "move_down": 256, "pan_left": 512, "pan_right": 1024, "pan_up": 2048, "pan_down": 4096, "rotate_left": 8192, "rotate_right": 16384, "reset": 32768},
   "records": {
     "frame": {"bytes": 40, "fields": {"version": 0, "clear": 4, "spriteX": 8, "spriteY": 12, "ticks": 16, "sounds": 20, "debugX": 24, "debugY": 32}},
     "command": {"bytes": 32, "fields": {"kind": 0, "x": 4, "y": 8, "w": 12, "h": 16, "color": 20, "offset": 24, "length": 28}},

@@ -252,7 +252,7 @@ cameras, flat lighting/fog and 3D/2D composition. The separate SDK 0.3.0 profile
 also prototypes typed voxel grids with cached visible-face meshes, bulk region
 edits and frame-resource animation. `mise run test:3d` verifies and benchmarks
 both SDKs through the standalone native player and browser Worker at both display
-modes. Chunked/merged voxel surfaces, textures and a GPU-resident backend remain future
+modes. Chunked/merged voxel resources and textures remain future
 work; [measurements](compact-3d-measurements.md) determine the next optimization.
 
 Add indexed meshes, depth testing, cameras, vertex colors, simple lighting/fog
@@ -276,14 +276,20 @@ opaque HUD coverage. Native uses Odin/OpenGL without a webview; browser renderin
 runs in its Worker. Both SDKs retain the same cartridge resource API.
 
 Keep CPU as the deterministic reference and GPU hardware checks opt-in.
-The current integration still transforms/lights triangles on CPU and reads back
-each 3D batch for CPU composition. Qualify its actual costs separately from the
+The streamed mode transforms/lights triangles on CPU. The separately opt-in
+resident mode caches versioned geometry and moves render transforms/lighting
+onto the GPU, retaining exact CPU work accounting. Both GPU modes present on the
+GPU and read each 3D batch back for CPU composition. Qualify actual costs separately from the
 independent riverside renderer; do not extrapolate that renderer's timings.
 
 Next slices:
 
-- Cache versioned mesh/voxel/palette uploads and move transforms/lighting onto
-  the GPU, retaining bounded validation and logical work accounting.
+- Implemented: bounded versioned mesh/voxel caches with exact palette snapshots,
+  GPU transforms/lighting, final GPU presentation, and live performance counters.
+  Retain opt-in selection and qualify both SDKs on native/browser before claims.
+- Implemented: optional CPU supersampling, orthographic snapping and smooth pan;
+  default CPU rendering allocates no supersample buffers. Riverside uses
+  independent walking/pan/orbit controls in both SDKs, verified across hosts.
 - Keep color/depth targets resident across compatible passes; synchronize only
   when a CPU operation actually consumes them. Preserve rollback, stale handles,
   target feedback checks and deterministic CPU readbacks for the reference mode.

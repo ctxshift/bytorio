@@ -309,14 +309,21 @@ device_calls: int
 device_failure: bool
 test_device :: proc(job: r.Raster_Job) -> bool {
     device_calls += 1
-    if len(job.vertices) != 2 * 3 * r.RASTER_VERTEX_BYTES { return false }
+    if device_resident {
+        if len(job.vertices) != 0 ||
+           len(job.draws) != 2 ||
+           job.draws[0].version == 0 ||
+           job.draws[0].version != job.draws[1].version { return false }
+    } else if len(job.vertices) != 2 * 3 * r.RASTER_VERTEX_BYTES { return false }
     r.put32(job.color, 0, 0xff00ffff)
     r.put32(job.color, (90 * 320 + 160) * 4, 0xff00ffff)
     for at := 0; at < len(job.border); at += 4 { r.put32(job.border, at, 0xff00ffff) }
     return !device_failure
 }
 
-raster_device_transactions :: proc(test: ^testing.T) {
+device_resident: bool
+
+raster_device_transactions :: proc(test: ^testing.T, resident := false, shift := 0.0) -> u64 {
     registry: r.Registry
     defer r.close(&registry)
     testing.expect(test, r.reset(&registry, 901))
@@ -327,20 +334,23 @@ raster_device_transactions :: proc(test: ^testing.T) {
     mesh := triangle(0.25, 0xff0000ff)
     commit(test, &registry)
     registry.rasterizer = test_device
+    registry.resident_meshes = resident
+    device_resident = resident
     registry.smooth_pan, registry.pixel_snap = true, true
     device_calls = 0
     device_failure = false
     t.begin_draw(0)
     pass := gfx.begin_pass(gfx.screen(), {clear = true, color = 0xff222222})
     g.bind(pass, depth, view)
-    g.draw(pass, mesh)
-    g.draw(pass, mesh)
+    g.draw(pass, mesh, g.pose(shift, 0, 0, 0, 1))
+    g.draw(pass, mesh, g.pose(shift, 0, 0, 0, 1))
     // CPU composition must observe the completed GPU batch before continuing.
     gfx.rect(pass, 159, 89, 2, 2, 0xff0000ff)
     gfx.end_pass(pass)
     gfx.present(gfx.screen())
     commit(test, &registry)
     testing.expect_value(test, device_calls, 1)
+    charged_work := registry.stats.pixel_work
     testing.expect(test, registry.preview_enabled)
     testing.expect_value(test, registry.preview_mask[90 * 320 + 160], u8(1))
     testing.expect_value(test, registry.output[0], u32(0xff00ffff))
@@ -363,6 +373,8 @@ raster_device_transactions :: proc(test: ^testing.T) {
     // Optional GPU staging must not reject a CPU-valid low-memory packet.
     testing.expect(test, r.reset(&registry, 902))
     testing.expect(test, t.configure(902))
+    registry.resident_meshes = false
+    device_resident = false
     t.begin(0)
     depth = g.depth(320, 180)
     view = camera()
@@ -378,6 +390,7 @@ raster_device_transactions :: proc(test: ^testing.T) {
     testing.expect_value(test, device_calls, 2)
     testing.expect_value(test, registry.output[90 * 320 + 160], u32(0xff0000ff))
     testing.expect(test, !registry.preview_enabled)
+    return charged_work
 }
 
 presentation_grid_and_hud :: proc(test: ^testing.T) {
@@ -416,11 +429,86 @@ presentation_grid_and_hud :: proc(test: ^testing.T) {
 }
 
 @(test)
+software_quality :: proc(test: ^testing.T) {
+    defer r.software_close()
+    color := make([]u8, 32 * 32 * 4)
+    depth := make([]u8, len(color))
+    defer delete(color)
+    defer delete(depth)
+    for at := 0; at < len(depth); at += 4 { r.putf(depth, at, 1) }
+    vertices := [21]f32 {
+        -0.8,
+        -0.8,
+        0.25,
+        1,
+        255,
+        0,
+        0,
+        0,
+        0.8,
+        0.25,
+        1,
+        255,
+        0,
+        0,
+        0.8,
+        -0.8,
+        0.25,
+        1,
+        255,
+        0,
+        0,
+    }
+    bytes := (cast([^]u8)&vertices[0])[:size_of(vertices)]
+    job := r.Raster_Job {
+        vertices  = bytes,
+        color     = color,
+        depth     = depth,
+        width     = 32,
+        height    = 32,
+        clip      = {0, 0, 32, 32},
+        fog_color = 0xff000000,
+        fog_start = 1,
+        fog_end   = 2,
+    }
+    r.software_configure(2)
+    testing.expect(test, r.software_raster(job))
+    testing.expect_value(test, r.u32le(color, (16 * 32 + 16) * 4), u32(0xff0000ff))
+    testing.expect_value(test, r.f32le(depth, (16 * 32 + 16) * 4), 0.25)
+    partial := false
+    for at := 0; at < len(color); at += 4 {
+        alpha := color[at + 3]
+        partial = partial || alpha > 0 && alpha < 255
+    }
+    testing.expect(test, partial)
+    device := r.software_device
+    for y in 0 ..< 2 {
+        for x in 0 ..< 2 {
+            r.put32(
+                device.color,
+                (y * device.width + x) * 4,
+                0xffffffff if (x + y) % 2 == 0 else 0xff000000,
+            )
+        }
+    }
+    filtered, _ := r.software_resolve(device, 0, 0, device.width, 2)
+    testing.expect_value(test, filtered, u32(0xffbcbcbc))
+    testing.expect(test, r.software_storage_bytes() > 0)
+    r.software_close()
+    testing.expect_value(test, r.software_storage_bytes(), 0)
+}
+
+@(test)
 shared_3d :: proc(test: ^testing.T) {
     mesh_depth_and_ownership(test)
     voxel_surfaces_and_atomic_edits(test)
     homogeneous_clipping_and_indices(test)
     voxel_limits_and_palette_lifetime(test)
-    raster_device_transactions(test)
+    streamed_work := raster_device_transactions(test)
+    resident_work := raster_device_transactions(test, true)
+    testing.expect_value(test, resident_work, streamed_work)
+    clipped_streamed := raster_device_transactions(test, false, 0.9)
+    clipped_resident := raster_device_transactions(test, true, 0.9)
+    testing.expect_value(test, clipped_resident, clipped_streamed)
     presentation_grid_and_hud(test)
 }

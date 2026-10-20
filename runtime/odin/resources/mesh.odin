@@ -36,7 +36,7 @@ Clip_Vertex :: struct {
     color: [3]f64,
 }
 
-f32le :: proc(b: []u8, at: int) -> f64 {
+f32le :: #force_inline proc(b: []u8, at: int) -> f64 {
     return f64(transmute(f32)u32le(b, at))
 }
 
@@ -84,7 +84,7 @@ padding_zero :: proc(args: []u32) -> bool {
 }
 
 // Copy-on-write works for non-image attachments as well as immutable 3D resources.
-mesh_owned :: proc(t: ^Transaction, id: u32, kind: Kind) -> ^Slot {
+mesh_owned :: proc(t: ^Transaction, id: u32, kind: Kind, preserve := true) -> ^Slot {
     slot := lookup(t, id, kind)
     if slot == nil {
         fail(t.registry, "invalid 3D resource handle")
@@ -93,13 +93,15 @@ mesh_owned :: proc(t: ^Transaction, id: u32, kind: Kind) -> ^Slot {
 
     original := &t.registry.slots[(id & w.handleIndexMask) - 1]
     if raw_data(slot.data) == raw_data(original.data) {
-        bytes, ok := allocate(t, len(slot.data))
+        bytes, ok := allocate(t, len(slot.data), zero = false)
         if !ok {
             return nil
         }
 
-        copy(bytes, slot.data)
-        t.copy_bytes += u64(len(bytes))
+        if preserve {
+            copy(bytes, slot.data)
+            t.copy_bytes += u64(len(bytes))
+        }
         slot.data = bytes
     }
 
@@ -142,7 +144,7 @@ mesh_command :: proc(
                 return fail(r, "invalid 3D depth/camera binding")
             }
 
-            depth = mesh_owned(t, id, .Depth)
+            depth = mesh_owned(t, id, .Depth, preserve = a[1] == 0)
             if depth == nil {
                 return false
             }
@@ -306,6 +308,7 @@ mesh_command :: proc(
     }
 
     candidate.data = bytes
+    if candidate.kind == .Mesh { candidate.gpu_version = mesh_version(r) }
     slot^ = candidate
     return true
 }
@@ -366,6 +369,22 @@ raster_mesh :: proc(t: ^Transaction, mesh: ^Slot, model: Matrix) -> bool {
     t.triangles += triangles
     vertices := mesh.data[int(mesh.mesh_offset):][:int(mesh.vertex_count) * w.meshVertexBytes]
     indices := mesh.data[int(mesh.mesh_offset) + len(vertices):]
+    if accelerated && t.registry.resident_meshes {
+        scratch_size := int(mesh.vertex_count) * size_of(Account_Vertex)
+        if scratch_size <= t.budget - t.retained {
+            return resident_mesh(t, mesh, model, view, camera)
+        }
+        // Optional cache accounting must not reject a reference-valid packet.
+        if t.resident_count > 0 {
+            if !flush_raster(t) { return false }
+        } else {
+            t.retained -= len(t.gpu_vertices)
+            delete(t.gpu_vertices)
+            t.gpu_vertices = nil
+        }
+        accelerated = false
+        t.preview_disabled = true
+    }
     for at := 0; at < int(mesh.index_count) * w.meshIndexBytes; at += 3 * w.meshIndexBytes {
         input: [3]Clip_Vertex
         world: [3][4]f64
@@ -390,30 +409,50 @@ raster_mesh :: proc(t: ^Transaction, mesh: ^Slot, model: Matrix) -> bool {
             }
         }
 
-        a, b: [3]f64
-        for j in 0 ..< 3 {
-            a[j] = world[1][j] - world[0][j]
-            b[j] = world[2][j] - world[0][j]
-        }
-
-        normal := cross3(a, b)
-        length := math.sqrt(normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2])
         ambient := f32le(camera.data, w.cameraAmbientOffset)
-        light := 0.0
-        if length > 0 {
+        if ambient != 1 {
+            a, b: [3]f64
             for j in 0 ..< 3 {
-                light += normal[j] / length * f32le(camera.data, w.cameraLightOffset + j * 4)
+                a[j] = world[1][j] - world[0][j]
+                b[j] = world[2][j] - world[0][j]
             }
-        }
 
-        intensity := ambient + (1 - ambient) * clamp(light, 0, 1)
-        for &v in input {
-            for &c in v.color {
-                c *= intensity
+            normal := cross3(a, b)
+            length := math.sqrt(
+                normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2],
+            )
+            light := 0.0
+            if length > 0 {
+                for j in 0 ..< 3 {
+                    light += normal[j] / length * f32le(camera.data, w.cameraLightOffset + j * 4)
+                }
+            }
+
+            intensity := ambient + (1 - ambient) * clamp(light, 0, 1)
+            for &v in input {
+                for &c in v.color {
+                    c *= intensity
+                }
             }
         }
 
         if accelerated { queue_triangle(t, input) }
+
+        outside_any := u32(0)
+        outside_all := u32(63)
+        for vertex in input {
+            code := u32(0)
+            for plane in 0 ..< 6 {
+                if clip_distance(vertex.p, plane) < 0 { code |= 1 << u32(plane) }
+            }
+            outside_any |= code
+            outside_all &= code
+        }
+        if outside_all != 0 { continue }
+        if outside_any == 0 {
+            if !raster_triangle(t, input, camera.data) { return false }
+            continue
+        }
 
         poly: [CLIP_CAPACITY]Clip_Vertex
         copy(poly[:], input[:])
@@ -467,7 +506,43 @@ top_left :: proc(a, b: [2]f64) -> bool {
     return b[1] < a[1] || (b[1] == a[1] && b[0] > a[0])
 }
 
-raster_triangle :: proc(t: ^Transaction, triangle: [3]Clip_Vertex, camera: []u8) -> bool {
+// Inputs are finite clipped screen coordinates. Integer conversion is bounded
+// by the display dimensions; these preserve round-away and floor/ceil exactly.
+pixel_round :: proc(value: f64) -> f64 {
+    return f64(int(value + 0.5)) if value >= 0 else f64(int(value - 0.5))
+}
+pixel_floor :: proc(value: f64) -> int {
+    n := int(value)
+    return n - 1 if f64(n) > value else n
+}
+pixel_ceil :: proc(value: f64) -> int {
+    n := int(value)
+    return n + 1 if f64(n) < value else n
+}
+project_pixel :: proc(point: [4]f64, width, height: int) -> [2]f64 {
+    reciprocal := 1 / point[3]
+    return {
+        pixel_round((point[0] * reciprocal * 0.5 + 0.5) * f64(width) * w.meshSubpixelScale) /
+        w.meshSubpixelScale,
+        pixel_round((0.5 - point[1] * reciprocal * 0.5) * f64(height) * w.meshSubpixelScale) /
+        w.meshSubpixelScale,
+    }
+}
+triangle_bounds :: proc(p: [3][2]f64, clip: [4]i32, width, height: int) -> [4]int {
+    return {
+        max(pixel_floor(min(p[0][0], p[1][0], p[2][0])), int(clip[0]), 0),
+        max(pixel_floor(min(p[0][1], p[1][1], p[2][1])), int(clip[1]), 0),
+        min(pixel_ceil(max(p[0][0], p[1][0], p[2][0])), int(clip[0] + clip[2]), width),
+        min(pixel_ceil(max(p[0][1], p[1][1], p[2][1])), int(clip[1] + clip[3]), height),
+    }
+}
+
+raster_triangle :: proc(
+    t: ^Transaction,
+    triangle: [3]Clip_Vertex,
+    camera: []u8,
+    account := true,
+) -> bool {
     target := image(t, t.render.target)
     depth := lookup(t, t.render.depth, .Depth)
     v := triangle
@@ -481,12 +556,7 @@ raster_triangle :: proc(t: ^Transaction, triangle: [3]Clip_Vertex, camera: []u8)
         iw[i] = 1 / q.p[3]
         z[i] = q.p[2] * iw[i]
         // Quantized coverage avoids tiny native/Wasm differences at shared edges.
-        p[i] = {
-            math.round((q.p[0] * iw[i] * 0.5 + 0.5) * f64(target.width) * w.meshSubpixelScale) /
-            w.meshSubpixelScale,
-            math.round((0.5 - q.p[1] * iw[i] * 0.5) * f64(target.height) * w.meshSubpixelScale) /
-            w.meshSubpixelScale,
-        }
+        p[i] = project_pixel(q.p, int(target.width), int(target.height))
     }
 
     area := edge(p[0], p[1], p[2])
@@ -502,28 +572,27 @@ raster_triangle :: proc(t: ^Transaction, triangle: [3]Clip_Vertex, camera: []u8)
         area = -area
     }
 
-    clip := t.render.clip
-    x0 := max(int(math.floor(min(p[0][0], p[1][0], p[2][0]))), int(clip[0]), 0)
-    y0 := max(int(math.floor(min(p[0][1], p[1][1], p[2][1]))), int(clip[1]), 0)
-    x1 := min(
-        int(math.ceil(max(p[0][0], p[1][0], p[2][0]))),
-        int(clip[0] + clip[2]),
-        int(target.width),
-    )
-    y1 := min(
-        int(math.ceil(max(p[0][1], p[1][1], p[2][1]))),
-        int(clip[1] + clip[3]),
-        int(target.height),
-    )
+    bounds := triangle_bounds(p, t.render.clip, int(target.width), int(target.height))
+    x0, y0, x1, y1 := bounds[0], bounds[1], bounds[2], bounds[3]
     if x1 <= x0 || y1 <= y0 {
         return true
     }
 
-    if !work(t, (x1 - x0) * (y1 - y0)) {
+    if account && !work(t, (x1 - x0) * (y1 - y0)) {
         return false
     }
 
     if len(t.gpu_vertices) != 0 { return true }
+
+    fog_start := f32le(camera, w.cameraFogStartOffset)
+    fog_end := f32le(camera, w.cameraFogEndOffset)
+    fog_color := u32le(camera, w.cameraFogColorOffset)
+    uniform := !account && v[0].color == v[1].color && v[0].color == v[2].color
+    solid := u32(0xff000000)
+    for c, channel in v[0].color {
+        uniform = uniform && c == pixel_round(c)
+        solid |= u32(clamp(pixel_round(c), 0, 255)) << u32(channel * 8)
+    }
 
     for y in y0 ..< y1 {
         for x in x0 ..< x1 {
@@ -556,14 +625,14 @@ raster_triangle :: proc(t: ^Transaction, triangle: [3]Clip_Vertex, camera: []u8)
                 continue
             }
 
+            if uniform && dz <= fog_start {
+                putf(depth.data, offset, dz)
+                put32(target.data, offset, solid)
+                continue
+            }
+
             reciprocal := weights[0] * iw[0] + weights[1] * iw[1] + weights[2] * iw[2]
-            fog := clamp(
-                (dz - f32le(camera, w.cameraFogStartOffset)) /
-                (f32le(camera, w.cameraFogEndOffset) - f32le(camera, w.cameraFogStartOffset)),
-                0,
-                1,
-            )
-            fog_color := u32le(camera, w.cameraFogColorOffset)
+            fog := clamp((dz - fog_start) / (fog_end - fog_start), 0, 1)
             color := u32(0xff000000)
             for channel in 0 ..< 3 {
                 value := 0.0

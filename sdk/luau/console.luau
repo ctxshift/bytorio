@@ -27,7 +27,23 @@ export type AudioStatus = resources.AudioStatus
 export type AudioCompletion = resources.Completion
 export type PixelBuffer = resources.PixelBuffer
 export type PCMBuffer = resources.PCMBuffer
-export type Button = "left" | "right" | "up" | "down" | "action"
+export type Button =
+    "left"
+    | "right"
+    | "up"
+    | "down"
+    | "action"
+    | "move_left"
+    | "move_right"
+    | "move_up"
+    | "move_down"
+    | "pan_left"
+    | "pan_right"
+    | "pan_up"
+    | "pan_down"
+    | "rotate_left"
+    | "rotate_right"
+    | "reset"
 export type Game = { init: () -> (), update: (number) -> (), draw: () -> () }
 local profileQuery = host.profile
 local profile = if profileQuery then profileQuery() else 1
@@ -63,6 +79,12 @@ api.gfx3d = resources.gfx3d
 api.audio = resources.audio
 api.data = resources.data
 local masks = { left = 1, right = 2, up = 4, down = 8, action = 16 }
+masks.move_left, masks.move_right = c.BUTTON_MOVE_LEFT, c.BUTTON_MOVE_RIGHT
+masks.move_up, masks.move_down = c.BUTTON_MOVE_UP, c.BUTTON_MOVE_DOWN
+masks.pan_left, masks.pan_right = c.BUTTON_PAN_LEFT, c.BUTTON_PAN_RIGHT
+masks.pan_up, masks.pan_down = c.BUTTON_PAN_UP, c.BUTTON_PAN_DOWN
+masks.rotate_left, masks.rotate_right, masks.reset =
+    c.BUTTON_ROTATE_LEFT, c.BUTTON_ROTATE_RIGHT, c.BUTTON_RESET
 local held, down, up, clock, randomState = 0, 0, 0, 0, c.DEFAULT_RANDOM_SEED
 local width, height = 640, 360
 local pointerActive, pointerX, pointerY = false, 0, 0
@@ -147,6 +169,9 @@ function api.assets(encoded: string)
     host.graphics_assets(encoded)
 end
 function api.buttons(): number
+    return bit32.band(held, c.LEGACY_BUTTON_MASK)
+end
+function api.all_buttons(): number
     return held
 end
 function api.button(key: Button): boolean
@@ -200,7 +225,7 @@ function api._wrap(game: Game, initialWidth: number?, initialHeight: number?): G
             resources._end()
         end,
         update = function(dt: number)
-            local nextHeld = bit32.band(host.buttons(), 31)
+            local nextHeld = bit32.band(host.buttons(), c.INPUT_BUTTON_MASK)
             down, up =
                 bit32.band(nextHeld, bit32.bnot(held)), bit32.band(held, bit32.bnot(nextHeld))
             held = nextHeld

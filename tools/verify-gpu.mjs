@@ -23,39 +23,43 @@ await once(server, "listening");
 const browser = await chromium.launch({ channel: process.env.PLAYER_BROWSER_CHANNEL || "chrome" });
 try {
   for (const language of ["odin", "luau"]) {
-    for (const ssaa of ["off", "2x", "1080p"]) {
-      const page = await browser.newPage();
-      const base = `/build/compact-3d/${language}/build/web`;
-      await page.goto(
-        `http://127.0.0.1:${server.address().port}${base}/player.html?renderer=gpu&ssaa=${ssaa}&pixel-snap&smoke`,
-      );
-      await page.waitForFunction(() => window.playerStatus?.ready || window.playerStatus?.error);
-      await page.locator("#start").click();
-      await page.waitForFunction(
-        () => window.playerStatus.ticks >= 120 || window.playerStatus.error,
-      );
-      const status = await page.evaluate(() => window.playerStatus);
-      assert.equal(status.error, "");
-      assert.equal(status.graphics.effective, "gpu");
-      const native = JSON.parse(
-        run(resolve(`build/compact-3d/${language}/build/native/player.exe`), [
-          "--check",
-          "--renderer",
-          "gpu",
-          "--ssaa",
+    for (const residentMeshes of [false, true]) {
+      for (const ssaa of ["off", "2x", "1080p"]) {
+        const page = await browser.newPage();
+        const base = `/build/compact-3d/${language}/build/web`;
+        await page.goto(
+          `http://127.0.0.1:${server.address().port}${base}/player.html?renderer=gpu&ssaa=${ssaa}&pixel-snap&smoke${residentMeshes ? "&gpu-meshes" : ""}`,
+        );
+        await page.waitForFunction(() => window.playerStatus?.ready || window.playerStatus?.error);
+        await page.locator("#start").click();
+        await page.waitForFunction(
+          () => window.playerStatus.ticks >= 120 || window.playerStatus.error,
+        );
+        const status = await page.evaluate(() => window.playerStatus);
+        assert.equal(status.error, "");
+        assert.equal(status.graphics.effective, "gpu");
+        const native = JSON.parse(
+          run(resolve(`build/compact-3d/${language}/build/native/player.exe`), [
+            "--check",
+            "--renderer",
+            "gpu",
+            "--ssaa",
+            ssaa,
+            "--pixel-snap",
+            ...(residentMeshes ? ["--gpu-meshes"] : []),
+          ]),
+        );
+        assert.equal(status.hash, native.hash, `${language}/${ssaa}: native/browser GPU parity`);
+        report.cases.push({
+          language,
           ssaa,
-          "--pixel-snap",
-        ]),
-      );
-      assert.equal(status.hash, native.hash, `${language}/${ssaa}: native/browser GPU parity`);
-      report.cases.push({
-        language,
-        ssaa,
-        hash: status.hash,
-        width: status.width,
-        height: status.height,
-      });
-      await page.close();
+          residentMeshes,
+          hash: status.hash,
+          width: status.width,
+          height: status.height,
+        });
+        await page.close();
+      }
     }
     const page = await browser.newPage({ viewport: { width: 1920, height: 1400 } });
     const base = `/build/compact-3d/${language}/build/web`;
@@ -156,8 +160,88 @@ try {
         window.playerStatus.error,
     );
     assert.equal(await page.evaluate(() => window.playerStatus.error), "");
-    assert.equal(await page.evaluate(() => window.playerStatus.graphics.requested.ssaa), "off");
+    assert.equal(await page.evaluate(() => window.playerStatus.graphics.requested.ssaa), "1080p");
     await page.close();
+    // CPU quality must work without creating a WebGL execution device.
+    for (const ssaa of ["off", "2x", "1080p"]) {
+      const cpuPage = await browser.newPage();
+      await cpuPage.goto(
+        `http://127.0.0.1:${server.address().port}/experiments/voxel-resolution/benchmark-host.html`,
+      );
+      const traces = await cpuPage.evaluate(
+        async ({ base, ssaa }) => {
+          const worker = new Worker(base + "/worker.js", { type: "module" });
+          const request = (message, type) =>
+            new Promise((resolve, reject) => {
+              const timeout = setTimeout(() => reject(new Error("CPU quality deadline")), 30000);
+              worker.onerror = (event) => {
+                clearTimeout(timeout);
+                reject(new Error(event.message));
+              };
+              worker.onmessage = async ({ data }) => {
+                if (data.type === "executor") {
+                  const bytes = await (await fetch(base + "/luau-executor.wasm")).arrayBuffer();
+                  worker.postMessage({ type: "executor", executor: { bytes } }, [bytes]);
+                } else if (data.type === "error") {
+                  clearTimeout(timeout);
+                  reject(new Error(data.error));
+                } else if (data.type === type) {
+                  clearTimeout(timeout);
+                  resolve(data);
+                }
+              };
+              worker.postMessage(message);
+            });
+          try {
+            const ready = await request(
+              {
+                type: "load",
+                gameUrl: location.origin + base + "/game.png",
+                graphics: { backend: "cpu", ssaa, smoothPan: true },
+                presentationSize: [1920, 1080],
+              },
+              "ready",
+            );
+            if (ready.graphics.effective !== "cpu") {
+              throw new Error("CPU quality unexpectedly selected GPU");
+            }
+            const rows = [];
+            for (const buttons of [0, 16]) {
+              const frame = await request(
+                { type: "step", steps: 1, input: { buttons, pointer: false, x: 0, y: 0 } },
+                "frame",
+              );
+              if (
+                !frame.smoothPresentation ||
+                frame.presentationWidth !== 1920 ||
+                !frame.metrics.cpuQualityBytes ||
+                frame.bitmap
+              ) {
+                throw new Error("CPU quality presentation inactive");
+              }
+              rows.push({ hash: frame.hash, sounds: frame.sounds });
+            }
+            return rows;
+          } finally {
+            worker.terminate();
+          }
+        },
+        { base, ssaa },
+      );
+      const inputs = resolve(root, "cpu-quality.inputs");
+      await writeFile(inputs, "0\n16\n");
+      const native = run(
+        resolve(`build/compact-3d/${language}/build/native/player.exe`),
+        ["--replay", inputs, "--renderer", "cpu", "--ssaa", ssaa, "--smooth-pan"],
+        { env: { ...process.env, SDL_VIDEODRIVER: "dummy" } },
+      )
+        .trim()
+        .split(/\r?\n/)
+        .map(JSON.parse);
+      assert.deepEqual(traces, native, `${language}/${ssaa}: exact CPU quality host parity`);
+      report.cases.push({ language, cpuQuality: ssaa, traces });
+      await cpuPage.close();
+    }
   }
   const page = await browser.newPage();
   await page.goto(`http://127.0.0.1:${server.address().port}/build/odin-player/web/player.html`);
@@ -197,8 +281,91 @@ try {
       const colors = new Uint8Array(memory.buffer, color, 32 * 32 * 4);
       const coverage = colors.filter((v, i) => i % 4 === 3 && v > 0 && v < 255).length;
       rows.push({ ssaa, result, rgba, z, coverage });
+      // Original positions and indices are immutable across cached draws.
+      const packed = new DataView(memory.buffer);
+      const meshOffset = 16384,
+        matrixOffset = 16512,
+        lightOffset = 16576;
+      for (let i = 0; i < 3; i++) {
+        for (let axis = 0; axis < 3; axis++) {
+          packed.setFloat32(meshOffset + i * 16 + axis * 4, vertices[i * 7 + axis], true);
+        }
+        packed.setUint32(meshOffset + i * 16 + 12, 0xff0000ff, true);
+        packed.setUint32(meshOffset + 48 + i * 4, i, true);
+      }
+      const identity = new Float32Array(memory.buffer, matrixOffset, 16);
+      identity.set([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+      for (let i = 0; i < 2; i++) {
+        new Uint8Array(memory.buffer, color, 32 * 32 * 4).fill(0);
+        new Float32Array(memory.buffer, depth, 32 * 32).fill(1);
+        device.queueMesh(
+          memory,
+          1,
+          0,
+          meshOffset,
+          3,
+          3,
+          0,
+          matrixOffset,
+          matrixOffset,
+          lightOffset,
+          1,
+        );
+        if (
+          device.raster(memory, 0, 0, color, depth, 32, 32, 0, 0, 32, 32, 0xff000000, 1, 2) !== 1 ||
+          packed.getUint32(color + center, true) !== 0xff0000ff ||
+          packed.getFloat32(depth + center, true) !== 0.25
+        ) {
+          throw new Error("Resident triangle fixture failed");
+        }
+      }
+      if (
+        device.metrics.meshUploads !== 1 ||
+        device.metrics.cacheHits !== 1 ||
+        device.metrics.cacheBytes !== 144
+      ) {
+        throw new Error("Resident upload lifecycle failed");
+      }
+      rows[rows.length - 1].resident = { ...device.metrics };
       device.gl.getExtension("WEBGL_lose_context")?.loseContext();
     }
+    const device = await createGpu(normalizeGraphics({ backend: "gpu" }));
+    const memory = new WebAssembly.Memory({ initial: 16 });
+    const output = 0,
+      preview = 320 * 180 * 4,
+      mask = preview + 322 * 182 * 4;
+    const pixels = new Uint32Array(memory.buffer, preview, 322 * 182);
+    for (let y = 0; y < 182; y++) {
+      for (let x = 0; x < 322; x++) {
+        pixels[y * 322 + x] = (0xff000000 | (x % 256) | ((y % 256) << 8)) >>> 0;
+      }
+    }
+    new Uint8Array(memory.buffer)[mask + 90 * 320 + 160] = 1;
+    new Uint32Array(memory.buffer)[90 * 320 + 160] = 0xffff00ff;
+    const displayed = device.present(
+      memory,
+      output,
+      preview,
+      mask,
+      320,
+      180,
+      1920,
+      1080,
+      1 / 6,
+      0,
+      0xff000000,
+    );
+    device.finish();
+    const context = new OffscreenCanvas(1920, 1080).getContext("2d");
+    context.drawImage(displayed.bitmap, 0, 0);
+    displayed.bitmap.close();
+    if (
+      String(context.getImageData(101, 100, 1, 1).data) !== "18,17,0,255" ||
+      String(context.getImageData(960, 540, 1, 1).data) !== "255,0,255,255"
+    ) {
+      throw new Error("GPU presentation orientation/residual/HUD fixture failed");
+    }
+    device.close();
     return rows;
   });
   for (const row of report.browserFixtures) {

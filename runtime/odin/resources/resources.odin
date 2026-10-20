@@ -3,6 +3,7 @@ package resources
 import abi "../abi"
 import audio "../audio"
 import w "../resource_protocol"
+import "core:encoding/endian"
 import "core:math"
 import "core:mem"
 
@@ -26,6 +27,7 @@ Kind :: enum {
     Voxel,
 }
 Slot :: struct {
+    gpu_version:                                          u64,
     generation:                                           u32,
     kind:                                                 Kind,
     format, width, height, channels, rate:                u32,
@@ -35,6 +37,8 @@ Slot :: struct {
     volume_depth, vertex_count, index_count, mesh_offset: u32,
 }
 Registry :: struct {
+    resident_meshes:             bool,
+    gpu_serial:                  u64,
     rasterizer:                  Raster_Proc,
     pixel_snap:                  bool,
     smooth_pan:                  bool,
@@ -68,14 +72,12 @@ u16le :: proc(b: []u8, at: int) -> u32 {
 
     return u32(b[at]) | u32(b[at + 1]) << 8
 }
-u32le :: proc(b: []u8, at: int) -> u32 {
-
-    return u16le(b, at) | u16le(b, at + 2) << 16
+u32le :: #force_inline proc(b: []u8, at: int) -> u32 {
+    // The checked slice covers the complete word, including unaligned payloads.
+    return endian.unchecked_get_u32le(b[at:at + 4])
 }
-put32 :: proc(b: []u8, at: int, value: u32) {
-    for i in 0 ..< 4 {
-        b[at + i] = u8(value >> u32(i * 8))
-    }
+put32 :: #force_inline proc(b: []u8, at: int, value: u32) {
+    endian.unchecked_put_u32le(b[at:at + 4], value)
 }
 within :: proc(offset, size: u32, length: int) -> bool {
     return u64(offset) + u64(size) <= u64(length)
@@ -99,9 +101,11 @@ close :: proc(r: ^Registry) {
 }
 reset :: proc(r: ^Registry, session: u32, protocol: u32 = w.version) -> bool {
     rasterizer, pixel_snap, smooth_pan := r.rasterizer, r.pixel_snap, r.smooth_pan
+    resident_meshes, gpu_serial := r.resident_meshes, r.gpu_serial
     close(r)
     r.rasterizer, r.pixel_snap = rasterizer, pixel_snap
     r.smooth_pan = smooth_pan
+    r.resident_meshes, r.gpu_serial = resident_meshes, gpu_serial
     if session == 0 {
 
         r.error = "zero resource session"

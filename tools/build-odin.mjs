@@ -92,6 +92,8 @@ if (target !== "native") {
     "mesh.vert",
     "mesh.frag",
     "resolve.frag",
+    "resident.vert",
+    "present.frag",
   ]) {
     await copyFile(`runtime/odin/gpu/${file}`, `${web}/gpu-shaders/${file}`);
   }

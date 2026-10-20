@@ -34,6 +34,19 @@ export const RANDOM_ZERO_SEED_FALLBACK = 1831565813;
 export const COORDINATE_MIN = -4096;
 export const COORDINATE_MAX = 4096;
 export const MAX_TEXT_BYTES_PER_COMMAND = 1024;
+export const LEGACY_BUTTON_MASK = 31;
+export const INPUT_BUTTON_MASK = 65535;
+export const BUTTON_MOVE_LEFT = 32;
+export const BUTTON_MOVE_RIGHT = 64;
+export const BUTTON_MOVE_UP = 128;
+export const BUTTON_MOVE_DOWN = 256;
+export const BUTTON_PAN_LEFT = 512;
+export const BUTTON_PAN_RIGHT = 1024;
+export const BUTTON_PAN_UP = 2048;
+export const BUTTON_PAN_DOWN = 4096;
+export const BUTTON_ROTATE_LEFT = 8192;
+export const BUTTON_ROTATE_RIGHT = 16384;
+export const BUTTON_RESET = 32768;
 export const RESOURCE_EXPORTS = Object.freeze([
   { name: "game_profile", params: [], results: [127] },
   { name: "game_required_features", params: [], results: [127] },

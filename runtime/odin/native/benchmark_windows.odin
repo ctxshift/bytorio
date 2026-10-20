@@ -1,4 +1,5 @@
 package main
+import gpu "../gpu/native"
 import presentation "../presentation"
 
 import abi "../abi"
@@ -41,7 +42,7 @@ benchmark :: proc(app: ^App, path: string, startup_ms: f64, baseline_working: ui
     defer delete(masks)
     for field in strings.fields(string(bytes)) {
         mask, ok := strconv.parse_u64(field)
-        if !ok || mask > 31 {
+        if !ok || mask > abi.INPUT_BUTTON_MASK {
 
             return error("invalid benchmark input")
         }
@@ -79,7 +80,16 @@ benchmark :: proc(app: ^App, path: string, startup_ms: f64, baseline_working: ui
 
                 return error("invalid benchmark frame")
             }
-            if app.game.resources.smooth_pan {
+            if app.gpu_enabled {
+                if !gpu.present(
+                    &app.game.resources,
+                    core.pixels[:core.width * core.height],
+                    core.width,
+                    core.height,
+                    1920,
+                    1080,
+                ) { return error("GPU benchmark presentation failed") }
+            } else if app.game.resources.smooth_pan {
                 app.present_pixels = presentation.prepare(
                     &app.presenter,
                     &app.game.resources,
@@ -118,6 +128,15 @@ benchmark :: proc(app: ^App, path: string, startup_ms: f64, baseline_working: ui
         peak_working,
     )
     stats := app.game.resources.stats
+    if app.gpu_enabled {
+        counts := gpu.statistics()
+        fmt.printf(
+            "\"gpuStats\":{{\"meshUploads\":%d,\"cacheHits\":%d,\"uploadBytes\":%d,\"gpuPresentation\":true}},",
+            counts[0],
+            counts[1],
+            counts[2],
+        )
+    }
     storage := resources.mesh_storage(&app.game.resources)
     fmt.printf(
         "\"resourceStats\":{{\"currentResourceBytes\":%d,\"peakResourceBytes\":%d,\"packetBytes\":%d,\"hostCopyBytes\":%d,\"triangles\":%d,\"voxelCells\":%d,\"voxelFaces\":%d,\"voxelRebuilds\":%d,\"sourceBytes\":%d,\"geometryBytes\":%d,\"depthBytes\":%d}},",
