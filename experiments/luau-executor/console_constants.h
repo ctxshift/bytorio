@@ -3,6 +3,11 @@
 #include <cstdint>
 
 namespace console_constants {
+constexpr auto PROFILE_RESOURCE = 2u;
+constexpr auto RESOURCE_ABI_VERSION = 2u;
+constexpr auto RESOURCE_SDK_VERSION = 512u;
+constexpr auto RESOURCE_FEATURES = 7u;
+constexpr auto RESOURCE_PROTOCOL = 4u;
 constexpr auto FRAME_BYTES = 40u;
 constexpr auto MAX_GAME_BYTES = 1048576u;
 constexpr auto MAX_MEMORY_BYTES = 8388608u;

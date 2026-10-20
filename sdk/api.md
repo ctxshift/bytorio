@@ -1,10 +1,10 @@
-# SDK API 0.1.0
+# SDK API 0.2.0
 
-This page documents implemented calls. The proposed next interface is described
-in [typed graphics and audio resources](../docs/resource-av-spec.md), including
-equivalent Luau/Odin operation shapes. Development-only [resource ownership](resources.md)
-and [explicit graphics](graphics.md) are implemented. PCM playback remains later
-work; the complete successor profile is not published.
+This page documents lifecycle and drawing conveniences. SDK 0.2.0 also publishes
+[resource ownership](resources.md), [explicit graphics](graphics.md),
+[PCM audio](audio.md) and [synthesis/effects](synthesis.md). Both SDKs expose the
+same [resource profile](../docs/resource-profile.md), including fixed limits and
+compatibility checks before game initialization.
 
 Luau imports `local console = require("@console")`. Odin imports
 `console "sdk:console"`. Sprite IDs start at zero. Drawing coordinates use the

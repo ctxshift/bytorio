@@ -348,11 +348,11 @@ run :: proc() -> int {
 
         cache_config = ""
     }
-    if !guest.load(&app.game, bytes, source, !unmetered, cache_config) {
+    if !guest.load(&app.game, bytes, source, !unmetered, cache_config, cart.profile) {
 
         return error(app.game.error)
     }
-    if packaged && !guest.validate_sdk(&app.game, cartridge.SDK_VERSION) {
+    if packaged && !guest.validate_sdk(&app.game, cart.sdk) {
 
         return error(app.game.error)
     }
@@ -460,6 +460,8 @@ run :: proc() -> int {
                 #partial switch event.type {
                 case .QUIT:
                     running = false
+                case .RENDER_DEVICE_LOST, .RENDER_DEVICE_RESET, .RENDER_TARGETS_RESET:
+                    return error("display context lost; restart the player")
                 case .KEY_DOWN:
                     if event.key.scancode == .F11 && !event.key.repeat {
 

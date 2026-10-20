@@ -142,6 +142,12 @@ runtime_cartridge_title_size :: proc "c" () -> u32 {
     return u32(len(cartridge_info.title))
 }
 @(export)
+runtime_cartridge_profile :: proc "c" () -> u32 { return cartridge_info.profile }
+@(export)
+runtime_cartridge_sdk :: proc "c" () -> u32 { return cartridge_info.sdk }
+@(export)
+runtime_cartridge_abi :: proc "c" () -> u32 { return cartridge_info.abi_version }
+@(export)
 runtime_cartridge_display :: proc "c" () -> u32 {
 
     return cartridge_info.display

@@ -17,6 +17,12 @@ local framePixels: console.PixelBuffer
 local bench = false
 return {
     init = function()
+        local caps = console.capabilities()
+        assert(caps.profile == 2 and caps.abi == 2 and caps.sdk == 512)
+        assert(caps.features == 7 and caps.protocol == 4)
+        assert(caps.resource_bytes == 67108864 and caps.slots == 1024)
+        assert(caps.payload_bytes == 1048576 and caps.audio_rate == 48000)
+        assert(caps.audio_lead_frames == 2400)
         console.display(320, 180)
         local stencil = gfx.target({ format = "stencil8", width = 320, height = 180 })
         scene = gfx.target({ format = "rgba8", width = 320, height = 180, stencil = stencil })

@@ -250,12 +250,25 @@ bool call(const char* name, bool delta = false) {
 } // namespace
 
 extern "C" {
+static std::uint32_t profile = 1;
+
+EMSCRIPTEN_KEEPALIVE std::uint32_t game_profile() {
+    return profile;
+}
+
+EMSCRIPTEN_KEEPALIVE std::uint32_t game_required_features() {
+    return profile == console_constants::PROFILE_RESOURCE ? console_constants::RESOURCE_FEATURES
+                                                          : 0;
+}
+
 EMSCRIPTEN_KEEPALIVE std::uint32_t game_abi() {
-    return 1;
+    return profile == console_constants::PROFILE_RESOURCE ? console_constants::RESOURCE_ABI_VERSION
+                                                          : 1;
 }
 
 EMSCRIPTEN_KEEPALIVE std::uint32_t game_sdk_version() {
-    return 256;
+    return profile == console_constants::PROFILE_RESOURCE ? console_constants::RESOURCE_SDK_VERSION
+                                                          : 256;
 }
 
 EMSCRIPTEN_KEEPALIVE std::uint32_t game_frame_size() {
@@ -272,6 +285,14 @@ EMSCRIPTEN_KEEPALIVE std::uint32_t game_source_capacity() {
 
 EMSCRIPTEN_KEEPALIVE void game_source_size(std::uint32_t size) {
     source_size = size;
+    constexpr char marker[] = "--!console-profile=";
+    constexpr auto prefix = sizeof(marker) - 1;
+    profile = 1;
+    if (size >= prefix && std::memcmp(source, marker, prefix) == 0)
+        profile = size > prefix + 1 && source[prefix] >= '1' && source[prefix] <= '9' &&
+                          source[prefix + 1] == '\n'
+                      ? static_cast<std::uint32_t>(source[prefix] - '0')
+                      : 0;
 }
 
 EMSCRIPTEN_KEEPALIVE std::uint32_t game_error_length() {
@@ -315,7 +336,12 @@ EMSCRIPTEN_KEEPALIVE void game_init() {
         return;
     }
     luaL_openlibs(state);
-    const luaL_Reg api[] = {{"resource_audio_status", resource_transport::audio_status},
+    const luaL_Reg api[] = {{"profile",
+                             [](lua_State* L) -> int {
+                                 lua_pushinteger(L, static_cast<int>(profile));
+                                 return 1;
+                             }},
+                            {"resource_audio_status", resource_transport::audio_status},
                             {"resource_results", resource_transport::results},
                             {"resource_session", resource_transport::session},
                             {"resource_emit", resource_transport::emit},

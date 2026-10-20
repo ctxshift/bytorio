@@ -106,6 +106,14 @@ run = "node tools/verify-audio.mjs"
 description = "Verify synthesis, effects and the full DSP workload on native/browser"
 run = ["node tools/verify-audio.mjs --synthesis", "node tools/verify-audio.mjs --synthesis --stress"]
 
+[tasks."build:resource-examples"]
+description = "Build playable graphics and synthesis PNGs for both SDKs and hosts"
+run = "node tools/build-resource-profile.mjs"
+
+[tasks."test:profile"]
+description = "Verify published profile negotiation, packaging and lifecycle on both hosts"
+run = "node tools/verify-profile.mjs"
+
 [tasks."test:graphics"]
 run = "node tools/verify-graphics.mjs"
 
@@ -135,6 +143,7 @@ run = [
   { task = "test:graphics" },
   { task = "test:audio" },
   { task = "test:synthesis" },
+  { task = "test:profile" },
   { task = "test:odin" },
   { task = "test:display" },
   { task = "test:rpg" },

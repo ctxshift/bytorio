@@ -82,7 +82,17 @@ function tokens(source) {
   }
   return result;
 }
-export async function bundleLuau({ entry, project, sdkRoot, assets, display = [640, 360] }) {
+export async function bundleLuau({
+  entry,
+  project,
+  sdkRoot,
+  assets,
+  display = [640, 360],
+  profile = 1,
+}) {
+  if (![1, 2].includes(profile)) {
+    throw new Error("Unsupported Luau cartridge profile");
+  }
   project = await realpath(project);
   sdkRoot = await realpath(sdkRoot);
   const native = resolve(sdkRoot, "native.luau"),
@@ -173,7 +183,7 @@ export async function bundleLuau({ entry, project, sdkRoot, assets, display = [6
   const sdkId = await visit(sdkEntry),
     mainId = await visit(entry);
   const output = [
-    `-- SDK 0.1.0 bundled cartridge. Generated; edit project sources instead.\nlocal __native=console\nlocal __modules,__cache={},{}\nlocal function __require(id:string):any\n    if id=="$native" then return __native end\n    if __cache[id]~=nil then return __cache[id] end\n    local value=__modules[id]()\n    assert(value~=nil,"module must return a value")\n    __cache[id]=value;return value\nend`,
+    `-- SDK bundled cartridge. Generated; edit project sources instead.\nlocal __native=console\nlocal __modules,__cache={},{}\nlocal function __require(id:string):any\n    if id=="$native" then return __native end\n    if __cache[id]~=nil then return __cache[id] end\n    local value=__modules[id]()\n    assert(value~=nil,"module must return a value")\n    __cache[id]=value;return value\nend`,
   ];
   for (const [id, source] of modules) {
     output.push(`__modules[${JSON.stringify(id)}]=function()\n${source}\nend`);
@@ -181,7 +191,10 @@ export async function bundleLuau({ entry, project, sdkRoot, assets, display = [6
   output.push(
     `local __sdk=__require(${JSON.stringify(sdkId)})\n__sdk.assets(${JSON.stringify(assets.toString("base64"))})\nreturn __sdk._wrap(__require(${JSON.stringify(mainId)}),${display[0]},${display[1]})\n`,
   );
-  const bytes = Buffer.from(formatSource(output.join("\n"), "game.luau"), "utf8");
+  const bytes = Buffer.from(
+    (profile === 2 ? "--!console-profile=2\n" : "") + formatSource(output.join("\n"), "game.luau"),
+    "utf8",
+  );
   if (bytes.length > 256 * 1024) {
     throw new Error("Bundled Luau source exceeds 256 KiB");
   }

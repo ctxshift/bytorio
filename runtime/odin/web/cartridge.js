@@ -17,6 +17,9 @@ export function decodeCartridge(runtime, bytes) {
   }
   return {
     language: language === 1 ? "luau" : "odin",
+    profile: runtime.runtime_cartridge_profile(),
+    sdk: runtime.runtime_cartridge_sdk(),
+    abi: runtime.runtime_cartridge_abi(),
     title: text.decode(
       read(runtime.runtime_cartridge_title(), runtime.runtime_cartridge_title_size()),
     ),

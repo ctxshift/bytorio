@@ -1,18 +1,14 @@
 {
-  "status": "design-only",
-  "implemented": false,
+  "status": "published",
+  "implemented": true,
   "specification": "../../docs/resource-av-spec.md",
   "profile": "resource-av-1",
-  "proposedProfileId": 2,
-  "proposedSdkVersion": "0.2.0",
-  "proposedSdkVersionWord": 512,
-  "proposedAbiVersion": 2,
   "packet": {
-    "status": "draft-not-frozen",
+    "status": "frozen",
     "magic": "AVP1",
     "headerBytes": 64,
     "commandHeaderBytes": 32,
-    "opcodeSchema": "to-be-generated-before-implementation"
+    "schema": "../resource-protocol.json"
   },
   "targets": {
     "guestMemoryBytes": 8388608,
@@ -43,5 +39,27 @@
     "pendingAudioEvents": 4096,
     "eventHorizonFrames": 96000,
     "initialSchedulingLeadFrames": 2400
+  },
+  "profileId": 2,
+  "sdkVersion": "0.2.0",
+  "sdkVersionWord": 512,
+  "abiVersion": 2,
+  "protocolVersion": 4,
+  "requiredFeatures": 7,
+  "featureBits": {
+    "typedResources": 1,
+    "softwareGraphics": 2,
+    "scheduledAudioAndSynthesis": 4
+  },
+  "performance": {
+    "status": "measured-reference",
+    "native": "Windows x64, standalone SDL3/Wasmtime",
+    "browser": "Chromium, WebAssembly and AudioWorklet",
+    "timingGuarantee": "No universal frame time or device latency guarantee; qualify target devices with the conformance workloads.",
+    "measurements": [
+      "../../docs/graphics-measurements.md",
+      "../../docs/audio-measurements.md",
+      "../../docs/synthesis-measurements.md"
+    ]
   }
 }

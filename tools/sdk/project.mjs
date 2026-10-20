@@ -66,8 +66,9 @@ async function inside(project, path) {
 export async function manifest(path) {
   const project = await realpath(resolve(path));
   const value = JSON.parse(await readFile(resolve(project, "console.json"), "utf8"));
-  if (value.sdk !== contract.sdkVersion) {
-    throw new Error(`This tool requires SDK ${contract.sdkVersion}`);
+  const profile = contract.profiles.find((item) => item.sdk === value.sdk);
+  if (!profile || (value.profile !== undefined && value.profile !== profile.name)) {
+    throw new Error("Unsupported SDK or profile requirements");
   }
   if (!["odin", "luau"].includes(value.language)) {
     throw new Error("language must be luau or odin");
@@ -82,6 +83,8 @@ export async function manifest(path) {
   }
   return {
     ...value,
+    profile: profile.name,
+    profileId: profile.id,
     project,
     entry: await inside(project, value.entry),
     assets: await inside(project, value.assets),
@@ -114,6 +117,7 @@ export async function createProject(path, language = "luau") {
     JSON.stringify(
       {
         sdk: contract.sdkVersion,
+        profile: contract.profile,
         title: "Hello, Console!",
         language,
         entry: language === "luau" ? "src/main.luau" : "src",
@@ -185,6 +189,7 @@ async function prepare(path) {
       sdkRoot: resolve(repo, "sdk/luau"),
       assets: packet,
       display: spec.display,
+      profile: spec.profileId,
     });
     await writeFile(resolve(generated, "game.luau"), source);
   } else {
@@ -232,6 +237,7 @@ async function prepare(path) {
       "build",
       destination,
       "-target:freestanding_wasm32",
+      `-define:CONSOLE_PROFILE=${spec.profileId}`,
       "-no-entry-point",
       "-o:speed",
       "-source-code-locations:filename",
@@ -325,6 +331,7 @@ export async function buildProject(path, options = {}) {
   const coverPath = options.cover ? resolve(options.cover) : spec.cover;
   const png = encodeCartridge({
     title: spec.title || "Console game",
+    profile: spec.profile,
     language: spec.language,
     display: spec.display,
     code: await readFile(resolve(spec.generated, luau ? "game.luau" : "game.wasm")),
@@ -345,6 +352,36 @@ export async function buildProject(path, options = {}) {
       base = resolve(repo, "build/odin-player", platform);
     await mkdir(resolve(target, "licenses"), { recursive: true });
     await writeFile(resolve(target, "game.png"), png);
+    await writeFile(
+      resolve(target, "profile.json"),
+      JSON.stringify(
+        {
+          ...contract.profiles.find((item) => item.id === spec.profileId),
+          containerVersion: contract.cartridge.containerVersion,
+          maxPngBytes: contract.cartridge.maxPngBytes,
+          schema: spec.profileId === 2 ? "resource-protocol.json" : null,
+        },
+        null,
+        2,
+      ) + "\n",
+    );
+    if (spec.profileId === 2) {
+      await copyFile(
+        resolve(repo, "sdk/resource-protocol.json"),
+        resolve(target, "resource-protocol.json"),
+      );
+      const bundledProfile = JSON.parse(
+        await readFile(resolve(repo, "sdk/profiles/resource-av-1.json")),
+      );
+      // Runtime exports keep their schema local; documentation links belong to the SDK checkout.
+      delete bundledProfile.specification;
+      delete bundledProfile.performance.measurements;
+      bundledProfile.packet.schema = "resource-protocol.json";
+      await writeFile(
+        resolve(target, "resource-av-1.json"),
+        JSON.stringify(bundledProfile, null, 2) + "\n",
+      );
+    }
     const names =
       platform === "web"
         ? [

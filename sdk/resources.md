@@ -1,13 +1,12 @@
-# Experimental typed resources: milestones 4a–4d
+# Typed resources: resource-av-1
 
-The current native player and browser Worker support an **internal development
-transport**, version 4, for typed resource ownership, explicit software
-graphics and scheduled PCM/synthesized audio. Version-1/2/3 guests remain supported with their original
-capabilities. These implement slices of [the resource proposal](../docs/resource-av-spec.md).
-It does not advertise SDK 0.2.0, ABI 2, or `resource-av-1`; the existing SDK 0.1.0 /
-ABI 1 cartridge contract and PNG readers are unchanged. These experimental calls
-require matching players from this checkout. They are not portable to older
-players merely because the cartridge still uses the existing container profile.
+The native player and browser Worker support SDK 0.2.0 / ABI 2,
+**resource-av-1**, using transport version 4 for typed ownership, software
+graphics and scheduled PCM/synthesized audio. The [published profile](profiles/resource-av-1.json)
+and [protocol schema](resource-protocol.json) define its limits and wire layout.
+Older players reject its profile-2 PNGs. ABI 1 and internal version-1/2/3 guests
+remain supported through the compatibility adapter. See
+[negotiation and conformance](../docs/resource-profile.md).
 
 Resources can be created, uploaded, edited and destroyed. [Explicit graphics](graphics.md)
 now renders textures and targets with passes, composition and readback.
@@ -68,7 +67,7 @@ destroy resources, then reuse a slot with a new generation.
 
 ## Internal transport and ownership
 
-[resource-transport.json](proposals/resource-transport.json) defines the subset's
+[resource-transport.json](resource-protocol.json) defines the subset's
 version, limits, formats, field layouts, descriptors and configuration exports.
 `mise run generate` generates the Odin, Luau, C++ and browser constants;
 `mise run generate:check` detects stale generated files.

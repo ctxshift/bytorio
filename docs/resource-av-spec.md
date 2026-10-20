@@ -1,16 +1,16 @@
 # Typed graphics and audio resources
 
-Status: **proposed profile; milestones 4a–4d implemented experimentally**, 2026-10-19. Proposed SDK 0.2.0,
-ABI 2, profile `resource-av-1`. The implemented SDK 0.1.0 / ABI 1 contract remains
-[unchanged](cartridge-spec.md). This document defines the intended public
-interface and observable behavior; wire opcode numbers and descriptor layouts
-must be generated and tested before this profile ships.
+Status: **published resource profile**, 2026-10-19. SDK 0.2.0,
+ABI 2, profile `resource-av-1` (identifier 2). The SDK 0.1.0 / ABI 1 compatibility
+contract remains supported. [The profile](../sdk/profiles/resource-av-1.json),
+[protocol schema](../sdk/resource-protocol.json) and generated constants define
+the public interface, wire layouts and portable bounds. See
+[conformance, packaging and performance scope](resource-profile.md).
 
-The [internal resource implementation](../sdk/resources.md),
+The [resource implementation](../sdk/resources.md),
 [software graphics reference](../sdk/graphics.md), [PCM mixer](../sdk/audio.md)
-and [synthesis/effects](../sdk/synthesis.md) support 4a–4d through both SDKs
-and hosts. This experimental transport does not publish the complete profile;
-full negotiated ABI and profile packaging remain later work.
+and [synthesis/effects](../sdk/synthesis.md) support both SDKs and hosts.
+Profile requirements are checked before initialization for loose payloads and PNGs.
 
 The 4c slice snapshots sample contents at each accepted play command. Source
 writes affect later plays; the explicit scheduled edits from 4d opt a source into
@@ -18,7 +18,8 @@ live storage. Its 8 MiB PCM/history arena is page allocated by the producer; ren
 leases through a fixed queue. Streams allow 64 chunks / 8,192 frames each.
 Controller/DSP state, wire/transfer arenas and feedback reserve a portable
 55,463,952-byte charge on either host, plus ordinary resource storage. This
-conservative reservation and the 50 ms lead remain provisional. Delivery uses
+conservative reservation and 50 ms lead are frozen for this profile; device
+latency and minimum hardware remain unqualified. Delivery uses
 SDL callbacks and transferable AudioWorklet buffers, with a maximum 2,048-frame
 render call; larger native callback requests are split. See the
 [measurement method and remaining gates](audio-measurements.md).
@@ -40,25 +41,26 @@ DSP and device delivery. The two SDKs provide the same capabilities and errors.
 ## 1. Compatibility and negotiation
 
 A cartridge explicitly requests `resource-av-1`; there is no automatic upgrade
-of ABI 1 games. The proposed profile identifier is 2, ABI is 2, and SDK version
+of ABI 1 games. The profile identifier is 2, ABI is 2, and SDK version
 word is 512. Existing players must reject these requirements before starting a
-game. A future player keeps an ABI 1 adapter for existing cartridges and golden
+game. The player keeps an ABI 1 adapter for existing cartridges and golden
 replays. Existing `console.sprite`, `text`, input and lifecycle conveniences remain
 available in the new SDK, implemented over the new resource interface.
-The ABI 1 sound cue remains in its compatibility adapter; new-profile audio uses
-explicit voice/source selection, with no secretly reserved voice slot.
+The legacy sound-cue convenience remains in its compatibility adapter;
+new-profile scheduled audio uses explicit voice/source selection, with no
+secretly reserved voice slot.
 
-The host compares required features and minimum limits with its capabilities
-before `game_init`. It supplies the agreed capabilities, a fresh session ID and
-input/completion storage through bounded guest buffers. Optional features require
-an explicit capability query; missing required features stop loading. The same
-requirements must pass on native and browser. A fast graphics backend cannot
-silently enable extra features or change resource budgets.
+The host checks an exact profile/SDK/ABI/protocol/feature tuple before `game_init`.
+This first profile has fixed limits and mandatory feature mask 7; it has no
+optional extensions or per-game limit negotiation. SDK `capabilities()` reports
+the selected tuple and principal limits. The host supplies a fresh session ID
+through `game_resource_configure`; inputs retain the fixed lifecycle arguments,
+with bounded completion/audio-status mailboxes before each update. This freezes
+the existing input representation instead of introducing a redundant input buffer.
+Missing features or exports stop loading. Both hosts enforce the same bounds.
 
-PNG container version 1 has room for these version/profile identifiers, but its
-current readers accept only profile 1. Profile-2 packaging and readers must be
-added together, preserving the existing 32-byte container header layout. This
-proposal does not increase the implemented 2 MiB PNG limit or enable the planned
+PNG container version 1 accepts profile 1 and profile 2, preserving the existing
+32-byte header layout. This profile does not increase the implemented 2 MiB PNG limit or enable the planned
 128/512 MB ROM sizes; the larger indexed-resource cartridge format is separate work.
 
 ## 2. Ownership, types and lifetime
@@ -130,7 +132,7 @@ versioned storage or copy-on-write. Old versions count against the budget. The
 host input mailbox delivers resource completions and status before an update;
 it never re-enters the game from a renderer, audio thread or browser promise.
 
-### Proposed transport
+### Published transport
 
 Keep guests import-free. SDK-generated exports provide bounded configuration /
 input buffers, accept a host configuration before initialization, and consume an
@@ -141,7 +143,7 @@ packet may be outstanding per guest. Audio delivery queues are host-owned and
 independent of this guest acknowledgement. Exact input/configuration layouts,
 acknowledgement exports and opcode/argument schemas are a milestone-4a gate.
 
-Proposed packet header, 64 bytes, little-endian:
+Packet header, 64 bytes, little-endian:
 
 | Offset | Type | Meaning |
 | --- | --- | --- |
@@ -325,8 +327,8 @@ an explicit duration in frames; zero means immediate. Game tick time and actual
 audio output position are separate status values.
 
 The initial adapter target is a fixed 2,400-frame / 50 ms scheduling lead, plus
-device latency, reported in capabilities. Both hosts test the same target; it is
-provisional until measured. A late event executes at the first unrendered frame
+device latency, reported in capabilities. Both hosts test the same fixed lead;
+it does not promise physical output latency. A late event executes at the first unrendered frame
 and increments a visible late-event counter; it is never replayed twice. This
 handles stalls explicitly but does not promise sample-exact synchronization
 between stalled gameplay and physical audio. On-time offline event traces must
@@ -365,10 +367,8 @@ and callback behavior; add synthesis only after the delivery path passes.
 
 ## 6. Equivalent SDK surfaces
 
-These describe the target resource interface. The experimental 4a–4d calls are
-available through matching checkout SDKs/players; their exact implemented
-signatures are documented in the SDK references above. The full negotiated
-profile is not published in SDK 0.1.0. Use `console.gfx`,
+These describe the published resource interface. Exact signatures and optional
+descriptor fields are documented in the SDK references above. Use `console.gfx`,
 `console.audio` and `console.data` in Luau, and the corresponding `sdk:gfx`,
 `sdk:audio` and `sdk:data` Odin packages. Descriptors use named fields, explicit
 units and tagged enum choices. Odin wraps handle kinds in distinct types; Luau
@@ -377,20 +377,20 @@ exports matching opaque types checked by the runtime as well as its analyzer.
 | Operation | Luau shape | Odin shape |
 | --- | --- | --- |
 | Pixel storage | `data.pixels(format,w,h)` | `data.pixels(format,w,h)` |
-| Sample storage | `data.pcm(format,frames,channels)` | `data.pcm(format,frames,channels)` |
+| Sample storage (f32) | `data.pcm(frames,channels)` | `data.pcm(frames,channels)` |
 | Create texture | `gfx.texture(desc)` | `gfx.texture(desc)` |
 | Upload pixels | `gfx.upload(texture,rect,pixels)` | `gfx.upload(texture,rect,pixels)` |
-| Palette/table/row creation | `gfx.palette(desc)`, `gfx.color_table(desc)`, `gfx.row_table(desc)` | Same operations with typed descriptors |
-| Mutable table data | `gfx.write(handle,range,buffer)` | Same operation; typed handle and span |
+| Palette/table/row creation | `gfx.palette(bytes)`, `gfx.color_table(bytes)`, `gfx.row_table(height)` | `gfx.palette(colors)` uses `[]u32`; table data uses `[]u8`; row count is explicit |
+| Mutable table data | `gfx.write(handle,offset_bytes,bytes)`, `gfx.write_rows(table,first,rows)` | Same operations; typed slices |
 | Offscreen image | `gfx.target(desc)` | `gfx.target(desc)` |
 | Pipeline/pass | `gfx.pipeline(desc)`, `gfx.begin_pass(target,opts)` | Same operations with typed descriptor structs |
 | Screen/default state | `gfx.screen()`, `gfx.default_pipeline(format)` | Same operations; session-scoped reserved handles |
-| Pass controls | `gfx.clip(pass,rect)`, `gfx.transform(pass,matrix)`, `gfx.bind(pass,pipeline)` | Same operations; typed pass and pipeline |
+| Pass controls | `gfx.clip(pass,x,y,w,h)`, `gfx.transform(pass,matrix)`, `gfx.bind(pass,pipeline)` | Same operations; typed pass and pipeline |
 | Draw | `gfx.draw(pass,image,src,dst,opts)` | `gfx.draw(pass,image,src,dst,opts)` |
 | Finish pass | `gfx.end_pass(pass)` | `gfx.end_pass(pass)` |
 | Resolve screen | `gfx.present(image,opts)` | `gfx.present(image,opts)` |
 | Pixel readback | `gfx.readback(target,rect)` | `gfx.readback(target,rect)` |
-| Consume readback | `gfx.poll(ticket)` | `gfx.poll(ticket)`; tagged pending/ready result |
+| Consume readback | `gfx.poll(ticket)` returns buffer or nil | `gfx.poll(ticket)` returns `(data.Pixel_Buffer,bool)` |
 | Audio storage/graph | `audio.sample(desc,pcm)`, `audio.wavetable(desc,pcm)`, `audio.instrument(nodes)` | Same operations with typed descriptors/slices |
 | Voices/routing | `audio.voice(index)`, `audio.master()`, `audio.bus(desc)` | Same operations; typed voice/bus handles |
 | Explicit playback | `audio.play_sample(voice,sample,opts)`, `audio.note_on(voice,inst,frequency_hz,opts)` | Same operations; typed voice/instrument handles |
@@ -399,7 +399,7 @@ exports matching opaque types checked by the runtime as well as its analyzer.
 | Mutable audio | `audio.edit_sample(sample,first,pcm,at)`, `audio.edit_wavetable(table,first,pcm,at)` | Same operations; explicit source-frame offset and time |
 | Release/stop | `audio.note_off(voice,at)`, `audio.release(voice,fade_frames,at)`, `audio.stop(voice,at)` | Same operations |
 | Clock/status | `audio.time()`, `audio.status()`, `console.capabilities()` | Same queries; integer clock and read-only snapshots |
-| Free resource | `gfx.destroy(handle)` / `audio.destroy(handle)` | Same operations |
+| Free resource | `gfx.destroy(handle)`, `audio.destroy(handle)`, `audio.destroy_instrument(inst)`, `audio.destroy_wavetable(table)` | Same operations with typed handles |
 
 Indexing into game data is zero-based in both SDKs, including Luau typed buffers;
 ordinary Luau arrays remain normal language arrays. Byte and frame offsets must
@@ -415,9 +415,10 @@ before live binding using its explicit frame range. SDK names expose these units
 
 ## 7. Initial limits and verification gates
 
-All new values below are **prototype targets**, not claims about today's runtime.
+These are the published profile's portable quotas. They do not promise a frame
+time or physical device latency on arbitrary hardware.
 
-| Item | Initial target |
+| Item | Profile limit |
 | --- | --- |
 | Game memory / tracked Luau heap | Retain 8 MiB / 4 MiB; staging fits inside those limits |
 | Live runtime resource IDs | 1,024, plus reserved screen/default resources |
@@ -436,8 +437,7 @@ Reported budgets must use the same portable charging rules on both hosts,
 including copies needed only by the browser adapter. Baseline runtime heaps,
 reserved linear-memory capacity, allocator overhead and device-driver memory
 are measured separately; a 64 MiB resource quota is not a process-RSS guarantee.
-The current player has fixed buffers and smaller limits; implementing this pool
-requires new host allocation/accounting rather than changing a constant alone.
+The implemented pool enforces these charges transactionally on both hosts.
 
 Acceptance requires matching Luau/Odin traces and native/browser rendering for
 pixel uploads, palette edits, LUT composition, masks, stencil, offscreen passes,

@@ -6,7 +6,7 @@ import {
   uploadGraphics,
   submitDrawing,
   rasterizeDrawing,
-  FRAME_BYTES,
+  negotiateProfile,
   configureResources,
   submitResources,
   deliverResources,
@@ -213,18 +213,13 @@ self.onmessage = async ({ data }) => {
       game = (await WebAssembly.instantiate(gameModule, imports)).exports;
       const instantiated = performance.now();
       initialMemory = game.memory.buffer.byteLength;
-      if (game.game_abi() !== 1 || game.game_frame_size() !== FRAME_BYTES) {
-        throw new Error("Unsupported game ABI or frame size.");
-      }
       runtime.runtime_init();
       const runtimeInitialized = performance.now();
       game._initialize?.();
-      if (cartridge && game.game_sdk_version?.() !== 256) {
-        throw new Error("Cartridge SDK version does not match its metadata.");
-      }
       if (source) {
         loadSource(game, source);
       }
+      negotiateProfile(game, cartridge);
       configureResources(game, runtime);
       game.game_init();
       checkExecutor(game);

@@ -1,18 +1,18 @@
-# Console SDK 0.1.0
+# Console SDK 0.2.0
 
-Two authoring SDKs for the same **2d-preview-1** console. Luau is the default
+Two authoring SDKs for the same **resource-av-1** console. Luau is the default
 authoring language; Odin is supported for explicit memory control and performance.
 The standalone native and browser players share the Odin renderer and cartridge
 ABI. The [formal specification](../docs/cartridge-spec.md) defines behavior and
 [contract.json](contract.json) records wire constants and required exports.
 
-The proposed [typed graphics/audio interface](../docs/resource-av-spec.md) adds
-runtime resources, explicit rendering controls and scheduled DSP in a future
-SDK 0.2.0 / ABI 2 profile. [Experimental resources](resources.md) and
-[explicit graphics](graphics.md), [PCM audio](audio.md) and
-[synthesis/effects](synthesis.md) implement 4a–4d,
-while the complete profile remains unpublished;
-[proposal targets](proposals/resource-av-1.json) are separate from the live contract.
+The [typed graphics/audio specification](../docs/resource-av-spec.md) and
+[published profile](profiles/resource-av-1.json) define SDK 0.2.0 / ABI 2.
+[Resources](resources.md), [explicit graphics](graphics.md), [PCM audio](audio.md)
+and [synthesis/effects](synthesis.md) work through both SDKs on native and browser.
+SDK 0.1.0 / ABI 1 remains an explicit compatibility profile. Existing manifests
+retain their version; new projects request SDK 0.2.0 and `resource-av-1`.
+See [profile negotiation and conformance](../docs/resource-profile.md).
 
 ## Start a game
 

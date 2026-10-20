@@ -36,6 +36,7 @@ Game :: struct {
     resource_packet:                           []u8,
     resource_enabled:                          bool,
     resource_protocol:                         u32,
+    profile:                                   u32,
 }
 
 resource_session: u32
@@ -215,6 +216,7 @@ load :: proc(
     source: []u8 = nil,
     metered := true,
     cache_config := "",
+    expected_profile: u32 = 0,
 ) -> bool {
     if len(bytes) == 0 || len(bytes) > abi.MAX_GAME_BYTES {
 
@@ -336,7 +338,9 @@ load :: proc(
 
             expected = abi.FRAME_BYTES
         }
-        if result[0].kind != 0 || result[0].of.i32 != expected {
+        if result[0].kind != 0 ||
+           (index == 0 && result[0].of.i32 != 1 && result[0].of.i32 != abi.RESOURCE_ABI_VERSION) ||
+           (index == 1 && result[0].of.i32 != expected) {
 
             return fail(game, "unsupported game ABI or frame size")
         }
@@ -441,11 +445,76 @@ load :: proc(
             return false
         }
     }
-    if !initialize(game) {
+    if !negotiate_profile(game, expected_profile) || !initialize(game) {
 
         return false
     }
     game.initialize_ms = time.duration_seconds(time.tick_since(initialize_start)) * 1000
+    return true
+}
+
+negotiate_profile :: proc(game: ^Game, expected: u32) -> bool {
+    profile := u32(1)
+    if has_export(game, "game_profile") {
+        query: Func
+        result: [1]Val
+        if !function(game, "game_profile", &query) ||
+           !call(game, &query, nil, result[:]) { return false }
+        if result[0].kind != 0 { return fail(game, "invalid game profile") }
+        profile = u32(result[0].of.i32)
+    }
+    if (profile != 1 && profile != abi.PROFILE_RESOURCE) ||
+       (expected != 0 && expected != profile) {
+        return fail(game, "unsupported or mismatched cartridge profile")
+    }
+    if profile == abi.PROFILE_RESOURCE {
+        for signature in abi.RESOURCE_EXPORTS {
+            query: Func
+            if !function(game, signature.name, &query) { return false }
+            kind := wasmtime_func_type(game.ctx, &query)
+            defer wasm_functype_delete(kind)
+            params, results := wasm_functype_params(kind), wasm_functype_results(kind)
+            if params.size != uint(len(signature.params)) ||
+               results.size != uint(len(signature.results)) {
+                return fail(game, "invalid resource profile export signature")
+            }
+            for expected, i in transmute([]u8)signature.params {
+                // Binary numeric types descend from 0x7f; C API kinds ascend from zero.
+                if wasm_valtype_kind(params.data[i]) != 127 - expected {
+                    return fail(game, "invalid resource profile export parameter")
+                }
+            }
+            for expected, i in transmute([]u8)signature.results {
+                if wasm_valtype_kind(results.data[i]) != 127 - expected {
+                    return fail(game, "invalid resource profile export result")
+                }
+            }
+        }
+    }
+    names := [4]string {
+        "game_abi",
+        "game_sdk_version",
+        "game_resource_protocol",
+        "game_required_features",
+    }
+    values := [4]u32 {
+        abi.RESOURCE_ABI_VERSION,
+        abi.RESOURCE_SDK_VERSION,
+        abi.RESOURCE_PROTOCOL,
+        abi.RESOURCE_FEATURES,
+    }
+    if profile == 1 { values[0] = 1 }
+    for name, index in names {
+        if profile == 1 && index > 0 { continue }
+        query: Func
+        result: [1]Val
+        if !function(game, name, &query) || !call(game, &query, nil, result[:]) { return false }
+        if result[0].kind != 0 || u32(result[0].of.i32) != values[index] {
+            return fail(game, "unsupported resource profile SDK, ABI, features or protocol")
+        }
+    }
+    if expected == 1 && !validate_sdk(game, 256) { return false }
+    game.profile = profile
     return true
 }
 

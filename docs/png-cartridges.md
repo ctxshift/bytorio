@@ -69,9 +69,9 @@ payload are **little-endian**, independently of the surrounding PNG envelope.
 | 0 | 4 bytes | ASCII `CART` |
 | 4 | u16 | Container version: 1 |
 | 6 | u8 | Language: 1 Luau, 2 Odin |
-| 7 | u8 | Profile: 1 (`2d-preview-1`) |
-| 8 | u32 | SDK version word: 256 (0.1.0) |
-| 12 | u32 | Game ABI: 1 |
+| 7 | u8 | Profile: 1 (`2d-preview-1`) or 2 (`resource-av-1`) |
+| 8 | u32 | SDK version word: 256 for profile 1; 512 (0.2.0) for profile 2 |
+| 12 | u32 | Game ABI: 1 for profile 1; 2 for profile 2 |
 | 16 | u16 | Initial display width: 320 or 640 |
 | 18 | u16 | Initial display height: 180 or 360, paired with width |
 | 20 | u32 | Title byte length, 1..128 |
@@ -83,7 +83,7 @@ entries, external paths or optional executor are allowed. The title is valid
 UTF-8 without ASCII controls or DEL. Luau code is UTF-8, at most 256 KiB. Odin code
 is a Wasm version-1 module, at most 1 MiB. Neither code section is compressed.
 Sprites and fonts are already embedded by the SDK. Both players check the
-cartridge SDK and initial display against the initialized game, and retain the
+cartridge SDK/ABI/profile before initialization and initial display afterward, and retain the
 existing guest memory, ABI, drawing, execution and diagnostic checks.
 
 Unsupported container, profile, SDK, ABI, language or flags fail explicitly.

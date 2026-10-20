@@ -1,7 +1,7 @@
 # Cartridge specification 0.1.0
 
 This is the normative **2d-preview-1** profile shared by the Luau and Odin SDKs.
-Its machine-readable constants are in [sdk/contract.json](../sdk/contract.json).
+Its machine-readable constants are in [the legacy contract](../sdk/profiles/2d-preview-1.json).
 It formalizes the implemented preview console, not the eventual full machine.
 The ABI version is **1**; the SDK version is independently **0.1.0**. WIT and
 the Wasm Component Model are not used.
@@ -13,20 +13,16 @@ streamed assets and large ROMs remain future profiles. Both languages support
 the [version-1 PNG cartridge container](png-cartridges.md).
 An SDK release is complete for this profile without claiming those features.
 
-## Proposed successor: typed graphics and audio resources
+## Successor: typed graphics and audio resources
 
-[The resource interface proposal](resource-av-spec.md) defines the intended next
+[The resource interface](resource-av-spec.md) defines the published successor
 profile, `resource-av-1`: typed runtime resources, mutable pixel/PCM staging,
 explicit passes and composition, and a scheduled shared audio mixer/synthesizer.
-It targets SDK 0.2.0 / ABI 2 with negotiation, generation-checked handles, bounded
-control/draw packets and lifecycle rules for both Luau and Odin. Its provisional
-budgets are isolated in [the proposal manifest](../sdk/proposals/resource-av-1.json).
-
-The complete profile is not implemented. Its [internal 4a/4b slices](../sdk/resources.md)
-does not change the advertised behavior, limits,
-exports or PNG compatibility specified below. `sdk/contract.json` remains the
-authoritative implemented contract. Profile 2 must not be advertised until the
-implementation-plan gates and native/browser conformance checks pass.
+It uses SDK 0.2.0 / ABI 2 with pre-init negotiation, generation-checked handles,
+bounded packets and lifecycle rules for both SDKs. Its fixed budgets are in
+[the profile manifest](../sdk/profiles/resource-av-1.json).
+The [live contract](../sdk/contract.json) describes the current SDK; the remainder
+of this document freezes ABI 1 compatibility. See [profile conformance](resource-profile.md).
 
 ## Execution and compatibility
 

@@ -1,10 +1,10 @@
-# Experimental PCM audio: milestone 4c
+# PCM audio: resource-av-1
 
 Both SDKs expose the same 48 kHz stereo mixer. The native player delivers its
 output through SDL; the browser runs the same Odin DSP in an independent
-AudioWorklet. These APIs use internal resource transport version 4 and require
-matching players from this checkout. SDK 0.2.0 / ABI 2 / `resource-av-1` remain
-unpublished until the remaining conformance and negotiation work in 4e.
+AudioWorklet. These APIs use resource transport version 4 in the published
+SDK 0.2.0 / ABI 2 / `resource-av-1` profile. See
+[profile negotiation and limits](../docs/resource-profile.md).
 
 Import `console.audio` / `console.data` in Luau or `audio "sdk:audio"` /
 `data "sdk:data"` in Odin. Record commands during init/update. Audio never calls

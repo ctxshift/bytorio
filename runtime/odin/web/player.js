@@ -213,6 +213,10 @@ async function start() {
 }
 
 async function load(restart = false) {
+  if (!display || display.isContextLost?.()) {
+    fail("Display context unavailable. Restore the display and restart the game.");
+    return;
+  }
   const currentGeneration = ++generation;
   worker?.terminate();
   stopOutput();
@@ -326,6 +330,9 @@ async function load(restart = false) {
     };
     if (data.startup) {
       globalThis.playerStatus.startup = data.startup;
+    }
+    if (data.memory) {
+      globalThis.playerStatus.memory = data.memory;
     }
     status.textContent =
       globalThis.playerInstructions || "Arrows / WASD: move · Space / tap: sound";
@@ -528,6 +535,10 @@ document.getElementById("fullscreen").addEventListener("click", () =>
     }),
 );
 document.addEventListener("fullscreenchange", resize);
+canvas.addEventListener("contextlost", (event) => {
+  event.preventDefault();
+  fail("Display context lost. Restore the display and restart the game.");
+});
 window.addEventListener("resize", resize);
 resize();
 load();

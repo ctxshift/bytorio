@@ -2,6 +2,7 @@
 local c = require("./constants")
 local host = require("./native")
 local resources = require("./resources")
+local schema = require("./resource_schema")
 export type Texture = resources.Texture
 export type Target = resources.Target
 export type Palette = resources.Palette
@@ -24,7 +25,23 @@ export type PixelBuffer = resources.PixelBuffer
 export type PCMBuffer = resources.PCMBuffer
 export type Button = "left" | "right" | "up" | "down" | "action"
 export type Game = { init: () -> (), update: (number) -> (), draw: () -> () }
-local api = { version = "0.1.0" }
+local profileQuery = host.profile
+local profile = if profileQuery then profileQuery() else 1
+local api = { version = if profile == c.PROFILE_RESOURCE then "0.2.0" else "0.1.0" }
+function api.capabilities()
+    return table.freeze({
+        profile = profile,
+        abi = if profile == c.PROFILE_RESOURCE then c.RESOURCE_ABI_VERSION else 1,
+        sdk = if profile == c.PROFILE_RESOURCE then c.RESOURCE_SDK_VERSION else 256,
+        features = if profile == c.PROFILE_RESOURCE then c.RESOURCE_FEATURES else 0,
+        protocol = if profile == c.PROFILE_RESOURCE then c.RESOURCE_PROTOCOL else 0,
+        resource_bytes = schema.maxResourceBytes,
+        slots = schema.maxSlots,
+        payload_bytes = schema.maxPayload,
+        audio_rate = schema.audioRate,
+        audio_lead_frames = schema.audioLeadFrames,
+    })
+end
 api.gfx = resources.gfx
 api.audio = resources.audio
 api.data = resources.data

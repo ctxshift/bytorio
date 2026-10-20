@@ -4,17 +4,18 @@ import abi "../abi"
 import "core:hash"
 import "core:unicode/utf8"
 
-// PNG container v1 for the implemented 2D preview profile. All returned views
+// PNG container v1 for the published profiles. All returned views
 // borrow the input; callers retain it until they have copied/compiled the code.
 MAX_BYTES :: 2 * 1024 * 1024
 HEADER_BYTES :: 32
-SDK_VERSION :: u32(256)
+LEGACY_SDK_VERSION :: u32(256)
 LUAU :: u32(1)
 ODIN :: u32(2)
 Cartridge :: struct {
-    language, display: u32,
-    title:             string,
-    code:              []u8,
+    language, display:         u32,
+    profile, sdk, abi_version: u32,
+    title:                     string,
+    code:                      []u8,
 }
 
 be32 :: proc(b: []u8) -> u32 {
@@ -37,11 +38,14 @@ parse_payload :: proc(b: []u8) -> (cart: Cartridge, error: string) {
 
         return {}, "invalid cartridge header"
     }
-    if le16(b[4:]) != 1 ||
-       b[7] != 1 ||
-       le32(b[8:]) != SDK_VERSION ||
-       le32(b[12:]) != abi.VERSION ||
-       le32(b[28:]) != 0 {
+    cart.profile, cart.sdk, cart.abi_version = u32(b[7]), le32(b[8:]), le32(b[12:])
+    legacy :=
+        cart.profile == 1 && cart.sdk == LEGACY_SDK_VERSION && cart.abi_version == abi.VERSION
+    resource :=
+        cart.profile == abi.PROFILE_RESOURCE &&
+        cart.sdk == abi.RESOURCE_SDK_VERSION &&
+        cart.abi_version == abi.RESOURCE_ABI_VERSION
+    if le16(b[4:]) != 1 || (!legacy && !resource) || le32(b[28:]) != 0 {
         return {}, "unsupported cartridge version, SDK, ABI or profile"
     }
     cart.language = u32(b[6])

@@ -1,9 +1,9 @@
-# Experimental explicit graphics: milestone 4b
+# Explicit graphics: resource-av-1
 
 The matching native and browser players implement the same Odin software
 reference renderer. Luau uses `console.gfx` and `console.data`; Odin imports
-`gfx "sdk:gfx"` and `data "sdk:data"`. These calls require internal resource
-transport version 2. They do not publish the complete SDK 0.2.0 / ABI 2 profile.
+`gfx "sdk:gfx"` and `data "sdk:data"`. The published SDK 0.2.0 / ABI 2
+profile uses resource transport version 4, retaining the version-2 graphics layout.
 The [resource ownership rules](resources.md) still apply.
 
 ## Resources and drawing

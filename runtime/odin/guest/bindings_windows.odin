@@ -90,6 +90,10 @@ foreign wasmtime {
     wasmtime_linker_define_func :: proc(linker: Linker, module: [^]u8, module_len: uint, name: [^]u8, name_len: uint, function_type: rawptr, callback: Callback, environment, finalizer: rawptr) -> Error ---
     wasmtime_linker_instantiate :: proc(linker: Linker, ctx: Context, module: Module, instance: ^Instance, trap: ^Trap) -> Error ---
     wasm_valtype_new :: proc(kind: u8) -> rawptr ---
+    wasm_valtype_kind :: proc(value: rawptr) -> u8 ---
+    wasmtime_func_type :: proc(ctx: Context, function: ^Func) -> rawptr ---
+    wasm_functype_params :: proc(function_type: rawptr) -> ^TypeVec ---
+    wasm_functype_results :: proc(function_type: rawptr) -> ^TypeVec ---
     wasm_valtype_vec_new_uninitialized :: proc(vector: ^TypeVec, size: uint) ---
     wasm_functype_new :: proc(params, results: ^TypeVec) -> rawptr ---
     wasm_functype_delete :: proc(function_type: rawptr) ---

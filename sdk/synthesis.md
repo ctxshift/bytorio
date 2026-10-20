@@ -1,9 +1,9 @@
-# Experimental synthesis and effects: milestone 4d
+# Synthesis and effects: resource-av-1
 
 Luau and Odin now author the same typed DSP graphs, evaluated by the shared Odin
-mixer on native and browser. This slice uses **internal resource protocol 4**.
-Players still accept protocols 1–3; the published cartridge profile and SDK
-version remain unchanged pending 4e. These calls require matching players.
+mixer on native and browser using **resource protocol 4**, published as
+SDK 0.2.0 / ABI 2 / `resource-av-1`. Players retain protocols 1–3 through the
+compatibility adapter. See [profile conformance](../docs/resource-profile.md).
 The [PCM audio reference](audio.md) defines clocks, voices, routing, queues,
 feedback, pause and device delivery shared by this API.
 
@@ -187,7 +187,8 @@ Protocol 4 expands the fixed portable audio reservation to **55,463,952 bytes**
 on both hosts for metadata, PCM arenas, command/transfer/feedback storage and
 scratch. Ordinary resource storage is charged additionally within the 64 MiB
 quota. No arbitrary guest DSP callbacks, topology feedback or host-device access
-is exposed. Minimum target devices and public profile negotiation remain 4e.
+is exposed. [Profile negotiation](../docs/resource-profile.md) is published;
+minimum hardware and physical device latency remain unqualified.
 
 The matching [Luau tone cartridge](../tests/synthesis/cartridges/game.luau) and
 [Odin tone cartridge](../tests/synthesis/cartridges/game.odin) demonstrate the

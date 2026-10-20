@@ -13,6 +13,12 @@ rows: [180]gfx.Row
 frame_pixels: data.Pixel_Buffer
 bench: bool
 init :: proc() {
+    caps := console.capabilities()
+    assert(caps.profile == 2 && caps.abi == 2 && caps.sdk == 512)
+    assert(caps.features == 7 && caps.protocol == 4)
+    assert(caps.resource_bytes == 67108864 && caps.slots == 1024)
+    assert(caps.payload_bytes == 1048576 && caps.audio_rate == 48000)
+    assert(caps.audio_lead_frames == 2400)
     console.display(.Low)
     stencil := gfx.target({format = .Stencil8, width = 320, height = 180})
     scene = gfx.target({format = .RGBA8, width = 320, height = 180, stencil = stencil})

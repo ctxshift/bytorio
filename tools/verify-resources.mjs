@@ -16,7 +16,7 @@ import {
   checkExecutor,
 } from "../runtime/odin/web/policy.js";
 
-const schema = JSON.parse(await readFile("sdk/proposals/resource-transport.json", "utf8"));
+const schema = JSON.parse(await readFile("sdk/resource-protocol.json", "utf8"));
 assert.equal(schema.magic, Buffer.from("AVP1").readUInt32LE());
 
 const root = resolve("build/resource-verification", randomUUID());

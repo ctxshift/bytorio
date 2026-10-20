@@ -1,5 +1,5 @@
 {
-  "status": "internal-milestone-4d",
+  "status": "published-resource-av-1",
   "version": 4,
   "abi": 2,
   "magic": 827348545,
@@ -429,10 +429,12 @@
       "game_commit_ack": "(sequence:u32)->u32",
       "game_resource_mailbox": "()->u32",
       "game_resource_mailbox_capacity": "()->u32",
-      "game_resource_mailbox_size": "(bytes:u32)->u32"
+      "game_resource_mailbox_size": "(bytes:u32)->u32",
+      "game_profile": "()->u32",
+      "game_required_features": "()->u32"
     },
-    "capabilities": "version 2: texture/sample ownership plus software graphics, reserved RGBA screen, 8 offscreen targets, 4 readbacks",
-    "input": "ABI-1 input arguments plus bounded readback mailbox before each update",
+    "capabilities": "Fixed resource-av-1 feature mask 7 and limits from profiles/resource-av-1.json; exact SDK/ABI/protocol negotiation before init",
+    "input": "game_update(buttons:u32,pointerActive:u32,x:f64,y:f64); completion/audio-status mailbox delivered before each update",
     "acknowledgement": "accepted packet sequence, synchronous before next callback; failure terminates session"
   },
   "maxTargets": 8,

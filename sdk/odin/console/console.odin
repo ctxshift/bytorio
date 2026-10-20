@@ -7,9 +7,35 @@ import gfx "../gfx"
 import resources "../resource"
 import "base:runtime"
 
-VERSION :: "0.1.0"
-VERSION_WORD :: u32(256)
+PROFILE :: #config(CONSOLE_PROFILE, 1)
+#assert(PROFILE == 1 || PROFILE == abi.PROFILE_RESOURCE)
+when PROFILE == abi.PROFILE_RESOURCE {
+    VERSION :: "0.2.0"
+    VERSION_WORD :: u32(abi.RESOURCE_SDK_VERSION)
+} else {
+    VERSION :: "0.1.0"
+    VERSION_WORD :: u32(256)
+}
 DT :: 1.0 / 60.0
+Capabilities :: struct {
+    profile, abi, sdk, features, protocol:                               u32,
+    resource_bytes, slots, payload_bytes, audio_rate, audio_lead_frames: u32,
+}
+capabilities :: proc() -> Capabilities {
+    resource := PROFILE == abi.PROFILE_RESOURCE
+    return {
+        u32(PROFILE),
+        u32(abi.RESOURCE_ABI_VERSION) if resource else 1,
+        VERSION_WORD,
+        u32(abi.RESOURCE_FEATURES) if resource else 0,
+        u32(abi.RESOURCE_PROTOCOL) if resource else 0,
+        w.maxResourceBytes,
+        w.maxSlots,
+        w.maxPayload,
+        w.audioRate,
+        w.audioLeadFrames,
+    }
+}
 Button :: enum u32 {
     Left   = 1,
     Right  = 2,
@@ -273,7 +299,13 @@ debug_position :: proc(x, y: f64) {
 @(export)
 game_abi :: proc "c" () -> u32 {
 
-    return abi.VERSION
+    return abi.RESOURCE_ABI_VERSION if PROFILE == abi.PROFILE_RESOURCE else abi.VERSION
+}
+@(export)
+game_profile :: proc "c" () -> u32 { return PROFILE }
+@(export)
+game_required_features :: proc "c" () -> u32 {
+    return abi.RESOURCE_FEATURES if PROFILE == abi.PROFILE_RESOURCE else 0
 }
 @(export)
 game_sdk_version :: proc "c" () -> u32 {

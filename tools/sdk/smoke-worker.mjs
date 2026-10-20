@@ -24,11 +24,7 @@ try {
   if (source) {
     loadSource(game, source);
   }
-  if (
-    game.game_abi() !== 1 ||
-    game.game_sdk_version() !== 256 ||
-    game.game_command_stride() !== 32
-  ) {
+  if (game.game_command_stride() !== 32) {
     throw new Error("Unsupported SDK/ABI version");
   }
   configureResources(game, runtime);

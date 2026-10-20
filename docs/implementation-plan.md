@@ -1,14 +1,15 @@
 # Implementation plan
 
-Status: updated 2026-10-19. **Luau is the default cartridge language; Odin cartridges are also supported.** The runtime remains Odin. [SDK 0.1.0](../sdk/README.md) implements the shared [2D preview contract](cartridge-spec.md), superseding the earlier Odin-only authoring direction. The C++ reference player is retired; C++ remains only for Luau support. Full machine-profile validation remains later work.
+Status: updated 2026-10-19. **Luau is the default cartridge language; Odin cartridges are also supported.** The runtime remains Odin. [SDK 0.2.0](../sdk/README.md) publishes the shared [resource profile](resource-profile.md), retaining the [ABI 1 adapter](cartridge-spec.md). The C++ reference player is retired; C++ remains only for Luau support. Larger indexed ROMs and 3D remain later work.
 
 Keep the standalone native requirement, browser target, single display with 640×360 and 320×180 modes, mostly 2D scope, approximate 128/512 MB package goals, and complete PNG cartridges. The [DS/3DS comparison](target-comparison.md) is advisory; the language change does not expand fidelity scope. The product name remains undecided; use neutral terminology and treat `sdk` command names as placeholders.
 
 ## Current evidence
 
-SDK 0.1.0 formalizes the implemented 2D preview profile and supports Luau as the
+SDK 0.2.0 publishes the resource profile and supports Luau as the
 default authoring language alongside Odin. Both SDKs provide lifecycle handling,
-drawing, input, timing, deterministic random numbers and cue audio. The shared CLI
+drawing, input, timing, deterministic random numbers, typed graphics resources,
+PCM playback and synthesis/effects. The shared CLI
 creates, checks, builds, packages, runs and watches projects; see [the SDK guide](../sdk/README.md).
 This supersedes the earlier Odin-only authoring direction. The runtime remains Odin.
 
@@ -88,11 +89,12 @@ Exit: the supported Odin build replaces the reference player and its documented 
 
 ## Milestone 4: typed graphics and audio resources
 
-Design: [resource interface proposal](resource-av-spec.md), proposed SDK 0.2.0 /
-ABI 2 / `resource-av-1`. Status: **4a/4b implemented; full profile not published**. Current SDK 0.1.0 remains the
-implemented contract. Complete the stages in order; do not expose partial calls
-as supported profile features. [Proposal budgets](../sdk/proposals/resource-av-1.json)
-are targets to validate, not constants to apply to today's player.
+Design: [resource interface](resource-av-spec.md), published SDK 0.2.0 /
+ABI 2 / `resource-av-1`. Status: **4a–4e implemented on the reference hosts**.
+SDK 0.1.0 remains supported through the ABI 1 adapter.
+[Profile bounds](../sdk/profiles/resource-av-1.json) are frozen portable quotas;
+minimum hardware and physical device latency remain unqualified. Earlier stages
+below record the slices that preceded publication; 4e defines the supported release.
 
 ### 4a. Resource ownership, transport and both SDKs
 
@@ -210,6 +212,21 @@ Record real-time CPU budget, copy overhead, peak memory, saturation behavior and
 underruns before freezing the provisional limits.
 
 ### 4e. Conformance, packaging and profile publication
+
+Implemented: [published SDK 0.2.0 / ABI 2 resource profile](resource-profile.md),
+generated public protocol schema, exact pre-init tuple/feature negotiation,
+profile-2 PNG packaging, both SDK capability queries and portable distribution
+manifests. `mise run test:profile` exercises both languages and hosts using
+loose/PNG graphics and synthesis cartridges, metadata rejection and session
+recovery, and retains cold/warm startup and memory observations. Existing
+conformance and ABI 1 RPG/racing suites remain in the same CI gate.
+
+Publication freezes portable bounds and supported reference platforms. Minimum
+hardware and physical latency are unqualified; the profile makes no universal
+frame/audio timing guarantee. Input retains the existing fixed arguments plus
+the completion mailbox, and the first profile requires all features rather than
+introducing optional feature/minimum-limit negotiation. Context-loss recovery
+uses session termination/restart; tests inject the event, not a physical GPU loss.
 
 - Publish the generated schema, SDK signatures, examples and measured limits only
   after the preceding gates pass. Add explicit profile/ABI negotiation to native

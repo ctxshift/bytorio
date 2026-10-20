@@ -1,0 +1,62 @@
+{
+  "sdkVersion": "0.1.0",
+  "sdkVersionWord": 256,
+  "abiVersion": 1,
+  "profile": "2d-preview-1",
+  "tickRate": 60,
+  "defaults": {"clearColor": 4281475093, "randomSeed": 1, "zeroSeedFallback": 1831565813, "previewSampleRate": 48000},
+  "displayModes": [[640, 360], [320, 180]],
+  "defaultDisplayMode": [640, 360],
+  "cartridge": {
+    "containerVersion": 1,
+    "pngChunk": "caRt",
+    "payloadMagic": "CART",
+    "profileId": 1,
+    "headerBytes": 32,
+    "maxPngBytes": 2097152,
+    "maxCoverWidth": 1024,
+    "maxCoverHeight": 1024,
+    "maxTitleBytes": 128,
+    "maxChunks": 4096,
+    "languages": {"luau": 1, "odin": 2},
+    "fields": {"magic": 0, "version": 4, "language": 6, "profile": 7, "sdkVersion": 8, "abiVersion": 12, "width": 16, "height": 18, "titleBytes": 20, "codeBytes": 24, "flags": 28}
+  },
+  "limits": {
+    "moduleBytes": 1048576,
+    "guestMemoryBytes": 8388608,
+    "luauSourceBytes": 262144,
+    "luauHeapBytes": 4194304,
+    "commands": 16384,
+    "textBytes": 16384,
+    "textBytesPerCommand": 1024,
+    "graphicsBytes": 66512,
+    "sprites": 256,
+    "coordinateMin": -4096,
+    "coordinateMax": 4096
+  },
+  "buttons": {"left": 1, "right": 2, "up": 4, "down": 8, "action": 16},
+  "records": {
+    "frame": {"bytes": 40, "fields": {"version": 0, "clear": 4, "spriteX": 8, "spriteY": 12, "ticks": 16, "sounds": 20, "debugX": 24, "debugY": 32}},
+    "command": {"bytes": 32, "fields": {"kind": 0, "x": 4, "y": 8, "w": 12, "h": 16, "color": 20, "offset": 24, "length": 28}},
+    "graphics": {"magic": 827868743, "headerBytes": 16, "paletteEntries": 16, "spriteWidth": 16, "spriteHeight": 16, "glyphs": 128, "glyphRows": 7}
+  },
+  "commandKinds": {"rect": 0, "sprite": 1, "text": 2, "spriteSize": 3},
+  "requiredExports": {
+    "game_abi": "() -> i32",
+    "game_sdk_version": "() -> i32",
+    "game_frame_size": "() -> i32",
+    "game_init": "() -> ()",
+    "game_update": "(i32, i32, f64, f64) -> ()",
+    "game_draw": "() -> i32",
+    "game_display_mode": "() -> i32",
+    "game_commands": "() -> i32",
+    "game_command_count": "() -> i32",
+    "game_command_stride": "() -> i32",
+    "game_text": "() -> i32",
+    "game_text_size": "() -> i32",
+    "game_assets": "() -> i32",
+    "game_assets_size": "() -> i32",
+    "game_error": "() -> i32",
+    "game_error_length": "() -> i32"
+  }
+}

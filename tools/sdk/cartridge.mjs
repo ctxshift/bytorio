@@ -1,5 +1,7 @@
 import { MAX_GAME_BYTES, MAX_LUAU_SOURCE_BYTES } from "../../runtime/odin/web/constants.js";
 import { deflateSync } from "node:zlib";
+import { readFileSync } from "node:fs";
+const contract = JSON.parse(readFileSync(new URL("../../sdk/contract.json", import.meta.url)));
 
 export const PNG_LIMIT = 2 * 1024 * 1024;
 export const signature = Buffer.from("89504e470d0a1a0a", "hex");
@@ -131,7 +133,19 @@ export function defaultCover({ title, language, assets }) {
   ]);
 }
 
-export function encodeCartridge({ title, language, display, code, cover, assets }) {
+export function encodeCartridge({
+  title,
+  language,
+  display,
+  code,
+  cover,
+  assets,
+  profile = "2d-preview-1",
+}) {
+  const requirements = contract.profiles.find((item) => item.name === profile);
+  if (!requirements) {
+    throw new Error("Unsupported cartridge profile");
+  }
   if (
     typeof title !== "string" ||
     [...title].some((c) => c.charCodeAt(0) < 32 || c.charCodeAt(0) === 127)
@@ -162,9 +176,9 @@ export function encodeCartridge({ title, language, display, code, cover, assets 
   header.write("CART");
   header.writeUInt16LE(1, 4);
   header[6] = kind;
-  header[7] = 1;
-  header.writeUInt32LE(256, 8);
-  header.writeUInt32LE(1, 12);
+  header[7] = requirements.id;
+  header.writeUInt32LE(requirements.sdkWord, 8);
+  header.writeUInt32LE(requirements.abi, 12);
   header.writeUInt16LE(display[0], 16);
   header.writeUInt16LE(display[1], 18);
   header.writeUInt32LE(name.length, 20);

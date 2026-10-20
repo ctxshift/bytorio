@@ -4,6 +4,12 @@ import {
   MAX_MEMORY_BYTES,
   WASM_PAGE_BYTES,
   resourceSchema,
+  PROFILE_RESOURCE,
+  RESOURCE_ABI_VERSION,
+  RESOURCE_SDK_VERSION,
+  RESOURCE_FEATURES,
+  RESOURCE_PROTOCOL,
+  RESOURCE_EXPORTS,
 } from "./constants.js";
 export { FRAME_BYTES, MAX_GAME_BYTES };
 export const MAX_PAGES = MAX_MEMORY_BYTES / WASM_PAGE_BYTES;
@@ -11,8 +17,48 @@ const DISPLAY_DIMENSION_BITS = 16;
 const DISPLAY_DIMENSION_MASK = 2 ** DISPLAY_DIMENSION_BITS - 1;
 const resourceProtocols = new WeakMap();
 
-// Internal resource transport. This does not advertise the unfinished ABI-2 profile.
+// A fixed profile is negotiated as a complete tuple before calling game_init.
+// There are no optional feature bits in resource-av-1.
+export function negotiateProfile(game, cartridge = null) {
+  const profile = game.game_profile?.() ?? 1;
+  const abi = game.game_abi();
+  const sdk = game.game_sdk_version?.();
+  if (
+    cartridge &&
+    (profile !== cartridge.profile || abi !== cartridge.abi || sdk !== cartridge.sdk)
+  ) {
+    throw new Error("Cartridge SDK, ABI or profile does not match its metadata.");
+  }
+  if (
+    game.game_frame_size() !== FRAME_BYTES ||
+    (profile === 1
+      ? abi !== 1
+      : profile !== PROFILE_RESOURCE ||
+        abi !== RESOURCE_ABI_VERSION ||
+        sdk !== RESOURCE_SDK_VERSION)
+  ) {
+    throw new Error("Unsupported game ABI or profile.");
+  }
+  if (
+    profile === PROFILE_RESOURCE &&
+    (game.game_resource_protocol?.() !== RESOURCE_PROTOCOL ||
+      game.game_required_features?.() !== RESOURCE_FEATURES)
+  ) {
+    throw new Error("Unsupported resource profile features or protocol.");
+  }
+  if (profile === PROFILE_RESOURCE) {
+    for (const { name } of RESOURCE_EXPORTS) {
+      if (typeof game[name] !== "function") {
+        throw new Error(`Missing resource profile export: ${name}.`);
+      }
+    }
+  }
+  return profile;
+}
+
+// Configure the negotiated profile; legacy experimental transports retain their bounds.
 export function configureResources(game, runtime) {
+  negotiateProfile(game);
   if (!game.game_resource_protocol) {
     return;
   }
@@ -145,6 +191,29 @@ export function inspectGuest(bytes, compiledModule) {
     throw new Error("Invalid Wasm integer.");
   }
   let hasMemory = false;
+  const types = [],
+    functions = [],
+    functionExports = new Map();
+  function name(end) {
+    const size = leb(end);
+    if (cursor + size > end) {
+      throw new Error("Truncated Wasm name.");
+    }
+    const result = new TextDecoder("utf-8", { fatal: true }).decode(
+      data.subarray(cursor, cursor + size),
+    );
+    cursor += size;
+    return result;
+  }
+  function vector(end) {
+    const count = leb(end);
+    if (cursor + count > end) {
+      throw new Error("Truncated Wasm type.");
+    }
+    const values = [...data.subarray(cursor, cursor + count)];
+    cursor += count;
+    return values;
+  }
   while (cursor < data.length) {
     const section = data[cursor++];
     const size = leb(data.length);
@@ -152,7 +221,41 @@ export function inspectGuest(bytes, compiledModule) {
     if (end > data.length) {
       throw new Error("Truncated Wasm section.");
     }
-    if (section === 5) {
+    if (section === 1) {
+      const count = leb(end);
+      for (let i = 0; i < count; i++) {
+        if (data[cursor++] !== 96) {
+          throw new Error("Unsupported Wasm function type.");
+        }
+        types.push({ params: vector(end), results: vector(end) });
+      }
+    } else if (section === 2) {
+      const count = leb(end);
+      for (let i = 0; i < count; i++) {
+        const module = name(end),
+          field = name(end),
+          kind = data[cursor++];
+        if (kind !== 0 || module !== "env" || field !== "sin") {
+          throw new Error("Unsupported game import.");
+        }
+        functions.push(leb(end));
+      }
+    } else if (section === 3) {
+      const count = leb(end);
+      for (let i = 0; i < count; i++) {
+        functions.push(leb(end));
+      }
+    } else if (section === 7) {
+      const count = leb(end);
+      for (let i = 0; i < count; i++) {
+        const field = name(end),
+          kind = data[cursor++],
+          index = leb(end);
+        if (kind === 0) {
+          functionExports.set(field, index);
+        }
+      }
+    } else if (section === 5) {
       if (hasMemory || leb(end) !== 1) {
         throw new Error("Game must define one memory.");
       }
@@ -179,6 +282,19 @@ export function inspectGuest(bytes, compiledModule) {
     }
   }
   const exports = new Map(WebAssembly.Module.exports(module).map((item) => [item.name, item.kind]));
+  for (const signature of RESOURCE_EXPORTS) {
+    if (!functionExports.has(signature.name)) {
+      continue;
+    }
+    const actual = types[functions[functionExports.get(signature.name)]];
+    if (
+      !actual ||
+      JSON.stringify(actual) !==
+        JSON.stringify({ params: signature.params, results: signature.results })
+    ) {
+      throw new Error(`Invalid resource profile export signature: ${signature.name}.`);
+    }
+  }
   for (const name of ["game_abi", "game_frame_size", "game_init", "game_update", "game_draw"]) {
     if (exports.get(name) !== "function") {
       throw new Error(`Missing game export: ${name}.`);
