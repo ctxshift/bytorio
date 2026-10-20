@@ -35,6 +35,13 @@ Slot :: struct {
     volume_depth, vertex_count, index_count, mesh_offset: u32,
 }
 Registry :: struct {
+    rasterizer:                  Raster_Proc,
+    pixel_snap:                  bool,
+    smooth_pan:                  bool,
+    preview, preview_mask:       []u8,
+    preview_residual:            [2]f64,
+    preview_enabled:             bool,
+    preview_background:          u32,
     session, sequence, protocol: u32,
     tick:                        u64,
     initialized:                 bool,
@@ -86,10 +93,15 @@ close :: proc(r: ^Registry) {
     }
     delete(r.screen.data)
     delete(r.output)
+    delete(r.preview)
+    delete(r.preview_mask)
     r^ = {}
 }
 reset :: proc(r: ^Registry, session: u32, protocol: u32 = w.version) -> bool {
+    rasterizer, pixel_snap, smooth_pan := r.rasterizer, r.pixel_snap, r.smooth_pan
     close(r)
+    r.rasterizer, r.pixel_snap = rasterizer, pixel_snap
+    r.smooth_pan = smooth_pan
     if session == 0 {
 
         r.error = "zero resource session"
@@ -208,6 +220,11 @@ submit :: proc(
     }
     committed := false
     defer {
+        delete(txn.gpu_vertices)
+        if !committed {
+            delete(txn.preview)
+            delete(txn.preview_mask)
+        }
         if !committed {
             if raw_data(txn.audio_master.data) !=
                raw_data(r.audio_master.data) { delete(txn.audio_master.data) }
@@ -238,6 +255,7 @@ submit :: proc(
         r.command = index
         cmd := packet[w.headerBytes + index * w.commandBytes:][:w.commandBytes]
         op, id := u16le(cmd, 0), u32le(cmd, 8)
+        if op != w.op_draw_mesh && !flush_raster(&txn) { return false }
         if r.protocol == 1 && op > w.op_destroy_sample {
 
             return fail(r, "graphics resources require resource protocol 2")
@@ -543,6 +561,11 @@ submit :: proc(
     r.screen = screen
     r.output = txn.output
     if phase == 2 {
+        delete(r.preview)
+        delete(r.preview_mask)
+        r.preview, r.preview_mask = txn.preview, txn.preview_mask
+        r.preview_enabled = len(txn.preview) != 0 && !txn.preview_disabled
+        r.preview_residual, r.preview_background = txn.gpu_residual, txn.preview_background
 
         r.has_output = txn.present_count == 1
         r.output_width = txn.width

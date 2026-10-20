@@ -1,11 +1,66 @@
 import { PREVIEW_SAMPLE_RATE, resourceSchema as audioLimits } from "./constants.js";
 import { prepareExecutor } from "./executor-cache.js";
+import { normalizeGraphics } from "./gpu.js";
 const canvas = document.getElementById("canvas");
 const display = canvas.getContext("2d", { alpha: false });
 const button = document.getElementById("start");
 const status = document.getElementById("status");
 const parameters = new URLSearchParams(location.search);
 const smoke = parameters.has("smoke");
+let graphics = { backend: "cpu", ssaa: "off", pixelSnap: false, smoothPan: false };
+try {
+  graphics = normalizeGraphics(JSON.parse(localStorage.getItem("graphics-v1") || "{}"));
+} catch {
+  /* Storage may be unavailable or contain old/invalid preferences. */
+}
+let graphicsError = "";
+try {
+  graphics = normalizeGraphics({
+    ...graphics,
+    ...(parameters.get("renderer") === "cpu"
+      ? { ssaa: "off", pixelSnap: false, smoothPan: false }
+      : {}),
+    backend: parameters.get("renderer") || graphics.backend,
+    ssaa: parameters.get("ssaa") || graphics.ssaa,
+    pixelSnap: parameters.has("pixel-snap") || graphics.pixelSnap,
+    smoothPan: parameters.has("smooth-pan") || graphics.smoothPan,
+  });
+} catch (error) {
+  graphicsError = error.message;
+}
+const graphicsBackend = document.getElementById("graphics-backend");
+const graphicsSsaa = document.getElementById("graphics-ssaa");
+const graphicsSnap = document.getElementById("graphics-snap");
+const graphicsSmooth = document.getElementById("graphics-smooth");
+graphicsBackend.value = graphics.backend;
+graphicsSsaa.value = graphics.ssaa;
+graphicsSnap.checked = graphics.pixelSnap;
+graphicsSmooth.checked = graphics.smoothPan;
+const syncGraphicsControls = () => {
+  const cpu = graphicsBackend.value === "cpu";
+  graphicsSsaa.disabled = graphicsSnap.disabled = graphicsSmooth.disabled = cpu;
+  if (cpu) {
+    graphicsSsaa.value = "off";
+    graphicsSnap.checked = false;
+    graphicsSmooth.checked = false;
+  }
+};
+graphicsBackend.addEventListener("change", syncGraphicsControls);
+syncGraphicsControls();
+document.getElementById("graphics-apply").addEventListener("click", () => {
+  graphics = normalizeGraphics({
+    backend: graphicsBackend.value,
+    ssaa: graphicsSsaa.value,
+    pixelSnap: graphicsSnap.checked,
+    smoothPan: graphicsSmooth.checked,
+  });
+  try {
+    localStorage.setItem("graphics-v1", JSON.stringify(graphics));
+  } catch {
+    /* Session settings still apply. */
+  }
+  load(started).catch((error) => fail(error.message));
+});
 const keys = new Set();
 const pointer = { pointer: false, x: 0, y: 0 };
 let worker,
@@ -303,13 +358,15 @@ async function load(restart = false) {
         ensureMixer().catch((error) => fail(error.message));
       }
     }
-    if (canvas.width !== data.width || canvas.height !== data.height) {
-      canvas.width = data.width;
-      canvas.height = data.height;
+    const imageWidth = data.presentationWidth || data.width,
+      imageHeight = data.presentationHeight || data.height;
+    if (canvas.width !== imageWidth || canvas.height !== imageHeight) {
+      canvas.width = imageWidth;
+      canvas.height = imageHeight;
       resize();
     }
     display.putImageData(
-      new ImageData(new Uint8ClampedArray(data.pixels), data.width, data.height),
+      new ImageData(new Uint8ClampedArray(data.pixels), imageWidth, imageHeight),
       0,
       0,
     );
@@ -327,9 +384,22 @@ async function load(restart = false) {
       hash,
       width,
       height,
+      smoothPresentation: data.smoothPresentation,
+      presentationWidth: imageWidth,
+      presentationHeight: imageHeight,
     };
+    resize();
     if (data.startup) {
       globalThis.playerStatus.startup = data.startup;
+    }
+    if (data.graphics) {
+      globalThis.playerStatus.graphics = data.graphics;
+      document.getElementById("graphics-status").textContent =
+        `Active renderer: ${data.graphics.effective}${data.graphics.fallback ? ` · ${data.graphics.fallback}` : ""}`;
+    }
+    if (graphics.smoothPan && !data.smoothPresentation) {
+      document.getElementById("graphics-status").textContent =
+        "Smooth pan inactive: needs an enlarged single orthographic screen batch with opaque HUD draws.";
     }
     if (data.memory) {
       globalThis.playerStatus.memory = data.memory;
@@ -351,7 +421,15 @@ async function load(restart = false) {
     if (currentGeneration !== generation) {
       return;
     }
-    worker.postMessage({ type: "load", gameUrl, smoke, executor, cartridge: selectedCartridge });
+    worker.postMessage({
+      type: "load",
+      gameUrl,
+      smoke,
+      executor,
+      cartridge: selectedCartridge,
+      graphics,
+      presentationSize: displayPixels(),
+    });
   } catch (error) {
     if (currentGeneration === generation) {
       fail(error.message || String(error));
@@ -451,7 +529,12 @@ function animate(now) {
       accumulator = Math.max(0, accumulator - steps / 60);
       pending = true;
       armWatchdog(1000);
-      worker.postMessage({ type: "step", steps, input: input() });
+      worker.postMessage({
+        type: "step",
+        steps,
+        input: input(),
+        presentationSize: displayPixels(),
+      });
     }
   }
   requestAnimationFrame(animate);
@@ -499,8 +582,10 @@ window.addEventListener("keydown", (event) => {
 window.addEventListener("keyup", (event) => keys.delete(event.code));
 function point(event) {
   const rect = canvas.getBoundingClientRect();
-  pointer.x = ((event.clientX - rect.left) * canvas.width) / rect.width;
-  pointer.y = ((event.clientY - rect.top) * canvas.height) / rect.height;
+  pointer.x =
+    ((event.clientX - rect.left) * (globalThis.playerStatus.width || canvas.width)) / rect.width;
+  pointer.y =
+    ((event.clientY - rect.top) * (globalThis.playerStatus.height || canvas.height)) / rect.height;
 }
 canvas.addEventListener("pointerdown", (event) => {
   canvas.focus();
@@ -518,13 +603,22 @@ button.addEventListener("click", () => start().catch((error) => fail(error.messa
 function resize() {
   const full = document.fullscreenElement === document.getElementById("screen");
   const density = devicePixelRatio || 1;
+  const width = globalThis.playerStatus.width || 640,
+    height = globalThis.playerStatus.height || 360;
   const available = Math.min(
-    ((innerWidth - (full ? 0 : 32)) * density) / canvas.width,
-    ((innerHeight - (full ? 0 : 150)) * density) / canvas.height,
+    ((innerWidth - (full ? 0 : 32)) * density) / width,
+    ((innerHeight - (full ? 0 : 150)) * density) / height,
   );
   const scale = available >= 1 ? Math.floor(available) : Math.max(0.25, available);
-  canvas.style.width = `${(canvas.width * scale) / density}px`;
-  canvas.style.height = `${(canvas.height * scale) / density}px`;
+  canvas.style.width = `${(width * scale) / density}px`;
+  canvas.style.height = `${(height * scale) / density}px`;
+}
+function displayPixels() {
+  const full = document.fullscreenElement === document.getElementById("screen");
+  return [
+    Math.max(1, Math.floor((innerWidth - (full ? 0 : 32)) * (devicePixelRatio || 1))),
+    Math.max(1, Math.floor((innerHeight - (full ? 0 : 150)) * (devicePixelRatio || 1))),
+  ];
 }
 document.getElementById("fullscreen").addEventListener("click", () =>
   document
@@ -541,5 +635,9 @@ canvas.addEventListener("contextlost", (event) => {
 });
 window.addEventListener("resize", resize);
 resize();
-load();
+if (graphicsError) {
+  fail(graphicsError);
+} else {
+  load();
+}
 requestAnimationFrame(animate);

@@ -1,4 +1,5 @@
 package main
+import presentation "../presentation"
 
 import abi "../abi"
 import core "../core"
@@ -77,6 +78,14 @@ benchmark :: proc(app: ^App, path: string, startup_ms: f64, baseline_working: ui
             if !render_current(app) {
 
                 return error("invalid benchmark frame")
+            }
+            if app.game.resources.smooth_pan {
+                app.present_pixels = presentation.prepare(
+                    &app.presenter,
+                    &app.game.resources,
+                    1920,
+                    1080,
+                )
             }
             t3 := clock_ms()
             if pass >= 2 {

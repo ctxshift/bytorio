@@ -12,8 +12,11 @@ import {
   deliverResources,
 } from "./policy.js";
 import { decodeCartridge } from "./cartridge.js";
+import { normalizeGraphics, createGpu } from "./gpu.js";
 
 let game, runtime;
+let gpu;
+let presentationSize = [1920, 1080];
 let smoke = false;
 let lastTick = 0;
 const imports = { env: { sin: Math.sin } };
@@ -121,15 +124,21 @@ function frame() {
   const drawing = submit();
   const { record } = drawing;
   rasterize(drawing);
+  const pixelPointer = runtime.runtime_presentation(...presentationSize);
+  const presentationWidth = runtime.runtime_presentation_width();
+  const presentationHeight = runtime.runtime_presentation_height();
   const pixels = new Uint8ClampedArray(
     runtime.memory.buffer,
-    runtime.runtime_pixels(),
-    drawing.width * drawing.height * 4,
+    pixelPointer,
+    presentationWidth * presentationHeight * 4,
   ).slice();
   lastTick = record.ticks;
   return {
     width: drawing.width,
     height: drawing.height,
+    presentationWidth,
+    presentationHeight,
+    smoothPresentation: Boolean(runtime.runtime_presentation_active()),
     pixels: pixels.buffer,
     ticks: record.ticks,
     sounds: record.sounds,
@@ -150,6 +159,19 @@ function frame() {
 
 self.onmessage = async ({ data }) => {
   try {
+    if (data.presentationSize) {
+      if (
+        !Array.isArray(data.presentationSize) ||
+        data.presentationSize.length !== 2 ||
+        data.presentationSize.some((v) => !Number.isInteger(v) || v < 1)
+      ) {
+        throw new Error("Invalid presentation dimensions.");
+      }
+      presentationSize = [
+        Math.min(1920, data.presentationSize[0]),
+        Math.min(1080, data.presentationSize[1]),
+      ];
+    }
     if (data.type === "audio-recycle") {
       const slot = audioTransfers[data.id];
       if (!slot || !slot.busy) {
@@ -182,6 +204,19 @@ self.onmessage = async ({ data }) => {
       return;
     }
     if (data.type === "load") {
+      const graphics = normalizeGraphics(data.graphics);
+      let graphicsFallback = "";
+      if (graphics.backend !== "cpu") {
+        try {
+          gpu = await createGpu(graphics);
+        } catch (error) {
+          if (graphics.backend === "gpu") {
+            throw error;
+          }
+          graphicsFallback = error.message;
+        }
+      }
+      imports.env.raster_gpu = (...args) => gpu.raster(runtime.memory, ...args);
       resourceTrace = !!data.resourceTrace;
       const url = new URL(data.gameUrl, location.href);
       if (url.origin !== location.origin) {
@@ -192,9 +227,15 @@ self.onmessage = async ({ data }) => {
       const isPNG = !!data.cartridge || url.pathname.toLowerCase().endsWith(".png");
       const [input, runtimeBytes] = await Promise.all([
         data.cartridge || fetchBytes(url, isPNG ? 2 * 1024 * 1024 : 1024 * 1024),
-        fetchBytes("./runtime.wasm"),
+        fetchBytes(gpu ? "./runtime-gpu.wasm" : "./runtime.wasm"),
       ]);
       runtime = (await WebAssembly.instantiate(runtimeBytes, imports)).instance.exports;
+      if (
+        gpu &&
+        runtime.runtime_gpu_configure(Number(graphics.pixelSnap), Number(graphics.smoothPan)) !== 1
+      ) {
+        throw new Error("Runtime does not support GPU execution.");
+      }
       const cartridge = isPNG ? decodeCartridge(runtime, input) : null;
       let executor = isSource ? data.executor : null;
       let gameBytes = cartridge ? cartridge.code : input;
@@ -252,6 +293,11 @@ self.onmessage = async ({ data }) => {
       self.postMessage(
         {
           type: "ready",
+          graphics: {
+            requested: graphics,
+            effective: gpu ? "gpu" : "cpu",
+            fallback: graphicsFallback,
+          },
           ...output,
           title: cartridge?.title,
           startup,
@@ -316,12 +362,11 @@ self.onmessage = async ({ data }) => {
           const { record } = drawing;
           const t2 = performance.now();
           rasterize(drawing);
+          const presentationPointer = runtime.runtime_presentation(...presentationSize);
+          const presentationBytes =
+            runtime.runtime_presentation_width() * runtime.runtime_presentation_height() * 4;
           const t3 = performance.now();
-          new Uint8Array(
-            runtime.memory.buffer,
-            runtime.runtime_pixels(),
-            drawing.width * drawing.height * 4,
-          ).slice();
+          new Uint8Array(runtime.memory.buffer, presentationPointer, presentationBytes).slice();
           const t4 = performance.now();
           if (pass >= 2) {
             timings.push([t1 - t0, t2 - t1, t3 - t2, t4 - t3]);

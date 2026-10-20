@@ -4,7 +4,9 @@ import abi "../abi"
 import mixer "../audio"
 import cartridge "../cartridge"
 import core "../core"
+import gpu "../gpu/native"
 import guest "../guest"
+import presentation "../presentation"
 import w "../resource_protocol"
 import "core:fmt"
 import "core:os"
@@ -35,6 +37,8 @@ read_bounded :: proc(path: string, limit: int) -> (data: []u8, message: string) 
 }
 
 App :: struct {
+    presenter:                     presentation.State,
+    present_pixels:                []u32,
     game:                          guest.Game,
     frame:                         abi.Frame,
     window:                        ^sdl.Window,
@@ -48,6 +52,7 @@ App :: struct {
     gamepad:                       ^sdl.Gamepad,
     focused:                       bool,
     texture_width, texture_height: int,
+    logical_width, logical_height: int,
     sounds_played, audio_queued:   u32,
 }
 
@@ -57,6 +62,8 @@ error :: proc(message: string) -> int {
 }
 
 cleanup :: proc(app: ^App) {
+    presentation.close(&app.presenter)
+    gpu.close()
     if app.mixer_audio != nil { sdl.DestroyAudioStream(app.mixer_audio) }
     if app.audio != nil {
 
@@ -168,7 +175,26 @@ render_current :: proc(app: ^App) -> bool {
 }
 
 display_texture :: proc(app: ^App) -> bool {
-    if app.texture != nil && app.texture_width == core.width && app.texture_height == core.height {
+    if app.logical_width != core.width || app.logical_height != core.height {
+        if !sdl.SetRenderLogicalPresentation(
+            app.renderer,
+            i32(core.width),
+            i32(core.height),
+            .INTEGER_SCALE,
+        ) { return false }
+        app.logical_width, app.logical_height = core.width, core.height
+    }
+    available_width, available_height: i32
+    _ = sdl.GetRenderOutputSize(app.renderer, &available_width, &available_height)
+    app.present_pixels = presentation.prepare(
+        &app.presenter,
+        &app.game.resources,
+        int(available_width),
+        int(available_height),
+    )
+    if app.texture != nil &&
+       app.texture_width == app.presenter.width &&
+       app.texture_height == app.presenter.height {
 
         return true
     }
@@ -177,27 +203,18 @@ display_texture :: proc(app: ^App) -> bool {
         sdl.DestroyTexture(app.texture)
         app.texture = nil
     }
-    if !sdl.SetRenderLogicalPresentation(
-        app.renderer,
-        i32(core.width),
-        i32(core.height),
-        .INTEGER_SCALE,
-    ) {
-
-        return false
-    }
     app.texture = sdl.CreateTexture(
         app.renderer,
         .RGBA32,
         .STREAMING,
-        i32(core.width),
-        i32(core.height),
+        i32(app.presenter.width),
+        i32(app.presenter.height),
     )
     if app.texture == nil || !sdl.SetTextureScaleMode(app.texture, .NEAREST) {
 
         return false
     }
-    app.texture_width, app.texture_height = core.width, core.height
+    app.texture_width, app.texture_height = app.presenter.width, app.presenter.height
     return true
 }
 
@@ -224,8 +241,16 @@ run :: proc() -> int {
     no_executor_cache := false
     cache_config := ""
     smoke, check_only := false, false
+    renderer_choice := "cpu"
+    ssaa := "off"
+    pixel_snap := false
+    smooth_pan := false
     for i := 1; i < len(os.args); i += 1 {
         switch os.args[i] {
+        case "--smooth-pan":
+            smooth_pan, pixel_snap = true, true
+        case "--pixel-snap":
+            pixel_snap = true
         case "--smoke":
             smoke = true
         case "--check":
@@ -235,6 +260,8 @@ run :: proc() -> int {
         case "--no-executor-cache":
             no_executor_cache = true
         case "--game",
+             "--renderer",
+             "--ssaa",
              "--capture",
              "--replay",
              "--source",
@@ -249,6 +276,10 @@ run :: proc() -> int {
             }
             if option == "--game" {
                 game_path = os.args[i]
+            } else if option == "--renderer" {
+                renderer_choice = os.args[i]
+            } else if option == "--ssaa" {
+                ssaa = os.args[i]
             } else if option == "--executor" {
                 executor_path = os.args[i]
             } else if option == "--source" {
@@ -280,6 +311,15 @@ run :: proc() -> int {
 
         return error("unmetered execution is limited to the development benchmark")
     }
+    if renderer_choice != "cpu" && renderer_choice != "gpu" && renderer_choice != "auto" {
+        return error("renderer must be cpu, gpu or auto")
+    }
+    if ssaa != "off" &&
+       ssaa != "2x" &&
+       ssaa != "1080p" { return error("SSAA must be off, 2x or 1080p") }
+    if renderer_choice == "cpu" &&
+       (ssaa != "off" ||
+               pixel_snap) { return error("SSAA and pixel snapping require the GPU renderer") }
     startup_start := clock_ms()
     baseline_working, _ := process_memory()
     file_bytes, read_error := read_bounded(game_path, cartridge.MAX_BYTES)
@@ -357,6 +397,20 @@ run :: proc() -> int {
         return error(app.game.error)
     }
     core.init()
+    if renderer_choice != "cpu" {
+        quality := 6 if ssaa == "1080p" else 2 if ssaa == "2x" else 1
+        if gpu.open(quality) {
+            app.game.resources.rasterizer = gpu.raster
+            app.game.resources.pixel_snap = pixel_snap
+            app.game.resources.smooth_pan = smooth_pan
+            fmt.eprintln("graphics: GPU rasterization enabled")
+        } else if renderer_choice == "gpu" {
+            return error("cannot initialize OpenGL 3.3 GPU renderer")
+        } else {
+            gpu.close()
+            fmt.eprintln("graphics: GPU unavailable; using CPU renderer")
+        }
+    }
     asset_size, graphics_ok := guest.read_graphics(&app.game)
     if !graphics_ok {
 
@@ -538,7 +592,12 @@ run :: proc() -> int {
                 app.sounds_played = app.frame.sounds
             }
             if !display_texture(app) ||
-               !sdl.UpdateTexture(app.texture, nil, &core.pixels, i32(core.width * 4)) ||
+               !sdl.UpdateTexture(
+                       app.texture,
+                       nil,
+                       raw_data(app.present_pixels),
+                       i32(app.presenter.width * 4),
+                   ) ||
                !sdl.SetRenderDrawColor(app.renderer, 0, 0, 0, 255) ||
                !sdl.RenderClear(app.renderer) ||
                !sdl.RenderTexture(app.renderer, app.texture, nil, nil) ||

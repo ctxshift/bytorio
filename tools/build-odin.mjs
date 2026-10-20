@@ -47,7 +47,7 @@ build([source, ...wasm, `-out:${web}/game.wasm`, "-extra-linker-flags:--max-memo
 const compilerRoot = dirname(odin);
 if (target !== "native") {
   if (reusePlayer) {
-    for (const file of ["runtime.wasm", "audio.wasm"]) {
+    for (const file of ["runtime.wasm", "runtime-gpu.wasm", "audio.wasm"]) {
       await copyFile(`build/odin-player/web/${file}`, `${web}/${file}`);
     }
   } else {
@@ -55,6 +55,13 @@ if (target !== "native") {
       "runtime/odin/web",
       ...hostWasm,
       `-out:${web}/runtime.wasm`,
+      `-extra-linker-flags:--max-memory=${limits.maxRuntimeBytes}`,
+    ]);
+    build([
+      "runtime/odin/web",
+      ...hostWasm,
+      "-define:GPU_RASTER=true",
+      `-out:${web}/runtime-gpu.wasm`,
       `-extra-linker-flags:--max-memory=${limits.maxRuntimeBytes}`,
     ]);
     build([
@@ -74,8 +81,19 @@ if (target !== "native") {
     "cartridge.js",
     "executor-cache.js",
     "executor-cache-core.js",
+    "gpu.js",
   ]) {
     await copyFile(`runtime/odin/web/${file}`, `${web}/${file}`);
+  }
+  await mkdir(`${web}/gpu-shaders`, { recursive: true });
+  for (const file of [
+    "fullscreen.vert",
+    "initialize.frag",
+    "mesh.vert",
+    "mesh.frag",
+    "resolve.frag",
+  ]) {
+    await copyFile(`runtime/odin/gpu/${file}`, `${web}/gpu-shaders/${file}`);
   }
   await mkdir(`${web}/licenses`, { recursive: true });
   await copyFile(resolve(compilerRoot, "LICENSE"), `${web}/licenses/odin.txt`);
@@ -103,6 +121,8 @@ if (target !== "web") {
     [resolve(dependency, "../LICENSE"), "wasmtime"],
     [resolve(compilerRoot, "vendor/sdl3/LICENSE.txt"), "sdl3"],
     [resolve(compilerRoot, "LICENSE"), "odin"],
+    [resolve(compilerRoot, "vendor/OpenGL/LICENSE"), "opengl"],
+    [resolve(compilerRoot, "vendor/OpenGL/LICENSE_glad"), "glad"],
   ]) {
     await copyFile(from, `${native}/licenses/${name}.txt`);
   }

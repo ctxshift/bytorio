@@ -397,6 +397,8 @@ export async function buildProject(path, options = {}) {
             "executor-cache.js",
             "executor-cache-core.js",
             "runtime.wasm",
+            "runtime-gpu.wasm",
+            "gpu.js",
           ]
         : ["player.exe", "SDL3.dll", "wasmtime.dll"];
     for (const file of names) {
@@ -404,6 +406,9 @@ export async function buildProject(path, options = {}) {
     }
     const { cp } = await import("node:fs/promises");
     await cp(resolve(base, "licenses"), resolve(target, "licenses"), { recursive: true });
+    if (platform === "web") {
+      await cp(resolve(base, "gpu-shaders"), resolve(target, "gpu-shaders"), { recursive: true });
+    }
     await copyFile(
       resolve(spec.generated, luau ? "game.luau" : "game.wasm"),
       resolve(target, luau ? "game.luau" : "game.wasm"),

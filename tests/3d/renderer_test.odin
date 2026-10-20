@@ -1,6 +1,8 @@
 package mesh_test
 
 import abi "../../runtime/odin/abi"
+import core "../../runtime/odin/core"
+import presentation "../../runtime/odin/presentation"
 import w "../../runtime/odin/resource_protocol"
 import r "../../runtime/odin/resources"
 import gfx "../../sdk/odin/gfx"
@@ -303,10 +305,122 @@ voxel_limits_and_palette_lifetime :: proc(test: ^testing.T) {
 }
 
 // SDK packet staging is session-global; exercise these cases sequentially.
+device_calls: int
+device_failure: bool
+test_device :: proc(job: r.Raster_Job) -> bool {
+    device_calls += 1
+    if len(job.vertices) != 2 * 3 * r.RASTER_VERTEX_BYTES { return false }
+    r.put32(job.color, 0, 0xff00ffff)
+    r.put32(job.color, (90 * 320 + 160) * 4, 0xff00ffff)
+    for at := 0; at < len(job.border); at += 4 { r.put32(job.border, at, 0xff00ffff) }
+    return !device_failure
+}
+
+raster_device_transactions :: proc(test: ^testing.T) {
+    registry: r.Registry
+    defer r.close(&registry)
+    testing.expect(test, r.reset(&registry, 901))
+    testing.expect(test, t.configure(901))
+    t.begin(0)
+    depth := g.depth(320, 180)
+    view := camera()
+    mesh := triangle(0.25, 0xff0000ff)
+    commit(test, &registry)
+    registry.rasterizer = test_device
+    registry.smooth_pan, registry.pixel_snap = true, true
+    device_calls = 0
+    device_failure = false
+    t.begin_draw(0)
+    pass := gfx.begin_pass(gfx.screen(), {clear = true, color = 0xff222222})
+    g.bind(pass, depth, view)
+    g.draw(pass, mesh)
+    g.draw(pass, mesh)
+    // CPU composition must observe the completed GPU batch before continuing.
+    gfx.rect(pass, 159, 89, 2, 2, 0xff0000ff)
+    gfx.end_pass(pass)
+    gfx.present(gfx.screen())
+    commit(test, &registry)
+    testing.expect_value(test, device_calls, 1)
+    testing.expect(test, registry.preview_enabled)
+    testing.expect_value(test, registry.preview_mask[90 * 320 + 160], u8(1))
+    testing.expect_value(test, registry.output[0], u32(0xff00ffff))
+    testing.expect_value(test, registry.output[90 * 320 + 160], u32(0xff0000ff))
+    previous := r.hash(&registry)
+    previous_preview := raw_data(registry.preview)
+    device_failure = true
+    t.begin_draw(0)
+    pass = gfx.begin_pass(gfx.screen(), {clear = true, color = 0xff333333})
+    g.bind(pass, depth, view)
+    g.draw(pass, mesh)
+    g.draw(pass, mesh)
+    gfx.end_pass(pass)
+    gfx.present(gfx.screen())
+    commit(test, &registry, false)
+    testing.expect_value(test, device_calls, 2)
+    testing.expect_value(test, r.hash(&registry), previous)
+    testing.expect(test, raw_data(registry.preview) == previous_preview)
+
+    // Optional GPU staging must not reject a CPU-valid low-memory packet.
+    testing.expect(test, r.reset(&registry, 902))
+    testing.expect(test, t.configure(902))
+    t.begin(0)
+    depth = g.depth(320, 180)
+    view = camera()
+    mesh = triangle(0.25, 0xff0000ff)
+    commit(test, &registry)
+    t.begin_draw(0)
+    pass = gfx.begin_pass(gfx.screen(), {clear = true, color = 0xff222222})
+    g.bind(pass, depth, view)
+    g.draw(pass, mesh)
+    gfx.end_pass(pass)
+    gfx.present(gfx.screen())
+    commit(test, &registry, budget = 2 * 1024 * 1024)
+    testing.expect_value(test, device_calls, 2)
+    testing.expect_value(test, registry.output[90 * 320 + 160], u32(0xff0000ff))
+    testing.expect(test, !registry.preview_enabled)
+}
+
+presentation_grid_and_hud :: proc(test: ^testing.T) {
+    registry: r.Registry
+    defer r.close(&registry)
+    testing.expect(test, core.set_display(abi.DISPLAY_LOW))
+    registry.has_output, registry.preview_enabled = true, true
+    registry.output_width, registry.output_height = 320, 180
+    registry.output = make([]u32, 320 * 180)
+    registry.preview_mask = make([]u8, 320 * 180)
+    registry.preview = make([]u8, 322 * 182 * 4)
+    registry.preview_background = 0xff000000
+    for y in 0 ..< 182 {
+        for x in 0 ..< 322 { r.put32(registry.preview, (y * 322 + x) * 4, 0xff000000 | u32(x % 256) | u32(y % 256) << 8) }
+    }
+    hud := 90 * 320 + 160
+    registry.preview_mask[hud] = 1
+    registry.output[hud] = 0xffff00ff
+    state: presentation.State
+    defer presentation.close(&state)
+    first := presentation.prepare(&state, &registry, 1920, 1080)
+    saved := make([]u32, len(first))
+    defer delete(saved)
+    copy(saved, first)
+    testing.expect_value(test, state.width, 1920)
+    registry.preview_residual[0] = 1.0 / 6.0
+    second := presentation.prepare(&state, &registry, 1920, 1080)
+    testing.expect_value(test, second[100 * 1920 + 100], saved[100 * 1920 + 101])
+    for x in 160 * 6 ..< 161 * 6 {
+        testing.expect_value(test, second[(90 * 6) * 1920 + x], u32(0xffff00ff))
+    }
+    registry.preview_enabled = false
+    _ = presentation.prepare(&state, &registry, 1920, 1080)
+    testing.expect(test, !state.active)
+    testing.expect_value(test, state.width, 320)
+}
+
 @(test)
 shared_3d :: proc(test: ^testing.T) {
     mesh_depth_and_ownership(test)
     voxel_surfaces_and_atomic_edits(test)
     homogeneous_clipping_and_indices(test)
     voxel_limits_and_palette_lifetime(test)
+    raster_device_transactions(test)
+    presentation_grid_and_hud(test)
 }

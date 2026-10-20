@@ -3,16 +3,74 @@ package main
 import abi "../abi"
 import cartridge "../cartridge"
 import core "../core"
+import presentation "../presentation"
 import resources "../resources"
 import "base:runtime"
 
 resource_registry: resources.Registry
 resource_packet: [resources.PACKET_BYTES]u8
 resource_session: u32
+presenter: presentation.State
+@(export)
+runtime_presentation :: proc "c" (width, height: u32) -> u32 {
+    context = runtime.default_context()
+    pixels := presentation.prepare(
+        &presenter,
+        &resource_registry,
+        int(min(width, 1920)),
+        int(min(height, 1080)),
+    )
+    return u32(uintptr(raw_data(pixels)))
+}
+@(export)
+runtime_presentation_width :: proc "c" () -> u32 { return u32(presenter.width) }
+@(export)
+runtime_presentation_height :: proc "c" () -> u32 { return u32(presenter.height) }
+@(export)
+runtime_presentation_active :: proc "c" () -> u32 { return u32(presenter.active) }
+when #config(GPU_RASTER, false) {
+    foreign import gpu "env"
+    foreign gpu {
+        raster_gpu :: proc "c" (vertices, count, color, depth, width, height: u32, x, y, w, h: i32, fog: u32, fog_start, fog_end: f32, border: u32) -> u32 ---
+    }
+    gpu_raster :: proc(job: resources.Raster_Job) -> bool {
+        return(
+            raster_gpu(
+                u32(uintptr(raw_data(job.vertices))),
+                u32(len(job.vertices) / resources.RASTER_VERTEX_BYTES),
+                u32(uintptr(raw_data(job.color))),
+                u32(uintptr(raw_data(job.depth))),
+                u32(job.width),
+                u32(job.height),
+                job.clip[0],
+                job.clip[1],
+                job.clip[2],
+                job.clip[3],
+                job.fog_color,
+                job.fog_start,
+                job.fog_end,
+                u32(uintptr(raw_data(job.border))),
+            ) ==
+            1 \
+        )
+    }
+}
+@(export)
+runtime_gpu_configure :: proc "c" (pixel_snap, smooth_pan: u32) -> u32 {
+    context = runtime.default_context()
+    when #config(GPU_RASTER, false) {
+        resource_registry.rasterizer = gpu_raster
+        resource_registry.pixel_snap = pixel_snap != 0
+        resource_registry.smooth_pan = smooth_pan != 0
+        return 1
+    }
+    return 0
+}
 @(export)
 runtime_resource_close :: proc "c" () {
     context = runtime.default_context()
     resources.close(&resource_registry)
+    presentation.close(&presenter)
 }
 @(export)
 runtime_resource_reset :: proc "c" (protocol: u32) -> u32 {

@@ -9,6 +9,105 @@ The separate [voxel resolution study](../experiments/voxel-resolution/README.md)
 preserves a procedural winter scene for comparing visual detail at three output
 sizes. It uses an independent renderer and does not extend the console profile.
 
+## Configurable GPU execution
+
+The player now has an opt-in GPU 3D raster path: OpenGL 3.3 in the standalone
+native runtime and WebGL 2 on an OffscreenCanvas in the browser Worker. The
+native player remains an Odin executable without a webview. The GPU adapters
+compile the same shader bodies from `runtime/odin/gpu/`. Both Luau and Odin
+cartridges use the existing mesh/camera/depth APIs and resource transport.
+
+CPU remains the default reference renderer. Browser graphics settings select
+**CPU reference**, **GPU 3D + CPU 2D**, or **Auto**, with supersampling off,
+up to 2× per axis, or up to 1080p, orthographic camera snapping and smooth pan
+presentation. Preferences persist in browser storage when available; applying
+them restarts the game. URL flags override stored settings, for example:
+
+```text
+player.html?renderer=gpu&ssaa=1080p&smooth-pan
+player.html?renderer=cpu
+```
+
+Native equivalents, from an exported game's native directory:
+
+```text
+./player.exe --renderer gpu --ssaa 1080p --smooth-pan
+./player.exe --renderer gpu --ssaa 2x --pixel-snap
+./player.exe --renderer cpu
+./player.exe --renderer auto
+```
+
+Smooth panning implies camera snapping. GPU quality options require the GPU
+path; explicit CPU/quality conflicts are rejected. Auto chooses at startup and
+falls back to CPU if device initialization is unavailable. Explicit GPU mode
+reports failure instead. Device failure during a draw rejects the transaction;
+it does not publish partial attachments or silently change devices mid-packet.
+The stable resource-av profile continues using its existing CPU 2D semantics.
+
+### Execution and ownership
+
+The common Odin resource implementation still validates handles, phases,
+matrices, palettes, clipping and logical work limits. It transforms and lights
+triangles into bounded, host-owned staging. Consecutive 3D draws are batched;
+before a pass/state change or 2D operation, the GPU rasterizes the batch into
+private scratch color/depth targets. Color and packed f32 depth are read back
+into transaction-owned attachments. CPU 2D composition and resource readbacks
+then observe that completed batch. Only the existing successful commit publishes
+attachments and presentation data. Rollback frees temporary staging and keeps
+the previous output and presentation snapshot. Session reset preserves the
+host's selected device, not GPU image contents.
+
+Triangle staging counts against transaction memory. If it cannot fit, that batch
+uses the CPU rasterizer. GPU scratch textures are device-owned and reused by
+shape, never guest pointers or cartridge handles. Sample counts are capped at
+six per axis and internal dimensions at approximately 1920×1080, plus the
+bounded overscan border. Larger offscreen targets can reduce the requested
+sample factor to fit. Optional screen presentation storage is separate from the
+cartridge resource budget: two screen-sized color/mask snapshots may coexist
+during commit, and the host presenter retains at most one 1920×1080 RGBA image.
+
+This first backend deliberately retains CPU transforms/lighting, logical
+bounding-box work accounting, 2D composition and GPU readback barriers. It is
+not the GPU-resident renderer used in the independent riverside experiment.
+No 60 fps guarantee for that scene follows from this integration. The next
+performance step is cached GPU mesh uploads and GPU-resident render targets,
+with explicit synchronization at actual CPU readback boundaries.
+
+### Quality and presentation semantics
+
+GPU SSAA rasterizes 3D at the selected integer sample factor and resolves color
+in linear light, including premultiplied alpha/coverage. Depth resolves to the
+nearest covered sample. A later batch uses logical depth again, so partially
+covered edge pixels can conservatively occlude later batches. Offscreen
+composition, clipping and CPU readbacks remain supported, with GPU device/quality
+dependent pixels. CPU conformance remains the exact coverage/color reference;
+the experimental 3D profile does not promise identical GPU pixels across every
+driver. Gameplay should not depend on cross-device equality of GPU pixel reads.
+
+Camera snapping rounds only the translation in an orthographic view-projection
+matrix to the game's output pixel pitch. Perspective cameras are not snapped;
+game state and model positions remain continuous. SSAA does not change the
+cartridge's two logical display modes or resource dimensions.
+
+Smooth presentation applies to an enlarged, single screen 3D batch with a full
+viewport and orthographic camera. It renders a one-game-pixel overscan border,
+then presents nearest-sampled blocks at an integer scale using the remaining
+camera offset, rounded to presentation pixels. Opaque CPU HUD draws after that
+batch stay fixed on the game grid; a separate coverage mask tracks them even
+when their colors match the world. Multiple screen batches, partial viewports,
+perspective, later screen clears, translucent/custom-blend overlays, offscreen
+presentation and a 1× display use ordinary logical presentation instead. The
+browser reports when smooth presentation is inactive. Rotation still changes
+projected geometry; this feature stabilizes panning, not rotational silhouettes.
+Input coordinates and framebuffer hashes remain in logical game pixels.
+
+Run `mise run test:gpu` on a Windows machine with OpenGL 3.3 and installed Chrome
+for the opt-in hardware checks. They exercise both SDKs, native/browser hashes,
+independent color/depth/coverage fixtures, rollback, 2D ordering, HUD stability,
+display switches, settings restarts and unavailable-device fallback. Reports
+are retained under `build/gpu-validation/`. CPU profile gates remain independent
+of hardware GPU availability.
+
 ## Profile and compatibility
 
 Opt in with SDK `0.3.0` and profile `compact-3d-preview-1` in `console.json`.

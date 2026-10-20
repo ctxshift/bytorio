@@ -252,7 +252,7 @@ cameras, flat lighting/fog and 3D/2D composition. The separate SDK 0.3.0 profile
 also prototypes typed voxel grids with cached visible-face meshes, bulk region
 edits and frame-resource animation. `mise run test:3d` verifies and benchmarks
 both SDKs through the standalone native player and browser Worker at both display
-modes. Chunked/merged voxel surfaces, textures and a GPU backend remain future
+modes. Chunked/merged voxel surfaces, textures and a GPU-resident backend remain future
 work; [measurements](compact-3d-measurements.md) determine the next optimization.
 
 Add indexed meshes, depth testing, cameras, vertex colors, simple lighting/fog
@@ -265,6 +265,36 @@ The [voxel resource assessment](voxel-3d-assessment.md) records the original des
 and its prototype gate. Chunk-local rebuilding, merged surfaces and additional
 engine features remain proposals; use the measured workloads before accepting
 further scope, published limits or performance guarantees.
+
+### 4g. GPU execution and configurable presentation
+
+The first execution slice is implemented experimentally in the
+[compact 3D graphics path](compact-3d.md): shared validated/charged triangle
+staging, transactional OpenGL/WebGL rasterization, CPU/GPU/auto selection,
+bounded SSAA, orthographic camera snapping and layered smooth presentation with
+opaque HUD coverage. Native uses Odin/OpenGL without a webview; browser rendering
+runs in its Worker. Both SDKs retain the same cartridge resource API.
+
+Keep CPU as the deterministic reference and GPU hardware checks opt-in.
+The current integration still transforms/lights triangles on CPU and reads back
+each 3D batch for CPU composition. Qualify its actual costs separately from the
+independent riverside renderer; do not extrapolate that renderer's timings.
+
+Next slices:
+
+- Cache versioned mesh/voxel/palette uploads and move transforms/lighting onto
+  the GPU, retaining bounded validation and logical work accounting.
+- Keep color/depth targets resident across compatible passes; synchronize only
+  when a CPU operation actually consumes them. Preserve rollback, stale handles,
+  target feedback checks and deterministic CPU readbacks for the reference mode.
+- Expand layered presentation beyond the initial single orthographic screen
+  batch, including translucent HUD composition and explicit pass/camera hints.
+- Port a representative riverside-sized workload through both cartridge SDKs;
+  measure complete update/render/presentation cost on native and browser before
+  claiming 60 fps, then qualify integrated/mobile GPUs and quality tiers.
+- Add a native settings menu/persistence after the runtime options and capability
+  reporting are stable. Current native configuration uses launch flags; browser
+  controls already persist preferences and restart the game to apply them.
 
 ## Milestone 5: indexed ROMs, full PNG cartridges, loading, and saves
 

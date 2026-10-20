@@ -70,6 +70,29 @@
       <button id="start" disabled>Start game</button>
       <button id="fullscreen">Fullscreen</button>
       <label>Open cartridge <input id="cartridge" type="file" accept=".png,image/png" /></label>
+      <fieldset>
+        <legend>Graphics settings (applying restarts the game)</legend>
+        <label
+          >Renderer
+          <select id="graphics-backend">
+            <option value="cpu">CPU reference</option>
+            <option value="gpu">GPU 3D + CPU 2D</option>
+            <option value="auto">Auto</option>
+          </select></label
+        >
+        <label
+          >Supersampling
+          <select id="graphics-ssaa">
+            <option value="off">Off</option>
+            <option value="2x">2× per axis</option>
+            <option value="1080p">Up to 1080p</option>
+          </select></label
+        >
+        <label><input id="graphics-snap" type="checkbox" /> Snap orthographic camera</label>
+        <label><input id="graphics-smooth" type="checkbox" /> Smooth pan presentation</label>
+        <button id="graphics-apply">Apply graphics settings</button>
+        <p id="graphics-status" role="status"></p>
+      </fieldset>
       <p id="status" role="status">Loading Odin player…</p>
     </main>
     <script type="module" src="./player.js"></script>

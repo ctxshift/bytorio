@@ -8,6 +8,13 @@ import "core:math"
 import "core:mem"
 
 Transaction :: struct {
+    gpu_vertices:                                         []u8,
+    gpu_count:                                            int,
+    gpu_ortho, preview_disabled:                          bool,
+    gpu_residual:                                         [2]f64,
+    preview, preview_mask:                                []u8,
+    screen_gpu_batches:                                   int,
+    preview_background:                                   u32,
     registry:                                             ^Registry,
     slots:                                                ^[w.maxSlots]Slot,
     screen:                                               ^Slot,
@@ -843,6 +850,7 @@ clear_stencil :: proc(t: ^Transaction, value: u32) -> bool {
     return true
 }
 clear_target :: proc(t: ^Transaction, value: u32, stencil: bool, stencil_value: u32) -> bool {
+    if t.render.target == 0 && len(t.preview) != 0 { t.preview_disabled = true }
     target := image(t, t.render.target)
     if (target.format == w.format_rgba8 && !premultiplied(value)) ||
        (target.format == w.format_index8 && value > 255) {
@@ -951,6 +959,13 @@ fragment :: proc(t: ^Transaction, target: ^Slot, x, y: int, value: u32) -> bool 
         return fail(t.registry, "channel mask produced non-premultiplied RGBA")
     }
     put32(target.data, at * 4, out)
+    if target == t.screen && len(t.preview) != 0 {
+        if value >> 24 == 255 && (p[1] == 0 || p[1] == 1) && p[3] == 15 {
+            t.preview_mask[at] = 1
+        } else if !(value >> 24 == 0 && p[1] == 1) {
+            t.preview_disabled = true
+        }
+    }
     return true
 }
 
@@ -1120,6 +1135,8 @@ wrap :: proc(value, size: int) -> int {
     return result + size if result < 0 else result
 }
 present :: proc(t: ^Transaction, id: u32, descriptor: [8]u32) -> bool {
+    if id != 0 { t.preview_disabled = true }
+    t.preview_background = descriptor[3]
     args := descriptor
     source := image(t, id)
     if source == nil ||

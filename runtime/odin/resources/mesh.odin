@@ -346,6 +346,18 @@ cross3 :: proc(a, b: [3]f64) -> [3]f64 {
 raster_mesh :: proc(t: ^Transaction, mesh: ^Slot, model: Matrix) -> bool {
     camera := lookup(t, t.render.camera, .Camera)
     view, _ := matrix_read(camera.data[:w.modelBytes])
+    accelerated := prepare_raster(t)
+    t.gpu_ortho = view[3] == 0 && view[7] == 0 && view[11] == 0 && view[15] == 1
+    if accelerated && t.registry.pixel_snap && t.gpu_ortho {
+        target := image(t, t.render.target)
+        old_x, old_y := view[12], view[13]
+        view[12] = math.round(view[12] * f64(target.width) / 2) * 2 / f64(target.width)
+        view[13] = math.round(view[13] * f64(target.height) / 2) * 2 / f64(target.height)
+        t.gpu_residual = {
+            (view[12] - old_x) * f64(target.width) / 2,
+            (old_y - view[13]) * f64(target.height) / 2,
+        }
+    }
     triangles := u64(mesh.index_count / 3)
     if t.triangles + triangles > w.maxTrianglesPerCommit {
         return fail(t.registry, "triangle work limit exceeded")
@@ -400,6 +412,8 @@ raster_mesh :: proc(t: ^Transaction, mesh: ^Slot, model: Matrix) -> bool {
                 c *= intensity
             }
         }
+
+        if accelerated { queue_triangle(t, input) }
 
         poly: [CLIP_CAPACITY]Clip_Vertex
         copy(poly[:], input[:])
@@ -508,6 +522,8 @@ raster_triangle :: proc(t: ^Transaction, triangle: [3]Clip_Vertex, camera: []u8)
     if !work(t, (x1 - x0) * (y1 - y0)) {
         return false
     }
+
+    if len(t.gpu_vertices) != 0 { return true }
 
     for y in y0 ..< y1 {
         for x in x0 ..< x1 {

@@ -72,6 +72,13 @@ outputs = [
   "build/odin-player/native/wasmtime.dll",
   "build/odin-player/native/SDL3.dll",
   "build/odin-player/web/runtime.wasm",
+    "build/odin-player/web/runtime-gpu.wasm",
+    "build/odin-player/web/gpu.js",
+    "build/odin-player/web/gpu-shaders/fullscreen.vert",
+    "build/odin-player/web/gpu-shaders/initialize.frag",
+    "build/odin-player/web/gpu-shaders/mesh.vert",
+    "build/odin-player/web/gpu-shaders/mesh.frag",
+    "build/odin-player/web/gpu-shaders/resolve.frag",
   "build/odin-player/web/audio.wasm",
   "build/odin-player/web/player.html",
   "build/odin-player/web/player.js",
@@ -162,6 +169,11 @@ run = ["node experiments/voxel-resolution/verify-river.mjs", "node experiments/v
 description = "Measure riverside CPU, GPU and frame pacing on installed Chrome"
 depends = ["build:voxel-resolution"]
 run = "node experiments/voxel-resolution/benchmark.mjs"
+
+[tasks."test:gpu"]
+description = "Verify transactional GPU rasterization, both SDKs and native/browser quality settings"
+depends = ["build:3d"]
+run = "node tools/verify-gpu.mjs"
 
 [tasks."test:3d"]
 description = "Verify and benchmark shared mesh/voxel rendering through both SDKs and hosts"
