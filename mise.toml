@@ -145,8 +145,8 @@ description = "Build both experimental mesh and voxel cartridges for native/brow
 run = "node tools/build-3d.mjs"
 
 [tasks."build:voxel-resolution"]
-description = "Render the preserved winter scene at three output resolutions"
-run = "node experiments/voxel-resolution/render.mjs"
+description = "Render both voxel scenes at three output resolutions"
+run = ["node experiments/voxel-resolution/render.mjs", "node experiments/voxel-resolution/river.mjs"]
 
 [tasks."serve:voxel-resolution"]
 description = "Serve the generated voxel resolution comparison"
