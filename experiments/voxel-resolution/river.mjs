@@ -11,6 +11,7 @@ const output = fileURLToPath(new URL("../../build/compact-3d/resolution/river/",
 const PROP_SPAN = 192;
 const PROP_HEIGHT = 80;
 const PROP_OFFSET = PROP_SPAN / 2;
+const MAX_TERRAIN_HEIGHT = 14;
 const EXPLICIT_AIR = 65535;
 const props = new Uint16Array(PROP_SPAN * PROP_HEIGHT * PROP_SPAN);
 const palette = [[0, 0, 0]];
@@ -32,12 +33,14 @@ const bridgeDark = color(127, 8, 35);
 const leaves = color(74, 192, 26);
 const door = color(94, 62, 52);
 const glass = color(96, 136, 165);
-const skin = color(244, 177, 141);
 const hair = color(235, 194, 143);
 const tunic = color(181, 79, 60);
 const trousers = color(95, 67, 66);
 const boots = color(116, 66, 42);
 const dark = color(62, 41, 43);
+const fur = color(231, 203, 167);
+const muzzle = color(250, 232, 203);
+const innerEar = color(214, 139, 132);
 
 function propIndex(x, y, z) {
   return ((z + PROP_OFFSET) * PROP_HEIGHT + y) * PROP_SPAN + x + PROP_OFFSET;
@@ -88,6 +91,39 @@ function segmentDistance(x, z, ax, az, bx, bz) {
 }
 
 const columns = new Map();
+
+function cobbleAt(x, z) {
+  const gridRow = Math.floor(z / 5);
+  for (let row = gridRow - 1; row <= gridRow + 1; row++) {
+    const stagger = (row % 2) * 3;
+    const gridColumn = Math.floor((x - stagger) / 6);
+    for (let col = gridColumn - 1; col <= gridColumn + 1; col++) {
+      const seed = noise(col, row);
+      if (seed % 13 === 0) {
+        continue;
+      }
+      const cx = col * 6 + stagger + 2.5 + ((seed % 3) - 1) * 0.6;
+      const cz = row * 5 + 2 + (((seed >>> 3) % 3) - 1) * 0.5;
+      const angle = (((seed >>> 10) % 7) - 3) * 0.12;
+      const dx = x + 0.5 - cx;
+      const dz = z + 0.5 - cz;
+      const u = dx * Math.cos(angle) + dz * Math.sin(angle);
+      const v = -dx * Math.sin(angle) + dz * Math.cos(angle);
+      const rx = 2 + ((seed >>> 5) % 3) * 0.25;
+      const rz = 1.45 + ((seed >>> 7) % 3) * 0.25;
+      const radius = (u / rx) ** 2 + (v / rz) ** 2;
+      const chipped = noise(x, z) % 7 === 0 ? 0.15 : 0;
+      if (radius < 1 - chipped) {
+        return {
+          height: radius < 0.35 && seed % 3 === 0 ? 2 : 1,
+          material: seed % 3 === 0 ? stoneLight : stone,
+        };
+      }
+    }
+  }
+  return null;
+}
+
 function terrainColumn(x, z) {
   let row = columns.get(x);
   if (!row) {
@@ -97,11 +133,16 @@ function terrainColumn(x, z) {
   if (row.has(z)) {
     return row.get(z);
   }
-  const center = z < -10 ? 29 : 27 + (z - 18) * 0.28;
-  const halfWidth = z > -46 && z < -7 ? 24 : 9;
-  const isWater = Math.abs(x - center) < halfWidth;
+  const center = (z < -10 ? 29 : 27 + (z - 18) * 0.28) + Math.sin(z / 13) * 1.2;
+  const halfWidth = 9 + 15 * Math.exp(-(((z + 26) / 21) ** 4));
+  const shoreline = Math.abs(x - center) - halfWidth + Math.sin(z / 4.5) * 0.7;
+  const isWater = shoreline < 0;
   const raised = x >= -65 && x < -13 && z >= -46 && z < 6;
-  let top = isWater ? 4 : raised ? 12 : 7;
+  const rightHill = 3 * Math.exp(-(((x - 55) / 18) ** 2 + ((z - 42) / 25) ** 2));
+  const leftHill = 2 * Math.exp(-(((x + 58) / 23) ** 2 + ((z - 30) / 25) ** 2));
+  const landHeight = 7 + Math.round(rightHill + leftHill);
+  const ground = isWater ? 4 : raised ? 12 : Math.min(landHeight, 5 + Math.floor(shoreline / 2.5));
+  let top = ground;
   let material = isWater ? water : grass;
   const path = Math.min(
     segmentDistance(x, z, -200, 104, -26, 40),
@@ -109,17 +150,25 @@ function terrainColumn(x, z) {
     segmentDistance(x, z, -4, 18, 200, 18),
   );
   const gatePath = x > -43 && x < -30 && z >= -15 && z <= 18;
-  if (!isWater && (path < 9 || gatePath)) {
-    const row = Math.floor(z / 4);
-    const stagger = (row % 2) * 2;
-    const px = (((x + stagger) % 5) + 5) % 5;
-    const pz = ((z % 4) + 4) % 4;
-    if (px < 4 && pz < 3 && noise(Math.floor((x + stagger) / 5), row) % 13 !== 0) {
-      top++;
-      material = noise(Math.floor((x + stagger) / 5), row) % 3 === 0 ? stoneLight : stone;
+  const pathWidth = 8 + (noise(Math.floor(x / 8), Math.floor(z / 8)) % 3);
+  if (!isWater && (path < pathWidth || gatePath)) {
+    const cobble = cobbleAt(x, z);
+    if (cobble) {
+      top += cobble.height;
+      material = cobble.material;
     }
   }
-  const column = { top, material };
+  const grassDepth = 1 + (noise(Math.floor(x / 2), Math.floor(z / 2)) % 3);
+  const outsideLawn = Math.max(-65 - x, x + 14, -46 - z, z - 5, 0);
+  const fringe = !raised && !isWater && !gatePath && outsideLawn <= 2 && noise(x, z) % 4 !== 0;
+  const column = {
+    top,
+    ground,
+    material,
+    isWater,
+    grassDepth,
+    fringeBottom: fringe ? 11 + (noise(x, z) % 2) : Infinity,
+  };
   row.set(z, column);
   return column;
 }
@@ -134,11 +183,20 @@ function voxel(x, y, z) {
       return material === EXPLICIT_AIR ? 0 : material;
     }
   }
-  if (y > 13) {
+  if (y > MAX_TERRAIN_HEIGHT) {
     return 0;
   }
   const column = terrainColumn(x, z);
-  return y > column.top ? 0 : y === column.top ? column.material : soil;
+  if (y > column.top) {
+    return y >= column.fringeBottom && y <= 12 ? grass : 0;
+  }
+  if (column.isWater) {
+    return y === column.top ? water : soil;
+  }
+  if (y > column.ground) {
+    return column.material;
+  }
+  return y > column.ground - column.grassDepth ? grass : soil;
 }
 
 // Cream cottage on a raised lawn, with a stepped hip roof and recessed doorway.
@@ -205,19 +263,26 @@ for (const x of [14, 41]) {
   box(x, 4, 11, 2, 7, 16, bridgeDark);
 }
 
-// Small adventurer, with peach face, red tunic, pale shield and upright sword.
+// Humanoid rabbit adventurer, with long ears, pale muzzle, tail and red tunic.
 box(-7, 8, 18, 2, 5, 3, trousers);
 box(-3, 8, 18, 2, 5, 3, trousers);
 box(-7, 8, 20, 2, 2, 3, boots);
 box(-3, 8, 20, 2, 2, 3, boots);
 box(-8, 13, 17, 8, 7, 5, tunic);
-box(-9, 14, 18, 2, 4, 3, skin);
-box(0, 14, 18, 2, 4, 3, skin);
-box(-7, 20, 17, 6, 7, 5, skin);
-box(-8, 25, 16, 8, 3, 6, hair);
-box(-7, 22, 16, 6, 5, 2, tunic);
-set(-6, 23, 22, dark);
-set(-2, 23, 22, dark);
+box(-9, 14, 18, 2, 4, 3, fur);
+box(0, 14, 18, 2, 4, 3, fur);
+ball(-4, 24, 19, 4, 4, 3.5, fur);
+box(-8, 27, 17, 3, 11, 3, fur);
+box(-2, 27, 17, 3, 13, 3, fur);
+box(-7, 29, 20, 1, 8, 1, innerEar);
+box(-1, 29, 20, 1, 10, 1, innerEar);
+box(-7, 38, 17, 2, 1, 3, fur);
+box(-1, 40, 17, 2, 1, 3, fur);
+box(-6, 25, 22, 1, 2, 1, dark);
+box(-2, 25, 22, 1, 2, 1, dark);
+ball(-4, 22, 22, 2.5, 2, 2, muzzle);
+set(-4, 23, 24, innerEar);
+ball(0, 14, 16, 2.5, 2.5, 2.5, muzzle);
 box(-10, 12, 21, 1, 6, 1, bark);
 box(-12, 18, 21, 5, 1, 1, wood);
 box(-10, 19, 21, 1, 13, 1, white);

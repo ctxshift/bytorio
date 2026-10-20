@@ -14,7 +14,10 @@ terrain. There is no mailbox. Its source is `render.mjs` and `index.html`.
 ## Riverside world
 
 `river.mjs` and `river.html` recreate a cottage, fenced lawn, leafy tree,
-cobbled path, adventurer and arched red bridge over a stream. The scene fills
+irregular oval cobbles, humanoid rabbit adventurer and arched red bridge over a
+stream. Curving banks step down to the water, hills vary in height and ragged
+grass lips overhang exposed soil. The rabbit has long ears, a pale muzzle and a
+tail, with a tunic, sword and shield. The scene fills
 the viewport, with no scoreboard or exposed platform boundary. Terrain is
 evaluated procedurally at world X/Z coordinates beyond the camera; a bounded
 cache stores only the placed props, not the world terrain. The camera sees a
@@ -52,6 +55,14 @@ procedural world, props, camera and lighting. Output sizes are 320 × 180,
 The first two are also enlarged 6× and 3× with nearest sampling for an equal-size
 1920 × 1080 comparison. Fixed-size detail crops preserve these exact scales;
 fit-to-window presentation can introduce additional fractional scaling.
+
+The riverside page also offers **Native size (no enlargement)**. This loads the
+original selected-resolution PNG and displays it at its intrinsic dimensions:
+320 × 180, 640 × 360 or 1920 × 1080 CSS pixels. A readout lists the render size,
+loaded PNG dimensions and displayed size. Native size and the enlarged
+1920-pixel presentation are mutually exclusive. Browser zoom and high-DPI
+screens can map a CSS pixel to multiple physical device pixels; this control
+does not change the generated image resolution.
 
 This is a standalone CPU voxel raycaster for evaluating visual style. It does
 not run through either cartridge SDK or the console renderer. Its shadows and
