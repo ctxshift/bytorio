@@ -6,6 +6,12 @@ Keep the standalone native requirement, browser target, single display with 640Ã
 
 ## Current evidence
 
+Both players offer a default 60 FPS render cap, a custom cap, uncapped rendering,
+and native display-refresh pacing. These are three policies: default/custom use
+the same capped policy. Simulation remains fixed at 60 Hz; fractional render-time
+interpolation and per-cartridge timing metadata remain future extensions.
+See [frame pacing](frame-pacing.md) for host controls and verification limits.
+
 SDK 0.2.0 publishes the resource profile and supports Luau as the
 default authoring language alongside Odin. Both SDKs provide lifecycle handling,
 drawing, input, timing, deterministic random numbers, typed graphics resources,

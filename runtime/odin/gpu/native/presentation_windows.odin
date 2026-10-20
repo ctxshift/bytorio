@@ -5,11 +5,11 @@ import "core:math"
 import gl "vendor:OpenGL"
 import sdl "vendor:sdl3"
 
-show :: proc(title: cstring, width, height: int) -> ^sdl.Window {
+show :: proc(title: cstring, width, height: int, vsync := true) -> ^sdl.Window {
     if !sdl.SetWindowTitle(device.window, title) ||
        !sdl.SetWindowSize(device.window, i32(width), i32(height)) ||
        !sdl.ShowWindow(device.window) { return nil }
-    _ = sdl.GL_SetSwapInterval(1)
+    _ = sdl.GL_SetSwapInterval(1 if vsync else 0)
     return device.window
 }
 

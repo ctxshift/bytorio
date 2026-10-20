@@ -194,8 +194,27 @@ try {
         const frames = [];
         for (const input of inputs) {
           pending = next();
-          worker.postMessage({ type: "step", steps: 1, input });
+          worker.postMessage({ type: "step", steps: 1, render: false, input });
+          const updated = await pending;
+          if (updated.type !== "stepped") {
+            throw new Error("Update-only request must not render");
+          }
+          pending = next();
+          worker.postMessage({ type: "step", steps: 0, render: true });
           const f = await pending;
+          if (f.ticks !== updated.ticks) {
+            throw new Error("Draw-only request advanced the game");
+          }
+          pending = next();
+          worker.postMessage({ type: "step", steps: 0, render: true });
+          const repeated = await pending;
+          if (
+            repeated.ticks !== f.ticks ||
+            repeated.hash !== f.hash ||
+            repeated.sounds !== f.sounds
+          ) {
+            throw new Error("Repeated drawing changed game state or sound events");
+          }
           frames.push({
             hash: f.hash,
             sounds: f.sounds,

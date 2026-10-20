@@ -5,6 +5,7 @@ import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { chromium } from "playwright";
 import { serve } from "./serve.mjs";
+import { tool, run } from "./toolchain.mjs";
 
 const root = "build/odin-player";
 const executable = resolve(root, "native/player.exe");
@@ -17,6 +18,7 @@ function native(args, expected = 0) {
   return result;
 }
 await mkdir(`${root}/verification`, { recursive: true });
+run(tool("odin"), ["test", "tests/timing", "-o:none", `-out:${root}/verification/timing.exe`]);
 const report = JSON.parse(
   native(["--smoke", "--capture", `${root}/verification/native.bmp`]).stdout,
 );
@@ -135,6 +137,54 @@ try {
   assert.equal(smoke.sounds, report.sounds);
   assert.equal(smoke.spriteX, report.spriteX);
   assert.equal(smoke.spriteY, report.spriteY);
+
+  for (const fps of ["30", "144", "native", "uncapped"]) {
+    const capped = JSON.parse(native(["--check", "--fps", fps]).stdout);
+    assert.equal(capped.hash, report.hash, "render policy does not alter deterministic check mode");
+    await page.goto(`${url}?smoke&fps=${fps}`);
+    await page.waitForFunction(() => globalThis.playerStatus?.ready);
+    await page.locator("#start").click();
+    await page.waitForFunction(() => globalThis.playerStatus.ticks === 120);
+    assert.equal(await page.evaluate(() => globalThis.playerStatus.hash), report.hash);
+    assert.equal(await page.locator("#frame-rate").inputValue(), Number(fps) > 0 ? "capped" : fps);
+    if (Number(fps) > 0) {
+      assert.equal(await page.locator("#frame-rate-cap").inputValue(), fps);
+    }
+  }
+  assert.match(native(["--check", "--fps", "0"], 1).stderr, /frame rate/i);
+  await page.goto(`${url}?fps=0`);
+  await page.waitForFunction(() => !!globalThis.playerStatus?.error);
+  assert.match(await page.locator("#status").textContent(), /Frame rate/i);
+
+  await page.goto(`${url}?fps=30`);
+  await page.waitForFunction(() => globalThis.playerStatus?.ready);
+  await page.locator("#start").click();
+  await page.waitForFunction(() => globalThis.playerStatus.ticks >= 10);
+  const pacingStart = await page.evaluate(() => ({
+    ...globalThis.playerStatus,
+    time: performance.now(),
+  }));
+  await page.waitForFunction(
+    (tick) => globalThis.playerStatus.ticks >= tick + 60,
+    pacingStart.ticks,
+  );
+  const pacingEnd = await page.evaluate(() => ({
+    ...globalThis.playerStatus,
+    time: performance.now(),
+  }));
+  const delivered = pacingEnd.frames - pacingStart.frames;
+  const updates = pacingEnd.ticks - pacingStart.ticks;
+  assert(updates >= 60 && updates <= 65);
+  assert(delivered >= 24 && delivered <= 34, "30 FPS cap keeps the 60 Hz update rate");
+  assert(
+    pacingEnd.time - pacingStart.time >= 850,
+    "simulation uses real time rather than render count",
+  );
+  await page.locator("#frame-rate").selectOption("native");
+  await page.waitForFunction(() => globalThis.playerStatus.renderFps === "native");
+  await page.locator("#frame-rate").selectOption("uncapped");
+  await page.waitForFunction(() => globalThis.playerStatus.renderFps === "uncapped");
+  assert.equal(await page.locator("#frame-rate-cap").isDisabled(), true);
 
   for (const [fixture, message] of [
     ["loop", /stopped responding/i],

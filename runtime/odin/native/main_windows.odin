@@ -9,6 +9,7 @@ import guest "../guest"
 import presentation "../presentation"
 import w "../resource_protocol"
 import resources "../resources"
+import timing "../timing"
 import "core:fmt"
 import "core:os"
 import "core:strconv"
@@ -310,6 +311,7 @@ run :: proc() -> int {
     pixel_snap := false
     smooth_pan := false
     resident_meshes := false
+    render_fps := timing.SIMULATION_HZ
     for i := 1; i < len(os.args); i += 1 {
         switch os.args[i] {
         case "--gpu-meshes":
@@ -327,6 +329,7 @@ run :: proc() -> int {
         case "--no-executor-cache":
             no_executor_cache = true
         case "--game",
+             "--fps",
              "--renderer",
              "--ssaa",
              "--capture",
@@ -342,7 +345,25 @@ run :: proc() -> int {
 
                 return error("missing option argument")
             }
-            if option == "--game" {
+            if option == "--fps" {
+                if os.args[i] == "native" {
+                    render_fps = timing.NATIVE_FRAME_RATE
+                } else if os.args[i] == "uncapped" {
+                    render_fps = timing.UNCAPPED_FRAME_RATE
+                } else {
+                    decimal := len(os.args[i]) > 0
+                    for digit in os.args[i] {
+                        if digit < '0' || digit > '9' { decimal = false }
+                    }
+                    rate, ok := strconv.parse_u64(os.args[i])
+                    if !decimal || !ok || rate < 1 || rate > timing.MAX_RENDER_FPS {
+                        return error(
+                            "frame rate must be an integer from 1 to 240, native, or uncapped",
+                        )
+                    }
+                    render_fps = int(rate)
+                }
+            } else if option == "--game" {
                 game_path = os.args[i]
             } else if option == "--renderer" {
                 renderer_choice = os.args[i]
@@ -553,6 +574,7 @@ run :: proc() -> int {
                 strings.clone_to_cstring(title, context.temp_allocator),
                 core.width * 2,
                 core.height * 2,
+                render_fps == timing.NATIVE_FRAME_RATE,
             )
             app.gpu_window = true
         } else {
@@ -573,7 +595,10 @@ run :: proc() -> int {
 
                 return error(string(sdl.GetError()))
             }
-            _ = sdl.SetRenderVSync(app.renderer, 1)
+            _ = sdl.SetRenderVSync(
+                app.renderer,
+                1 if render_fps == timing.NATIVE_FRAME_RATE else 0,
+            )
             if !display_texture(app) {
 
                 return error(string(sdl.GetError()))
@@ -601,7 +626,7 @@ run :: proc() -> int {
     app.focused = true
     running := true
     previous := f64(sdl.GetTicksNS()) / 1e9
-    accumulator: f64
+    clock: timing.Clock
     for running {
         event: sdl.Event
         if !check_only {
@@ -620,9 +645,9 @@ run :: proc() -> int {
                         )
                     }
                 case .WINDOW_FOCUS_LOST:
-                    app.focused = false; accumulator = 0
+                    app.focused = false; clock = {}
                 case .WINDOW_FOCUS_GAINED:
-                    app.focused = true; accumulator = 0
+                    app.focused = true; clock = {}
                 case .GAMEPAD_ADDED:
                     if app.gamepad == nil {
 
@@ -640,14 +665,14 @@ run :: proc() -> int {
         delta := clamp(now - previous, 0, 0.1)
         previous = now
         if smoke || check_only {
-
-            accumulator += 1.0 / 60.0
+            timing.advance(&clock, 1.0 / timing.SIMULATION_HZ)
         } else if app.focused {
-
-            accumulator += delta
+            timing.advance(&clock, delta)
         }
-        steps := 0
-        for accumulator >= 1.0 / 60.0 && steps < 5 {
+        steps, render := timing.take(&clock, render_fps)
+        if smoke || check_only { render = true }
+        if !app.focused && !smoke && !check_only { render = false }
+        for _ in 0 ..< steps {
             keys: abi.Input
             if smoke || check_only {
 
@@ -660,16 +685,9 @@ run :: proc() -> int {
 
                 return error(app.game.error)
             }
-            accumulator -= 1.0 / 60.0
-            steps += 1
         }
-        // Updates retain fixed ticks and input edges; rendering is once per
-        // delivered frame, as required by the side-effect-free draw contract.
-        if steps > 0 && !draw(app) { return error(app.game.error) }
-        if steps == 5 {
-
-            accumulator = 0
-        }
+        // Draws may run without an update, or after multiple fixed updates.
+        if render && !draw(app) { return error(app.game.error) }
         if !check_only {
             if !attach_audio(app) { return error("cannot start PCM mixer output") }
             mixer.pause(app.audio_engine, !app.focused)
@@ -688,6 +706,10 @@ run :: proc() -> int {
                 }
                 app.audio_queued += core.SAMPLE_COUNT
                 app.sounds_played = app.frame.sounds
+            }
+            if !render {
+                sdl.Delay(1)
+                continue
             }
             if app.gpu_enabled {
                 w, h: i32
@@ -716,8 +738,7 @@ run :: proc() -> int {
                !sdl.RenderPresent(app.renderer) {
                 return error(string(sdl.GetError()))
             }
-            update_window_stats(app, steps > 0)
-            sdl.Delay(1)
+            update_window_stats(app, true)
         }
         if (smoke || check_only) && app.frame.ticks >= 120 {
 

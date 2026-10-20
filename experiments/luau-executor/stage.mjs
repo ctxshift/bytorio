@@ -47,6 +47,7 @@ for (const platform of ["web", "native"]) {
           "gpu.js",
           "executor-cache.js",
           "executor-cache-core.js",
+          "frame-clock.js",
           "runtime.wasm",
           "runtime-gpu.wasm",
           "game.wasm",

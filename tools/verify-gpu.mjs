@@ -109,6 +109,7 @@ try {
             { type: "step", steps: 1, input: { buttons: 16, pointer: false, x: 0, y: 0 } },
             "frame",
           );
+          const drawOnly = await request({ type: "step", steps: 0, render: true }, "frame");
           const perspective = await request(
             { type: "step", steps: 1, input: { buttons: 2, pointer: false, x: 0, y: 0 } },
             "frame",
@@ -121,10 +122,14 @@ try {
             { type: "step", steps: 5, input: { buttons: 0, pointer: false, x: 0, y: 0 } },
             "frame",
           );
-          for (const frame of [high, perspective, single, catchup]) {
+          for (const frame of [high, drawOnly, perspective, single, catchup]) {
             frame.bitmap?.close();
           }
           return {
+            drawOnlyStable:
+              drawOnly.hash === high.hash &&
+              drawOnly.ticks === high.ticks &&
+              drawOnly.sounds === high.sounds,
             catchup: {
               ticks: catchup.ticks - single.ticks,
               uploadRatio: catchup.metrics.gpuUploadBytes / single.metrics.gpuUploadBytes,
@@ -148,6 +153,7 @@ try {
       { base, language },
     );
     assert.equal(frames.high.width, 640);
+    assert(frames.drawOnlyStable, "GPU draw-only frames preserve image, ticks and sound events");
     assert.equal(frames.high.presentationWidth, 1920);
     assert(frames.high.smooth);
     assert.equal(frames.perspective.smooth, false);

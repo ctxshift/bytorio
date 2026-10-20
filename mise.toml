@@ -91,6 +91,7 @@ outputs = [
   "build/odin-player/web/cartridge.js",
   "build/odin-player/web/executor-cache.js",
   "build/odin-player/web/executor-cache-core.js",
+  "build/odin-player/web/frame-clock.js",
   "build/odin-player/web/licenses/odin.txt",
   "build/odin-player/native/licenses/odin.txt",
   "build/odin-player/native/licenses/sdl3.txt",
@@ -252,7 +253,7 @@ run = "node tools/validate.mjs"
 
 [tasks."test:validation"]
 description = "Test validation failure reporting, deadlines and source tracking"
-run = "node --test tools/validation-runner.test.mjs"
+run = "node --test tools/validation-runner.test.mjs tools/frame-clock.test.mjs"
 
 [tasks."test:drawing"]
 run = "node experiments/luau-executor/verify-drawing.mjs"

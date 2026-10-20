@@ -396,6 +396,7 @@ export async function buildProject(path, options = {}) {
             "cartridge.js",
             "executor-cache.js",
             "executor-cache-core.js",
+            "frame-clock.js",
             "runtime.wasm",
             "runtime-gpu.wasm",
             "gpu.js",

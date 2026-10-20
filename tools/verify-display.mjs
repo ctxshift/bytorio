@@ -120,6 +120,12 @@ try {
   assert.deepEqual(await page.locator("canvas").evaluate((c) => [c.width, c.height]), [640, 360]);
   await page.locator("#fullscreen").click();
   await page.waitForFunction(() => document.fullscreenElement?.id === "screen");
+  // Fullscreen state can become visible before fullscreenchange applies the
+  // integer-scaled canvas dimensions. Wait for that observable result too.
+  await page.waitForFunction(() => {
+    const bounds = document.querySelector("canvas").getBoundingClientRect();
+    return bounds.width === 1280 && bounds.height === 720;
+  });
   const bounds = await page.locator("canvas").boundingBox();
   assert.equal(bounds.width, 1280);
   assert.equal(bounds.height, 720);

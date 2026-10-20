@@ -18,6 +18,7 @@ function cli(args, status = 0) {
   return result;
 }
 cli(["new", project]);
+assert.match(cli(["run", project, "--fps", "241"], 1).stderr, /Frame rate/);
 const editorSettings = JSON.parse(await readFile(".vscode/settings.json", "utf8"));
 assert.equal(editorSettings["luau-lsp.fflags.enableNewSolver"], true);
 assert.equal(editorSettings["luau-lsp.platform.type"], "standard");
@@ -70,7 +71,7 @@ const port = reservation.address().port;
 await new Promise((r) => reservation.close(r));
 const watcher = spawn(
   process.execPath,
-  ["tools/console.mjs", "watch", project, "--web", "--port", String(port)],
+  ["tools/console.mjs", "watch", project, "--web", "--port", String(port), "--fps", "144"],
   { stdio: ["ignore", "pipe", "pipe"] },
 );
 let output = "";
@@ -94,6 +95,7 @@ const waitFor = async (text, count = 1) => {
 try {
   await waitFor("Watching source");
   await waitFor(`Player: http://127.0.0.1:${port}`);
+  assert(output.includes(`/player.html?fps=144`));
   const url = `http://127.0.0.1:${port}/game.luau`;
   assert.equal(await (await fetch(url)).text(), bundled);
   await writeFile(resolve(project, "src/message.luau"), 'return "UPDATED MESSAGE"\n');

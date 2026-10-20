@@ -28,7 +28,7 @@ Everything in this section beyond the accepted display and package-size intent i
 | Area | Initial proposal |
 | --- | --- |
 | Simulation | Fixed 60 Hz ticks |
-| Presentation | 60 FPS target; explicit 30 FPS rendering option |
+| Presentation | 60 FPS default; custom 1–240 FPS cap, uncapped, or native display refresh |
 | Display | 640×360 default or 320×180, nearest-neighbor presentation, integer scaling and letterboxing |
 | Colors | RGBA rendering with optional palette-indexed assets and palette swaps |
 | 2D | Sprites, tilemaps, transforms, clipping, blending, text, render targets |

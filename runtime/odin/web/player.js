@@ -2,12 +2,47 @@ import { PREVIEW_SAMPLE_RATE, resourceSchema as audioLimits } from "./constants.
 import { prepareExecutor } from "./executor-cache.js";
 import { normalizeGraphics } from "./gpu.js";
 import * as controls from "./constants.js";
+import { FrameClock, parseFrameRate } from "./frame-clock.js";
 const canvas = document.getElementById("canvas");
 const display = canvas.getContext("2d", { alpha: false });
 const button = document.getElementById("start");
 const status = document.getElementById("status");
 const parameters = new URLSearchParams(location.search);
 const smoke = parameters.has("smoke");
+let clock = new FrameClock();
+let renderFps = 60;
+let timingError = "";
+try {
+  renderFps = parseFrameRate(parameters.get("fps") ?? "60");
+} catch (error) {
+  timingError = error.message;
+}
+const frameRateControl = document.getElementById("frame-rate");
+const frameRateCap = document.getElementById("frame-rate-cap");
+const frameRateSetting = () =>
+  renderFps < 0 ? "uncapped" : renderFps === 0 ? "native" : renderFps;
+frameRateControl.value = renderFps > 0 ? "capped" : frameRateSetting();
+frameRateCap.value = renderFps > 0 ? String(renderFps) : "60";
+frameRateCap.disabled = renderFps <= 0;
+function changeFrameRate() {
+  const value = frameRateControl.value === "capped" ? frameRateCap.value : frameRateControl.value;
+  try {
+    renderFps = parseFrameRate(value);
+    frameRateCap.setCustomValidity("");
+  } catch (error) {
+    frameRateCap.setCustomValidity(error.message);
+    frameRateCap.reportValidity();
+    return;
+  }
+  frameRateCap.disabled = renderFps <= 0;
+  clock.nextDraw = clock.elapsed;
+  const url = new URL(location.href);
+  url.searchParams.set("fps", String(frameRateSetting()));
+  history.replaceState(null, "", url);
+  globalThis.playerStatus.renderFps = frameRateSetting();
+}
+frameRateControl.addEventListener("change", changeFrameRate);
+frameRateCap.addEventListener("change", changeFrameRate);
 let statsStarted = performance.now();
 let statsFrames = 0;
 let statsUploads = 0;
@@ -173,7 +208,6 @@ function closeMixer() {
 }
 let selection = 0;
 let previous = performance.now(),
-  accumulator = 0,
   generation = 0,
   soundsPlayed = 0;
 globalThis.playerStatus = { ready: false, error: "", ticks: 0 };
@@ -268,7 +302,7 @@ async function start() {
   await ensureMixer();
   mixerNode?.port.postMessage({ type: "pause", paused: false });
   previous = performance.now();
-  accumulator = 0;
+  clock = new FrameClock();
   button.textContent = "Resume game";
   canvas.focus();
   maybePlay();
@@ -345,6 +379,17 @@ async function load(restart = false) {
       fail(data.error);
       return;
     }
+    if (data.type === "stepped") {
+      globalThis.playerStatus.ticks = data.ticks;
+      if (data.audioEnabled) {
+        globalThis.playerAudio.lowEnabled = true;
+        if (started) {
+          ensureMixer().catch((error) => fail(error.message));
+        }
+      }
+      requestFrame(performance.now());
+      return;
+    }
     if (data.type === "ready") {
       if (data.title) {
         document.title = data.title;
@@ -418,6 +463,9 @@ async function load(restart = false) {
       presentationWidth: imageWidth,
       presentationHeight: imageHeight,
       metrics: data.metrics,
+      renderFps: frameRateSetting(),
+      simulationHz: 60,
+      frames: (globalThis.playerStatus.frames || 0) + 1,
     };
     resize();
     if (data.startup) {
@@ -568,7 +616,7 @@ function input() {
   };
 }
 
-function requestFrame(now = performance.now()) {
+function requestFrame(now = performance.now(), displayOpportunity = false) {
   clearTimeout(frameTimer);
   frameTimer = undefined;
   // A response can arrive after the timestamp of an already queued RAF.
@@ -576,27 +624,34 @@ function requestFrame(now = performance.now()) {
   const delta = Math.min((current - previous) / 1000, 0.1);
   previous = current;
   if (started && worker && !document.hidden && !(smoke && globalThis.playerStatus.ticks >= 120)) {
-    accumulator = Math.min(accumulator + delta, 5 / 60);
-    const steps = smoke ? 1 : Math.min(Math.floor(accumulator * 60), 5);
-    if (!pending && steps > 0) {
-      accumulator = Math.max(0, accumulator - steps / 60);
+    clock.advance(delta);
+    // Bundle updates with the display callback in native mode. A tick timer
+    // competing with RAF could otherwise occupy the Worker at every refresh.
+    if (!smoke && renderFps === 0 && !displayOpportunity) {
+      return;
+    }
+    if (!pending) {
+      const { steps, render } = smoke
+        ? { steps: 1, render: true }
+        : clock.take(renderFps, displayOpportunity);
+      if (steps === 0 && !render) {
+        frameTimer = setTimeout(requestFrame, clock.delay(renderFps));
+        return;
+      }
       pending = true;
       armWatchdog(1000);
       worker.postMessage({
         type: "step",
         steps,
+        render,
         input: input(),
         presentationSize: displayPixels(),
       });
-    } else if (!pending) {
-      // Start the next CPU frame when its simulation tick is due rather than
-      // spending another monitor refresh waiting after the Worker response.
-      frameTimer = setTimeout(requestFrame, Math.max(1, (1 / 60 - accumulator) * 1000));
     }
   }
 }
 function animate(now) {
-  requestFrame(now);
+  requestFrame(now, true);
   requestAnimationFrame(animate);
 }
 
@@ -605,7 +660,7 @@ function resetInput() {
   frameTimer = undefined;
   keys.clear();
   pointer.pointer = false;
-  accumulator = 0;
+  clock = new FrameClock();
 }
 window.addEventListener("blur", () => {
   resetInput();
@@ -700,8 +755,8 @@ canvas.addEventListener("contextlost", (event) => {
 });
 window.addEventListener("resize", resize);
 resize();
-if (graphicsError) {
-  fail(graphicsError);
+if (graphicsError || timingError) {
+  fail(graphicsError || timingError);
 } else {
   load();
 }

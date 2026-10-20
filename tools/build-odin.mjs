@@ -81,6 +81,7 @@ if (target !== "native") {
     "cartridge.js",
     "executor-cache.js",
     "executor-cache-core.js",
+    "frame-clock.js",
     "gpu.js",
   ]) {
     await copyFile(`runtime/odin/web/${file}`, `${web}/${file}`);

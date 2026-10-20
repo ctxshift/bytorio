@@ -55,6 +55,7 @@ if (language === "cpp") {
       pkg === "tests/graphics" ||
       pkg === "tests/3d" ||
       pkg === "tests/resources" ||
+      pkg === "tests/timing" ||
       pkg === "tests/audio";
     const args = [
       "check",

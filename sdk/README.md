@@ -1,5 +1,9 @@
 # Console SDK 0.2.0
 
+Both players support three [frame-rate policies](../docs/frame-pacing.md):
+a custom render cap (60 FPS by default), uncapped rendering, and native display
+refresh. Simulation remains fixed at 60 Hz in both SDKs.
+
 Two authoring SDKs for the same **resource-av-1** console. Luau is the default
 authoring language; Odin is supported for explicit memory control and performance.
 The standalone native and browser players share the Odin renderer and cartridge

@@ -357,11 +357,17 @@ self.onmessage = async ({ data }) => {
         [output.bitmap || output.pixels, sample.buffer],
       );
     } else if (data.type === "step") {
-      if (!game || !Number.isInteger(data.steps) || data.steps < 1 || data.steps > 5) {
+      if (
+        !game ||
+        !Number.isInteger(data.steps) ||
+        data.steps < 0 ||
+        data.steps > 5 ||
+        (data.render !== undefined && typeof data.render !== "boolean") ||
+        (data.steps === 0 && data.render !== true)
+      ) {
         throw new Error("Invalid step request.");
       }
       let output;
-      let updated = false;
       const uploadsBefore = gpu ? gpu.metrics.uploadBytes + gpu.metrics.textureUploadBytes : 0;
       for (let i = 0; i < data.steps && (!smoke || lastTick < 120); i++) {
         const buttons = smoke ? (lastTick < 60 ? 2 : lastTick === 60 ? 16 : 0) : data.input.buttons;
@@ -376,9 +382,8 @@ self.onmessage = async ({ data }) => {
         submitResources(game, runtime);
         drainAudio();
         lastTick++;
-        updated = true;
       }
-      if (updated) {
+      if (data.render !== false) {
         output = frame(false);
         const started = performance.now();
         const uploads = gpu ? gpu.metrics.textureUploadBytes : 0;
@@ -389,6 +394,12 @@ self.onmessage = async ({ data }) => {
           ? gpu.metrics.uploadBytes + gpu.metrics.textureUploadBytes - uploadsBefore
           : 0;
         self.postMessage({ type: "frame", ...output }, [output.bitmap || output.pixels]);
+      } else {
+        self.postMessage({
+          type: "stepped",
+          ticks: lastTick,
+          audioEnabled: !!runtime.runtime_audio_enabled?.(),
+        });
       }
     } else if (data.type === "capture") {
       if (!game) {

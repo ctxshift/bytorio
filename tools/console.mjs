@@ -3,12 +3,17 @@ import { spawn } from "node:child_process";
 import { watch } from "node:fs";
 import { createProject, checkProject, buildProject, packProject } from "./sdk/project.mjs";
 import { serve } from "./serve.mjs";
+import { parseFrameRate } from "../runtime/odin/web/frame-clock.js";
 
 const MAX_TCP_PORT = 65535;
 
 const [action, path, ...args] = process.argv.slice(2);
-const help =
-  "Usage: node tools/console.mjs new <directory> [--language luau|odin]\n       node tools/console.mjs check|build <directory>\n       node tools/console.mjs pack <directory> [--output game.png] [--cover cover.png]\n       node tools/console.mjs run|watch <directory> [--web|--native] [--port 8080]";
+const help = [
+  "Usage: node tools/console.mjs new <directory> [--language luau|odin]",
+  "       node tools/console.mjs check|build <directory>",
+  "       node tools/console.mjs pack <directory> [--output game.png] [--cover cover.png]",
+  "       node tools/console.mjs run|watch <directory> [--web|--native] [--port 8080] [--fps 60|144|native|uncapped]",
+].join("\n");
 try {
   if (action === "--help" || action === "help" || !action) {
     console.log(help);
@@ -18,7 +23,7 @@ try {
     }
     const options = {};
     for (let i = 0; i < args.length; i++) {
-      if (["--language", "--port", "--output", "--cover"].includes(args[i])) {
+      if (["--language", "--port", "--output", "--cover", "--fps"].includes(args[i])) {
         if (!args[i + 1]) {
           throw new Error("Missing option value");
         }
@@ -31,6 +36,9 @@ try {
     }
     if (options.web && options.native) {
       throw new Error("Choose --web or --native");
+    }
+    if (options.fps !== undefined) {
+      parseFrameRate(options.fps);
     }
     if (action === "new") {
       await createProject(path, options.language || "luau");
@@ -46,6 +54,9 @@ try {
       const launch = () => {
         const base = resolve(spec.project, "build/native");
         const flags = ["--game", resolve(base, "game.png")];
+        if (options.fps !== undefined) {
+          flags.push("--fps", options.fps);
+        }
         child = spawn(resolve(base, "player.exe"), flags, { stdio: "inherit" });
         child.on("error", (error) => console.error(error.message));
       };
@@ -61,7 +72,10 @@ try {
           console.error(error.message);
           process.exitCode = 1;
         });
-        server.on("listening", () => console.log(`Player: http://127.0.0.1:${port}/player.html`));
+        const query = options.fps === undefined ? "" : `?fps=${encodeURIComponent(options.fps)}`;
+        server.on("listening", () =>
+          console.log(`Player: http://127.0.0.1:${port}/player.html${query}`),
+        );
       }
       if (action === "watch") {
         let pending = false,

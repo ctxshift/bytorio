@@ -85,6 +85,17 @@
       </div>
       <button id="start" disabled>Start game</button>
       <button id="fullscreen">Fullscreen</button>
+      <label
+        >Frame rate
+        <select id="frame-rate">
+          <option value="capped" selected>Capped</option>
+          <option value="uncapped">Uncapped</option>
+          <option value="native">Native (display refresh)</option>
+        </select>
+      </label>
+      <label
+        >FPS cap <input id="frame-rate-cap" type="number" min="1" max="240" step="1" value="60"
+      /></label>
       <label>Open cartridge <input id="cartridge" type="file" accept=".png,image/png" /></label>
       <fieldset>
         <legend>Graphics settings (applying restarts the game)</legend>
