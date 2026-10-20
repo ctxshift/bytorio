@@ -113,9 +113,11 @@
             <option value="continuous">Continuous 3D</option>
             <option value="snapped">Pixel-snapped 3D</option>
             <option value="sprite">Rabbit sprite</option>
+            <option value="surface">Rabbit surface samples (experimental)</option>
           </select>
         </label>
         <label><input id="supersampling" type="checkbox" /> Supersampling from 1080p</label>
+        <label><input id="smooth-presentation" type="checkbox" /> Smooth pan presentation</label>
         <label><input id="native" type="checkbox" /> Native size (no enlargement)</label>
         <label
           ><input id="actual" type="checkbox" /> Actual 1920-pixel presentation (scroll if
@@ -133,9 +135,25 @@
       <p class="note">
         Click the view, then use WASD to move the rabbit, arrow keys to pan, and Q/E to orbit. Pause
         motion to toggle quality at exactly the same pose. Supersampling averages 3×3 or 6×6 samples
-        in linear color space before producing a true 640×360 or 320×180 canvas. Final enlargement
-        uses nearest sampling. Native size shows one canvas pixel per CSS pixel; high-DPI screens
-        can use more than one device pixel per CSS pixel.
+        in linear color space before producing a true 640×360 or 320×180 game image. Final
+        enlargement uses nearest sampling. Native size shows one canvas pixel per CSS pixel;
+        high-DPI screens can use more than one device pixel per CSS pixel.
+      </p>
+      <p class="note">
+        Smooth pan presentation keeps a snapped game grid with one pixel of overscan, then moves
+        nearest-sampled blocks at a higher integer canvas scale using the residual camera offset. It
+        applies to snapped, sprite and surface modes; native-size view disables it. The canvas gains
+        presentation pixels, not scene detail. A fractional CSS fit can still rescale those pixels;
+        use Actual 1920-pixel presentation for an integer CSS scale at normal browser zoom. Rotation
+        still changes the view; this toggle stabilizes panning only. Redrawing at a camera snap
+        boundary can still change rare edge or depth samples in the 3D scene.
+      </p>
+      <p class="note">
+        Rabbit surface samples stores fixed object-local positions, normals and baked face colors
+        once. Rotating the rabbit or camera reprojects the same samples as grid-aligned square
+        splats with depth testing. Only the rabbit uses this representation. It is a rotation
+        experiment, with approximate silhouettes, overlapping splats and possible gaps or depth
+        artifacts; it does not guarantee invariant pixels. Compare Q/E orbiting with Rabbit sprite.
       </p>
       <p class="note">
         Pixel-snapped 3D aligns rendered camera and rabbit positions to the output grid without

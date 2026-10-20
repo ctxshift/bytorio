@@ -1,6 +1,19 @@
 /* global document, window, requestAnimationFrame, fetch, performance */
 
 import { RabbitSprite, makeTexture, allocateTexture } from "./river-sprite.js";
+import { RabbitSurface } from "./river-surface.js";
+
+const PRESENT_FRAGMENT = `#version 300 es
+precision highp float;
+precision highp int;
+uniform sampler2D image;
+uniform float scale;
+uniform vec2 residual;
+out vec4 result;
+void main() {
+  ivec2 at=ivec2(floor(gl_FragCoord.xy/scale+vec2(1.0)+residual));
+  result=texelFetch(image,at,0);
+}`;
 
 const SCENE_VERTEX = `#version 300 es
 precision highp float;
@@ -20,9 +33,10 @@ vec3 decode(vec3 c) {
 void main() {
   float s = sin(rotation), c = cos(rotation);
   vec3 p = vec3(position.x*c + position.z*s, position.y, -position.x*s + position.z*c);
-  p += translation - target;
-  gl_Position = vec4(dot(p,right)*2.0/span.x, dot(p,up)*2.0/span.y,
-    (dot(p,forward)+260.0)/250.0-1.0, 1.0);
+  p += translation;
+  vec2 projected=vec2(dot(p,right)-target.x,dot(p,up)-target.y);
+  gl_Position = vec4(projected*2.0/span,
+    (dot(p,forward)-target.z+260.0)/250.0-1.0, 1.0);
   linearColor = decode(color.rgb);
 }`;
 
@@ -144,6 +158,16 @@ export class RiverRenderer {
     };
     this.sceneProgram = program(SCENE_VERTEX, SCENE_FRAGMENT);
     this.resolveProgram = program(RESOLVE_VERTEX, RESOLVE_FRAGMENT);
+    this.presentProgram = program(RESOLVE_VERTEX, PRESENT_FRAGMENT);
+    this.presentUniforms = Object.fromEntries(
+      ["image", "scale", "residual"].map((name) => [
+        name,
+        gl.getUniformLocation(this.presentProgram, name),
+      ]),
+    );
+    this.presentationTexture = makeTexture(gl);
+    this.presentationFramebuffer = gl.createFramebuffer();
+    this.surface = new RabbitSurface(gl, program, rabbit);
     this.sprite = new RabbitSprite(gl, program);
     this.uniforms = Object.fromEntries(
       ["translation", "rotation", "target", "right", "up", "forward", "span"].map((name) => [
@@ -194,11 +218,19 @@ export class RiverRenderer {
     const gl = this.gl;
     const width = state.width;
     const height = (width * 9) / 16;
-    const internalWidth = state.supersampling ? 1920 : width;
-    const internalHeight = (internalWidth * 9) / 16;
-    if (this.canvas.width !== width || this.canvas.height !== height) {
-      this.canvas.width = width;
-      this.canvas.height = height;
+    const smooth = Boolean(state.smoothPresentation && state.stabilization !== "continuous");
+    const border = smooth ? 1 : 0;
+    const renderWidth = width + border * 2;
+    const renderHeight = height + border * 2;
+    const factor = state.supersampling ? 1920 / width : 1;
+    const internalWidth = renderWidth * factor;
+    const internalHeight = renderHeight * factor;
+    const scale = smooth
+      ? Math.max(1, Math.min(6, Math.floor(state.presentationWidth / width) || 1))
+      : 1;
+    if (this.canvas.width !== width * scale || this.canvas.height !== height * scale) {
+      this.canvas.width = width * scale;
+      this.canvas.height = height * scale;
     }
     if (this.internalWidth !== internalWidth) {
       gl.bindTexture(gl.TEXTURE_2D, this.texture);
@@ -233,7 +265,7 @@ export class RiverRenderer {
     const basis = viewBasis(this.metadata.camera.forward, state.yaw || 0);
     const { forward, right, up } = basis;
     const pixel = this.metadata.camera.viewWidth / width;
-    const snapped = state.stabilization === "snapped" || state.stabilization === "sprite";
+    const snapped = state.stabilization !== "continuous";
     const target = snapped ? snapToViewGrid(state.target, basis, pixel) : state.target;
     const rabbit = snapped ? snapToViewGrid(state.rabbit, basis, pixel) : state.rabbit;
     this.renderPose = { target: [...target], rabbit: [...rabbit] };
@@ -241,13 +273,18 @@ export class RiverRenderer {
     gl.uniform3fv(u.forward, forward);
     gl.uniform3fv(u.right, right);
     gl.uniform3fv(u.up, up);
-    gl.uniform3fv(u.target, target);
-    gl.uniform2f(u.span, this.metadata.camera.viewWidth, (this.metadata.camera.viewWidth * 9) / 16);
+    // Subtract snapped view coordinates after projection so integer camera steps
+    // do not perturb world-space dot-product rounding at supersample boundaries.
+    gl.uniform3fv(u.target, [dot(target, right), dot(target, up), dot(target, forward)]);
+    const span = [renderWidth * pixel, renderHeight * pixel];
+    gl.uniform2fv(u.span, span);
     gl.uniform3f(u.translation, 0, 0, 0);
     gl.uniform1f(u.rotation, 0);
     gl.bindVertexArray(this.world);
     gl.drawArrays(gl.TRIANGLES, 0, this.metadata.worldVertices);
-    if (state.stabilization !== "sprite") {
+    if (state.stabilization === "surface") {
+      this.surface.draw(basis, target, rabbit, state.angle, span, pixel, factor);
+    } else if (state.stabilization !== "sprite") {
       gl.uniform3fv(u.translation, rabbit);
       gl.uniform1f(u.rotation, state.angle);
       gl.bindVertexArray(this.rabbit);
@@ -255,7 +292,11 @@ export class RiverRenderer {
     } else {
       this.sprite.prepare(width, basis, state.angle, (localTarget, span) => {
         gl.useProgram(this.sceneProgram);
-        gl.uniform3fv(u.target, localTarget);
+        gl.uniform3fv(u.target, [
+          dot(localTarget, right),
+          dot(localTarget, up),
+          dot(localTarget, forward),
+        ]);
         gl.uniform2fv(u.span, span);
         gl.uniform3f(u.translation, 0, 0, 0);
         gl.uniform1f(u.rotation, state.angle);
@@ -263,10 +304,37 @@ export class RiverRenderer {
         gl.drawArrays(gl.TRIANGLES, 0, this.metadata.rabbitVertices);
       });
     }
+    this.presentation = null;
+    if (smooth) {
+      const offset = state.target.map((v, i) => v - target[i]);
+      this.presentation = {
+        scale,
+        residual: [right, up].map(
+          (axis) => Math.round((dot(offset, axis) / pixel) * scale) / scale,
+        ),
+        logicalWidth: width,
+        logicalHeight: height,
+      };
+      if (this.presentationWidth !== renderWidth) {
+        allocateTexture(gl, this.presentationTexture, renderWidth, renderHeight, false);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.presentationFramebuffer);
+        gl.framebufferTexture2D(
+          gl.FRAMEBUFFER,
+          gl.COLOR_ATTACHMENT0,
+          gl.TEXTURE_2D,
+          this.presentationTexture,
+          0,
+        );
+        if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
+          throw new Error("Cannot allocate the overscan presentation target.");
+        }
+        this.presentationWidth = renderWidth;
+      }
+    }
     this.resolve(
-      width,
-      height,
-      internalWidth / width,
+      renderWidth,
+      renderHeight,
+      factor,
       state.stabilization === "sprite"
         ? {
             offset: [
@@ -276,7 +344,7 @@ export class RiverRenderer {
                   right,
                 ) / pixel,
               ) +
-                width / 2 -
+                renderWidth / 2 -
                 this.sprite.width / 2,
               Math.round(
                 dot(
@@ -284,7 +352,7 @@ export class RiverRenderer {
                   up,
                 ) / pixel,
               ) +
-                height / 2 +
+                renderHeight / 2 +
                 this.sprite.liftPixels -
                 this.sprite.height / 2,
             ],
@@ -300,7 +368,7 @@ export class RiverRenderer {
 
   resolve(width, height, factor, sprite = null) {
     const gl = this.gl;
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.presentation ? this.presentationFramebuffer : null);
     gl.viewport(0, 0, width, height);
     gl.disable(gl.DEPTH_TEST);
     gl.useProgram(this.resolveProgram);
@@ -326,6 +394,18 @@ export class RiverRenderer {
     }
     gl.bindVertexArray(this.emptyVao);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
+    if (this.presentation) {
+      const p = this.presentation;
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+      gl.useProgram(this.presentProgram);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, this.presentationTexture);
+      gl.uniform1i(this.presentUniforms.image, 0);
+      gl.uniform1f(this.presentUniforms.scale, p.scale);
+      gl.uniform2fv(this.presentUniforms.residual, p.residual);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+    }
   }
 
   capture() {
@@ -377,6 +457,7 @@ async function start() {
     const actual = document.querySelector("#actual");
     const ssaa = document.querySelector("#supersampling");
     const stabilization = document.querySelector("#stabilization");
+    const smooth = document.querySelector("#smooth-presentation");
     const walkHeight = (x, z) => {
       const w = metadata.walk;
       x = Math.round(x);
@@ -412,6 +493,8 @@ async function start() {
       ssaa.disabled = state.width === 1920;
       state.supersampling = ssaa.checked && !ssaa.disabled;
       state.stabilization = stabilization.value;
+      smooth.disabled = native.checked || state.stabilization === "continuous";
+      state.smoothPresentation = smooth.checked && !smooth.disabled;
     };
     for (const button of document.querySelectorAll("button[data-width]")) {
       button.addEventListener("click", () => {
@@ -436,6 +519,7 @@ async function start() {
     });
     ssaa.addEventListener("change", updatePresentation);
     stabilization.addEventListener("change", updatePresentation);
+    smooth.addEventListener("change", updatePresentation);
     document.querySelector("#reset").addEventListener("click", () => {
       state.rabbit = [...metadata.rabbitOrigin];
       state.angle = 0;
@@ -530,6 +614,7 @@ async function start() {
             (state.rabbit[2] - 19) * follow +
             (auto ? Math.sin(clock * 0.33) * 3 : 0),
         ];
+        state.presentationWidth = canvas.clientWidth * window.devicePixelRatio;
         renderer.render(state);
         state.frame++;
         state.internalWidth = renderer.internalWidth;
@@ -538,7 +623,7 @@ async function start() {
         state.spriteCaptures = renderer.sprite.captures;
         const bounds = canvas.getBoundingClientRect();
         document.querySelector("#dimensions").textContent =
-          `${stabilization.selectedOptions[0].textContent} · ${state.supersampling ? "Filtered 1080p" : "Direct"}: ${renderer.internalWidth} × ${renderer.internalHeight} → ${canvas.width} × ${canvas.height} pixels · Displayed: ${Math.round(bounds.width)} × ${Math.round(bounds.height)} CSS pixels`;
+          `${stabilization.selectedOptions[0].textContent} · ${state.supersampling ? "Filtered 1080p" : "Direct"}: ${renderer.internalWidth} × ${renderer.internalHeight} → ${state.width} × ${(state.width * 9) / 16} game pixels · Canvas: ${canvas.width} × ${canvas.height}${renderer.presentation ? ` · Smooth pan ${renderer.presentation.scale}× (1-pixel overscan)` : ""} · Displayed: ${Math.round(bounds.width)} × ${Math.round(bounds.height)} CSS pixels${state.stabilization === "surface" ? ` · ${renderer.surface.count} fixed rabbit samples` : ""}`;
         requestAnimationFrame(tick);
       } catch (error) {
         state.error = error.message;

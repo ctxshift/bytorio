@@ -76,7 +76,38 @@ These modes target translation stability. Orbiting the camera or turning the
 rabbit changes the projected shapes and can still change pixel clusters. They
 do not reproduce an undisclosed external renderer. The separate
 [rotation research note](../../docs/rotating-pixel-art-research.md) evaluates
-persistent surface sampling as a possible next experiment.
+persistent surface sampling and its limitations.
+
+**Smooth pan presentation** is independent of these modes and available for
+snapped, sprite and surface rendering. It renders one extra game pixel on each
+edge, resolves at the chosen game pixel pitch, then nearest-samples into an
+integer-scale presentation canvas. The residual camera translation is rounded
+to presentation pixels. The integer scale follows the displayed device-pixel
+width, capped at 6; resizing can change the scale. Native-size view disables
+it, and the actual-1920 presentation gives integer CSS enlargement at normal
+browser zoom. Fractional CSS fitting can still introduce uneven screen blocks.
+It adds presentation resolution, not 3D scene detail or a console display mode.
+At scale 1 it has no finer motion steps. Camera rotation still changes geometry.
+At a camera snap boundary the scene is re-rasterized: rare edge or depth ties
+can change even though the presentation pass itself is an exact nearest copy.
+
+**Rabbit surface samples (experimental)** replaces only the rabbit mesh with
+fixed object-local samples, spaced at 0.25 world units on every exposed voxel
+face. Each array record is a persistent sample identity containing a position,
+normal and baked face color. This array and its GPU buffer are uploaded once;
+camera and actor rotations only transform the samples. Back-facing samples are
+rejected, projected centers snap to the game grid, and screen-aligned square
+splats depth-test against the world and each other. SSAA filters the result at
+the same output pitch. The world remains the ordinary triangle mesh.
+
+This isolates persistent color/sample identity from changing view visibility.
+It is not a guarantee of stable silhouettes or identical pixels through rotation:
+square footprints overlap, may leave gaps, inflate silhouettes, and approximate
+surface depth with center depth. Equal-depth overlaps use fixed draw order;
+grazing angles can change visible samples abruptly. Baked face colors do not
+exercise fine textures or dynamic lighting, so this scene alone cannot establish
+how much stability improves on more detailed assets. No temporal filtering or
+view-angle cache is involved. Use Q/E and WASD to compare all four modes.
 
 Lighting, shadows and local occlusion are baked into mesh face colors. The
 rabbit moves independently, but its lighting and world shadows are not updated
@@ -145,3 +176,12 @@ checks establish correctness, not hardware performance.
 sprite reuse during translation, recapture on view/facing changes, fractional
 coverage, full-turn frame coverage and Q/E controls. Independent red/green depth
 fixtures check front/behind occlusion against known results.
+
+`presentation-checks.json` records exact one-presentation-pixel horizontal and vertical motion
+in all three snapped modes, with and without SSAA at both game sizes. It
+independently checks every presented texel against the resolved overscan image,
+including across camera snap boundaries, and records scene raster differences
+at those boundaries separately. It also checks fixed sample-buffer reuse,
+deterministic return to a pose, rotation changing the image, and UI exclusions.
+An independent planar fixture checks the expected sample centers, normals and
+colors, front/behind world depth and back-face rejection after a half-turn.

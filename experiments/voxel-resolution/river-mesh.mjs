@@ -176,7 +176,7 @@ export async function buildLiveAssets(scene) {
       lighting: "Baked per-face shadows and local occlusion; rabbit moves independently",
     }),
   );
-  for (const file of ["river-live.js", "river-sprite.js"]) {
+  for (const file of ["river-live.js", "river-sprite.js", "river-surface.js"]) {
     await writeFile(join(output, file), await readFile(new URL(file, import.meta.url)));
   }
   console.log(
