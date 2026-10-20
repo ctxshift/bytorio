@@ -52,6 +52,30 @@ and `serve:unified` remain aliases for the shared RPG setup.
 
 ## Checks
 
+Use `mise run validate` for the complete quality and conformance gates, including
+all existing suites, drawing batches, executor caching, and formatting after
+asset generation. CI runs the same command. For a focused iteration, pass task
+names, for example `mise run validate test:validation` or
+`mise run validate generate:check test:resources`. Existing `mise run test` and
+individual `test:*` tasks remain available with their original coverage.
+
+The runner executes tasks sequentially and stops at the first failure. It prints
+one start/result line per task and retains complete output in unique
+`build/validation/<run>/` logs. `report.json` is updated after every task with
+durations, exit codes, timeout state, Node/platform information, Git revision,
+and content fingerprints of tracked and nonignored untracked files. Tool pins
+are included through the fingerprinted `mise.toml` and dependency task files.
+Logs may contain local diagnostic paths; they remain ignored build artifacts.
+
+A failed launch or a 30-minute task deadline fails validation. A detected source
+change marks an otherwise successful run `stale` and returns a nonzero status.
+Finish edits before final validation; inspect the changed scope and rerun its
+affected gates. Fingerprints are taken at task boundaries, not continuously, and
+do not cover ignored files or external configuration. They are provenance, not a
+build cache or proof that every byte stayed unchanged during execution. A report
+left `running` after interruption is incomplete and must not be treated as passed.
+Do not benchmark concurrently with heavy builds or tests.
+
 ```text
 npm run lint
 npm run format:check

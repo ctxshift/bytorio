@@ -33,25 +33,14 @@ jobs:
         with:
           version: 2026.10.15
       - run: npm ci
-      - name: Lint and type check all project languages
-        run: mise run lint
-      - name: Check formatting in all project languages
-        run: mise run format:check
-      - name: Check generated constants
-        run: mise run generate:check
-      - name: Verify SDKs, cartridges, resources, graphics and game replays
-        run: mise run test
-      - name: Verify drawing batches
-        run: node experiments/luau-executor/verify-drawing.mjs
-      - name: Verify executor cache
-        run: node experiments/luau-executor/verify-cache.mjs
-      - name: Ensure asset rebuilds preserve formatting
-        run: mise run format:check
+      - name: Run quality, conformance, drawing and cache gates
+        run: mise run validate
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: sdk-verification
           path: |
+            build/validation/
             build/sdk-verification/
             build/cartridge-verification/
             build/resource-verification/
