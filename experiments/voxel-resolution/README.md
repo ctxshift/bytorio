@@ -107,7 +107,26 @@ surface depth with center depth. Equal-depth overlaps use fixed draw order;
 grazing angles can change visible samples abruptly. Baked face colors do not
 exercise fine textures or dynamic lighting, so this scene alone cannot establish
 how much stability improves on more detailed assets. No temporal filtering or
-view-angle cache is involved. Use Q/E and WASD to compare all four modes.
+view-angle cache is involved. Use Q/E and WASD to compare the modes.
+
+**Whole-scene surface samples (experimental)** also replaces the static world
+mesh with a persistent world-space sample cloud. Terrain, water, cottage, tree,
+bridge, fences and cobbles all use the same square-splat renderer as the rabbit.
+The world spacing is 0.5 units, versus 0.25 for the rabbit, to limit storage and
+overdraw. The world has 682,064 samples (23.4 MiB of records on each of the CPU
+and GPU, excluding meshes, textures, driver overhead and temporary generation
+allocations). Generation allocates one typed record array instead of a large
+intermediate JavaScript number array. The cloud is created on first selection;
+switching resolutions, rotating and switching modes reuse it. No view-dependent
+resampling or world triangle fallback is used. Existing modes remain unchanged.
+
+Use **Rotate camera** or Q/E to compare this mode against **Rabbit surface
+samples**, **Pixel-snapped 3D** and **Continuous 3D**, with matching resolution
+and supersampling. Smooth pan presentation also works with the sampled world.
+The sample positions and baked colors stay fixed, but projected placement,
+coverage and visibility change. Expect more obvious silhouette and depth
+artifacts on fine scenery than in the rabbit-only experiment. This is a visual
+prototype, not evidence of a frame-rate target or a console memory budget.
 
 Lighting, shadows and local occlusion are baked into mesh face colors. The
 rabbit moves independently, but its lighting and world shadows are not updated
@@ -178,10 +197,13 @@ coverage, full-turn frame coverage and Q/E controls. Independent red/green depth
 fixtures check front/behind occlusion against known results.
 
 `presentation-checks.json` records exact one-presentation-pixel horizontal and vertical motion
-in all three snapped modes, with and without SSAA at both game sizes. It
+in all four snapped modes, with and without SSAA at both game sizes. It
 independently checks every presented texel against the resolved overscan image,
 including across camera snap boundaries, and records scene raster differences
 at those boundaries separately. It also checks fixed sample-buffer reuse,
 deterministic return to a pose, rotation changing the image, and UI exclusions.
 An independent planar fixture checks the expected sample centers, normals and
 colors, front/behind world depth and back-face rejection after a half-turn.
+The sampled-world checks additionally cover eight orbit angles, no uncovered
+pixels in the initial camera framing, lazy creation, storage size, buffer reuse,
+deterministic mode switching and independence from the world triangle draw count.

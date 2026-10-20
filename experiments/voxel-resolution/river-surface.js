@@ -1,14 +1,30 @@
 // Fixed object-local samples: identity, position, normal and baked color never
 // change with the view. Screen-aligned splats deliberately trade exact silhouettes
-// for stable sample colors; they are an experimental representation of the rabbit.
+// for stable sample colors; both static world and moving actor can use them.
 const SAMPLE_SPACING = 0.25;
+export const WORLD_SAMPLE_SPACING = 0.5;
 const RECORD_FLOATS = 9;
 
-export function surfaceSamples(mesh) {
+export function surfaceSamples(mesh, spacing = SAMPLE_SPACING) {
+  if (!Number.isFinite(spacing) || spacing <= 0) {
+    throw new RangeError("Surface sample spacing must be positive and finite.");
+  }
   const view = new DataView(mesh);
-  const records = [];
   const position = (vertex) =>
     [0, 1, 2].map((axis) => view.getFloat32(vertex * 16 + axis * 4, true));
+  // Allocate exactly once: an intermediate JavaScript number array multiplies
+  // peak memory when sampling hundreds of thousands of world faces.
+  let count = 0;
+  for (let face = 0; face < mesh.byteLength / 96; face++) {
+    const a = position(face * 6);
+    const b = position(face * 6 + 1);
+    const d = position(face * 6 + 5);
+    count +=
+      Math.ceil(Math.hypot(...b.map((v, i) => v - a[i])) / spacing) *
+      Math.ceil(Math.hypot(...d.map((v, i) => v - a[i])) / spacing);
+  }
+  const records = new Float32Array(count * RECORD_FLOATS);
+  let cursor = 0;
   for (let face = 0; face < mesh.byteLength / 96; face++) {
     const a = position(face * 6);
     const b = position(face * 6 + 1);
@@ -25,19 +41,23 @@ export function surfaceSamples(mesh) {
       continue;
     }
     const color = [0, 1, 2].map((channel) => view.getUint8(face * 96 + 12 + channel) / 255);
-    const nx = Math.ceil(Math.hypot(...u) / SAMPLE_SPACING);
-    const ny = Math.ceil(Math.hypot(...v) / SAMPLE_SPACING);
+    const nx = Math.ceil(Math.hypot(...u) / spacing);
+    const ny = Math.ceil(Math.hypot(...v) / spacing);
     for (let y = 0; y < ny; y++) {
       for (let x = 0; x < nx; x++) {
-        records.push(
-          ...a.map((value, i) => value + (u[i] * (x + 0.5)) / nx + (v[i] * (y + 0.5)) / ny),
-          ...normal.map((value) => value / length),
-          ...color,
+        records.set(
+          [
+            ...a.map((value, i) => value + (u[i] * (x + 0.5)) / nx + (v[i] * (y + 0.5)) / ny),
+            ...normal.map((value) => value / length),
+            ...color,
+          ],
+          cursor,
         );
+        cursor += RECORD_FLOATS;
       }
     }
   }
-  return new Float32Array(records);
+  return records.subarray(0, cursor);
 }
 
 const VERTEX = `#version 300 es
@@ -47,7 +67,7 @@ layout(location=1) in vec3 normal;
 layout(location=2) in vec3 color;
 uniform vec3 translation, target, right, up, forward;
 uniform vec2 span;
-uniform float rotation, pixel, factor;
+uniform float rotation, pixel, factor, spacing;
 out vec3 linearColor;
 vec3 turn(vec3 p) {
   float s=sin(rotation), c=cos(rotation);
@@ -60,7 +80,7 @@ void main() {
   projected=(floor(projected/pixel)+0.5)*pixel;
   gl_Position=vec4(projected*2.0/span,(dot(p,forward)-target.z+260.0)/250.0-1.0,1.0);
   if(dot(turn(normal),forward)>=-0.00001) gl_Position=vec4(2.0,2.0,2.0,1.0);
-  gl_PointSize=max(1.0,${SAMPLE_SPACING}*1.4/pixel)*factor;
+  gl_PointSize=max(1.0,spacing*1.4/pixel)*factor;
   linearColor=mix(color/12.92,pow((color+0.055)/1.055,vec3(2.4)),greaterThan(color,vec3(0.04045)));
 }`;
 
@@ -70,10 +90,11 @@ in vec3 linearColor;
 out vec4 result;
 void main() { result=vec4(linearColor,1.0); }`;
 
-export class RabbitSurface {
-  constructor(gl, program, mesh) {
+export class SurfaceCloud {
+  constructor(gl, program, mesh, spacing = SAMPLE_SPACING) {
     this.gl = gl;
-    this.samples = surfaceSamples(mesh);
+    this.spacing = spacing;
+    this.samples = surfaceSamples(mesh, spacing);
     this.count = this.samples.length / RECORD_FLOATS;
     this.program = program(VERTEX, FRAGMENT);
     this.uniforms = Object.fromEntries(
@@ -87,6 +108,7 @@ export class RabbitSurface {
         "rotation",
         "pixel",
         "factor",
+        "spacing",
       ].map((name) => [name, gl.getUniformLocation(this.program, name)]),
     );
     this.vao = gl.createVertexArray();
@@ -100,7 +122,7 @@ export class RabbitSurface {
     }
   }
 
-  draw(basis, target, rabbit, angle, span, pixel, factor) {
+  draw(basis, target, translation, angle, span, pixel, factor) {
     const gl = this.gl;
     const u = this.uniforms;
     gl.useProgram(this.program);
@@ -113,10 +135,11 @@ export class RabbitSurface {
         target.reduce((sum, value, i) => sum + value * basis[name][i], 0),
       ),
     );
-    gl.uniform3fv(u.translation, rabbit);
+    gl.uniform3fv(u.translation, translation);
     gl.uniform1f(u.rotation, angle);
     gl.uniform1f(u.pixel, pixel);
     gl.uniform1f(u.factor, factor);
+    gl.uniform1f(u.spacing, this.spacing);
     gl.uniform2fv(u.span, span);
     gl.bindVertexArray(this.vao);
     gl.drawArrays(gl.POINTS, 0, this.count);

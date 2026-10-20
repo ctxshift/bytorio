@@ -18,6 +18,7 @@ try {
   await page.waitForFunction(() => window.riverDemo?.ready || window.riverDemo?.error);
   assert.equal(await page.evaluate(() => window.riverDemo.error), "");
   await page.locator("#pause").check();
+  assert(await page.evaluate(() => !window.riverDemo.renderer.worldSurface));
   report.presentation = await page.evaluate(async () => {
     const { viewBasis, snapToViewGrid } = await import("./river-live.js");
     const s = window.riverDemo;
@@ -27,7 +28,7 @@ try {
     for (const width of [320, 640]) {
       const pixel = r.metadata.camera.viewWidth / width;
       const target = snapToViewGrid(s.target, basis, pixel);
-      for (const mode of ["snapped", "sprite", "surface"]) {
+      for (const mode of ["snapped", "sprite", "surface", "scene-surface"]) {
         for (const ssaa of [false, true]) {
           const state = {
             ...s,
@@ -134,33 +135,36 @@ try {
     const samples = r.surface.samples;
     const initial = samples.slice();
     const rows = [];
-    for (const width of [320, 640, 1920]) {
-      for (const ssaa of width === 1920 ? [false] : [false, true]) {
-        const state = {
-          ...s,
-          width,
-          supersampling: ssaa,
-          stabilization: "surface",
-          smoothPresentation: false,
-          yaw: 0,
-          angle: 0,
-        };
-        r.render(state);
-        const first = r.capture().output;
-        r.render({ ...state, yaw: 0.55, angle: 0.35 });
-        const rotated = r.capture().output;
-        r.render(state);
-        const returned = r.capture().output;
-        rows.push({
-          width,
-          ssaa,
-          count: r.surface.count,
-          sameBuffer: samples === r.surface.samples,
-          unchanged: initial.every((v, i) => v === samples[i]),
-          returnIdentical: first.every((v, i) => v === returned[i]),
-          rotationChangesImage: first.some((v, i) => v !== rotated[i]),
-          error: r.gl.getError(),
-        });
+    for (const mode of ["surface", "scene-surface"]) {
+      for (const width of [320, 640, 1920]) {
+        for (const ssaa of width === 1920 ? [false] : [false, true]) {
+          const state = {
+            ...s,
+            width,
+            supersampling: ssaa,
+            stabilization: mode,
+            smoothPresentation: false,
+            yaw: 0,
+            angle: 0,
+          };
+          r.render(state);
+          const first = r.capture().output;
+          r.render({ ...state, yaw: 0.55, angle: 0.35 });
+          const rotated = r.capture().output;
+          r.render(state);
+          const returned = r.capture().output;
+          rows.push({
+            mode,
+            width,
+            ssaa,
+            count: r.surface.count,
+            sameBuffer: samples === r.surface.samples,
+            unchanged: initial.every((v, i) => v === samples[i]),
+            returnIdentical: first.every((v, i) => v === returned[i]),
+            rotationChangesImage: first.some((v, i) => v !== rotated[i]),
+            error: r.gl.getError(),
+          });
+        }
       }
     }
     return rows;
@@ -175,6 +179,77 @@ try {
     );
     assert.equal(row.error, 0);
   }
+  report.worldSurface = await page.evaluate(() => {
+    const s = window.riverDemo;
+    const r = s.renderer;
+    const cloud = r.worldSurface;
+    const samples = cloud.samples;
+    const buffer = cloud.buffer;
+    const initial = samples.slice();
+    const state = {
+      ...s,
+      width: 320,
+      supersampling: false,
+      smoothPresentation: false,
+      stabilization: "scene-surface",
+      yaw: 0,
+      angle: 0,
+    };
+    const views = [];
+    for (let step = 0; step < 8; step++) {
+      r.render({ ...state, yaw: (step * Math.PI) / 4 });
+      const output = r.capture().output;
+      let uncovered = 0;
+      for (let i = 0; i < output.length; i += 4) {
+        uncovered += Number(output[i] + output[i + 1] + output[i + 2] === 0);
+      }
+      views.push({ yaw: (step * Math.PI) / 4, uncovered, error: r.gl.getError() });
+    }
+    r.render(state);
+    const reference = r.capture().output;
+    // Removing the triangle draw count must not affect the sampled world.
+    const worldVertices = r.metadata.worldVertices;
+    let noTriangles;
+    try {
+      r.metadata.worldVertices = 0;
+      r.render(state);
+      noTriangles = r.capture().output;
+    } finally {
+      r.metadata.worldVertices = worldVertices;
+    }
+    r.render({ ...state, stabilization: "snapped" });
+    const triangles = r.capture().output;
+    r.render(state);
+    const returned = r.capture().output;
+    return {
+      views,
+      count: cloud.count,
+      spacing: cloud.spacing,
+      bytes: samples.byteLength,
+      unchanged: initial.every((v, i) => v === samples[i]),
+      reused:
+        r.worldSurface === cloud &&
+        r.worldSurface.samples === samples &&
+        r.worldSurface.buffer === buffer,
+      noTriangleFallback: reference.every((v, i) => v === noTriangles[i]),
+      returnIdentical: reference.every((v, i) => v === returned[i]),
+      differsFromTriangles: reference.some((v, i) => v !== triangles[i]),
+      error: r.gl.getError(),
+    };
+  });
+  const world = report.worldSurface;
+  assert(
+    world.unchanged &&
+      world.reused &&
+      world.noTriangleFallback &&
+      world.returnIdentical &&
+      world.differsFromTriangles,
+  );
+  assert.equal(world.count, 682064);
+  assert.equal(world.spacing, 0.5);
+  assert.equal(world.bytes, world.count * 9 * 4);
+  assert(world.views.every((view) => view.uncovered === 0 && view.error === 0));
+  assert.equal(world.error, 0);
   report.surfaceFixtures = await page.evaluate(async () => {
     const { RiverRenderer } = await import("./river-live.js");
     const { surfaceSamples } = await import("./river-surface.js");
@@ -256,6 +331,9 @@ try {
   await page.locator('[data-width="320"]').click();
   await page.waitForFunction(() => window.riverDemo.renderer.presentation?.scale === 6);
   await page.locator("#scene").screenshot({ path: resolve(root, "surface-smooth-320.png") });
+  await page.locator("#stabilization").selectOption("scene-surface");
+  await page.waitForFunction(() => window.riverDemo.stabilization === "scene-surface");
+  await page.locator("#scene").screenshot({ path: resolve(root, "scene-surface-smooth-320.png") });
   await page.locator("#native").check();
   await page.waitForFunction(() => !window.riverDemo.smoothPresentation);
   assert(await page.locator("#smooth-presentation").isDisabled());

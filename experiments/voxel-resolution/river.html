@@ -114,6 +114,7 @@
             <option value="snapped">Pixel-snapped 3D</option>
             <option value="sprite">Rabbit sprite</option>
             <option value="surface">Rabbit surface samples (experimental)</option>
+            <option value="scene-surface">Whole-scene surface samples (experimental)</option>
           </select>
         </label>
         <label><input id="supersampling" type="checkbox" /> Supersampling from 1080p</label>
@@ -142,11 +143,11 @@
       <p class="note">
         Smooth pan presentation keeps a snapped game grid with one pixel of overscan, then moves
         nearest-sampled blocks at a higher integer canvas scale using the residual camera offset. It
-        applies to snapped, sprite and surface modes; native-size view disables it. The canvas gains
-        presentation pixels, not scene detail. A fractional CSS fit can still rescale those pixels;
-        use Actual 1920-pixel presentation for an integer CSS scale at normal browser zoom. Rotation
-        still changes the view; this toggle stabilizes panning only. Redrawing at a camera snap
-        boundary can still change rare edge or depth samples in the 3D scene.
+        applies to snapped, sprite and both surface modes; native-size view disables it. The canvas
+        gains presentation pixels, not scene detail. A fractional CSS fit can still rescale those
+        pixels; use Actual 1920-pixel presentation for an integer CSS scale at normal browser zoom.
+        Rotation still changes the view; this toggle stabilizes panning only. Redrawing at a camera
+        snap boundary can still change rare edge or depth samples in the 3D scene.
       </p>
       <p class="note">
         Rabbit surface samples stores fixed object-local positions, normals and baked face colors
@@ -154,6 +155,14 @@
         splats with depth testing. Only the rabbit uses this representation. It is a rotation
         experiment, with approximate silhouettes, overlapping splats and possible gaps or depth
         artifacts; it does not guarantee invariant pixels. Compare Q/E orbiting with Rabbit sprite.
+      </p>
+      <p class="note">
+        Whole-scene surface samples replaces the terrain, water and every prop with fixed
+        world-space samples at 0.5-unit spacing, plus the rabbit's 0.25-unit samples. The world
+        buffer is created on first selection and reused through rotation and mode changes. Compare
+        Q/E or Rotate camera with the original modes, at the same output resolution and
+        supersampling setting. Wider world splats can thicken silhouettes, bridge tiny gaps or leave
+        coverage/depth artifacts; stable sample identity does not mean frozen screen pixels.
       </p>
       <p class="note">
         Pixel-snapped 3D aligns rendered camera and rabbit positions to the output grid without

@@ -1,7 +1,7 @@
 /* global document, window, requestAnimationFrame, fetch, performance */
 
 import { RabbitSprite, makeTexture, allocateTexture } from "./river-sprite.js";
-import { RabbitSurface } from "./river-surface.js";
+import { SurfaceCloud, WORLD_SAMPLE_SPACING } from "./river-surface.js";
 
 const PRESENT_FRAGMENT = `#version 300 es
 precision highp float;
@@ -167,7 +167,8 @@ export class RiverRenderer {
     );
     this.presentationTexture = makeTexture(gl);
     this.presentationFramebuffer = gl.createFramebuffer();
-    this.surface = new RabbitSurface(gl, program, rabbit);
+    this.surface = new SurfaceCloud(gl, program, rabbit);
+    this.makeWorldSurface = () => new SurfaceCloud(gl, program, world, WORLD_SAMPLE_SPACING);
     this.sprite = new RabbitSprite(gl, program);
     this.uniforms = Object.fromEntries(
       ["translation", "rotation", "target", "right", "up", "forward", "span"].map((name) => [
@@ -280,9 +281,17 @@ export class RiverRenderer {
     gl.uniform2fv(u.span, span);
     gl.uniform3f(u.translation, 0, 0, 0);
     gl.uniform1f(u.rotation, 0);
-    gl.bindVertexArray(this.world);
-    gl.drawArrays(gl.TRIANGLES, 0, this.metadata.worldVertices);
-    if (state.stabilization === "surface") {
+    if (state.stabilization === "scene-surface") {
+      if (!this.worldSurface) {
+        this.worldSurface = this.makeWorldSurface();
+        this.makeWorldSurface = null;
+      }
+      this.worldSurface.draw(basis, target, [0, 0, 0], 0, span, pixel, factor);
+    } else {
+      gl.bindVertexArray(this.world);
+      gl.drawArrays(gl.TRIANGLES, 0, this.metadata.worldVertices);
+    }
+    if (state.stabilization === "surface" || state.stabilization === "scene-surface") {
       this.surface.draw(basis, target, rabbit, state.angle, span, pixel, factor);
     } else if (state.stabilization !== "sprite") {
       gl.uniform3fv(u.translation, rabbit);
@@ -623,7 +632,7 @@ async function start() {
         state.spriteCaptures = renderer.sprite.captures;
         const bounds = canvas.getBoundingClientRect();
         document.querySelector("#dimensions").textContent =
-          `${stabilization.selectedOptions[0].textContent} · ${state.supersampling ? "Filtered 1080p" : "Direct"}: ${renderer.internalWidth} × ${renderer.internalHeight} → ${state.width} × ${(state.width * 9) / 16} game pixels · Canvas: ${canvas.width} × ${canvas.height}${renderer.presentation ? ` · Smooth pan ${renderer.presentation.scale}× (1-pixel overscan)` : ""} · Displayed: ${Math.round(bounds.width)} × ${Math.round(bounds.height)} CSS pixels${state.stabilization === "surface" ? ` · ${renderer.surface.count} fixed rabbit samples` : ""}`;
+          `${stabilization.selectedOptions[0].textContent} · ${state.supersampling ? "Filtered 1080p" : "Direct"}: ${renderer.internalWidth} × ${renderer.internalHeight} → ${state.width} × ${(state.width * 9) / 16} game pixels · Canvas: ${canvas.width} × ${canvas.height}${renderer.presentation ? ` · Smooth pan ${renderer.presentation.scale}× (1-pixel overscan)` : ""} · Displayed: ${Math.round(bounds.width)} × ${Math.round(bounds.height)} CSS pixels${state.stabilization === "surface" || state.stabilization === "scene-surface" ? ` · ${renderer.surface.count} fixed rabbit samples` : ""}${state.stabilization === "scene-surface" ? ` + ${renderer.worldSurface.count} world samples (0.5-unit spacing, ${(renderer.worldSurface.samples.byteLength / 1048576).toFixed(1)} MiB each CPU/GPU)` : ""}`;
         requestAnimationFrame(tick);
       } catch (error) {
         state.error = error.message;
