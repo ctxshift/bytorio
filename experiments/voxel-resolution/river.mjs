@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { deflateSync } from "node:zlib";
 import { chunk, signature } from "../../tools/sdk/cartridge.mjs";
+import { buildLiveAssets } from "./river-mesh.mjs";
 
 // An unbounded procedural ground field, with a finite collection of placed props.
 // The prop cache bounds do not clip terrain or define a world boundary.
@@ -14,6 +15,9 @@ const PROP_OFFSET = PROP_SPAN / 2;
 const MAX_TERRAIN_HEIGHT = 14;
 const EXPLICIT_AIR = 65535;
 const props = new Uint16Array(PROP_SPAN * PROP_HEIGHT * PROP_SPAN);
+const rabbitProps = new Uint16Array(props.length);
+let placement = props;
+let rabbitVisible = true;
 const palette = [[0, 0, 0]];
 const color = (r, g, b) => palette.push([r, g, b]) - 1;
 const grass = color(0, 153, 61);
@@ -51,7 +55,7 @@ function set(x, y, z, material) {
   y = Math.floor(y);
   z = Math.floor(z);
   assert(Math.abs(x) < PROP_OFFSET && Math.abs(z) < PROP_OFFSET && y >= 0 && y < PROP_HEIGHT);
-  props[propIndex(x, y, z)] = material;
+  placement[propIndex(x, y, z)] = material;
 }
 
 function box(x, y, z, w, h, d, material) {
@@ -178,7 +182,8 @@ function voxel(x, y, z) {
     return 0;
   }
   if (x > -PROP_OFFSET && x < PROP_OFFSET && z > -PROP_OFFSET && z < PROP_OFFSET) {
-    const material = props[propIndex(x, y, z)];
+    const at = propIndex(x, y, z);
+    const material = (rabbitVisible && rabbitProps[at]) || props[at];
     if (material) {
       return material === EXPLICIT_AIR ? 0 : material;
     }
@@ -264,6 +269,7 @@ for (const x of [14, 41]) {
 }
 
 // Humanoid rabbit adventurer, with long ears, pale muzzle, tail and red tunic.
+placement = rabbitProps;
 box(-7, 8, 18, 2, 5, 3, trousers);
 box(-3, 8, 18, 2, 5, 3, trousers);
 box(-7, 8, 20, 2, 2, 3, boots);
@@ -287,6 +293,7 @@ box(-10, 12, 21, 1, 6, 1, bark);
 box(-12, 18, 21, 5, 1, 1, wood);
 box(-10, 19, 21, 1, 13, 1, white);
 box(1, 13, 20, 2, 6, 4, hair);
+placement = props;
 
 function normalize(v) {
   const length = Math.hypot(...v);
@@ -444,3 +451,18 @@ await writeFile(
     2,
   ),
 );
+
+await buildLiveAssets({
+  output,
+  voxel,
+  shade,
+  terrainColumn,
+  props,
+  rabbitProps,
+  propIndex,
+  camera: { forward, target, viewWidth },
+  setRabbitVisible(visible) {
+    rabbitVisible = visible;
+    faces.clear();
+  },
+});

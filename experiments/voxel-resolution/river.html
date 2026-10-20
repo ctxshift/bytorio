@@ -100,37 +100,47 @@
       <h1>Riverside — a world beyond the frame</h1>
       <p>
         A cottage, leafy tree, irregular cobbled path, rabbit adventurer and red bridge over a
-        winding stream. Procedural terrain continues beyond every camera edge. Identical world
-        geometry, camera, lighting and pixel-center sampling at all three resolutions. No scoreboard
-        or antialiasing.
+        winding stream. Compare direct rendering against a filtered 1080p render, using the same
+        geometry, lighting and moving camera. No scoreboard.
       </p>
       <nav aria-label="Rendering resolution">
         <button data-width="320" aria-pressed="false">320 × 180</button>
         <button data-width="640" aria-pressed="true">640 × 360</button>
         <button data-width="1920" aria-pressed="false">1920 × 1080</button>
+        <label><input id="supersampling" type="checkbox" /> Supersampling from 1080p</label>
         <label><input id="native" type="checkbox" /> Native size (no enlargement)</label>
         <label
           ><input id="actual" type="checkbox" /> Actual 1920-pixel presentation (scroll if
           needed)</label
         >
       </nav>
+      <nav aria-label="Movement controls">
+        <label><input id="camera-motion" type="checkbox" /> Gentle camera motion</label>
+        <label><input id="follow" type="checkbox" checked /> Follow rabbit</label>
+        <label><input id="pause" type="checkbox" /> Pause motion</label>
+        <button id="reset">Reset position and camera</button>
+      </nav>
       <p id="dimensions" role="status" class="note"></p>
       <p class="note">
-        Low-resolution renders are enlarged exactly 6× and 3× to 1920 × 1080 using nearest sampling.
-        Fit-to-window may add fractional scaling; actual-size mode and the fixed-size crops below
-        avoid it. Native size loads the original PNG at one image pixel per CSS pixel; high-DPI
-        screens can use more than one device pixel per CSS pixel.
+        Click the view, then use WASD to move the rabbit and arrow keys to pan the camera. Pause
+        motion to toggle quality at exactly the same pose. Supersampling averages 3×3 or 6×6 samples
+        in linear color space before producing a true 640×360 or 320×180 canvas. Final enlargement
+        uses nearest sampling. Native size shows one canvas pixel per CSS pixel; high-DPI screens
+        can use more than one device pixel per CSS pixel.
       </p>
     </header>
     <div id="frame">
-      <img
+      <canvas
         id="scene"
-        src="river-640-display.png"
-        alt="Riverside scene rendered at 640 by 360 and enlarged three times"
-      />
+        width="640"
+        height="360"
+        tabindex="0"
+        aria-label="Riverside voxel scene. WASD moves the rabbit; arrow keys pan the camera."
+        >This interactive comparison requires JavaScript and WebGL 2.</canvas
+      >
     </div>
     <section>
-      <h2>Same detail at the same display size</h2>
+      <h2>Static CPU reference details at the same display size</h2>
       <div class="details">
         <figure>
           <figcaption>320 × 180 · 6× pixels</figcaption>
@@ -152,62 +162,13 @@
         <a href="../index.html">Winter scene comparison</a>
       </p>
       <p class="note">
-        Visual experiment using a standalone CPU voxel raycaster. This is not the console renderer,
-        a supported 1080p display mode, or a console performance benchmark. Shadows and local
-        occlusion here exceed the current console lighting API. This static comparison does not
-        measure motion shimmer.
+        Standalone WebGL 2 experiment using voxel meshes and baked per-face shadows and occlusion
+        from the CPU reference scene. Rabbit lighting is baked; its shadows do not update as it
+        moves. Linear scene colors use an RGBA8 intermediate target. This is not the console
+        renderer, a new console display mode, or a console performance benchmark. The links and
+        detail crops above remain the original unfiltered static CPU renders.
       </p>
     </section>
-    <script>
-      const scene = document.querySelector("#scene");
-      const frame = document.querySelector("#frame");
-      const native = document.querySelector("#native");
-      const actual = document.querySelector("#actual");
-      let selectedWidth = 640;
-
-      function showDimensions() {
-        const bounds = scene.getBoundingClientRect();
-        document.querySelector("#dimensions").textContent =
-          `Render: ${selectedWidth} × ${(selectedWidth * 9) / 16} pixels · ` +
-          `PNG: ${scene.naturalWidth} × ${scene.naturalHeight} pixels · ` +
-          `Displayed: ${Math.round(bounds.width)} × ${Math.round(bounds.height)} CSS pixels`;
-      }
-
-      function updatePresentation() {
-        frame.classList.toggle("native", native.checked);
-        frame.classList.toggle("actual", actual.checked && !native.checked);
-        scene.src = native.checked
-          ? `river-${selectedWidth}x${(selectedWidth * 9) / 16}.png`
-          : `river-${selectedWidth}-display.png`;
-        scene.alt = `Riverside scene rendered at ${selectedWidth} pixels wide`;
-      }
-
-      for (const button of document.querySelectorAll("button[data-width]")) {
-        button.addEventListener("click", () => {
-          for (const sibling of document.querySelectorAll("button[data-width]")) {
-            sibling.setAttribute("aria-pressed", String(sibling === button));
-          }
-          selectedWidth = Number(button.dataset.width);
-          updatePresentation();
-        });
-      }
-      native.addEventListener("change", () => {
-        if (native.checked) {
-          actual.checked = false;
-        }
-        updatePresentation();
-      });
-      actual.addEventListener("change", () => {
-        if (actual.checked) {
-          native.checked = false;
-        }
-        updatePresentation();
-      });
-      scene.addEventListener("load", showDimensions);
-      window.addEventListener("resize", showDimensions);
-      if (scene.complete) {
-        showDimensions();
-      }
-    </script>
+    <script type="module" src="river-live.js"></script>
   </body>
 </html>
