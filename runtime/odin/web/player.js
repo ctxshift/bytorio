@@ -11,6 +11,7 @@ const smoke = parameters.has("smoke");
 let statsStarted = performance.now();
 let statsFrames = 0;
 let statsUploads = 0;
+let frameTimer;
 const mib = (bytes) => (bytes / 1048576).toFixed(2);
 let graphics = { backend: "cpu", ssaa: "off", pixelSnap: false, smoothPan: false };
 try {
@@ -441,6 +442,7 @@ async function load(restart = false) {
       autoStart = false;
       start().catch((error) => fail(error.message));
     }
+    requestFrame(performance.now());
   };
   try {
     const gameUrl = parameters.get("game") || globalThis.playerCartridge || "./game.wasm";
@@ -566,9 +568,13 @@ function input() {
   };
 }
 
-function animate(now) {
-  const delta = Math.min(Math.max((now - previous) / 1000, 0), 0.1);
-  previous = now;
+function requestFrame(now = performance.now()) {
+  clearTimeout(frameTimer);
+  frameTimer = undefined;
+  // A response can arrive after the timestamp of an already queued RAF.
+  const current = Math.max(now, previous);
+  const delta = Math.min((current - previous) / 1000, 0.1);
+  previous = current;
   if (started && worker && !document.hidden && !(smoke && globalThis.playerStatus.ticks >= 120)) {
     accumulator = Math.min(accumulator + delta, 5 / 60);
     const steps = smoke ? 1 : Math.min(Math.floor(accumulator * 60), 5);
@@ -582,12 +588,21 @@ function animate(now) {
         input: input(),
         presentationSize: displayPixels(),
       });
+    } else if (!pending) {
+      // Start the next CPU frame when its simulation tick is due rather than
+      // spending another monitor refresh waiting after the Worker response.
+      frameTimer = setTimeout(requestFrame, Math.max(1, (1 / 60 - accumulator) * 1000));
     }
   }
+}
+function animate(now) {
+  requestFrame(now);
   requestAnimationFrame(animate);
 }
 
 function resetInput() {
+  clearTimeout(frameTimer);
+  frameTimer = undefined;
   keys.clear();
   pointer.pointer = false;
   accumulator = 0;

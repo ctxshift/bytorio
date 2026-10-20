@@ -113,7 +113,22 @@ try {
             { type: "step", steps: 1, input: { buttons: 2, pointer: false, x: 0, y: 0 } },
             "frame",
           );
+          const single = await request(
+            { type: "step", steps: 1, input: { buttons: 0, pointer: false, x: 0, y: 0 } },
+            "frame",
+          );
+          const catchup = await request(
+            { type: "step", steps: 5, input: { buttons: 0, pointer: false, x: 0, y: 0 } },
+            "frame",
+          );
+          for (const frame of [high, perspective, single, catchup]) {
+            frame.bitmap?.close();
+          }
           return {
+            catchup: {
+              ticks: catchup.ticks - single.ticks,
+              uploadRatio: catchup.metrics.gpuUploadBytes / single.metrics.gpuUploadBytes,
+            },
             high: {
               hash: high.hash,
               width: high.width,
@@ -137,6 +152,8 @@ try {
     assert(frames.high.smooth);
     assert.equal(frames.perspective.smooth, false);
     assert.equal(frames.perspective.presentationWidth, 320);
+    assert.equal(frames.catchup.ticks, 5, "catch-up preserves every fixed simulation tick");
+    assert(frames.catchup.uploadRatio < 1.2, "five catch-up updates render the scene once");
     const inputs = resolve(root, "action.inputs");
     await writeFile(inputs, "16\n");
     const nativeHigh = JSON.parse(

@@ -17,6 +17,11 @@ close :: proc(state: ^State) {
     state^ = {}
 }
 
+floor_div :: proc(value, divisor: int) -> int {
+    quotient := value / divisor
+    return quotient - 1 if value < 0 && value % divisor != 0 else quotient
+}
+
 prepare :: proc(
     state: ^State,
     registry: ^resources.Registry,
@@ -39,23 +44,35 @@ prepare :: proc(
         delete(state.pixels)
         state.pixels = make([]u32, count)
     }
-    dx := math.round(registry.preview_residual[0] * f64(scale)) / f64(scale)
-    dy := math.round(registry.preview_residual[1] * f64(scale)) / f64(scale)
-    out_width := width * scale
-    for y in 0 ..< height * scale {
-        sy := int(math.floor((f64(y) + 0.5) / f64(scale) + 1 + dy))
-        for x in 0 ..< out_width {
-            at := (y / scale) * width + x / scale
+    shift_x := int(math.round(registry.preview_residual[0] * f64(scale)))
+    shift_y := int(math.round(registry.preview_residual[1] * f64(scale)))
+    out_width, out_height := width * scale, height * scale
+    // Both world samples and unshifted HUD pixels are constant over integer
+    // rectangles. Split at either grid's boundary, shade once, then copy rows.
+    for y := 0; y < out_height; {
+        sy := floor_div(y + shift_y, scale) + 1
+        hud_y := y / scale
+        next_y := min(out_height, sy * scale - shift_y, (hud_y + 1) * scale)
+        row := state.pixels[y * out_width:(y + 1) * out_width]
+        for x := 0; x < out_width; {
+            sx := floor_div(x + shift_x, scale) + 1
+            hud_x := x / scale
+            next_x := min(out_width, sx * scale - shift_x, (hud_x + 1) * scale)
+            at := hud_y * width + hud_x
             color: u32
             if registry.preview_mask[at] != 0 {
                 color = registry.output[at]
             } else {
-                sx := int(math.floor((f64(x) + 0.5) / f64(scale) + 1 + dx))
                 color = resources.u32le(registry.preview, (sy * (width + 2) + sx) * 4)
                 color = resources.over(color, registry.preview_background)
             }
-            state.pixels[y * out_width + x] = color
+            for &pixel in row[x:next_x] { pixel = color }
+            x = next_x
         }
+        for copy_y := y + 1; copy_y < next_y; copy_y += 1 {
+            copy(state.pixels[copy_y * out_width:(copy_y + 1) * out_width], row)
+        }
+        y = next_y
     }
     state.width, state.height, state.active = out_width, height * scale, true
     return state.pixels

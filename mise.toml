@@ -186,6 +186,11 @@ run = "node experiments/voxel-resolution/console-benchmark.mjs"
 description = "Check riverside face coverage, encoding and bounded compression"
 run = "node --test experiments/voxel-resolution/console-mesh.test.mjs"
 
+[tasks."bench:riverside:cpu"]
+description = "Measure interactive CPU quality modes and final canvas delivery"
+depends = ["build:riverside"]
+run = "node experiments/voxel-resolution/console-cpu-benchmark.mjs"
+
 [tasks."test:riverside:controls"]
 description = "Verify riverside controls and counters in both SDKs and exact CPU host replays"
 depends = ["build:riverside"]

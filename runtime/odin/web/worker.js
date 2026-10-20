@@ -361,6 +361,7 @@ self.onmessage = async ({ data }) => {
         throw new Error("Invalid step request.");
       }
       let output;
+      let updated = false;
       const uploadsBefore = gpu ? gpu.metrics.uploadBytes + gpu.metrics.textureUploadBytes : 0;
       for (let i = 0; i < data.steps && (!smoke || lastTick < 120); i++) {
         const buttons = smoke ? (lastTick < 60 ? 2 : lastTick === 60 ? 16 : 0) : data.input.buttons;
@@ -374,9 +375,11 @@ self.onmessage = async ({ data }) => {
         checkExecutor(game);
         submitResources(game, runtime);
         drainAudio();
-        output = frame(false);
+        lastTick++;
+        updated = true;
       }
-      if (output) {
+      if (updated) {
+        output = frame(false);
         const started = performance.now();
         const uploads = gpu ? gpu.metrics.textureUploadBytes : 0;
         Object.assign(output, presentFrame(output.width, output.height));

@@ -656,13 +656,16 @@ run :: proc() -> int {
 
                 keys = input(app)
             }
-            if !guest.update(&app.game, keys) || !draw(app) {
+            if !guest.update(&app.game, keys) {
 
                 return error(app.game.error)
             }
             accumulator -= 1.0 / 60.0
             steps += 1
         }
+        // Updates retain fixed ticks and input edges; rendering is once per
+        // delivered frame, as required by the side-effect-free draw contract.
+        if steps > 0 && !draw(app) { return error(app.game.error) }
         if steps == 5 {
 
             accumulator = 0

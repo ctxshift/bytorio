@@ -177,3 +177,53 @@ Keep color/depth resident across compatible passes next, synchronizing for actua
 CPU consumers while preserving rollback, depth, resource bounds and HUD
 composition. The CPU reference and optional CPU quality path remain available.
 Qualify integrated/mobile devices separately before setting a minimum GPU target.
+
+## CPU smooth-pan regression and interactive measurements
+
+With supersampling off, the initial CPU smooth presenter reduced a static
+320×180 view from about 60 FPS to 13 FPS. Snapping alone, and smooth presentation
+at a 1:1 display size, both retained 60 FPS. The expensive operation was enlarged
+CPU presentation: floating-point source-coordinate calculations and composition
+ran for every presentation pixel. The replacement partitions at the shifted
+world and unshifted HUD grid boundaries, shades constant rectangles once and
+copies repeated rows. An independent full-image reference verifies both output
+modes, positive/negative residuals, translucent edges and HUD boundaries.
+
+There were two additional scheduling costs. Catch-up performed up to five full
+draws before delivering one image; it now performs all fixed updates and draws
+once. This follows the existing side-effect-free draw contract. A five-tick
+Worker regression check verifies five simulation ticks with one frame's upload
+traffic. Browser scheduling also resumes work after a response or tick deadline,
+instead of waiting for another monitor refresh before dispatching to the Worker.
+Native catch-up uses the same update-then-draw ordering. Replay benchmarks retain
+one draw per recorded tick, so their deterministic traces do not change.
+
+`mise run bench:riverside:cpu` measures actual browser frame delivery through the
+player UI, with 1920×1080 presentation and two seconds of observation per case.
+Loading plus 12 updates precede measurement. It records runtime/script/cartridge
+hashes, FPS, render p50/p95 and memory in
+`build/compact-3d/riverside/cpu-performance.json`. These short interactive samples
+include frame transport and main-thread scheduling; they are a different metric
+from the synchronized render benchmark above. Desktop activity and physical
+scanout remain uncontrolled. The GPU timings above precede these CPU-presenter
+and interactive-scheduler changes; the resident GPU benchmark path bypasses both.
+
+Observed browser FPS after the fixes, on the same qualification machine:
+
+| Output  | CPU settings             | Motion | Odin | Luau |
+| ------- | ------------------------ | ------ | ---: | ---: |
+| 320×180 | SSAA off                 | Static | 59.8 | 60.0 |
+| 320×180 | SSAA off, snap           | Static | 60.0 | 59.8 |
+| 320×180 | SSAA off, snap, smooth   | Static | 60.1 | 59.7 |
+| 320×180 | SSAA off, snap, smooth   | Orbit  | 59.0 | 59.2 |
+| 320×180 | SSAA off, snap, smooth   | Walk   | 59.8 | 59.1 |
+| 640×360 | SSAA off, snap, smooth   | Static | 37.4 | 37.2 |
+| 320×180 | 2× SSAA, snap, smooth    | Static | 43.8 | 43.8 |
+| 320×180 | 1080p SSAA, snap, smooth | Static | 10.0 |  9.9 |
+
+The independent JavaScript viewer performs supersampling in WebGL shaders; it
+has no matching CPU supersampling mode. Its high frame rate is a GPU result.
+The console GPU path also meets the 60 Hz render budget on this machine.
+The software rasterizer has substantial optimization work remaining at higher
+sample/output sizes; the CPU results above do not qualify 1080p software SSAA
+for 60 FPS. The console currently advances simulation at a fixed 60 Hz.

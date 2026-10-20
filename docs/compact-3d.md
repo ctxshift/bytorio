@@ -64,6 +64,14 @@ by dimensions and released on device close. Default CPU rendering allocates no
 quality device. Full-scene 1080p CPU rendering can be much slower than GPU mode;
 availability of these options is not a CPU frame-rate guarantee.
 
+The CPU smooth presenter expands constant rectangles using integer grid
+boundaries and row copies, preserving shifted world pixels and unshifted opaque
+HUD coverage. Interactive hosts perform all pending fixed updates and then draw
+once, avoiding repeated full rendering during catch-up. Browser frame dispatch
+also uses response/tick deadlines instead of waiting for a second display refresh.
+See [CPU measurements](riverside-console-measurements.md#cpu-smooth-pan-regression-and-interactive-measurements)
+for the remaining software supersampling costs.
+
 Live browser overlays show delivered FPS, GPU upload traffic, resident geometry,
 explicit texture storage estimates, guest/runtime linear memory and resource
 budget usage, plus CPU quality buffers when enabled. GPU upload traffic includes

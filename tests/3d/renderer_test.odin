@@ -8,6 +8,7 @@ import r "../../runtime/odin/resources"
 import gfx "../../sdk/odin/gfx"
 import g "../../sdk/odin/gfx3d"
 import t "../../sdk/odin/resource"
+import "core:math"
 import "core:testing"
 
 commit :: proc(
@@ -428,6 +429,69 @@ presentation_grid_and_hud :: proc(test: ^testing.T) {
     testing.expect_value(test, state.width, 320)
 }
 
+presentation_matches_independent_pixel_reference :: proc(test: ^testing.T) {
+    for width in ([2]int{320, 640}) {
+        registry: r.Registry
+        height := width * 9 / 16
+        testing.expect(
+            test,
+            core.set_display(abi.DISPLAY_LOW if width == 320 else abi.DISPLAY_HIGH),
+        )
+        registry.has_output, registry.preview_enabled = true, true
+        registry.output_width, registry.output_height = width, height
+        registry.output = make([]u32, width * height)
+        registry.preview_mask = make([]u8, width * height)
+        registry.preview = make([]u8, (width + 2) * (height + 2) * 4)
+        registry.preview_background = 0xff332211
+        for y in 0 ..< height + 2 {
+            for x in 0 ..< width + 2 {
+                color := u32(0x80100000) | u32(x % 128) | u32(y % 128) << 8
+                r.put32(registry.preview, (y * (width + 2) + x) * 4, color)
+            }
+        }
+        for y in 0 ..< height {
+            for x in 0 ..< width {
+                at := y * width + x
+                registry.preview_mask[at] = 1 if (x + y) % 7 == 0 else 0
+                registry.output[at] = 0xff123456
+            }
+        }
+        state: presentation.State
+        for scale in ([3]int{2, 3, 6}) {
+            if width == 640 && scale == 6 { continue }
+            for sign in ([2]f64{-1, 1}) {
+                registry.preview_residual = {sign * 1.49 / f64(scale), -sign * 1.49 / f64(scale)}
+                pixels := presentation.prepare(&state, &registry, width * scale, height * scale)
+                dx := math.round(registry.preview_residual[0] * f64(scale)) / f64(scale)
+                dy := math.round(registry.preview_residual[1] * f64(scale)) / f64(scale)
+                same := true
+                for y in 0 ..< height * scale {
+                    for x in 0 ..< width * scale {
+                        at := (y / scale) * width + x / scale
+                        expected := registry.output[at]
+                        if registry.preview_mask[at] == 0 {
+                            sx := int(math.floor((f64(x) + 0.5) / f64(scale) + 1 + dx))
+                            sy := int(math.floor((f64(y) + 0.5) / f64(scale) + 1 + dy))
+                            expected = r.over(
+                                r.u32le(registry.preview, (sy * (width + 2) + sx) * 4),
+                                registry.preview_background,
+                            )
+                        }
+                        same = same && pixels[y * width * scale + x] == expected
+                    }
+                }
+                testing.expect(
+                    test,
+                    same,
+                    "integer presentation must preserve every reference pixel, including shifted HUD boundaries",
+                )
+            }
+        }
+        presentation.close(&state)
+        r.close(&registry)
+    }
+}
+
 @(test)
 software_quality :: proc(test: ^testing.T) {
     defer r.software_close()
@@ -511,4 +575,5 @@ shared_3d :: proc(test: ^testing.T) {
     clipped_resident := raster_device_transactions(test, true, 0.9)
     testing.expect_value(test, clipped_resident, clipped_streamed)
     presentation_grid_and_hud(test)
+    presentation_matches_independent_pixel_reference(test)
 }
