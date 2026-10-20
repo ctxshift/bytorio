@@ -134,7 +134,7 @@ for (const language of ["odin", "luau"]) {
   const project = resolve(root, language);
   await createProject(project, language);
   await copyFile(
-    `tests/resources/cartridges/game.${language}`,
+    `examples/resource-lifecycle-${language}/main.${language}`,
     resolve(project, `src/main.${language}`),
   );
   await buildProject(project);

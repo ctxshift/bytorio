@@ -97,6 +97,9 @@ with multiple samples for performance measurement. Old C++-specific CTest and
 
 ## Formatting and linting
 
+See [language examples](language-examples.md) for checked resource lifecycle
+examples and readability conventions that formatters do not enforce.
+
 `mise run format` applies every formatter. `mise run format:check` checks without
 writing. `mise run lint` runs all analyzers. Matching npm aliases remain available;
 use `mise exec -- npm run <command>` without shell activation. Language-specific
