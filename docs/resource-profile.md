@@ -13,6 +13,10 @@ C++ and JavaScript constants are checked with `mise run generate:check`.
 | --- | --- | --- | --- | --- | --- |
 | `2d-preview-1` | 1 | 256 (0.1.0) | 1 | Legacy / optional experimental transport | 0 |
 | `resource-av-1` | 2 | 512 (0.2.0) | 2 | 4 | 7 |
+| `compact-3d-preview-1` (experimental) | 3 | 768 (0.3.0) | 2 | 5 | 15 |
+
+The [3D preview](compact-3d.md) is a separate opt-in profile. The shared schema
+also describes its experimental additions; `stableVersion` remains 4.
 
 Bits 1, 2 and 4 identify typed ownership, software graphics, and scheduled
 audio/synthesis. All are mandatory. This version has no optional extensions:

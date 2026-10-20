@@ -20,7 +20,7 @@ assert.equal(profile.status, "published");
 assert.equal(profile.profile, contract.profile);
 assert.equal(profile.sdkVersion, contract.sdkVersion);
 assert.equal(profile.abiVersion, contract.abiVersion);
-assert.equal(profile.protocolVersion, resourceSchema.version);
+assert.equal(profile.protocolVersion, resourceSchema.stableVersion);
 const advertised = contract.profiles.find((item) => item.id === profile.profileId);
 assert.deepEqual(
   [profile.sdkVersionWord, profile.abiVersion, profile.protocolVersion, profile.requiredFeatures],

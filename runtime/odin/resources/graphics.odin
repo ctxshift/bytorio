@@ -19,13 +19,16 @@ Transaction :: struct {
     audio:                                                audio.Transaction,
     audio_created:                                        bool,
     audio_master:                                         Slot,
+    triangles, voxel_cells, voxel_faces, voxel_rebuilds:  u64,
+    voxel_palette_cells:                                  u64,
 }
 Render_State :: struct {
-    active:   bool,
-    target:   u32,
-    pipeline: [8]u32,
-    clip:     [4]i32,
-    affine:   [6]i32,
+    active:        bool,
+    target:        u32,
+    pipeline:      [8]u32,
+    clip:          [4]i32,
+    affine:        [6]i32,
+    depth, camera: u32,
 }
 lookup :: proc(t: ^Transaction, id: u32, kind: Kind = .Empty) -> ^Slot {
     slot: ^Slot
@@ -113,6 +116,7 @@ allocate :: proc(t: ^Transaction, size: int) -> ([]u8, bool) {
     data := (cast([^]u8)ptr)[:size]
     mem.zero(ptr, size)
     t.retained += size
+    t.peak = max(t.peak, t.retained)
     return data, true
 }
 owned :: proc(t: ^Transaction, id: u32) -> ^Slot {
@@ -253,6 +257,7 @@ graphics_control :: proc(t: ^Transaction, op, id: u32, descriptor: [8]u32, data:
 
             return fail(r, "invalid palette write")
         }
+        if slot.kind == .Palette && !voxel_palette_write(t, id, args[0], data) { return false }
         if slot.kind == .Row_Table {
             if args[0] % 12 != 0 || len(data) % 12 != 0 {
 

@@ -10,6 +10,10 @@ import {
   RESOURCE_FEATURES,
   RESOURCE_PROTOCOL,
   RESOURCE_EXPORTS,
+  PROFILE_3D,
+  PREVIEW_3D_SDK,
+  PREVIEW_3D_FEATURES,
+  PREVIEW_3D_PROTOCOL,
 } from "./constants.js";
 export { FRAME_BYTES, MAX_GAME_BYTES };
 export const MAX_PAGES = MAX_MEMORY_BYTES / WASM_PAGE_BYTES;
@@ -23,6 +27,10 @@ export function negotiateProfile(game, cartridge = null) {
   const profile = game.game_profile?.() ?? 1;
   const abi = game.game_abi();
   const sdk = game.game_sdk_version?.();
+  const preview = profile === PROFILE_3D;
+  if (profile === 1 && (game.game_resource_protocol?.() ?? 0) > RESOURCE_PROTOCOL) {
+    throw new Error("Experimental 3D requires its explicit cartridge profile.");
+  }
   if (
     cartridge &&
     (profile !== cartridge.profile || abi !== cartridge.abi || sdk !== cartridge.sdk)
@@ -33,20 +41,20 @@ export function negotiateProfile(game, cartridge = null) {
     game.game_frame_size() !== FRAME_BYTES ||
     (profile === 1
       ? abi !== 1
-      : profile !== PROFILE_RESOURCE ||
+      : (!preview && profile !== PROFILE_RESOURCE) ||
         abi !== RESOURCE_ABI_VERSION ||
-        sdk !== RESOURCE_SDK_VERSION)
+        sdk !== (preview ? PREVIEW_3D_SDK : RESOURCE_SDK_VERSION))
   ) {
     throw new Error("Unsupported game ABI or profile.");
   }
   if (
-    profile === PROFILE_RESOURCE &&
-    (game.game_resource_protocol?.() !== RESOURCE_PROTOCOL ||
-      game.game_required_features?.() !== RESOURCE_FEATURES)
+    profile !== 1 &&
+    (game.game_resource_protocol?.() !== (preview ? PREVIEW_3D_PROTOCOL : RESOURCE_PROTOCOL) ||
+      game.game_required_features?.() !== (preview ? PREVIEW_3D_FEATURES : RESOURCE_FEATURES))
   ) {
     throw new Error("Unsupported resource profile features or protocol.");
   }
-  if (profile === PROFILE_RESOURCE) {
+  if (profile !== 1) {
     for (const { name } of RESOURCE_EXPORTS) {
       if (typeof game[name] !== "function") {
         throw new Error(`Missing resource profile export: ${name}.`);
@@ -63,7 +71,7 @@ export function configureResources(game, runtime) {
     return;
   }
   const protocol = game.game_resource_protocol();
-  if (![1, 2, 3, 4].includes(protocol) || !runtime.runtime_resource_reset) {
+  if (![1, 2, 3, 4, 5].includes(protocol) || !runtime.runtime_resource_reset) {
     throw new Error("Unsupported internal resource protocol.");
   }
   for (const name of [

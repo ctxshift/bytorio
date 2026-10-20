@@ -56,6 +56,7 @@ jobs:
             build/cartridge-verification/
             build/resource-verification/
             build/graphics-verification/
+            build/compact-3d/
             build/audio-verification/
             build/synthesis-verification/
             build/profile-verification/

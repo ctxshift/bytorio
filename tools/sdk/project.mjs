@@ -98,6 +98,7 @@ export async function syncEditor(project) {
     "console.luau",
     "native.luau",
     "resources.luau",
+    "math3d.luau",
     "resource_schema.luau",
     "constants.luau",
   ]) {
@@ -320,9 +321,7 @@ export async function checkProject(path) {
     await executor();
   }
   await smoke(spec);
-  console.log(
-    `Checked ${spec.language} SDK ${contract.sdkVersion}: types, assets, ABI and first frames.`,
-  );
+  console.log(`Checked ${spec.language} SDK ${spec.sdk}: types, assets, ABI and first frames.`);
   return spec;
 }
 export async function buildProject(path, options = {}) {
@@ -359,26 +358,28 @@ export async function buildProject(path, options = {}) {
           ...contract.profiles.find((item) => item.id === spec.profileId),
           containerVersion: contract.cartridge.containerVersion,
           maxPngBytes: contract.cartridge.maxPngBytes,
-          schema: spec.profileId === 2 ? "resource-protocol.json" : null,
+          schema: spec.profileId >= 2 ? "resource-protocol.json" : null,
         },
         null,
         2,
       ) + "\n",
     );
-    if (spec.profileId === 2) {
+    if (spec.profileId >= 2) {
       await copyFile(
         resolve(repo, "sdk/resource-protocol.json"),
         resolve(target, "resource-protocol.json"),
       );
       const bundledProfile = JSON.parse(
-        await readFile(resolve(repo, "sdk/profiles/resource-av-1.json")),
+        await readFile(resolve(repo, `sdk/profiles/${spec.profile}.json`)),
       );
       // Runtime exports keep their schema local; documentation links belong to the SDK checkout.
       delete bundledProfile.specification;
-      delete bundledProfile.performance.measurements;
+      if (bundledProfile.performance) {
+        delete bundledProfile.performance.measurements;
+      }
       bundledProfile.packet.schema = "resource-protocol.json";
       await writeFile(
-        resolve(target, "resource-av-1.json"),
+        resolve(target, `${spec.profile}.json`),
         JSON.stringify(bundledProfile, null, 2) + "\n",
       );
     }

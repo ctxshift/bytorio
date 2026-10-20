@@ -4,6 +4,10 @@ local host = require("./native")
 local resources = require("./resources")
 local schema = require("./resource_schema")
 export type Texture = resources.Texture
+export type Mesh = resources.Mesh
+export type Depth = resources.Depth
+export type Camera = resources.Camera
+export type Voxel = resources.Voxel
 export type Target = resources.Target
 export type Palette = resources.Palette
 export type ColorTable = resources.ColorTable
@@ -27,14 +31,26 @@ export type Button = "left" | "right" | "up" | "down" | "action"
 export type Game = { init: () -> (), update: (number) -> (), draw: () -> () }
 local profileQuery = host.profile
 local profile = if profileQuery then profileQuery() else 1
-local api = { version = if profile == c.PROFILE_RESOURCE then "0.2.0" else "0.1.0" }
+local preview = profile == c.PROFILE_3D
+local api = {
+    version = if preview then "0.3.0" elseif profile == c.PROFILE_RESOURCE then "0.2.0" else "0.1.0",
+}
 function api.capabilities()
     return table.freeze({
         profile = profile,
-        abi = if profile == c.PROFILE_RESOURCE then c.RESOURCE_ABI_VERSION else 1,
-        sdk = if profile == c.PROFILE_RESOURCE then c.RESOURCE_SDK_VERSION else 256,
-        features = if profile == c.PROFILE_RESOURCE then c.RESOURCE_FEATURES else 0,
-        protocol = if profile == c.PROFILE_RESOURCE then c.RESOURCE_PROTOCOL else 0,
+        abi = if profile ~= 1 then c.RESOURCE_ABI_VERSION else 1,
+        sdk = if preview
+            then c.PREVIEW_3D_SDK
+            elseif profile == c.PROFILE_RESOURCE then c.RESOURCE_SDK_VERSION
+            else 256,
+        features = if preview
+            then c.PREVIEW_3D_FEATURES
+            elseif profile == c.PROFILE_RESOURCE then c.RESOURCE_FEATURES
+            else 0,
+        protocol = if preview
+            then c.PREVIEW_3D_PROTOCOL
+            elseif profile == c.PROFILE_RESOURCE then c.RESOURCE_PROTOCOL
+            else 0,
         resource_bytes = schema.maxResourceBytes,
         slots = schema.maxSlots,
         payload_bytes = schema.maxPayload,
@@ -43,6 +59,7 @@ function api.capabilities()
     })
 end
 api.gfx = resources.gfx
+api.gfx3d = resources.gfx3d
 api.audio = resources.audio
 api.data = resources.data
 local masks = { left = 1, right = 2, up = 4, down = 8, action = 16 }

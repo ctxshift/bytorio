@@ -344,6 +344,14 @@ self.onmessage = async ({ data }) => {
           hostCopyBytes: Number(runtime.runtime_resource_stat?.(1) || 0) - resourceBaseline[1],
           pixelWork: Number(runtime.runtime_resource_stat?.(2) || 0) - resourceBaseline[2],
           peakResourceBytes: Number(runtime.runtime_resource_stat?.(3) || 0),
+          currentResourceBytes: runtime.runtime_resource_bytes(),
+          triangles: Number(runtime.runtime_resource_stat?.(4) || 0),
+          voxelCells: Number(runtime.runtime_resource_stat?.(5) || 0),
+          voxelFaces: Number(runtime.runtime_resource_stat?.(6) || 0),
+          voxelRebuilds: Number(runtime.runtime_resource_stat?.(7) || 0),
+          sourceBytes: Number(runtime.runtime_resource_stat?.(8) || 0),
+          geometryBytes: Number(runtime.runtime_resource_stat?.(9) || 0),
+          depthBytes: Number(runtime.runtime_resource_stat?.(10) || 0),
         },
       });
     } else {

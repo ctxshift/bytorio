@@ -3,6 +3,10 @@
 #include <cstdint>
 
 namespace console_constants {
+constexpr auto PROFILE_3D = 3u;
+constexpr auto PREVIEW_3D_SDK = 768u;
+constexpr auto PREVIEW_3D_FEATURES = 15u;
+constexpr auto PREVIEW_3D_PROTOCOL = 5u;
 constexpr auto PROFILE_RESOURCE = 2u;
 constexpr auto RESOURCE_ABI_VERSION = 2u;
 constexpr auto RESOURCE_SDK_VERSION = 512u;

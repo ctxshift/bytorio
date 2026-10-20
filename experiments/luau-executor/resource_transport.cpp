@@ -6,6 +6,7 @@
 #include <cstring>
 #include <emscripten/emscripten.h>
 #include <lualib.h>
+extern "C" std::uint32_t game_profile();
 
 namespace resource_transport {
 using namespace resource_schema;
@@ -134,7 +135,8 @@ int emit(lua_State* L) {
 
 extern "C" {
 EMSCRIPTEN_KEEPALIVE unsigned game_resource_protocol() {
-    return resource_schema::version;
+    return game_profile() == console_constants::PROFILE_3D ? console_constants::PREVIEW_3D_PROTOCOL
+                                                           : console_constants::RESOURCE_PROTOCOL;
 }
 
 EMSCRIPTEN_KEEPALIVE unsigned game_resource_configure(unsigned session) {

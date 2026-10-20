@@ -20,14 +20,19 @@ Kind :: enum {
     Stream,
     Wavetable,
     Instrument,
+    Mesh,
+    Depth,
+    Camera,
+    Voxel,
 }
 Slot :: struct {
-    generation:                            u32,
-    kind:                                  Kind,
-    format, width, height, channels, rate: u32,
-    data:                                  []u8,
-    link:                                  u32,
-    delivered:                             bool,
+    generation:                                           u32,
+    kind:                                                 Kind,
+    format, width, height, channels, rate:                u32,
+    data:                                                 []u8,
+    link:                                                 u32,
+    delivered:                                            bool,
+    volume_depth, vertex_count, index_count, mesh_offset: u32,
 }
 Registry :: struct {
     session, sequence, protocol: u32,
@@ -46,7 +51,8 @@ Registry :: struct {
     audio_master:                Slot,
 }
 Stats :: struct {
-    packet_bytes, copy_bytes, pixel_work, peak_bytes: u64,
+    packet_bytes, copy_bytes, pixel_work, peak_bytes:    u64,
+    triangles, voxel_cells, voxel_faces, voxel_rebuilds: u64,
 }
 PACKET_BYTES :: w.headerBytes + w.maxCommands * w.commandBytes + w.maxPayload
 PAYLOAD_OFFSET :: w.headerBytes + w.maxCommands * w.commandBytes
@@ -264,6 +270,23 @@ submit :: proc(
         for i in 0 ..< int(args_size / 4) {
 
             args[i] = u32le(payload, int(args_offset) + i * 4)
+        }
+        if op >= w.op_create_mesh {
+            if r.protocol < w.meshProtocol {
+                return fail(r, "3D requires resource protocol 5")
+            }
+            if !mesh_command(
+                &txn,
+                op,
+                id,
+                args,
+                payload[int(data_offset):][:int(data_size)],
+                phase,
+            ) {
+                return false
+            }
+            txn.peak = max(txn.peak, txn.retained)
+            continue
         }
         if op >= w.op_audio_bus {
             if r.protocol < 3 ||
@@ -533,6 +556,10 @@ submit :: proc(
     r.stats.packet_bytes += u64(len(packet))
     r.stats.copy_bytes += u64(len(packet)) + txn.copy_bytes
     r.stats.pixel_work += u64(txn.work)
+    r.stats.triangles += txn.triangles
+    r.stats.voxel_cells += txn.voxel_cells
+    r.stats.voxel_faces += txn.voxel_faces
+    r.stats.voxel_rebuilds += txn.voxel_rebuilds
     r.stats.peak_bytes = max(r.stats.peak_bytes, u64(max(txn.peak, txn.retained)))
     committed = true
     return true

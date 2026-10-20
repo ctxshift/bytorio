@@ -93,7 +93,19 @@ runtime_resource_stat :: proc "c" (index: u32) -> u64 {
     case 2:
         return resource_registry.stats.pixel_work
     case 3:
-        return resource_registry.stats.peak_bytes}
+        return resource_registry.stats.peak_bytes
+    case 4:
+        return resource_registry.stats.triangles
+    case 5:
+        return resource_registry.stats.voxel_cells
+    case 6:
+        return resource_registry.stats.voxel_faces
+    case 7:
+        return resource_registry.stats.voxel_rebuilds
+    case 8, 9, 10:
+        storage := resources.mesh_storage(&resource_registry)
+        return storage[index - 8]
+    }
     return 0
 }
 

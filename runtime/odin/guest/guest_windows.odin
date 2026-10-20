@@ -463,11 +463,11 @@ negotiate_profile :: proc(game: ^Game, expected: u32) -> bool {
         if result[0].kind != 0 { return fail(game, "invalid game profile") }
         profile = u32(result[0].of.i32)
     }
-    if (profile != 1 && profile != abi.PROFILE_RESOURCE) ||
+    if (profile != 1 && profile != abi.PROFILE_RESOURCE && profile != abi.PROFILE_3D) ||
        (expected != 0 && expected != profile) {
         return fail(game, "unsupported or mismatched cartridge profile")
     }
-    if profile == abi.PROFILE_RESOURCE {
+    if profile != 1 {
         for signature in abi.RESOURCE_EXPORTS {
             query: Func
             if !function(game, signature.name, &query) { return false }
@@ -504,6 +504,11 @@ negotiate_profile :: proc(game: ^Game, expected: u32) -> bool {
         abi.RESOURCE_FEATURES,
     }
     if profile == 1 { values[0] = 1 }
+    if profile == abi.PROFILE_3D {
+        values[1] = abi.PREVIEW_3D_SDK
+        values[2] = abi.PREVIEW_3D_PROTOCOL
+        values[3] = abi.PREVIEW_3D_FEATURES
+    }
     for name, index in names {
         if profile == 1 && index > 0 { continue }
         query: Func
@@ -615,6 +620,9 @@ initialize :: proc(game: ^Game) -> bool {
             return fail(game, "unsupported internal resource protocol")
         }
         game.resource_protocol = u32(result[0].of.i32)
+        if game.profile != abi.PROFILE_3D && game.resource_protocol > abi.RESOURCE_PROTOCOL {
+            return fail(game, "experimental 3D requires its explicit cartridge profile")
+        }
         if game.resource_protocol >= 2 {
             mailbox: Func
             names := [3]string {

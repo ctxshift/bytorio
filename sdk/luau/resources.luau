@@ -2,6 +2,11 @@
 local c = require("./constants")
 local host = require("./native")
 local schema = require("./resource_schema")
+local math3d = require("./math3d")
+export type Mesh = { _resourceKind: "mesh" }
+export type Depth = { _resourceKind: "depth" }
+export type Camera = { _resourceKind: "camera" }
+export type Voxel = { _resourceKind: "voxel" }
 export type Texture = { _resourceKind: "texture" }
 export type Target = { _resourceKind: "target" }
 export type Palette = { _resourceKind: "palette" }
@@ -30,7 +35,11 @@ export type Rect = { x: number, y: number, width: number, height: number }
 export type FrameRange = { first: number, frames: number }
 export type Upload = { offset_bytes: number?, stride_bytes: number? }
 type Handle =
-    Texture
+    Mesh
+    | Depth
+    | Camera
+    | Voxel
+    | Texture
     | Sample
     | Target
     | Palette
@@ -112,8 +121,14 @@ local function check(handle: Handle, kind: string): Record
 end
 local function emit(op: number, id: number, values: { number }?, bytes: buffer?)
     assert(
-        ((op <= 13 or op >= schema.op_audio_bus) and phase ~= "draw")
-            or (op >= 16 and op <= schema.op_sprite and phase == "draw"),
+        ((op <= 13 or (op >= schema.op_audio_bus and op < schema.op_begin_3d)) and phase ~= "draw")
+            or (
+                (
+                    op >= 16 and op <= schema.op_sprite
+                    or op == schema.op_begin_3d
+                    or op == schema.op_draw_mesh
+                ) and phase == "draw"
+            ),
         "resource command in wrong callback phase"
     )
     local args = buffer.create(if values then 32 else 0)
@@ -1200,6 +1215,137 @@ function api._end()
     assert(activePass == nil, "graphics pass was not ended")
     active = false
 end
+local gfx3d = {
+    identity = math3d.identity,
+    multiply = math3d.multiply,
+    pose = math3d.pose,
+    orthographic = math3d.orthographic,
+    perspective = math3d.perspective,
+    look_at = math3d.look_at,
+}
+local function matrixBytes(m: math3d.Matrix): buffer
+    assert(#m == 16, "matrix requires 16 elements")
+    local bytes = buffer.create(schema.modelBytes)
+    for i, value in m do
+        buffer.writef32(bytes, (i - 1) * 4, value)
+    end
+    return bytes
+end
+export type Vertex = { position: { number }, color: number }
+export type CameraDesc = {
+    view_projection: math3d.Matrix,
+    light: { number }?,
+    ambient: number?,
+    fog_color: number?,
+    fog_start: number?,
+    fog_end: number?,
+}
+function gfx3d.mesh(vertices: { Vertex }, indices: { number }): Mesh
+    integer(#vertices, 1, schema.maxMeshVertices)
+    integer(#indices, 3, schema.maxMeshIndices)
+    assert(#indices % 3 == 0, "indices must form triangles")
+    local bytes =
+        buffer.create(#vertices * schema.meshVertexBytes + #indices * schema.meshIndexBytes)
+    for i, v in vertices do
+        assert(#v.position == 3, "position requires three components")
+        for j, p in v.position do
+            buffer.writef32(bytes, (i - 1) * schema.meshVertexBytes + (j - 1) * 4, p)
+        end
+        buffer.writeu32(
+            bytes,
+            (i - 1) * schema.meshVertexBytes + schema.meshColorOffset,
+            integer(v.color, 0, c.U32_MAX)
+        )
+    end
+    for i, index in indices do
+        buffer.writeu32(
+            bytes,
+            #vertices * schema.meshVertexBytes + (i - 1) * 4,
+            integer(index, 0, #vertices - 1)
+        )
+    end
+    local h = reserve("mesh", 0, 0)
+    emit(schema.op_create_mesh, records[h].id, { #vertices, #indices }, bytes)
+    return h :: Mesh
+end
+function gfx3d.depth(width: number, height: number): Depth
+    local h = reserve("depth", 0, 0)
+    emit(
+        schema.op_create_depth,
+        records[h].id,
+        { integer(width, 1, schema.maxImageAxis), integer(height, 1, schema.maxImageAxis) }
+    )
+    return h :: Depth
+end
+function gfx3d.camera(desc: CameraDesc): Camera
+    local bytes = buffer.create(schema.cameraBytes)
+    buffer.copy(bytes, 0, matrixBytes(desc.view_projection))
+    local light = desc.light or { 0, 0, 0 }
+    assert(#light == 3, "light requires three components")
+    for i, v in light do
+        buffer.writef32(bytes, schema.cameraLightOffset + (i - 1) * 4, v)
+    end
+    buffer.writef32(bytes, schema.cameraAmbientOffset, desc.ambient or 1)
+    buffer.writeu32(bytes, schema.cameraFogColorOffset, desc.fog_color or c.COLOR_OPAQUE_BLACK)
+    buffer.writef32(bytes, schema.cameraFogStartOffset, desc.fog_start or 1)
+    buffer.writef32(bytes, schema.cameraFogEndOffset, desc.fog_end or 2)
+    local h = reserve("camera", 0, 0)
+    emit(schema.op_create_camera, records[h].id, {}, bytes)
+    return h :: Camera
+end
+function gfx3d.voxel(
+    width: number,
+    height: number,
+    depth: number,
+    palette: Palette,
+    cells: buffer
+): Voxel
+    local h = reserve("voxel", 0, 0)
+    emit(schema.op_create_voxel, records[h].id, {
+        integer(width, 1, schema.maxVoxelAxis),
+        integer(height, 1, schema.maxVoxelAxis),
+        integer(depth, 1, schema.maxVoxelAxis),
+        id(palette, "palette"),
+    }, cells)
+    return h :: Voxel
+end
+function gfx3d.edit(
+    volume: Voxel,
+    x: number,
+    y: number,
+    z: number,
+    width: number,
+    height: number,
+    depth: number,
+    cells: buffer
+)
+    emit(schema.op_edit_voxel, id(volume, "voxel"), {
+        integer(x, 0, schema.maxVoxelAxis),
+        integer(y, 0, schema.maxVoxelAxis),
+        integer(z, 0, schema.maxVoxelAxis),
+        integer(width, 1, schema.maxVoxelAxis),
+        integer(height, 1, schema.maxVoxelAxis),
+        integer(depth, 1, schema.maxVoxelAxis),
+    }, cells)
+end
+function gfx3d.bind(pass: Pass, depth: Depth, camera: Camera, clear: boolean?)
+    checkPass(pass)
+    emit(
+        schema.op_begin_3d,
+        id(depth, "depth"),
+        { id(camera, "camera"), if clear == false then 0 else 1 }
+    )
+end
+function gfx3d.draw(pass: Pass, geometry: Mesh | Voxel, model: math3d.Matrix?)
+    checkPass(pass)
+    local record = check(geometry, "any")
+    assert(record.kind == "mesh" or record.kind == "voxel", "expected mesh or voxel")
+    emit(schema.op_draw_mesh, record.id, {}, matrixBytes(model or math3d.identity()))
+end
+function gfx3d.destroy(value: Mesh | Depth | Camera | Voxel)
+    destroy(value, "any")
+end
+api.gfx3d = table.freeze(gfx3d)
 api.gfx = table.freeze(gfx)
 api.audio = table.freeze(audio)
 api.data = table.freeze(data)

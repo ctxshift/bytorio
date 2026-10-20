@@ -8,8 +8,11 @@ import resources "../resource"
 import "base:runtime"
 
 PROFILE :: #config(CONSOLE_PROFILE, 1)
-#assert(PROFILE == 1 || PROFILE == abi.PROFILE_RESOURCE)
-when PROFILE == abi.PROFILE_RESOURCE {
+#assert(PROFILE == 1 || PROFILE == abi.PROFILE_RESOURCE || PROFILE == abi.PROFILE_3D)
+when PROFILE == abi.PROFILE_3D {
+    VERSION :: "0.3.0"
+    VERSION_WORD :: u32(abi.PREVIEW_3D_SDK)
+} else when PROFILE == abi.PROFILE_RESOURCE {
     VERSION :: "0.2.0"
     VERSION_WORD :: u32(abi.RESOURCE_SDK_VERSION)
 } else {
@@ -22,13 +25,13 @@ Capabilities :: struct {
     resource_bytes, slots, payload_bytes, audio_rate, audio_lead_frames: u32,
 }
 capabilities :: proc() -> Capabilities {
-    resource := PROFILE == abi.PROFILE_RESOURCE
+    resource := PROFILE != 1
     return {
         u32(PROFILE),
         u32(abi.RESOURCE_ABI_VERSION) if resource else 1,
         VERSION_WORD,
-        u32(abi.RESOURCE_FEATURES) if resource else 0,
-        u32(abi.RESOURCE_PROTOCOL) if resource else 0,
+        u32(abi.PREVIEW_3D_FEATURES) if PROFILE == abi.PROFILE_3D else u32(abi.RESOURCE_FEATURES) if resource else 0,
+        u32(abi.PREVIEW_3D_PROTOCOL) if PROFILE == abi.PROFILE_3D else u32(abi.RESOURCE_PROTOCOL) if resource else 0,
         w.maxResourceBytes,
         w.maxSlots,
         w.maxPayload,
@@ -299,13 +302,15 @@ debug_position :: proc(x, y: f64) {
 @(export)
 game_abi :: proc "c" () -> u32 {
 
-    return abi.RESOURCE_ABI_VERSION if PROFILE == abi.PROFILE_RESOURCE else abi.VERSION
+    return abi.RESOURCE_ABI_VERSION if PROFILE != 1 else abi.VERSION
 }
 @(export)
 game_profile :: proc "c" () -> u32 { return PROFILE }
 @(export)
 game_required_features :: proc "c" () -> u32 {
-    return abi.RESOURCE_FEATURES if PROFILE == abi.PROFILE_RESOURCE else 0
+    return(
+        abi.PREVIEW_3D_FEATURES if PROFILE == abi.PROFILE_3D else abi.RESOURCE_FEATURES if PROFILE == abi.PROFILE_RESOURCE else 0 \
+    )
 }
 @(export)
 game_sdk_version :: proc "c" () -> u32 {
@@ -421,7 +426,7 @@ game_error_length :: proc "c" () -> u32 {
 @(export)
 game_resource_protocol :: proc "c" () -> u32 {
 
-    return resources.VERSION
+    return abi.PREVIEW_3D_PROTOCOL if PROFILE == abi.PROFILE_3D else abi.RESOURCE_PROTOCOL
 }
 @(export)
 game_resource_configure :: proc "c" (session: u32) -> u32 {

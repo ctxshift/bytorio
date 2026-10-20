@@ -14,6 +14,11 @@ SDK 0.1.0 / ABI 1 remains an explicit compatibility profile. Existing manifests
 retain their version; new projects request SDK 0.2.0 and `resource-av-1`.
 See [profile negotiation and conformance](../docs/resource-profile.md).
 
+SDK 0.3.0 / `compact-3d-preview-1` is an explicit experimental opt-in for
+[meshes, cameras, depth and voxel resources](../docs/compact-3d.md) in both SDKs.
+Create ordinary SDK projects, then set that SDK/profile tuple in `console.json`.
+`mise run build:3d` exports the matching native/browser prototypes.
+
 ## Start a game
 
 Run from the SDK repository root:

@@ -1,0 +1,404 @@
+{
+  "environment": {
+    "platform": "win32",
+    "arch": "x64",
+    "cpu": "11th Gen Intel(R) Core(TM) i7-11700K @ 3.60GHz",
+    "browser": "156.0.8078.4"
+  },
+  "frames": 24,
+  "method": "Five measured passes after two warm-up passes; CPU excludes presentation/audio output. Both published display modes; exact framebuffer hashes and matching resource accounting.",
+  "results": [
+    {
+      "language": "odin",
+      "loads": {
+        "browser": {
+          "cold": {
+            "startup": {
+              "fetchMs": 10.900000095367432,
+              "compileMs": 1.1999999284744263,
+              "instantiateMs": 0,
+              "runtimeInitMs": 1.2000000476837158,
+              "gameInitMs": 4.799999952316284,
+              "firstFrameMs": 6.300000071525574,
+              "totalMs": 24.40000009536743,
+              "executorCache": {
+                "enabled": false,
+                "hit": false
+              }
+            },
+            "memory": {
+              "initialLinear": 3276800,
+              "currentLinear": 3342336,
+              "runtimeLinear": 19333120,
+              "heapBytes": null,
+              "heapPeak": null
+            }
+          },
+          "warm": {
+            "startup": {
+              "fetchMs": 3.5999999046325684,
+              "compileMs": 0.6000000238418579,
+              "instantiateMs": 0,
+              "runtimeInitMs": 0.8000000715255737,
+              "gameInitMs": 4.899999976158142,
+              "firstFrameMs": 7.100000023841858,
+              "totalMs": 17,
+              "executorCache": {
+                "enabled": false,
+                "hit": false
+              }
+            },
+            "memory": {
+              "initialLinear": 3276800,
+              "currentLinear": 3342336,
+              "runtimeLinear": 19333120,
+              "heapBytes": null,
+              "heapPeak": null
+            }
+          }
+        },
+        "native": {
+          "uncached": {
+            "totalMs": 17.3099,
+            "compileMs": 13.3103,
+            "instantiateMs": 0.0739,
+            "gameInitMs": 1.2872
+          },
+          "cached": {
+            "totalMs": 18.2579,
+            "compileMs": 13.4338,
+            "instantiateMs": 0.0726,
+            "gameInitMs": 1.8335
+          }
+        }
+      },
+      "cases": [
+        {
+          "name": "scene-320",
+          "nativeP50Ms": 2.0749000000000004,
+          "nativeP95Ms": 2.3452,
+          "browserP50Ms": 2.5,
+          "browserP95Ms": 2.700000047683716,
+          "nativeUpdateP95Ms": 0.0171,
+          "browserUpdateP95Ms": 0.10000002384185791
+        },
+        {
+          "name": "scene-640",
+          "nativeP50Ms": 7.054,
+          "nativeP95Ms": 8.1611,
+          "browserP50Ms": 7.599999904632568,
+          "browserP95Ms": 8,
+          "nativeUpdateP95Ms": 0.0265,
+          "browserUpdateP95Ms": 0.10000002384185791
+        },
+        {
+          "name": "edit-320",
+          "nativeP50Ms": 2.1928,
+          "nativeP95Ms": 2.5100000000000002,
+          "browserP50Ms": 2.5,
+          "browserP95Ms": 2.799999952316284,
+          "nativeUpdateP95Ms": 0.0732,
+          "browserUpdateP95Ms": 0.10000002384185791
+        },
+        {
+          "name": "edit-640",
+          "nativeP50Ms": 6.9851,
+          "nativeP95Ms": 7.291,
+          "browserP50Ms": 7.600000023841858,
+          "browserP95Ms": 8.299999952316284,
+          "nativeUpdateP95Ms": 0.0776,
+          "browserUpdateP95Ms": 0.10000002384185791
+        },
+        {
+          "name": "checkerboard-320",
+          "nativeP50Ms": 9.1289,
+          "nativeP95Ms": 9.574000000000002,
+          "browserP50Ms": 15.399999976158142,
+          "browserP95Ms": 16.5,
+          "nativeUpdateP95Ms": 0.0224,
+          "browserUpdateP95Ms": 0.10000002384185791
+        },
+        {
+          "name": "checkerboard-640",
+          "nativeP50Ms": 17.8422,
+          "nativeP95Ms": 18.516000000000002,
+          "browserP50Ms": 25,
+          "browserP95Ms": 30.200000047683716,
+          "nativeUpdateP95Ms": 0.023,
+          "browserUpdateP95Ms": 0.10000002384185791
+        },
+        {
+          "name": "instances-320",
+          "nativeP50Ms": 5.2549,
+          "nativeP95Ms": 5.9658,
+          "browserP50Ms": 8.5,
+          "browserP95Ms": 9.5,
+          "nativeUpdateP95Ms": 0.0194,
+          "browserUpdateP95Ms": 0.10000002384185791
+        },
+        {
+          "name": "instances-640",
+          "nativeP50Ms": 10.9125,
+          "nativeP95Ms": 11.4645,
+          "browserP50Ms": 14.5,
+          "browserP95Ms": 15.199999928474426,
+          "nativeUpdateP95Ms": 0.0269,
+          "browserUpdateP95Ms": 0.10000002384185791
+        },
+        {
+          "name": "perspective-320",
+          "nativeP50Ms": 1.5454,
+          "nativeP95Ms": 1.7581,
+          "browserP50Ms": 1.9000000953674316,
+          "browserP95Ms": 2.299999952316284,
+          "nativeUpdateP95Ms": 0.0109,
+          "browserUpdateP95Ms": 0.10000002384185791
+        },
+        {
+          "name": "perspective-640",
+          "nativeP50Ms": 4.8561000000000005,
+          "nativeP95Ms": 5.1837,
+          "browserP50Ms": 5.5,
+          "browserP95Ms": 6.300000071525574,
+          "nativeUpdateP95Ms": 0.0202,
+          "browserUpdateP95Ms": 0.10000002384185791
+        }
+      ],
+      "sceneMemory": {
+        "native": {
+          "currentLinear": 3342336,
+          "heapBytes": 0,
+          "heapPeak": 0,
+          "baselineWorking": 10813440,
+          "working": 24612864,
+          "peakWorking": 31113216
+        },
+        "browser": {
+          "initialLinear": 3276800,
+          "currentLinear": 3342336,
+          "runtimeLinear": 19595264,
+          "heapBytes": null,
+          "heapPeak": null,
+          "peakLinear": 3342336,
+          "peakHeap": null
+        },
+        "resources": {
+          "currentResourceBytes": 2770904,
+          "peakResourceBytes": 3463316,
+          "packetBytes": 37928,
+          "hostCopyBytes": 16402864,
+          "triangles": 34224,
+          "voxelCells": 5168,
+          "voxelFaces": 13086,
+          "voxelRebuilds": 5,
+          "sourceBytes": 5168,
+          "geometryBytes": 1151720,
+          "depthBytes": 1152000
+        }
+      }
+    },
+    {
+      "language": "luau",
+      "loads": {
+        "browser": {
+          "cold": {
+            "startup": {
+              "fetchMs": 18.800000071525574,
+              "compileMs": 0.6000000238418579,
+              "instantiateMs": 0.19999992847442627,
+              "runtimeInitMs": 0.8000000715255737,
+              "gameInitMs": 42.5,
+              "firstFrameMs": 9,
+              "totalMs": 71.90000009536743,
+              "executorCache": {
+                "enabled": true,
+                "hit": false,
+                "key": "executor-v1:4ec8ff5326360ede8650cbb19bec55dd0e2f14e4cc97b7b06e9bb4c8cce92dbd",
+                "lookupMs": 0.8000000715255737,
+                "compileMs": 1.100000023841858,
+                "scope": "page",
+                "fetchMs": 5.900000095367432,
+                "prepareMs": 8,
+                "downloadedExecutor": true
+              }
+            },
+            "memory": {
+              "initialLinear": 4194304,
+              "currentLinear": 4456448,
+              "runtimeLinear": 19333120,
+              "heapBytes": 1197305,
+              "heapPeak": 1197305
+            }
+          },
+          "warm": {
+            "startup": {
+              "fetchMs": 5.699999928474426,
+              "compileMs": 0.7000000476837158,
+              "instantiateMs": 0.10000002384185791,
+              "runtimeInitMs": 0.8999999761581421,
+              "gameInitMs": 14,
+              "firstFrameMs": 5.899999976158142,
+              "totalMs": 27.299999952316284,
+              "executorCache": {
+                "enabled": true,
+                "hit": true,
+                "key": "executor-v1:4ec8ff5326360ede8650cbb19bec55dd0e2f14e4cc97b7b06e9bb4c8cce92dbd",
+                "lookupMs": 0,
+                "compileMs": 0,
+                "scope": "page",
+                "fetchMs": 1.7000000476837158,
+                "prepareMs": 1.7000000476837158,
+                "downloadedExecutor": false
+              }
+            },
+            "memory": {
+              "initialLinear": 4194304,
+              "currentLinear": 4456448,
+              "runtimeLinear": 19333120,
+              "heapBytes": 1197305,
+              "heapPeak": 1197305
+            }
+          }
+        },
+        "native": {
+          "uncached": {
+            "totalMs": 174.8081,
+            "compileMs": 159.7351,
+            "instantiateMs": 0.1201,
+            "gameInitMs": 11.8693
+          },
+          "cached": {
+            "totalMs": 22.9093,
+            "compileMs": 6.6268,
+            "instantiateMs": 0.1266,
+            "gameInitMs": 11.78
+          }
+        }
+      },
+      "cases": [
+        {
+          "name": "scene-320",
+          "nativeP50Ms": 2.0431,
+          "nativeP95Ms": 2.2245000000000004,
+          "browserP50Ms": 2.5,
+          "browserP95Ms": 3,
+          "nativeUpdateP95Ms": 0.0201,
+          "browserUpdateP95Ms": 0.10000002384185791
+        },
+        {
+          "name": "scene-640",
+          "nativeP50Ms": 6.9037,
+          "nativeP95Ms": 7.3585,
+          "browserP50Ms": 7.600000023841858,
+          "browserP95Ms": 8.100000023841858,
+          "nativeUpdateP95Ms": 0.0385,
+          "browserUpdateP95Ms": 0.10000002384185791
+        },
+        {
+          "name": "edit-320",
+          "nativeP50Ms": 2.0997,
+          "nativeP95Ms": 2.3011,
+          "browserP50Ms": 2.5,
+          "browserP95Ms": 2.8000000715255737,
+          "nativeUpdateP95Ms": 0.0697,
+          "browserUpdateP95Ms": 0.19999992847442627
+        },
+        {
+          "name": "edit-640",
+          "nativeP50Ms": 7.007299999999999,
+          "nativeP95Ms": 7.4139,
+          "browserP50Ms": 7.600000023841858,
+          "browserP95Ms": 8.100000023841858,
+          "nativeUpdateP95Ms": 0.0904,
+          "browserUpdateP95Ms": 0.10000002384185791
+        },
+        {
+          "name": "checkerboard-320",
+          "nativeP50Ms": 9.639800000000001,
+          "nativeP95Ms": 10.178500000000001,
+          "browserP50Ms": 15.399999976158142,
+          "browserP95Ms": 16.40000009536743,
+          "nativeUpdateP95Ms": 0.0364,
+          "browserUpdateP95Ms": 0.10000002384185791
+        },
+        {
+          "name": "checkerboard-640",
+          "nativeP50Ms": 17.9129,
+          "nativeP95Ms": 18.5452,
+          "browserP50Ms": 24.799999952316284,
+          "browserP95Ms": 25.699999928474426,
+          "nativeUpdateP95Ms": 0.0458,
+          "browserUpdateP95Ms": 0.10000002384185791
+        },
+        {
+          "name": "instances-320",
+          "nativeP50Ms": 5.397100000000001,
+          "nativeP95Ms": 6.2278,
+          "browserP50Ms": 8.600000023841858,
+          "browserP95Ms": 10.199999928474426,
+          "nativeUpdateP95Ms": 0.0357,
+          "browserUpdateP95Ms": 0.10000002384185791
+        },
+        {
+          "name": "instances-640",
+          "nativeP50Ms": 11.0373,
+          "nativeP95Ms": 11.6306,
+          "browserP50Ms": 14.700000047683716,
+          "browserP95Ms": 15.5,
+          "nativeUpdateP95Ms": 0.0447,
+          "browserUpdateP95Ms": 0.10000002384185791
+        },
+        {
+          "name": "perspective-320",
+          "nativeP50Ms": 1.6347,
+          "nativeP95Ms": 2.1679000000000004,
+          "browserP50Ms": 2,
+          "browserP95Ms": 2.299999952316284,
+          "nativeUpdateP95Ms": 0.0289,
+          "browserUpdateP95Ms": 0.10000002384185791
+        },
+        {
+          "name": "perspective-640",
+          "nativeP50Ms": 4.8268,
+          "nativeP95Ms": 5.1759,
+          "browserP50Ms": 5.400000095367432,
+          "browserP95Ms": 6,
+          "nativeUpdateP95Ms": 0.0397,
+          "browserUpdateP95Ms": 0.10000002384185791
+        }
+      ],
+      "sceneMemory": {
+        "native": {
+          "currentLinear": 4456448,
+          "heapBytes": 1264793,
+          "heapPeak": 1264793,
+          "baselineWorking": 10780672,
+          "working": 22503424,
+          "peakWorking": 22962176
+        },
+        "browser": {
+          "initialLinear": 4194304,
+          "currentLinear": 4456448,
+          "runtimeLinear": 19595264,
+          "heapBytes": 1264793,
+          "heapPeak": 1264793,
+          "peakLinear": 4456448,
+          "peakHeap": 1264793
+        },
+        "resources": {
+          "currentResourceBytes": 2770904,
+          "peakResourceBytes": 3463316,
+          "packetBytes": 37928,
+          "hostCopyBytes": 16402864,
+          "triangles": 34224,
+          "voxelCells": 5168,
+          "voxelFaces": 13086,
+          "voxelRebuilds": 5,
+          "sourceBytes": 5168,
+          "geometryBytes": 1151720,
+          "depthBytes": 1152000
+        }
+      }
+    }
+  ]
+}

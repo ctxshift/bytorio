@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Voxel Garden — cartridge comparison</title>
+    <link rel="icon" href="data:," />
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: system-ui, sans-serif;
+      }
+      body {
+        margin: 0;
+        padding: 24px;
+        background: #10131e;
+        color: #dfeae7;
+      }
+      main {
+        max-width: 1500px;
+        margin: auto;
+      }
+      h1 {
+        margin-bottom: 8px;
+      }
+      p {
+        line-height: 1.6;
+        color: #b6c8d5;
+      }
+      a {
+        color: #70f0c0;
+      }
+      .players {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 600px), 1fr));
+        gap: 20px;
+      }
+      article {
+        padding: 16px;
+        border: 1px solid #334152;
+        border-radius: 12px;
+      }
+      h2 {
+        margin: 0 0 8px;
+      }
+      iframe {
+        display: block;
+        width: 100%;
+        height: 560px;
+        border: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Voxel Garden</h1>
+      <p>
+        The same scene in two cartridge languages, running through the same player. Start either
+        demo and click its display to use the keyboard.
+      </p>
+      <p>
+        Down: edit a wall · Up: checkerboard stress · Left: 64 props · Right: perspective · Space:
+        640×360 while held
+      </p>
+      <div class="players">
+        <article>
+          <h2>Odin</h2>
+          <a href="./odin/build/web/player.html?game=./game.png">Open player</a> ·
+          <a href="./odin/build/web/game.png" download>Download PNG cartridge</a>
+          <iframe
+            title="Odin cartridge"
+            src="./odin/build/web/player.html?game=./game.png"
+            allow="fullscreen"
+          ></iframe>
+        </article>
+        <article>
+          <h2>Luau</h2>
+          <a href="./luau/build/web/player.html?game=./game.png">Open player</a> ·
+          <a href="./luau/build/web/game.png" download>Download PNG cartridge</a>
+          <iframe
+            title="Luau cartridge"
+            src="./luau/build/web/player.html?game=./game.png"
+            allow="fullscreen"
+          ></iframe>
+        </article>
+      </div>
+      <p>
+        Default display: 320×180. The dense checkerboard intentionally stresses surface rendering.
+        Benchmark data is available in <a href="./report.json">report.json</a> after running the
+        conformance benchmark.
+      </p>
+    </main>
+  </body>
+</html>

@@ -117,6 +117,14 @@ run = "node tools/verify-profile.mjs"
 [tasks."test:graphics"]
 run = "node tools/verify-graphics.mjs"
 
+[tasks."build:3d"]
+description = "Build both experimental mesh and voxel cartridges for native/browser"
+run = "node tools/build-3d.mjs"
+
+[tasks."test:3d"]
+description = "Verify and benchmark shared mesh/voxel rendering through both SDKs and hosts"
+run = "node tools/verify-3d.mjs"
+
 [tasks."test:odin"]
 depends = ["build:odin"]
 env = { SDL_VIDEODRIVER = "dummy", SDL_AUDIODRIVER = "dummy", SDL_RENDER_DRIVER = "software" }
@@ -141,6 +149,7 @@ run = [
   { task = "test:cartridge" },
   { task = "test:resources" },
   { task = "test:graphics" },
+  { task = "test:3d" },
   { task = "test:audio" },
   { task = "test:synthesis" },
   { task = "test:profile" },

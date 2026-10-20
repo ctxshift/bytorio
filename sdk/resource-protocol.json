@@ -1,6 +1,32 @@
 {
   "status": "published-resource-av-1",
-  "version": 4,
+  "version": 5,
+  "stableVersion": 4,
+  "meshProtocol": 5,
+  "meshVertexBytes": 16,
+  "meshIndexBytes": 4,
+  "maxMeshVertices": 65536,
+  "maxMeshIndices": 98304,
+  "maxTrianglesPerCommit": 65536,
+  "maxVoxelAxis": 32,
+  "maxVoxelFaces": 16384,
+  "maxVoxelCellsPerCommit": 131072,
+  "cameraBytes": 96,
+  "cameraLightOffset": 64,
+  "cameraAmbientOffset": 76,
+  "cameraFogColorOffset": 80,
+  "cameraFogStartOffset": 84,
+  "cameraFogEndOffset": 88,
+  "cameraPaddingOffset": 92,
+  "meshColorOffset": 12,
+  "meshSubpixelScale": 256,
+  "max3dCoordinate": 10000,
+  "kindMesh": 13,
+  "kindDepth": 14,
+  "kindCamera": 15,
+  "kindVoxel": 16,
+  "modelBytes": 64,
+  "depthBytes": 4,
   "abi": 2,
   "magic": 827348545,
   "headerBytes": 64,
@@ -70,7 +96,14 @@
     "audio_effects": 48,
     "audio_destroy_synth": 49,
     "audio_source": 50,
-    "audio_source_destroy": 51
+    "audio_source_destroy": 51,
+    "create_mesh": 64,
+    "create_depth": 65,
+    "create_camera": 66,
+    "create_voxel": 67,
+    "edit_voxel": 68,
+    "begin_3d": 69,
+    "draw_mesh": 70
   },
   "formats": {
     "index8": 1,
@@ -418,6 +451,76 @@
       "reserved",
       "reserved",
       "reserved"
+    ],
+    "create_mesh": [
+      "vertices",
+      "indices",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved"
+    ],
+    "create_depth": [
+      "width",
+      "height",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved"
+    ],
+    "create_camera": [
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved"
+    ],
+    "create_voxel": [
+      "width",
+      "height",
+      "depth",
+      "palette",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved"
+    ],
+    "edit_voxel": [
+      "x",
+      "y",
+      "z",
+      "width",
+      "height",
+      "depth",
+      "reserved",
+      "reserved"
+    ],
+    "begin_3d": [
+      "camera",
+      "clearDepth",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved"
+    ],
+    "draw_mesh": [
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved",
+      "reserved"
     ]
   },
   "configuration": {
@@ -656,5 +759,20 @@
     "reserved",
     "reserved",
     "reserved"
-  ]
+  ],
+  "experimental3d": {
+    "profile": "compact-3d-preview-1",
+    "protocol": 5,
+    "status": "experimental",
+    "vertex": [
+      "x:f32",
+      "y:f32",
+      "z:f32",
+      "color:rgba8"
+    ],
+    "indices": "zero-based u32 following vertex bytes",
+    "matrix": "column-major f32[16]",
+    "depth": "f32 normalized device depth; strict less-than",
+    "voxelCells": "index8; x fastest, then y, then z; zero empty"
+  }
 }

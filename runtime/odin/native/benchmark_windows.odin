@@ -3,6 +3,7 @@ package main
 import abi "../abi"
 import core "../core"
 import guest "../guest"
+import resources "../resources"
 import "core:fmt"
 import "core:os"
 import "core:strconv"
@@ -106,6 +107,22 @@ benchmark :: proc(app: ^App, path: string, startup_ms: f64, baseline_working: ui
         baseline_working,
         working,
         peak_working,
+    )
+    stats := app.game.resources.stats
+    storage := resources.mesh_storage(&app.game.resources)
+    fmt.printf(
+        "\"resourceStats\":{{\"currentResourceBytes\":%d,\"peakResourceBytes\":%d,\"packetBytes\":%d,\"hostCopyBytes\":%d,\"triangles\":%d,\"voxelCells\":%d,\"voxelFaces\":%d,\"voxelRebuilds\":%d,\"sourceBytes\":%d,\"geometryBytes\":%d,\"depthBytes\":%d}},",
+        app.game.resources.bytes,
+        stats.peak_bytes,
+        stats.packet_bytes,
+        stats.copy_bytes,
+        stats.triangles,
+        stats.voxel_cells,
+        stats.voxel_faces,
+        stats.voxel_rebuilds,
+        storage[0],
+        storage[1],
+        storage[2],
     )
     fmt.printf(
         "\"metered\":%t,\"executorCacheEnabled\":%t,\"commandCount\":%d,\"timings\":[",

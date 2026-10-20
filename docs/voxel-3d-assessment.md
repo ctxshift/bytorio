@@ -1,7 +1,9 @@
 # Voxel resources and compact 3D
 
-Status: proposed design assessment, not an implemented API or profile. This
-evaluation does not change the accepted scope of milestone 4f.
+Status: original design assessment. The subsequent
+[experimental implementation](compact-3d.md) establishes the mesh/camera/depth
+foundation and a bounded voxel prototype. Chunked/merged surfaces remain proposed;
+the implementation document and measurements describe the actual supported scope.
 
 ## Recommendation
 
@@ -144,5 +146,6 @@ Odin scene through the same native and browser player:
    claiming a frame budget.
 
 Use these results to decide chunk sizes, geometry caps, edit budgets, profile
-memory and whether a GPU backend is necessary. No voxel performance result has
-been established by this assessment.
+memory and whether a GPU backend is necessary. The subsequent
+[prototype measurements](compact-3d-measurements.md) provide initial evidence;
+minimum-device qualification and published voxel limits remain future work.

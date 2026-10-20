@@ -90,7 +90,7 @@ export async function bundleLuau({
   display = [640, 360],
   profile = 1,
 }) {
-  if (![1, 2].includes(profile)) {
+  if (![1, 2, 3].includes(profile)) {
     throw new Error("Unsupported Luau cartridge profile");
   }
   project = await realpath(project);
@@ -192,7 +192,8 @@ export async function bundleLuau({
     `local __sdk=__require(${JSON.stringify(sdkId)})\n__sdk.assets(${JSON.stringify(assets.toString("base64"))})\nreturn __sdk._wrap(__require(${JSON.stringify(mainId)}),${display[0]},${display[1]})\n`,
   );
   const bytes = Buffer.from(
-    (profile === 2 ? "--!console-profile=2\n" : "") + formatSource(output.join("\n"), "game.luau"),
+    (profile !== 1 ? `--!console-profile=${profile}\n` : "") +
+      formatSource(output.join("\n"), "game.luau"),
     "utf8",
   );
   if (bytes.length > 256 * 1024) {

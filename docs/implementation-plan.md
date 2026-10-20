@@ -246,16 +246,25 @@ distributions. Design documents and provisional JSON alone do not meet this exit
 
 ### 4f. Compact 3D after the resource interface
 
+Implemented experimentally: [shared compact 3D](compact-3d.md), indexed colored
+meshes, six-plane clipping, depth attachments, explicit orthographic/perspective
+cameras, flat lighting/fog and 3D/2D composition. The separate SDK 0.3.0 profile
+also prototypes typed voxel grids with cached visible-face meshes, bulk region
+edits and frame-resource animation. `mise run test:3d` verifies and benchmarks
+both SDKs through the standalone native player and browser Worker at both display
+modes. Chunked/merged voxel surfaces, textures and a GPU backend remain future
+work; [measurements](compact-3d-measurements.md) determine the next optimization.
+
 Add indexed meshes, depth testing, cameras, vertex colors, simple lighting/fog
 and 3D-to-2D composition using these target/resource lifetimes. Keep custom shaders,
 advanced shadows, full physics and complex animation deferred until game needs
 and minimum-device measurements justify them. Compressed music decoding and large
 asset streaming depend on milestone 5, not on the presence of a PCM stream handle.
 
-The [voxel resource assessment](voxel-3d-assessment.md) proposes a possible extension
-through the same mesh/camera/depth pipeline. It remains an evaluation: establish
-the shared 3D foundation and measure the proposed voxel workloads before accepting
-additional API scope, profile limits or performance guarantees.
+The [voxel resource assessment](voxel-3d-assessment.md) records the original design
+and its prototype gate. Chunk-local rebuilding, merged surfaces and additional
+engine features remain proposals; use the measured workloads before accepting
+further scope, published limits or performance guarantees.
 
 ## Milestone 5: indexed ROMs, full PNG cartridges, loading, and saves
 
