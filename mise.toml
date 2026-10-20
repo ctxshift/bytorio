@@ -226,6 +226,7 @@ run = [
   {task = "test:display"},
   {task = "//examples/rpg:test"},
   {task = "//examples/racing:test"},
+  {task = "test:site"},
 ]
 
 [tasks.validate]
@@ -281,3 +282,23 @@ run = [{task = "//experiments/voxel-resolution:test:surface"}]
 
 [tasks."test:riverside:controls"]
 run = [{task = "//experiments/voxel-resolution:test:controls"}]
+
+[tasks."build:site"]
+description = "Build console demos and the static website"
+run = "node tools/build-site.mjs"
+
+[tasks."build:site:pages"]
+description = "Build website pages from already staged demo exports"
+run = "node tools/build-site.mjs --staged"
+
+[tasks."serve:site"]
+description = "Preview the console website on port 8088"
+run = "node tools/serve-site.mjs"
+
+[tasks."capture:site"]
+description = "Capture real showcase screenshots for site artwork"
+run = "node tools/capture-site.mjs"
+
+[tasks."test:site"]
+description = "Check website links, search, responsive layout and playable touch controls"
+run = ["node tools/build-site.mjs --staged", "node tools/verify-site.mjs"]

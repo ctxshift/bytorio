@@ -32,11 +32,12 @@ export default [
       "experiments/**/*.mjs",
       "examples/**/tools/**/*.mjs",
       "examples/_shared/*.mjs",
+      "site/**/*.mjs",
     ],
     languageOptions: { globals: globals.node },
   },
   {
-    files: ["runtime/**/web/*.js", "examples/**/shared/*.js"],
+    files: ["runtime/**/web/*.js", "examples/**/shared/*.js", "site/**/*.js"],
     languageOptions: { globals: { ...globals.browser, ...globals.worker } },
   },
   {

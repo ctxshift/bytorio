@@ -1,5 +1,9 @@
 # Bytorio
 
+The [console website](docs/website.md) includes a landing page, searchable documentation,
+and browser-playable demo games with touch controls. Build it with `mise run build:site`
+and preview it with `mise run serve:site`.
+
 [Bytorio](https://bytor.io) is a fantasy game console focused on small, mostly 2D games with occasional low-poly 3D, a fast development loop, and modern editors and AI tooling.
 
 **[SDK 0.2.0](sdk/README.md)** provides typed Luau and Odin authoring APIs,
