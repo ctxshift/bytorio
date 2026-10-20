@@ -11,6 +11,7 @@ From the repository root:
 ```text
 mise run build:riverside
 mise run bench:riverside
+mise run bench:riverside:startup
 ```
 
 The hardware benchmark requires native OpenGL and installed Chrome with WebGL2;
@@ -110,7 +111,7 @@ linear memory and resource budget bytes are different accounting domains.
 
 ## Resident mesh and GPU presentation results
 
-Measured on 2026-10-20 on Windows x64 with an i7-11700K and RTX 3090, using
+Refreshed at revision `34f17b0` on 2026-10-20 on Windows x64 with an i7-11700K and RTX 3090, using
 Chrome 155.0.8059.41 for the browser. The report enumerates browser GPU devices;
 it does not separately record the native OpenGL adapter string. All eight cases
 passed exact same-host cross-SDK comparisons and bounded cross-driver image
@@ -123,14 +124,14 @@ Observed total p95 milliseconds:
 
 | SDK  | Output  | Motion | Native | Browser |
 | ---- | ------- | ------ | -----: | ------: |
-| Odin | 320×180 | Pan    |   3.54 |    5.00 |
-| Odin | 320×180 | Orbit  |   3.71 |    4.50 |
-| Odin | 640×360 | Pan    |   6.66 |    7.50 |
-| Odin | 640×360 | Orbit  |   5.42 |    7.80 |
-| Luau | 320×180 | Pan    |   3.55 |    5.50 |
-| Luau | 320×180 | Orbit  |   3.86 |    5.50 |
-| Luau | 640×360 | Pan    |   6.48 |    8.30 |
-| Luau | 640×360 | Orbit  |   5.45 |    8.20 |
+| Odin | 320×180 | Pan    |   3.75 |    4.70 |
+| Odin | 320×180 | Orbit  |   3.40 |    4.20 |
+| Odin | 640×360 | Pan    |   6.20 |    7.90 |
+| Odin | 640×360 | Orbit  |   5.24 |    6.60 |
+| Luau | 320×180 | Pan    |   4.02 |    4.90 |
+| Luau | 320×180 | Orbit  |   3.62 |    6.00 |
+| Luau | 640×360 | Pan    |   5.24 |    8.40 |
+| Luau | 640×360 | Orbit  |   5.26 |    8.80 |
 
 Each scene loads 33 resident meshes once. Across seven benchmark passes, exactly
 231 uploads and 8,547 cache hits were recorded, with no steady-state geometry
@@ -152,8 +153,8 @@ timings exclude console work and remain a different measurement.
 Observed guest linear memory was 3.50 MiB for Odin and 6.44 MiB for Luau; Luau
 heap peak was 3.62 MiB, within the unchanged 4 MiB ceiling. Browser runtime linear
 memory reached 27.88 MiB at the low output and 34.06 MiB at the high output.
-Native resource-budget peaks were 6.52/9.15 MiB; browser peaks were 6.27/8.90 MiB.
-Native process working set was approximately 142–156 MiB after repeated loads.
+Native resource-budget peaks were 6.51/9.15 MiB; browser peaks were 6.26/8.90 MiB.
+Native process working set was approximately 141–148 MiB after repeated loads.
 These domains overlap or describe different processes;
 do not sum them into a single memory requirement.
 
@@ -205,8 +206,8 @@ hashes, FPS, render p50/p95 and memory in
 `build/compact-3d/riverside/cpu-performance.json`. These short interactive samples
 include frame transport and main-thread scheduling; they are a different metric
 from the synchronized render benchmark above. Desktop activity and physical
-scanout remain uncontrolled. The GPU timings above precede these CPU-presenter
-and interactive-scheduler changes; the resident GPU benchmark path bypasses both.
+scanout remain uncontrolled. The resident GPU replay benchmark above measures one
+draw per recorded tick and bypasses the CPU presenter and interactive scheduler.
 
 Observed browser FPS after the fixes, on the same qualification machine:
 
@@ -227,3 +228,46 @@ The console GPU path also meets the 60 Hz render budget on this machine.
 The software rasterizer has substantial optimization work remaining at higher
 sample/output sizes; the CPU results above do not qualify 1080p software SSAA
 for 60 FPS. The console currently advances simulation at a fixed 60 Hz.
+
+## Cartridge size and startup
+
+The startup snapshot below uses the same hardware and revision `34f17b0`. Each
+time is a median of three runs to the first complete riverside scene at 320×180.
+CPU uses default quality; GPU uses resident meshes, 1080p SSAA, snapping and smooth
+presentation. Native starts a fresh process with executor caching disabled.
+Browser uses a fresh context, local HTTP and an automatic Start click. OS,
+browser-engine and GPU-driver caches are not flushed, and Internet latency is
+excluded.
+
+| Cartridge | PNG bytes | PNG KiB | Native CPU | Native GPU | Browser CPU | Browser GPU |
+| --------- | --------: | ------: | ---------: | ---------: | ----------: | ----------: |
+| Odin      |   277,334 |   270.8 |     1.20 s |     1.24 s |      0.98 s |      1.08 s |
+| Luau      |   257,835 |   251.8 |     1.37 s |     1.43 s |      1.03 s |      1.11 s |
+
+The browser player becomes ready in about 72–142 ms, before Start. After Start,
+the scene takes about 0.87 s in CPU mode and 0.92–0.95 s in GPU mode. The staged
+decoder/upload schedule consumes 51 simulation ticks, approximately 850 ms at
+60 Hz. Odin intentionally mirrors the Luau decoding schedule. This is the demo's
+loading policy, not a required startup delay for every cartridge.
+
+PNG size excludes the player: browser runtime modules are 347,703 bytes (CPU)
+or 348,157 bytes (GPU), and the shared Luau executor is 716,725 bytes. The scene
+contains 33,806 submitted triangles after surface merging.
+
+With a warm native executor cache, Luau reaches the complete scene in about
+1.20 s CPU / 1.26 s GPU. Browser executor caching is scoped to the page: a full
+reload does not report an application cache hit. Restarting within the same page
+does reuse the compiled executor, verified by the benchmark's cache-hit checks.
+
+Run `mise run validate bench:riverside:startup`. The retained report is
+`build/riverside-startup/report.json`, including sizes, hashes, individual samples,
+cache behavior and native stock-player image checks. The benchmark builds a
+speed-optimized copy of native player sources under ignored build output, with
+timing probes, neutral input and real-time smoke pacing. Timers begin at runtime
+entry, excluding OS process/DLL loading; the native audio device is dummy. Window
+presentation is included, but physical scanout is unmeasured. The stock player is
+not edited. Browser timing observes the main-thread frame handler after canvas
+delivery. The recorded snapshot's native and browser first-scene hashes matched
+the stock player for both SDKs and backends. The task checks observer/stock
+agreement natively, browser CPU/stock agreement, and cross-SDK agreement on each
+browser backend. Builds finish before timing.

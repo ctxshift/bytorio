@@ -81,6 +81,10 @@ gates: `mise run validate test:gpu test:riverside:controls`. The latter verifies
 WASD walking, Q/E orbit, arrow panning, reset, counters and native/browser CPU
 quality replays for both SDKs. `mise run validate bench:riverside` retains the
 resident GPU qualification report; see [measurements](riverside-console-measurements.md).
+`mise run validate bench:riverside:startup` measures PNG sizes, player readiness
+and the first complete scene through native/browser CPU/GPU paths, including
+fresh, reload and same-page executor cache behavior. It retains its observer
+build and results under `build/riverside-startup/`.
 
 Each task also retains a `*.commands.jsonl` timing journal for instrumented
 synchronous compiler, build and verifier commands. Entries include PID, start
