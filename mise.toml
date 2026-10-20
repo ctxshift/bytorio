@@ -156,7 +156,7 @@ run = "node tools/serve.mjs build/compact-3d/resolution"
 [tasks."test:voxel-resolution"]
 description = "Verify live supersampling, native dimensions and rabbit/camera controls"
 depends = ["build:voxel-resolution"]
-run = "node experiments/voxel-resolution/verify-river.mjs"
+run = ["node experiments/voxel-resolution/verify-river.mjs", "node experiments/voxel-resolution/verify-stability.mjs"]
 
 [tasks."test:3d"]
 description = "Verify and benchmark shared mesh/voxel rendering through both SDKs and hosts"

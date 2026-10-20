@@ -27,7 +27,7 @@ at each resolution. This does not implement chunk streaming in the console.
 
 The interactive page uses `river-live.js`, a standalone WebGL 2 viewer. The
 build also calls `river-mesh.mjs` to bake the same voxel surfaces and per-face
-lighting into separate world and rabbit meshes. A 320 × 320-cell terrain patch
+lighting into separate world and rabbit meshes. A 384 × 384-cell terrain patch
 extends beyond all allowed camera views; walking and camera panning are bounded
 to keep its edges out of view. This live mesh is not an infinite streamed world.
 
@@ -43,11 +43,40 @@ direct comparison does not include hidden hardware MSAA. At 1920 × 1080 there
 is no downsampling, and the supersampling control is disabled.
 
 Click the view to focus it. **WASD** walks and turns the rabbit, with basic terrain,
-water and obstacle collision. **Arrow keys** pan the camera. **Follow rabbit**
+water and obstacle collision. **Arrow keys** pan the camera and **Q/E** orbit it.
+**Rotate camera** continuously orbits the view. **Follow rabbit**
 tracks movement, and **Gentle camera motion** adds a repeatable fractional pan.
 **Pause motion** freezes rabbit and camera movement while quality and resolution
 controls remain active. **Reset position and camera** restores the starting pose.
 Losing focus clears held keys.
+
+The **Rendering mode** selector adds two stabilization comparisons alongside
+the original continuous 3D path:
+
+- **Pixel-snapped 3D:** quantizes projected camera and rabbit translations to the
+  final output grid, in the camera's right/up basis. Simulation positions remain
+  continuous. With fixed view angle, fractional translations within the same
+  snap interval do not change the rendered pixels. The 1080p supersampling
+  checkbox remains available; snapping always uses the final output pixel size.
+- **Rabbit sprite:** uses the snapped world camera and captures the rabbit into
+  an independent, fixed-pivot color/depth image. Its local capture always uses
+  1080p-equivalent sample density, averaged to the output pixel pitch. Translation
+  reuses exactly the same filtered image and places it at integer pixel coordinates.
+  The single-entry capture cache refreshes when facing, view angle or output
+  resolution changes, so it stays bounded during orbiting. Supersampling controls
+  the background in this mode.
+
+The sprite stores premultiplied linear color and fractional coverage. Compositing
+happens in linear space before sRGB encoding. Per-pixel depth is compared against
+the world, so the sprite can pass behind geometry. Depth uses the nearest covered
+sample in both images; this is conservative around subpixel occluders, not exact
+per-sample transparency/intersection handling. The sprite is not a flat overlay.
+
+These modes target translation stability. Orbiting the camera or turning the
+rabbit changes the projected shapes and can still change pixel clusters. They
+do not reproduce an undisclosed external renderer. The separate
+[rotation research note](../../docs/rotating-pixel-art-research.md) evaluates
+persistent surface sampling as a possible next experiment.
 
 Lighting, shadows and local occlusion are baked into mesh face colors. The
 rabbit moves independently, but its lighting and world shadows are not updated
@@ -103,7 +132,7 @@ local face occlusion are not evidence of implemented console API support, and
 generation and are not console benchmarks. The live viewer helps assess motion
 shimmer, but does not qualify console GPU performance or promise a frame rate.
 
-The browser verifier checks all five effective resolution/quality combinations,
+The browser verifiers check five continuous and ten stabilized resolution/quality combinations,
 native dimensions, complete frame coverage, fixed-pose toggling, movement,
 camera controls and focus/pause/reset behavior. It independently recomputes
 filtered scene pixels and tests a synthetic black/white texture: the even mix
@@ -111,3 +140,8 @@ must resolve to approximately 188 in sRGB rather than 128. Results and captures
 are retained in `build/compact-3d/resolution/river/live-checks.json` and adjacent
 PNGs. Automated browser execution may use a software graphics driver; these
 checks establish correctness, not hardware performance.
+
+`stability-checks.json` additionally retains pixel-grid invariance, bit-identical
+sprite reuse during translation, recapture on view/facing changes, fractional
+coverage, full-turn frame coverage and Q/E controls. Independent red/green depth
+fixtures check front/behind occlusion against known results.

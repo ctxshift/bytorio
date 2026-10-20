@@ -107,6 +107,14 @@
         <button data-width="320" aria-pressed="false">320 × 180</button>
         <button data-width="640" aria-pressed="true">640 × 360</button>
         <button data-width="1920" aria-pressed="false">1920 × 1080</button>
+        <label
+          >Rendering mode
+          <select id="stabilization">
+            <option value="continuous">Continuous 3D</option>
+            <option value="snapped">Pixel-snapped 3D</option>
+            <option value="sprite">Rabbit sprite</option>
+          </select>
+        </label>
         <label><input id="supersampling" type="checkbox" /> Supersampling from 1080p</label>
         <label><input id="native" type="checkbox" /> Native size (no enlargement)</label>
         <label
@@ -116,17 +124,26 @@
       </nav>
       <nav aria-label="Movement controls">
         <label><input id="camera-motion" type="checkbox" /> Gentle camera motion</label>
+        <label><input id="camera-orbit" type="checkbox" /> Rotate camera</label>
         <label><input id="follow" type="checkbox" checked /> Follow rabbit</label>
         <label><input id="pause" type="checkbox" /> Pause motion</label>
         <button id="reset">Reset position and camera</button>
       </nav>
       <p id="dimensions" role="status" class="note"></p>
       <p class="note">
-        Click the view, then use WASD to move the rabbit and arrow keys to pan the camera. Pause
+        Click the view, then use WASD to move the rabbit, arrow keys to pan, and Q/E to orbit. Pause
         motion to toggle quality at exactly the same pose. Supersampling averages 3×3 or 6×6 samples
         in linear color space before producing a true 640×360 or 320×180 canvas. Final enlargement
         uses nearest sampling. Native size shows one canvas pixel per CSS pixel; high-DPI screens
         can use more than one device pixel per CSS pixel.
+      </p>
+      <p class="note">
+        Pixel-snapped 3D aligns rendered camera and rabbit positions to the output grid without
+        changing gameplay positions. Rabbit sprite captures the rabbit separately on a stable local
+        grid, filters its color and coverage, and places it at whole pixels with depth occlusion.
+        Its capture is reused during translation and refreshed when facing, camera angle or
+        resolution changes. Supersampling still controls the world background. Rotation changes the
+        sampled view; these modes do not promise rotation-invariant pixels.
       </p>
     </header>
     <div id="frame">
@@ -135,7 +152,7 @@
         width="640"
         height="360"
         tabindex="0"
-        aria-label="Riverside voxel scene. WASD moves the rabbit; arrow keys pan the camera."
+        aria-label="Riverside voxel scene. WASD moves the rabbit; arrow keys pan; Q and E orbit."
         >This interactive comparison requires JavaScript and WebGL 2.</canvas
       >
     </div>

@@ -3,7 +3,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 const VERTEX_BYTES = 16;
-const TERRAIN_EXTENT = 160;
+const TERRAIN_EXTENT = 192;
 const RABBIT_ORIGIN = [-4, 8, 19];
 const EXPLICIT_AIR = 65535;
 const FACES = [
@@ -176,7 +176,7 @@ export async function buildLiveAssets(scene) {
       lighting: "Baked per-face shadows and local occlusion; rabbit moves independently",
     }),
   );
-  for (const file of ["river-live.js"]) {
+  for (const file of ["river-live.js", "river-sprite.js"]) {
     await writeFile(join(output, file), await readFile(new URL(file, import.meta.url)));
   }
   console.log(
