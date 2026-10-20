@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile, writeFile, mkdir, copyFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { once } from "node:events";
 import { chromium } from "playwright";
@@ -25,6 +25,19 @@ for (const language of ["luau", "odin"]) {
   await createProject(path, language);
   await copyFile(`tests/sdk/game.${language}`, resolve(path, `src/main.${language}`));
   await buildProject(path);
+  for (const platform of ["web", "native"]) {
+    const exported = resolve(path, "build", platform);
+    if (language === "luau") {
+      const executor = await readFile(resolve(exported, "luau-executor.wasm"));
+      const version = JSON.parse(await readFile(resolve(exported, "executor-version.json")));
+      assert.equal(version.sha256, createHash("sha256").update(executor).digest("hex"));
+      for (const name of ["luau", "emscripten", "libcxx", "libcxxabi", "musl"]) {
+        assert.ok((await readFile(resolve(exported, "licenses", `${name}.txt`))).length > 0);
+      }
+    } else {
+      await assert.rejects(readFile(resolve(exported, "luau-executor.wasm")), { code: "ENOENT" });
+    }
+  }
   paths[language] = path;
 }
 const imports = { env: { sin: Math.sin } };

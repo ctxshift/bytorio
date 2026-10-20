@@ -1,7 +1,6 @@
 import { readFile, writeFile, mkdir, readdir, copyFile, realpath } from "node:fs/promises";
 import { resolve, dirname, relative, sep } from "node:path";
 import { timedSpawnSync as spawnSync } from "../command-timing.mjs";
-import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { Worker } from "node:worker_threads";
 import { readGraphics } from "./assets.mjs";
@@ -10,7 +9,8 @@ import { inspectGuest } from "../../runtime/odin/web/policy.js";
 import { encodeCartridge } from "./cartridge.mjs";
 import { decodeCartridge } from "../../runtime/odin/web/cartridge.js";
 import { formatSource } from "../code-tools.mjs";
-import { tool, emscriptenRoot, task } from "../toolchain.mjs";
+import { exportPlayer } from "../player-export.mjs";
+import { tool, task } from "../toolchain.mjs";
 
 export const repo = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const contract = JSON.parse(await readFile(resolve(repo, "sdk/contract.json"), "utf8"));
@@ -383,54 +383,11 @@ export async function buildProject(path, options = {}) {
         JSON.stringify(bundledProfile, null, 2) + "\n",
       );
     }
-    const names =
-      platform === "web"
-        ? [
-            "player.html",
-            "player.js",
-            "worker.js",
-            "policy.js",
-            "audio-worklet.js",
-            "audio.wasm",
-            "constants.js",
-            "cartridge.js",
-            "executor-cache.js",
-            "executor-cache-core.js",
-            "frame-clock.js",
-            "runtime.wasm",
-            "runtime-gpu.wasm",
-            "gpu.js",
-          ]
-        : ["player.exe", "SDL3.dll", "wasmtime.dll"];
-    for (const file of names) {
-      await copyFile(resolve(base, file), resolve(target, file));
-    }
-    const { cp } = await import("node:fs/promises");
-    await cp(resolve(base, "licenses"), resolve(target, "licenses"), { recursive: true });
-    if (platform === "web") {
-      await cp(resolve(base, "gpu-shaders"), resolve(target, "gpu-shaders"), { recursive: true });
-    }
+    await exportPlayer({ platform, source: base, target, luau });
     await copyFile(
       resolve(spec.generated, luau ? "game.luau" : "game.wasm"),
       resolve(target, luau ? "game.luau" : "game.wasm"),
     );
-    if (luau) {
-      const executor = await readFile(resolve(repo, "build/luau-executor/luau-executor.wasm"));
-      await writeFile(resolve(target, "luau-executor.wasm"), executor);
-      await writeFile(
-        resolve(target, "executor-version.json"),
-        JSON.stringify({ sha256: createHash("sha256").update(executor).digest("hex") }) + "\n",
-      );
-      for (const [source, name] of [
-        ["build/luau-executor/_deps/luau-src/LICENSE.txt", "luau.txt"],
-        [resolve(emscriptenRoot(), "LICENSE"), "emscripten.txt"],
-        [resolve(emscriptenRoot(), "system/lib/libcxx/LICENSE.TXT"), "libcxx.txt"],
-        [resolve(emscriptenRoot(), "system/lib/libcxxabi/LICENSE.TXT"), "libcxxabi.txt"],
-        [resolve(emscriptenRoot(), "system/lib/libc/musl/COPYRIGHT"), "musl.txt"],
-      ]) {
-        await copyFile(resolve(repo, source), resolve(target, "licenses", name));
-      }
-    }
     await writeFile(
       resolve(target, "console.json"),
       JSON.stringify(

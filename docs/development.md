@@ -195,6 +195,14 @@ enabled. Formatter checks enforce the same space-based indentation.
 
 ## Task layout
 
+Player builds, SDK exports and comparison launchers share
+`tools/player-export.mjs` for player dependencies, shaders, notices and optional
+Luau executor metadata. Cartridge contents, profiles and launcher customization
+remain with their callers. `mise run validate test:player-export` checks export
+completeness and missing-input failures; SDK and comparison suites exercise the
+assembled players. Add player dependencies to this module and update the
+`build:odin` outputs in `mise.toml` so missing cached files trigger a rebuild.
+
 `mise.toml` defines the project commands: `format`, `format:check`, `lint`,
 `build:odin`, `build:rpg`, `build:racing`, `test`, and each `test:*` suite.
 Dependency tasks are declared in `.mise/tasks/deps.toml`:

@@ -2,6 +2,7 @@ import { resourceSchema as limits } from "../runtime/odin/web/constants.js";
 import { mkdir, copyFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { parseArgs } from "node:util";
+import { exportPlayer, stagePlayerSupport } from "./player-export.mjs";
 import { tool, dependencyRoot, run, script, repo, task } from "./toolchain.mjs";
 
 const { values } = parseArgs({
@@ -47,9 +48,7 @@ build([source, ...wasm, `-out:${web}/game.wasm`, "-extra-linker-flags:--max-memo
 const compilerRoot = dirname(odin);
 if (target !== "native") {
   if (reusePlayer) {
-    for (const file of ["runtime.wasm", "runtime-gpu.wasm", "audio.wasm"]) {
-      await copyFile(`build/odin-player/web/${file}`, `${web}/${file}`);
-    }
+    await exportPlayer({ platform: "web", source: "build/odin-player/web", target: web });
   } else {
     build([
       "runtime/odin/web",
@@ -71,35 +70,9 @@ if (target !== "native") {
       `-extra-linker-flags:--max-memory=${limits.maxAudioRuntimeBytes}`,
     ]);
   }
-  for (const file of [
-    "player.html",
-    "player.js",
-    "worker.js",
-    "policy.js",
-    "audio-worklet.js",
-    "constants.js",
-    "cartridge.js",
-    "executor-cache.js",
-    "executor-cache-core.js",
-    "frame-clock.js",
-    "gpu.js",
-  ]) {
-    await copyFile(`runtime/odin/web/${file}`, `${web}/${file}`);
+  if (!reusePlayer) {
+    await stagePlayerSupport({ platform: "web", target: web, compilerRoot });
   }
-  await mkdir(`${web}/gpu-shaders`, { recursive: true });
-  for (const file of [
-    "fullscreen.vert",
-    "initialize.frag",
-    "mesh.vert",
-    "mesh.frag",
-    "resolve.frag",
-    "resident.vert",
-    "present.frag",
-  ]) {
-    await copyFile(`runtime/odin/gpu/${file}`, `${web}/gpu-shaders/${file}`);
-  }
-  await mkdir(`${web}/licenses`, { recursive: true });
-  await copyFile(resolve(compilerRoot, "LICENSE"), `${web}/licenses/odin.txt`);
 }
 if (target !== "web") {
   if (process.platform !== "win32") {
@@ -107,7 +80,7 @@ if (target !== "web") {
   }
   const dependency = dependencyRoot();
   if (reusePlayer) {
-    await copyFile("build/odin-player/native/player.exe", `${native}/player.exe`);
+    await exportPlayer({ platform: "native", source: "build/odin-player/native", target: native });
   } else {
     build([
       "runtime/odin/native",
@@ -117,17 +90,8 @@ if (target !== "web") {
     ]);
   }
   await copyFile(`${web}/game.wasm`, `${native}/game.wasm`);
-  await copyFile(resolve(dependency, "wasmtime.dll"), `${native}/wasmtime.dll`);
-  await copyFile(resolve(compilerRoot, "vendor/sdl3/SDL3.dll"), `${native}/SDL3.dll`);
-  await mkdir(`${native}/licenses`, { recursive: true });
-  for (const [from, name] of [
-    [resolve(dependency, "../LICENSE"), "wasmtime"],
-    [resolve(compilerRoot, "vendor/sdl3/LICENSE.txt"), "sdl3"],
-    [resolve(compilerRoot, "LICENSE"), "odin"],
-    [resolve(compilerRoot, "vendor/OpenGL/LICENSE"), "opengl"],
-    [resolve(compilerRoot, "vendor/OpenGL/LICENSE_glad"), "glad"],
-  ]) {
-    await copyFile(from, `${native}/licenses/${name}.txt`);
+  if (!reusePlayer) {
+    await stagePlayerSupport({ platform: "native", target: native, compilerRoot, dependency });
   }
 }
 if (fixtures) {

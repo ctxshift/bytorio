@@ -63,6 +63,7 @@ sources = [
   "examples/hello-odin/**/*.odin",
   "tests/odin/fixtures/**/*.odin",
   "tools/build-odin.mjs",
+  "tools/player-export.mjs",
   "tools/toolchain.mjs",
   "tools/command-timing.mjs",
   "mise.toml",
@@ -232,6 +233,7 @@ run = "node tools/verify-racing.mjs"
 description = "Run the conformance suites sequentially"
 run = [
   { task = "test:validation" },
+  { task = "test:player-export" },
   { task = "test:sdk" },
   { task = "test:cartridge" },
   { task = "test:resources" },
@@ -254,6 +256,10 @@ run = "node tools/validate.mjs"
 [tasks."test:validation"]
 description = "Test validation failure reporting, deadlines and source tracking"
 run = "node --test tools/validation-runner.test.mjs tools/frame-clock.test.mjs"
+
+[tasks."test:player-export"]
+description = "Verify complete player exports and missing-dependency failures"
+run = "node --test tools/player-export.test.mjs"
 
 [tasks."test:drawing"]
 run = "node experiments/luau-executor/verify-drawing.mjs"
