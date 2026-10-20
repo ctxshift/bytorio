@@ -207,3 +207,65 @@ colors, front/behind world depth and back-face rejection after a half-turn.
 The sampled-world checks additionally cover eight orbit angles, no uncovered
 pixels in the initial camera framing, lazy creation, storage size, buffer reuse,
 deterministic mode switching and independence from the world triangle draw count.
+
+## Rendering performance
+
+Run `mise run bench:voxel-resolution` with installed Chrome. Set
+`PLAYER_BROWSER_CHANNEL` to select another installed Playwright browser channel.
+The build finishes before measurement begins. The report is retained at
+`build/compact-3d/resolution/river/performance.json`, including renderer identity,
+driver/browser details, source hashes and per-run statistics.
+
+The benchmark uses the actual `RiverRenderer` in a separate headless browser,
+with the viewer's competing animation/status loop disabled. It presents at
+1920×1080, warms each configuration for 45 frames, then measures 120 frames in
+each of three rounds. Case order reverses in the middle round. Cases cover both
+game resolutions, panning/orbiting, direct/1080p rendering, smooth presentation
+on/off, and the sampled-world comparison. There are 36 runs and 4,320 timed
+frames, plus warmup and a separate completion diagnostic. Other desktop GPU
+activity is uncontrolled.
+
+CPU submission is measured independently from asynchronous, paired GPU timer
+queries around scene drawing and resolve/presentation. A frame's GPU total is
+the sum of its two query results; component percentiles must not be summed.
+Disjoint/incomplete GPU query results are reported as unavailable. Browser rAF
+intervals describe headless scheduling, not physical monitor presentation.
+A separate 30-frame-per-run diagnostic forces a one-pixel readback after drawing,
+including synchronization/driver/readback overhead. It is not a proposed runtime
+operation; see the distinction between submission and blocking readback in
+[WebGL best practices](https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices).
+Startup, shader compilation and sample-cloud construction are excluded.
+
+Measured on 2026-10-20 against renderer revision `a2672a6`, using hardware WebGL
+through ANGLE/D3D11 on an RTX 3090, i7-11700K, and Chrome 155.0.8059.41. These
+are the highest per-run p95 values, combining pan/orbit runs where applicable:
+
+| Mode (1080p SSAA and smooth presentation) | Game output | CPU submission p95 | GPU p95 | Forced-readback p95 |
+| --- | --- | --- | --- | --- |
+| Pixel-snapped 3D | 320×180 | 0.20 ms | 2.03 ms | 4.40 ms |
+| Pixel-snapped 3D | 640×360 | 0.20 ms | 2.02 ms | 4.20 ms |
+| Whole-scene surface samples | 320×180 | 0.20 ms | 3.62 ms | 4.10 ms |
+| Whole-scene surface samples | 640×360 | 0.20 ms | 3.54 ms | 4.90 ms |
+
+All 4,320 GPU frame measurements were complete and nondisjoint. The preferred
+pixel-snapped/SSAA/smooth configurations cover 1,440 frames: worst observed GPU
+time was 2.19 ms, highest per-run rAF interval p95 was 8.20 ms, and no interval
+exceeded 18 ms. Their scene-draw p95 reached about 1.91 ms, while combined
+resolve/presentation p95 reached 0.19 ms. Run-to-run GPU times varied, so these
+results use conservative per-run p95 values rather than the fastest run.
+
+This supports a 16.67 ms rendering budget for this scene on this desktop. It
+does not establish a minimum device or a complete game's 60 fps performance.
+Both game outputs render roughly 2.1 million internal pixels, including overscan;
+choosing 320×180 does not make the 1080p render four times cheaper. The current
+scene submits about 1.03 million triangle vertices with resident static geometry
+and baked lighting. Cartridge execution, gameplay, dynamic lighting/shadows,
+asset streaming, larger scenes and the standalone native player are unmeasured.
+
+Keep snapped 3D plus SSAA and smooth presentation as the visual baseline. The
+next gate is a console GPU backend on native and browser running the same
+cartridge workload, followed by integrated/mobile GPU measurements. Preserve
+the CPU renderer as a reference. If those measurements need more headroom,
+test chunk visibility, compatible face merging and lower internal-resolution
+quality tiers before changing the preferred visual style. These results do not
+qualify the current console software rasterizer for this workload.

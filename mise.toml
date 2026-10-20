@@ -158,6 +158,11 @@ description = "Verify live supersampling, native dimensions and rabbit/camera co
 depends = ["build:voxel-resolution"]
 run = ["node experiments/voxel-resolution/verify-river.mjs", "node experiments/voxel-resolution/verify-stability.mjs", "node experiments/voxel-resolution/verify-presentation.mjs"]
 
+[tasks."bench:voxel-resolution"]
+description = "Measure riverside CPU, GPU and frame pacing on installed Chrome"
+depends = ["build:voxel-resolution"]
+run = "node experiments/voxel-resolution/benchmark.mjs"
+
 [tasks."test:3d"]
 description = "Verify and benchmark shared mesh/voxel rendering through both SDKs and hosts"
 run = "node tools/verify-3d.mjs"
