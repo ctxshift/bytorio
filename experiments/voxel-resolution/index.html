@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Snow scene — voxel resolution comparison</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: #101216;
+        color: #e9edf4;
+        font:
+          16px/1.5 system-ui,
+          sans-serif;
+      }
+      header,
+      section {
+        padding: 20px 28px;
+      }
+      h1 {
+        font-size: 24px;
+        margin: 0 0 8px;
+      }
+      p {
+        margin: 8px 0 16px;
+        max-width: 1000px;
+        color: #bfc8d7;
+      }
+      button,
+      a {
+        color: #b9d4ff;
+      }
+      button {
+        padding: 9px 18px;
+        border: 1px solid #56627b;
+        background: #222b3b;
+        border-radius: 6px;
+        cursor: pointer;
+        font: inherit;
+      }
+      button[aria-pressed="true"] {
+        background: #bddeff;
+        color: #132337;
+      }
+      nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+      }
+      #frame {
+        overflow: auto;
+        background: black;
+        border-block: 1px solid #303847;
+      }
+      #scene {
+        display: block;
+        width: 100%;
+        max-width: 1920px;
+        height: auto;
+        margin: auto;
+        image-rendering: pixelated;
+      }
+      #frame.actual #scene {
+        width: 1920px;
+        max-width: none;
+      }
+      .details {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+      }
+      figure {
+        margin: 0;
+      }
+      figure img {
+        display: block;
+        width: 384px;
+        height: 384px;
+        image-rendering: pixelated;
+        background: black;
+      }
+      figcaption {
+        margin-bottom: 8px;
+      }
+      .note {
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>One voxel scene, three rendering resolutions</h1>
+      <p>
+        Procedural reconstruction of the supplied winter diorama. Identical voxel grid, camera,
+        directional shadows, local occlusion and pixel-center sampling. No antialiasing. The
+        reconstruction approximates the reference; it is not its original model.
+      </p>
+      <nav aria-label="Rendering resolution">
+        <button data-width="320" aria-pressed="false">320 × 180</button>
+        <button data-width="640" aria-pressed="true">640 × 360</button>
+        <button data-width="1920" aria-pressed="false">1920 × 1080</button>
+        <label
+          ><input id="actual" type="checkbox" /> Actual 1920-pixel presentation (scroll if
+          needed)</label
+        >
+      </nav>
+      <p class="note">
+        Low-resolution renders are enlarged exactly 6× and 3× to 1920 × 1080 using nearest sampling.
+        Fit-to-window may add fractional scaling; actual-size mode and the fixed-size crops below
+        avoid it.
+      </p>
+    </header>
+    <div id="frame">
+      <img
+        id="scene"
+        src="snow-640-display.png"
+        alt="Snow scene rendered at 640 by 360 and enlarged three times"
+      />
+    </div>
+    <section>
+      <h2>Same detail at the same display size</h2>
+      <div class="details">
+        <figure>
+          <figcaption>320 × 180 · 6× pixels</figcaption>
+          <img src="detail-320.png" alt="Character detail at low resolution" />
+        </figure>
+        <figure>
+          <figcaption>640 × 360 · 3× pixels</figcaption>
+          <img src="detail-640.png" alt="Character detail at medium resolution" />
+        </figure>
+        <figure>
+          <figcaption>1920 × 1080 · native pixels</figcaption>
+          <img src="detail-1920.png" alt="Character detail at high resolution" />
+        </figure>
+      </div>
+      <p>
+        <a href="snow-320x180.png">Original 320 × 180 PNG</a> ·
+        <a href="snow-640x360.png">Original 640 × 360 PNG</a> ·
+        <a href="snow-1920x1080.png">Original 1920 × 1080 PNG</a>
+      </p>
+      <p class="note">
+        Visual experiment using a standalone CPU voxel raycaster. This is not the console renderer,
+        a supported 1080p display mode, or a console performance benchmark. Shadows and local
+        occlusion here exceed the current console lighting API. This static comparison does not
+        measure motion shimmer.
+      </p>
+    </section>
+    <script>
+      const scene = document.querySelector("#scene");
+      for (const button of document.querySelectorAll("button[data-width]")) {
+        button.addEventListener("click", () => {
+          for (const sibling of document.querySelectorAll("button[data-width]")) {
+            sibling.setAttribute("aria-pressed", String(sibling === button));
+          }
+          scene.src = `snow-${button.dataset.width}-display.png`;
+          scene.alt = `Snow scene rendered at ${button.dataset.width} pixels wide and presented at 1920 pixels`;
+        });
+      }
+      document.querySelector("#actual").addEventListener("change", (event) => {
+        document.querySelector("#frame").classList.toggle("actual", event.target.checked);
+      });
+    </script>
+  </body>
+</html>

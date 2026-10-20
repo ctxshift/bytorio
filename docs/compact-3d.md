@@ -5,6 +5,10 @@ the standalone native player and browser player. Both SDKs expose indexed meshes
 explicit cameras, depth attachments and cached voxel surfaces. This is an original
 implementation using the existing resource ownership and transaction machinery.
 
+The separate [voxel resolution study](../experiments/voxel-resolution/README.md)
+preserves a procedural winter scene for comparing visual detail at three output
+sizes. It uses an independent renderer and does not extend the console profile.
+
 ## Profile and compatibility
 
 Opt in with SDK `0.3.0` and profile `compact-3d-preview-1` in `console.json`.

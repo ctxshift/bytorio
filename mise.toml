@@ -144,6 +144,15 @@ run = "node tools/verify-graphics.mjs"
 description = "Build both experimental mesh and voxel cartridges for native/browser"
 run = "node tools/build-3d.mjs"
 
+[tasks."build:voxel-resolution"]
+description = "Render the preserved winter scene at three output resolutions"
+run = "node experiments/voxel-resolution/render.mjs"
+
+[tasks."serve:voxel-resolution"]
+description = "Serve the generated voxel resolution comparison"
+depends = ["build:voxel-resolution"]
+run = "node tools/serve.mjs build/compact-3d/resolution"
+
 [tasks."test:3d"]
 description = "Verify and benchmark shared mesh/voxel rendering through both SDKs and hosts"
 run = "node tools/verify-3d.mjs"
