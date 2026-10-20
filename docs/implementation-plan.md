@@ -289,9 +289,10 @@ Next slices:
   target feedback checks and deterministic CPU readbacks for the reference mode.
 - Expand layered presentation beyond the initial single orthographic screen
   batch, including translucent HUD composition and explicit pass/camera hints.
-- Port a representative riverside-sized workload through both cartridge SDKs;
-  measure complete update/render/presentation cost on native and browser before
-  claiming 60 fps, then qualify integrated/mobile GPUs and quality tiers.
+- The representative riverside field is now packaged through both SDKs;
+  [console qualification](riverside-console-measurements.md) measures update,
+  rendering and presentation on native and browser. Use those results to gate
+  60 fps claims, GPU residency and later integrated/mobile qualification.
 - Add a native settings menu/persistence after the runtime options and capability
   reporting are stable. Current native configuration uses launch flags; browser
   controls already persist preferences and restart the game to apply them.

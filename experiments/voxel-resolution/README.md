@@ -1,5 +1,9 @@
 # Voxel resolution study
 
+The riverside scene also has [console GPU qualification cartridges](../../docs/riverside-console-measurements.md)
+in both SDKs. Use `mise run build:riverside` to package them and
+`mise run bench:riverside` to verify and measure native/browser execution.
+
 Two independent scenes compare the same geometry at 320 × 180, 640 × 360 and
 1920 × 1080. The build task renders both; the comparison pages link to each other.
 

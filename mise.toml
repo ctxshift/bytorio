@@ -170,6 +170,20 @@ description = "Measure riverside CPU, GPU and frame pacing on installed Chrome"
 depends = ["build:voxel-resolution"]
 run = "node experiments/voxel-resolution/benchmark.mjs"
 
+[tasks."build:riverside"]
+description = "Package the full riverside surface field through both SDKs"
+depends = ["build:odin", "build:voxel-resolution"]
+run = "node experiments/voxel-resolution/console-build.mjs"
+
+[tasks."bench:riverside"]
+description = "Verify and measure the full riverside cartridges on native and browser GPU hosts"
+depends = ["build:riverside"]
+run = "node experiments/voxel-resolution/console-benchmark.mjs"
+
+[tasks."test:riverside:geometry"]
+description = "Check riverside face coverage, encoding and bounded compression"
+run = "node --test experiments/voxel-resolution/console-mesh.test.mjs"
+
 [tasks."test:gpu"]
 description = "Verify transactional GPU rasterization, both SDKs and native/browser quality settings"
 depends = ["build:3d"]
@@ -205,6 +219,7 @@ run = [
   { task = "test:resources" },
   { task = "test:graphics" },
   { task = "test:3d" },
+    { task = "test:riverside:geometry" },
   { task = "test:audio" },
   { task = "test:synthesis" },
   { task = "test:profile" },

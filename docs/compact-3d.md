@@ -287,4 +287,6 @@ linear memory and resource-budget bytes describe different things. No full audio
 DSP stress workload is included in this 3D benchmark.
 
 See [measurements](compact-3d-measurements.md) for observed results and remaining
-work. Physics, streaming, a scene editor and a GPU backend are separate extensions.
+work. The [riverside cartridge qualification](riverside-console-measurements.md)
+measures the first GPU backend on a larger preserved surface field. Physics,
+streaming, a scene editor and GPU residency remain separate extensions.
