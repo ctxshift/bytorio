@@ -1,4 +1,4 @@
-import { readFile, writeFile, copyFile, mkdir, readdir } from "node:fs/promises";
+import { readFile, writeFile, copyFile, mkdir, readdir, cp } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { encodeCartridge } from "../../tools/sdk/cartridge.mjs";
 import { emscriptenRoot } from "../../tools/toolchain.mjs";
@@ -44,14 +44,19 @@ for (const platform of ["web", "native"]) {
           "constants.js",
           "cartridge.js",
           "worker.js",
+          "gpu.js",
           "executor-cache.js",
           "executor-cache-core.js",
           "runtime.wasm",
+          "runtime-gpu.wasm",
           "game.wasm",
         ]
       : ["player.exe", "SDL3.dll", "wasmtime.dll", "game.wasm"];
   for (const file of files) {
     await copyFile(`${source}/${file}`, `${target}/${file}`);
+  }
+  if (platform === "web") {
+    await cp(`${source}/gpu-shaders`, `${target}/gpu-shaders`, { recursive: true });
   }
   await copyFile("build/luau-executor/luau-executor.wasm", `${target}/luau-executor.wasm`);
   await copyFile(
