@@ -2,11 +2,11 @@ import assert from "node:assert/strict";
 import { mkdir, readFile, writeFile, copyFile } from "node:fs/promises";
 import { resolve, relative } from "node:path";
 import { randomUUID } from "node:crypto";
-import { spawnSync } from "node:child_process";
+import { timedSpawnSync as spawnSync } from "./command-timing.mjs";
 import { once } from "node:events";
 import { chromium } from "playwright";
 import { createProject, buildProject } from "./sdk/project.mjs";
-import { tool, dependencyRoot, toolRoot } from "./toolchain.mjs";
+import { tool, dependencyRoot, toolRoot, task } from "./toolchain.mjs";
 import { serve } from "./serve.mjs";
 import { resourceSchema as limits } from "../runtime/odin/web/constants.js";
 import {
@@ -37,13 +37,8 @@ function run(exe, args, env = {}, diagnostics = false) {
   return result.stdout + (diagnostics ? result.stderr : "");
 }
 const deps = dependencyRoot();
-run(tool("odin"), [
-  "build",
-  "tests/audio/player",
-  "-o:speed",
-  `-collection:deps=${deps}`,
-  `-out:${resolve(root, "trace.exe")}`,
-]);
+task("deps:trace:audio");
+await copyFile("build/validation-tools/audio/trace.exe", resolve(root, "trace.exe"));
 await copyFile(resolve(deps, "wasmtime.dll"), resolve(root, "wasmtime.dll"));
 await copyFile(resolve(toolRoot("odin"), "vendor/sdl3/SDL3.dll"), resolve(root, "SDL3.dll"));
 const report = {
@@ -58,7 +53,12 @@ let packetReference, pcmReference;
 const projects = {};
 await writeFile(
   resolve(root, "unit.log"),
-  run(tool("odin"), ["test", "tests/audio", `-out:${resolve(root, "mixer-tests.exe")}`], {}, true),
+  run(
+    tool("odin"),
+    ["test", "tests/audio", "-o:none", `-out:${resolve(root, "mixer-tests.exe")}`],
+    {},
+    true,
+  ),
 );
 for (const language of ["odin", "luau"]) {
   const project = resolve(root, language);

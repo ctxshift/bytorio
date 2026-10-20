@@ -5,6 +5,33 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { runStep, sourceState, validate } from "./validation-runner.mjs";
+import { timedSpawnSync } from "./command-timing.mjs";
+
+test("command timings retain failed status and original output", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "validation-timing-"));
+  const destination = join(cwd, "commands.jsonl");
+  const previous = process.env.VALIDATION_COMMAND_TIMINGS;
+  try {
+    process.env.VALIDATION_COMMAND_TIMINGS = destination;
+    const result = timedSpawnSync(
+      process.execPath,
+      ["-e", "console.log('output'); process.exitCode = 8"],
+      { encoding: "utf8" },
+    );
+    assert.equal(result.status, 8);
+    assert.equal(result.stdout.trim(), "output");
+    const event = JSON.parse((await readFile(destination, "utf8")).trim());
+    assert.equal(event.exitCode, 8);
+    assert.ok(event.durationMs >= 0);
+    assert.equal(event.pid, process.pid);
+  } finally {
+    if (previous === undefined) {
+      delete process.env.VALIDATION_COMMAND_TIMINGS;
+    } else {
+      process.env.VALIDATION_COMMAND_TIMINGS = previous;
+    }
+  }
+});
 
 test("retains large output and preserves a failure after output", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "validation-test-"));

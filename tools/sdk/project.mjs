@@ -1,6 +1,6 @@
 import { readFile, writeFile, mkdir, readdir, copyFile, realpath } from "node:fs/promises";
 import { resolve, dirname, relative, sep } from "node:path";
-import { spawnSync } from "node:child_process";
+import { timedSpawnSync as spawnSync } from "../command-timing.mjs";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { Worker } from "node:worker_threads";

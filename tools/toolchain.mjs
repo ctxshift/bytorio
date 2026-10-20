@@ -1,6 +1,6 @@
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { spawnSync } from "node:child_process";
+import { timedSpawnSync as spawnSync } from "./command-timing.mjs";
 
 export const repo = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const mise = process.env.MISE_BIN || "mise";

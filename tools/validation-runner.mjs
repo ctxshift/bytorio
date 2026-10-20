@@ -43,7 +43,7 @@ export function sourceState(cwd) {
   };
 }
 
-export async function runStep({ executable, args, cwd, log, timeoutMs }) {
+export async function runStep({ executable, args, cwd, log, timeoutMs, env = process.env }) {
   const started = Date.now();
   const fd = openSync(log, "w");
   let timer;
@@ -54,6 +54,7 @@ export async function runStep({ executable, args, cwd, log, timeoutMs }) {
   try {
     const child = spawn(executable, args, {
       cwd,
+      env,
       stdio: ["ignore", fd, fd],
       windowsHide: true,
       detached: process.platform !== "win32",
@@ -152,15 +153,18 @@ export async function validate({
       const log = `${directory}/${String(index + 1).padStart(2, "0")}-${task.replaceAll(":", "-")}.log`;
       notify(`[${index + 1}/${tasks.length}] ${task}`);
       const before = sourceState(cwd);
+      const commands = log.replace(/\.log$/, ".commands.jsonl");
+      await writeFile(resolve(cwd, commands), "");
       const result = await execute({
         executable: mise,
         args: ["run", task],
         cwd,
         log: resolve(cwd, log),
         timeoutMs,
+        env: { ...process.env, VALIDATION_COMMAND_TIMINGS: resolve(cwd, commands) },
       });
       const after = sourceState(cwd);
-      report.steps.push({ task, log, before, after, ...result });
+      report.steps.push({ task, log, commands, before, after, ...result });
       notify(
         `${task}: ${result.exitCode === 0 ? "PASS" : "FAIL"} (${(result.durationMs / 1000).toFixed(1)}s); ${log}`,
       );

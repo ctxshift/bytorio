@@ -76,6 +76,35 @@ build cache or proof that every byte stayed unchanged during execution. A report
 left `running` after interruption is incomplete and must not be treated as passed.
 Do not benchmark concurrently with heavy builds or tests.
 
+Each task also retains a `*.commands.jsonl` timing journal for instrumented
+synchronous compiler, build and verifier commands. Entries include PID, start
+time, arguments, duration and exit status. A parent build command can contain
+other recorded commands: do not sum nested durations as independent wall time.
+An empty journal means that task did not use the instrumented command helpers.
+
+Unit-test packages compile with `-o:none`: the pinned compiler's default
+optimization took about 64 seconds for the resource unit package, compared with
+0.21 seconds without optimization. The same test body then ran in under a
+millisecond, with bounds checks and allocation tracking retained. Production
+players, Wasm cartridges, native trace harnesses and benchmarks still use their
+existing optimization settings. No assertions, sample counts, workloads or
+native/browser combinations are removed.
+
+Mise dependency tasks `deps:trace:resources`, `deps:trace:graphics` and
+`deps:trace:audio` reuse compiled, speed-optimized harnesses under
+`build/validation-tools/`. Every verifier copies its harness into a fresh run
+directory and executes every check. Sources include runtime, SDK and test Odin
+files, build helpers and toolchain/task configuration; missing executables also
+trigger a rebuild. Use `mise run --force deps:trace:audio` (or the corresponding
+task) when intentionally checking a clean harness build or after modifying an
+installed tool outside mise. Test results themselves are never cached.
+
+All-target RPG/racing builds reuse `build:odin`'s optimized native player and
+browser runtime/audio modules. They still build their own cartridges and fault
+fixtures and stage fresh exports. Host sources and the pinned configuration
+invalidate `build:odin`; its outputs include the required binaries, scripts,
+licenses and fault fixtures, so a missing export triggers regeneration.
+
 ```text
 npm run lint
 npm run format:check

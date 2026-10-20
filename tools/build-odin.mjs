@@ -2,7 +2,7 @@ import { resourceSchema as limits } from "../runtime/odin/web/constants.js";
 import { mkdir, copyFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { parseArgs } from "node:util";
-import { tool, dependencyRoot, run, script, repo } from "./toolchain.mjs";
+import { tool, dependencyRoot, run, script, repo, task } from "./toolchain.mjs";
 
 const { values } = parseArgs({
   options: {
@@ -14,6 +14,11 @@ const { values } = parseArgs({
 const { target, game, fixtures } = values;
 if (!["all", "native", "web"].includes(target) || !["hello", "rpg", "racing"].includes(game)) {
   throw new Error("Invalid build target or game");
+}
+// Game cartridges differ, but all use the same optimized native/browser host.
+const reusePlayer = game !== "hello" && target === "all";
+if (reusePlayer) {
+  task("build:odin");
 }
 const odin = tool("odin");
 if (!run(odin, ["version"]).includes("84bc3fc")) {
@@ -41,18 +46,24 @@ const hostWasm = ["-target:freestanding_wasm32", "-no-entry-point", ...hostFlags
 build([source, ...wasm, `-out:${web}/game.wasm`, "-extra-linker-flags:--max-memory=8388608"]);
 const compilerRoot = dirname(odin);
 if (target !== "native") {
-  build([
-    "runtime/odin/web",
-    ...hostWasm,
-    `-out:${web}/runtime.wasm`,
-    `-extra-linker-flags:--max-memory=${limits.maxRuntimeBytes}`,
-  ]);
-  build([
-    "runtime/odin/audio_web",
-    ...hostWasm,
-    `-out:${web}/audio.wasm`,
-    `-extra-linker-flags:--max-memory=${limits.maxAudioRuntimeBytes}`,
-  ]);
+  if (reusePlayer) {
+    for (const file of ["runtime.wasm", "audio.wasm"]) {
+      await copyFile(`build/odin-player/web/${file}`, `${web}/${file}`);
+    }
+  } else {
+    build([
+      "runtime/odin/web",
+      ...hostWasm,
+      `-out:${web}/runtime.wasm`,
+      `-extra-linker-flags:--max-memory=${limits.maxRuntimeBytes}`,
+    ]);
+    build([
+      "runtime/odin/audio_web",
+      ...hostWasm,
+      `-out:${web}/audio.wasm`,
+      `-extra-linker-flags:--max-memory=${limits.maxAudioRuntimeBytes}`,
+    ]);
+  }
   for (const file of [
     "player.html",
     "player.js",
@@ -74,12 +85,16 @@ if (target !== "web") {
     throw new Error("The native adapter currently targets Windows x64");
   }
   const dependency = dependencyRoot();
-  build([
-    "runtime/odin/native",
-    ...hostFlags,
-    `-out:${native}/player.exe`,
-    `-collection:deps=${dependency}`,
-  ]);
+  if (reusePlayer) {
+    await copyFile("build/odin-player/native/player.exe", `${native}/player.exe`);
+  } else {
+    build([
+      "runtime/odin/native",
+      ...hostFlags,
+      `-out:${native}/player.exe`,
+      `-collection:deps=${dependency}`,
+    ]);
+  }
   await copyFile(`${web}/game.wasm`, `${native}/game.wasm`);
   await copyFile(resolve(dependency, "wasmtime.dll"), `${native}/wasmtime.dll`);
   await copyFile(resolve(compilerRoot, "vendor/sdl3/SDL3.dll"), `${native}/SDL3.dll`);

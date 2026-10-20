@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve, relative } from "node:path";
-import { spawnSync } from "node:child_process";
+import { timedSpawnSync as spawnSync } from "./command-timing.mjs";
 import { once } from "node:events";
 import { cpus, platform, arch } from "node:os";
 import { chromium } from "playwright";
@@ -60,7 +60,7 @@ function run(exe, args, options = {}) {
   assert.equal(output.status, 0, output.stderr + output.stdout);
   return output.stdout;
 }
-run(tool("odin"), ["test", "tests/3d", `-out:${resolve(root, "renderer-tests.exe")}`]);
+run(tool("odin"), ["test", "tests/3d", "-o:none", `-out:${resolve(root, "renderer-tests.exe")}`]);
 const projects = await build3dExamples(root);
 const cases = [
   ["scene", 0],

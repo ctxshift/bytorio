@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import { mkdir, readFile, writeFile, copyFile } from "node:fs/promises";
 import { resolve, relative } from "node:path";
 import { randomUUID } from "node:crypto";
-import { spawnSync } from "node:child_process";
+import { timedSpawnSync as spawnSync } from "./command-timing.mjs";
 import { once } from "node:events";
 import { chromium } from "playwright";
 import { createProject, buildProject } from "./sdk/project.mjs";
 import { serve } from "./serve.mjs";
-import { tool, dependencyRoot } from "./toolchain.mjs";
+import { tool, dependencyRoot, task } from "./toolchain.mjs";
 import {
   configureResources,
   submitResources,
@@ -32,14 +32,9 @@ function run(exe, args, expected = 0) {
 }
 const odin = tool("odin");
 const deps = dependencyRoot();
-run(odin, ["test", "tests/graphics", `-out:${resolve(root, "renderer-tests.exe")}`]);
-run(odin, [
-  "build",
-  "tests/graphics/player",
-  "-o:speed",
-  `-collection:deps=${deps}`,
-  `-out:${resolve(root, "trace.exe")}`,
-]);
+run(odin, ["test", "tests/graphics", "-o:none", `-out:${resolve(root, "renderer-tests.exe")}`]);
+task("deps:trace:graphics");
+await copyFile("build/validation-tools/graphics/trace.exe", resolve(root, "trace.exe"));
 await copyFile(resolve(deps, "wasmtime.dll"), resolve(root, "wasmtime.dll"));
 const projects = {},
   references = {},

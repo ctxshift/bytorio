@@ -3,12 +3,12 @@ import assert from "node:assert/strict";
 import { mkdir, copyFile, readFile, writeFile } from "node:fs/promises";
 import { resolve, relative } from "node:path";
 import { randomUUID } from "node:crypto";
-import { spawnSync } from "node:child_process";
+import { timedSpawnSync as spawnSync } from "./command-timing.mjs";
 import { once } from "node:events";
 import { chromium } from "playwright";
 import { createProject, buildProject } from "./sdk/project.mjs";
 import { serve } from "./serve.mjs";
-import { tool, dependencyRoot } from "./toolchain.mjs";
+import { tool, dependencyRoot, task } from "./toolchain.mjs";
 import {
   configureResources,
   submitResources,
@@ -30,14 +30,9 @@ function run(exe, args) {
 run(process.execPath, ["tools/generate-constants.mjs", "--check"]);
 const odin = tool("odin");
 const dependency = dependencyRoot();
-run(odin, ["test", "tests/resources", `-out:${resolve(root, "registry-tests.exe")}`]);
-run(odin, [
-  "build",
-  "tests/resources/player",
-  "-o:speed",
-  `-collection:deps=${dependency}`,
-  `-out:${resolve(root, "trace.exe")}`,
-]);
+run(odin, ["test", "tests/resources", "-o:none", `-out:${resolve(root, "registry-tests.exe")}`]);
+task("deps:trace:resources");
+await copyFile("build/validation-tools/resources/trace.exe", resolve(root, "trace.exe"));
 await copyFile(resolve(dependency, "wasmtime.dll"), resolve(root, "wasmtime.dll"));
 const projects = {};
 let reference;

@@ -64,6 +64,7 @@ sources = [
   "tests/odin/fixtures/**/*.odin",
   "tools/build-odin.mjs",
   "tools/toolchain.mjs",
+  "tools/command-timing.mjs",
   "mise.toml",
 ]
 outputs = [
@@ -71,8 +72,30 @@ outputs = [
   "build/odin-player/native/wasmtime.dll",
   "build/odin-player/native/SDL3.dll",
   "build/odin-player/web/runtime.wasm",
+  "build/odin-player/web/audio.wasm",
+  "build/odin-player/web/player.html",
+  "build/odin-player/web/player.js",
+  "build/odin-player/web/worker.js",
+  "build/odin-player/web/policy.js",
+  "build/odin-player/web/audio-worklet.js",
+  "build/odin-player/web/constants.js",
+  "build/odin-player/web/cartridge.js",
+  "build/odin-player/web/executor-cache.js",
+  "build/odin-player/web/executor-cache-core.js",
+  "build/odin-player/web/licenses/odin.txt",
+  "build/odin-player/native/licenses/odin.txt",
+  "build/odin-player/native/licenses/sdl3.txt",
+  "build/odin-player/native/licenses/wasmtime.txt",
+  "build/odin-player/native/game.wasm",
   "build/odin-player/web/game.wasm",
   "build/odin-player/web/fixtures/loop.wasm",
+  "build/odin-player/web/fixtures/abi.wasm",
+  "build/odin-player/web/fixtures/offset.wasm",
+  "build/odin-player/web/fixtures/command.wasm",
+  "build/odin-player/web/fixtures/trap.wasm",
+  "build/odin-player/web/fixtures/list-count.wasm",
+  "build/odin-player/web/fixtures/list-offset.wasm",
+  "build/odin-player/web/fixtures/list-command.wasm",
 ]
 run = "node tools/build-odin.mjs --fixtures"
 
