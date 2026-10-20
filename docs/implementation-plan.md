@@ -252,6 +252,11 @@ advanced shadows, full physics and complex animation deferred until game needs
 and minimum-device measurements justify them. Compressed music decoding and large
 asset streaming depend on milestone 5, not on the presence of a PCM stream handle.
 
+The [voxel resource assessment](voxel-3d-assessment.md) proposes a possible extension
+through the same mesh/camera/depth pipeline. It remains an evaluation: establish
+the shared 3D foundation and measure the proposed voxel workloads before accepting
+additional API scope, profile limits or performance guarantees.
+
 ## Milestone 5: indexed ROMs, full PNG cartridges, loading, and saves
 
 Implemented subset: [PNG container v1](png-cartridges.md), SDK `pack`, default or
