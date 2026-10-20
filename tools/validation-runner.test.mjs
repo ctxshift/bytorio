@@ -69,6 +69,23 @@ test("fingerprints untracked sources but excludes ignored logs", async () => {
   assert.notEqual(sourceState(cwd).fingerprint, added.fingerprint);
 });
 
+test("interrupts the active command and removes signal handlers", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "validation-test-"));
+  const listeners = process.listenerCount("SIGINT");
+  const pending = runStep({
+    executable: process.execPath,
+    args: ["-e", "setInterval(() => {}, 1000)"],
+    cwd,
+    log: join(cwd, "interrupted.log"),
+    timeoutMs: 10000,
+  });
+  process.emit("SIGINT");
+  const result = await pending;
+  assert.equal(result.exitCode, 130);
+  assert.equal(result.interrupted, true);
+  assert.equal(process.listenerCount("SIGINT"), listeners);
+});
+
 test("stops on failure and rejects results from changing sources", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "validation-test-"));
   for (const args of [

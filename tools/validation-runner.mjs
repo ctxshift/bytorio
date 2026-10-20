@@ -49,6 +49,8 @@ export async function runStep({ executable, args, cwd, log, timeoutMs }) {
   let timer;
   let timedOut = false;
   let launchError;
+  let interrupted = false;
+  let interrupt;
   try {
     const child = spawn(executable, args, {
       cwd,
@@ -56,13 +58,18 @@ export async function runStep({ executable, args, cwd, log, timeoutMs }) {
       windowsHide: true,
       detached: process.platform !== "win32",
     });
-    timer = setTimeout(() => {
-      timedOut = true;
+    function stop() {
       if (!child.pid) {
         return;
       }
       if (process.platform === "win32") {
-        spawnSync("taskkill", ["/PID", String(child.pid), "/T", "/F"], { windowsHide: true });
+        const result = spawnSync("taskkill", ["/PID", String(child.pid), "/T", "/F"], {
+          windowsHide: true,
+          timeout: 10000,
+        });
+        if (result.error || result.status !== 0) {
+          child.kill();
+        }
       } else {
         try {
           process.kill(-child.pid, "SIGKILL");
@@ -72,6 +79,16 @@ export async function runStep({ executable, args, cwd, log, timeoutMs }) {
           }
         }
       }
+    }
+    interrupt = () => {
+      interrupted = true;
+      stop();
+    };
+    process.once("SIGINT", interrupt);
+    process.once("SIGTERM", interrupt);
+    timer = setTimeout(() => {
+      timedOut = true;
+      stop();
     }, timeoutMs);
     return await new Promise((done) => {
       child.on("error", (error) => {
@@ -79,9 +96,10 @@ export async function runStep({ executable, args, cwd, log, timeoutMs }) {
       });
       child.on("close", (code, signal) =>
         done({
-          exitCode: timedOut ? 124 : launchError ? 127 : (code ?? 1),
+          exitCode: interrupted ? 130 : timedOut ? 124 : launchError ? 127 : (code ?? 1),
           signal,
           timedOut,
+          interrupted,
           error: launchError ?? null,
           durationMs: Date.now() - started,
         }),
@@ -89,6 +107,10 @@ export async function runStep({ executable, args, cwd, log, timeoutMs }) {
     });
   } finally {
     clearTimeout(timer);
+    if (interrupt) {
+      process.removeListener("SIGINT", interrupt);
+      process.removeListener("SIGTERM", interrupt);
+    }
     closeSync(fd);
   }
 }
