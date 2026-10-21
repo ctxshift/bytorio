@@ -227,6 +227,10 @@ run = "node tools/verify-gpu.mjs"
 description = "Verify and benchmark shared mesh/voxel rendering through both SDKs and hosts"
 run = "node tools/verify-3d.mjs"
 
+[tasks."test:textured3d"]
+description = "Verify typed textured resources through both SDKs and native/browser hosts"
+run = "node tools/verify-textured-3d.mjs"
+
 [tasks."test:odin"]
 depends = ["build:odin"]
 env = {SDL_VIDEODRIVER = "dummy", SDL_AUDIODRIVER = "dummy", SDL_RENDER_DRIVER = "software"}
@@ -254,6 +258,7 @@ run = [
   {task = "test:resources"},
   {task = "test:graphics"},
   {task = "test:3d"},
+  {task = "test:textured3d"},
   {task = "test:riverside:geometry"},
   {task = "test:audio"},
   {task = "test:synthesis"},

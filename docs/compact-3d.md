@@ -5,6 +5,10 @@ the standalone native player and browser player. Both SDKs expose indexed meshes
 explicit cameras, depth attachments and cached voxel surfaces. This is an original
 implementation using the existing resource ownership and transaction machinery.
 
+The separate [textured resource contract](textured-3d.md) adds experimental UV
+mesh and material lifecycles under SDK 0.4.0 without changing this profile.
+Textured draw execution is not exposed yet.
+
 The separate [voxel resolution study](../experiments/voxel-resolution/README.md)
 preserves a procedural winter scene for comparing visual detail at three output
 sizes. It uses an independent renderer and does not extend the console profile.

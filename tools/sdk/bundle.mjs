@@ -90,7 +90,7 @@ export async function bundleLuau({
   display = [640, 360],
   profile = 1,
 }) {
-  if (![1, 2, 3].includes(profile)) {
+  if (![1, 2, 3, 4].includes(profile)) {
     throw new Error("Unsupported Luau cartridge profile");
   }
   project = await realpath(project);

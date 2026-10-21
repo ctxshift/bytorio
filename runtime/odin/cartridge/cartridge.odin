@@ -43,7 +43,8 @@ parse_payload :: proc(b: []u8) -> (cart: Cartridge, error: string) {
         cart.profile == 1 && cart.sdk == LEGACY_SDK_VERSION && cart.abi_version == abi.VERSION
     resource :=
         (cart.profile == abi.PROFILE_RESOURCE && cart.sdk == abi.RESOURCE_SDK_VERSION ||
-            cart.profile == abi.PROFILE_3D && cart.sdk == abi.PREVIEW_3D_SDK) &&
+            cart.profile == abi.PROFILE_3D && cart.sdk == abi.PREVIEW_3D_SDK ||
+            cart.profile == abi.PROFILE_TEXTURED_3D && cart.sdk == abi.TEXTURED_3D_SDK) &&
         cart.abi_version == abi.RESOURCE_ABI_VERSION
     if le16(b[4:]) != 1 || (!legacy && !resource) || le32(b[28:]) != 0 {
         return {}, "unsupported cartridge version, SDK, ABI or profile"

@@ -8,8 +8,16 @@ import resources "../resource"
 import "base:runtime"
 
 PROFILE :: #config(CONSOLE_PROFILE, 1)
-#assert(PROFILE == 1 || PROFILE == abi.PROFILE_RESOURCE || PROFILE == abi.PROFILE_3D)
-when PROFILE == abi.PROFILE_3D {
+#assert(
+    PROFILE == 1 ||
+    PROFILE == abi.PROFILE_RESOURCE ||
+    PROFILE == abi.PROFILE_3D ||
+    PROFILE == abi.PROFILE_TEXTURED_3D,
+)
+when PROFILE == abi.PROFILE_TEXTURED_3D {
+    VERSION :: "0.4.0"
+    VERSION_WORD :: u32(abi.TEXTURED_3D_SDK)
+} else when PROFILE == abi.PROFILE_3D {
     VERSION :: "0.3.0"
     VERSION_WORD :: u32(abi.PREVIEW_3D_SDK)
 } else when PROFILE == abi.PROFILE_RESOURCE {
@@ -30,8 +38,8 @@ capabilities :: proc() -> Capabilities {
         u32(PROFILE),
         u32(abi.RESOURCE_ABI_VERSION) if resource else 1,
         VERSION_WORD,
-        u32(abi.PREVIEW_3D_FEATURES) if PROFILE == abi.PROFILE_3D else u32(abi.RESOURCE_FEATURES) if resource else 0,
-        u32(abi.PREVIEW_3D_PROTOCOL) if PROFILE == abi.PROFILE_3D else u32(abi.RESOURCE_PROTOCOL) if resource else 0,
+        game_required_features(),
+        game_resource_protocol() if resource else 0,
         w.maxResourceBytes,
         w.maxSlots,
         w.maxPayload,
@@ -320,6 +328,7 @@ game_abi :: proc "c" () -> u32 {
 game_profile :: proc "c" () -> u32 { return PROFILE }
 @(export)
 game_required_features :: proc "c" () -> u32 {
+    if PROFILE == abi.PROFILE_TEXTURED_3D { return abi.TEXTURED_3D_FEATURES }
     return(
         abi.PREVIEW_3D_FEATURES if PROFILE == abi.PROFILE_3D else abi.RESOURCE_FEATURES if PROFILE == abi.PROFILE_RESOURCE else 0 \
     )
@@ -437,7 +446,7 @@ game_error_length :: proc "c" () -> u32 {
 }
 @(export)
 game_resource_protocol :: proc "c" () -> u32 {
-
+    if PROFILE == abi.PROFILE_TEXTURED_3D { return abi.TEXTURED_3D_PROTOCOL }
     return abi.PREVIEW_3D_PROTOCOL if PROFILE == abi.PROFILE_3D else abi.RESOURCE_PROTOCOL
 }
 @(export)

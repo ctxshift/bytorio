@@ -2,9 +2,17 @@
 #pragma once
 
 namespace resource_schema {
-constexpr unsigned version = 5;
+constexpr unsigned version = 6;
 constexpr unsigned stableVersion = 4;
 constexpr unsigned meshProtocol = 5;
+constexpr unsigned texturedProtocol = 6;
+constexpr unsigned texturedVertexBytes = 24;
+constexpr unsigned texturedUvOffset = 16;
+constexpr unsigned maxTextureCoordinate = 1024;
+constexpr unsigned kindMaterial = 17;
+constexpr unsigned kindTexturedMesh = 18;
+constexpr unsigned addressClamp = 0;
+constexpr unsigned addressRepeat = 1;
 constexpr unsigned meshVertexBytes = 16;
 constexpr unsigned meshIndexBytes = 4;
 constexpr unsigned maxMeshVertices = 65536;
@@ -151,6 +159,8 @@ constexpr unsigned op_create_voxel = 67;
 constexpr unsigned op_edit_voxel = 68;
 constexpr unsigned op_begin_3d = 69;
 constexpr unsigned op_draw_mesh = 70;
+constexpr unsigned op_create_textured_mesh = 71;
+constexpr unsigned op_create_material = 72;
 constexpr unsigned format_index8 = 1;
 constexpr unsigned format_rgba8 = 2;
 constexpr unsigned format_f32 = 3;

@@ -12,7 +12,7 @@ mesh_storage :: proc "contextless" (r: ^Registry) -> (bytes: [3]u64) {
         case .Voxel:
             bytes[0] += u64(slot.width) * u64(slot.height) * u64(slot.volume_depth)
             bytes[1] += u64(len(slot.data)) - u64(slot.mesh_offset)
-        case .Mesh:
+        case .Mesh, .Textured_Mesh:
             bytes[1] += u64(len(slot.data))
         case .Depth:
             bytes[2] += u64(len(slot.data))
@@ -199,7 +199,7 @@ mesh_command :: proc(
 
     size := 0
     switch op {
-    case w.op_create_mesh:
+    case w.op_create_mesh, w.op_create_textured_mesh:
         if a[0] == 0 ||
            a[0] > w.maxMeshVertices ||
            a[1] == 0 ||
@@ -209,31 +209,56 @@ mesh_command :: proc(
             return fail(r, "invalid mesh counts")
         }
 
-        size = int(a[0]) * w.meshVertexBytes + int(a[1]) * w.meshIndexBytes
+        textured := op == w.op_create_textured_mesh
+        stride := w.texturedVertexBytes if textured else w.meshVertexBytes
+        size = int(a[0]) * stride + int(a[1]) * w.meshIndexBytes
         if len(data) != size {
             return fail(r, "invalid mesh byte length")
         }
 
         for vertex in 0 ..< int(a[0]) {
-            at := vertex * w.meshVertexBytes
+            at := vertex * stride
             for axis in 0 ..< 3 {
                 if !finite(f32le(data, at + axis * 4)) {
                     return fail(r, "invalid mesh position")
                 }
             }
 
-            if u32le(data, at + 12) >> 24 != 255 {
+            if u32le(data, at + w.meshColorOffset) >> 24 != 255 {
                 return fail(r, "mesh colors must be opaque")
+            }
+            if textured {
+                for component in 0 ..< 2 {
+                    if !finite(
+                        f32le(data, at + w.texturedUvOffset + component * 4),
+                        w.maxTextureCoordinate,
+                    ) {
+                        return fail(r, "invalid mesh UV coordinate")
+                    }
+                }
             }
         }
 
-        for at := int(a[0]) * w.meshVertexBytes; at < size; at += w.meshIndexBytes {
+        for at := int(a[0]) * stride; at < size; at += w.meshIndexBytes {
             if u32le(data, at) >= a[0] {
                 return fail(r, "mesh index outside vertices")
             }
         }
 
-        candidate.kind, candidate.vertex_count, candidate.index_count = .Mesh, a[0], a[1]
+        candidate.kind = .Textured_Mesh if textured else .Mesh
+        candidate.vertex_count, candidate.index_count = a[0], a[1]
+    case w.op_create_material:
+        texture := lookup(t, a[0], .Texture)
+        if texture == nil ||
+           texture.format != w.format_rgba8 ||
+           a[1] > w.addressRepeat ||
+           a[2] > w.addressRepeat ||
+           !padding_zero(a[3:]) ||
+           len(data) != 0 {
+            return fail(r, "invalid material texture or sampler")
+        }
+        candidate.kind, candidate.link = .Material, a[0]
+        size = w.descriptorBytes
     case w.op_create_depth:
         if a[0] == 0 ||
            a[0] > w.maxImageAxis ||
@@ -308,7 +333,11 @@ mesh_command :: proc(
     }
 
     candidate.data = bytes
-    if candidate.kind == .Mesh { candidate.gpu_version = mesh_version(r) }
+    if candidate.kind == .Material {
+        for value, i in a { put32(bytes, i * 4, value) }
+    }
+    if candidate.kind == .Mesh ||
+       candidate.kind == .Textured_Mesh { candidate.gpu_version = mesh_version(r) }
     slot^ = candidate
     return true
 }

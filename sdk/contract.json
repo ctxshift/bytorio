@@ -6,7 +6,8 @@
   "profiles": [
     {"id": 1, "name": "2d-preview-1", "sdk": "0.1.0", "sdkWord": 256, "abi": 1, "protocol": 0, "features": 0},
     {"id": 2, "name": "resource-av-1", "sdk": "0.2.0", "sdkWord": 512, "abi": 2, "protocol": 4, "features": 7},
-    {"id": 3, "name": "compact-3d-preview-1", "sdk": "0.3.0", "sdkWord": 768, "abi": 2, "protocol": 5, "features": 15}
+    {"id": 3, "name": "compact-3d-preview-1", "sdk": "0.3.0", "sdkWord": 768, "abi": 2, "protocol": 5, "features": 15},
+    {"id": 4, "name": "textured-3d-preview-1", "sdk": "0.4.0", "sdkWord": 1024, "abi": 2, "protocol": 6, "features": 31}
   ],
   "tickRate": 60,
   "defaults": {"clearColor": 4281475093, "randomSeed": 1, "zeroSeedFallback": 1831565813, "previewSampleRate": 48000},

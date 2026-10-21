@@ -1,8 +1,16 @@
 {
   "status": "published-resource-av-1",
-  "version": 5,
+  "version": 6,
   "stableVersion": 4,
   "meshProtocol": 5,
+  "texturedProtocol": 6,
+  "texturedVertexBytes": 24,
+  "texturedUvOffset": 16,
+  "maxTextureCoordinate": 1024,
+  "kindMaterial": 17,
+  "kindTexturedMesh": 18,
+  "addressClamp": 0,
+  "addressRepeat": 1,
   "meshVertexBytes": 16,
   "meshIndexBytes": 4,
   "maxMeshVertices": 65536,
@@ -103,7 +111,9 @@
     "create_voxel": 67,
     "edit_voxel": 68,
     "begin_3d": 69,
-    "draw_mesh": 70
+    "draw_mesh": 70,
+    "create_textured_mesh": 71,
+    "create_material": 72
   },
   "formats": {
     "index8": 1,
@@ -512,6 +522,8 @@
       "reserved",
       "reserved"
     ],
+    "create_textured_mesh": ["vertices", "indices", "reserved", "reserved", "reserved", "reserved", "reserved", "reserved"],
+    "create_material": ["texture", "addressU", "addressV", "reserved", "reserved", "reserved", "reserved", "reserved"],
     "draw_mesh": [
       "reserved",
       "reserved",

@@ -4,6 +4,8 @@ local host = require("./native")
 local schema = require("./resource_schema")
 local math3d = require("./math3d")
 export type Mesh = { _resourceKind: "mesh" }
+export type TexturedMesh = { _resourceKind: "textured_mesh" }
+export type Material = { _resourceKind: "material" }
 export type Depth = { _resourceKind: "depth" }
 export type Camera = { _resourceKind: "camera" }
 export type Voxel = { _resourceKind: "voxel" }
@@ -36,6 +38,8 @@ export type FrameRange = { first: number, frames: number }
 export type Upload = { offset_bytes: number?, stride_bytes: number? }
 type Handle =
     Mesh
+    | TexturedMesh
+    | Material
     | Depth
     | Camera
     | Voxel
@@ -121,7 +125,14 @@ local function check(handle: Handle, kind: string): Record
 end
 local function emit(op: number, id: number, values: { number }?, bytes: buffer?)
     assert(
-        ((op <= 13 or (op >= schema.op_audio_bus and op < schema.op_begin_3d)) and phase ~= "draw")
+        (
+            (
+                op <= 13
+                or (op >= schema.op_audio_bus and op < schema.op_begin_3d)
+                or op == schema.op_create_textured_mesh
+                or op == schema.op_create_material
+            ) and phase ~= "draw"
+        )
             or (
                 (
                     op >= 16 and op <= schema.op_sprite
@@ -1232,6 +1243,8 @@ local function matrixBytes(m: math3d.Matrix): buffer
     return bytes
 end
 export type Vertex = { position: { number }, color: number }
+export type TexturedVertex = { position: { number }, color: number, uv: { number } }
+export type MaterialOptions = { address_u: ("clamp" | "repeat")?, address_v: ("clamp" | "repeat")? }
 export type CameraDesc = {
     view_projection: math3d.Matrix,
     light: { number }?,
@@ -1268,6 +1281,54 @@ function gfx3d.mesh(vertices: { Vertex }, indices: { number }): Mesh
     emit(schema.op_create_mesh, records[h].id, { #vertices, #indices }, bytes)
     return h :: Mesh
 end
+function gfx3d.textured_mesh(vertices: { TexturedVertex }, indices: { number }): TexturedMesh
+    integer(#vertices, 1, schema.maxMeshVertices)
+    integer(#indices, 3, schema.maxMeshIndices)
+    assert(#indices % 3 == 0, "indices must form triangles")
+    local bytes =
+        buffer.create(#vertices * schema.texturedVertexBytes + #indices * schema.meshIndexBytes)
+    for i, vertex in vertices do
+        assert(#vertex.position == 3 and #vertex.uv == 2, "textured vertex requires XYZ and UV")
+        local at = (i - 1) * schema.texturedVertexBytes
+        for axis, position in vertex.position do
+            buffer.writef32(bytes, at + (axis - 1) * 4, position)
+        end
+        buffer.writeu32(bytes, at + schema.meshColorOffset, integer(vertex.color, 0, c.U32_MAX))
+        for axis, uv in vertex.uv do
+            buffer.writef32(bytes, at + schema.texturedUvOffset + (axis - 1) * 4, uv)
+        end
+    end
+    for i, index in indices do
+        buffer.writeu32(
+            bytes,
+            #vertices * schema.texturedVertexBytes + (i - 1) * schema.meshIndexBytes,
+            integer(index, 0, #vertices - 1)
+        )
+    end
+    local h = reserve("textured_mesh", 0, 0)
+    emit(schema.op_create_textured_mesh, records[h].id, { #vertices, #indices }, bytes)
+    return h :: TexturedMesh
+end
+
+function gfx3d.material(texture: Texture, options: MaterialOptions?): Material
+    local record = check(texture, "texture")
+    assert(record.format == schema.format_rgba8, "material requires an RGBA texture")
+    local function address(value: ("clamp" | "repeat")?): number
+        assert(
+            value == nil or value == "clamp" or value == "repeat",
+            "invalid material address mode"
+        )
+        return if value == "repeat" then schema.addressRepeat else schema.addressClamp
+    end
+    local h = reserve("material", 0, 0)
+    emit(schema.op_create_material, records[h].id, {
+        record.id,
+        address(if options then options.address_u else nil),
+        address(if options then options.address_v else nil),
+    })
+    return h :: Material
+end
+
 function gfx3d.depth(width: number, height: number): Depth
     local h = reserve("depth", 0, 0)
     emit(
@@ -1342,7 +1403,7 @@ function gfx3d.draw(pass: Pass, geometry: Mesh | Voxel, model: math3d.Matrix?)
     assert(record.kind == "mesh" or record.kind == "voxel", "expected mesh or voxel")
     emit(schema.op_draw_mesh, record.id, {}, matrixBytes(model or math3d.identity()))
 end
-function gfx3d.destroy(value: Mesh | Depth | Camera | Voxel)
+function gfx3d.destroy(value: Mesh | TexturedMesh | Material | Depth | Camera | Voxel)
     destroy(value, "any")
 end
 api.gfx3d = table.freeze(gfx3d)

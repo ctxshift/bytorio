@@ -25,6 +25,8 @@ Kind :: enum {
     Depth,
     Camera,
     Voxel,
+    Material,
+    Textured_Mesh,
 }
 Slot :: struct {
     gpu_version:                                          u64,
@@ -294,6 +296,9 @@ submit :: proc(
             args[i] = u32le(payload, int(args_offset) + i * 4)
         }
         if op >= w.op_create_mesh {
+            if op >= w.op_create_textured_mesh && r.protocol < w.texturedProtocol {
+                return fail(r, "textured resources require resource protocol 6")
+            }
             if r.protocol < w.meshProtocol {
                 return fail(r, "3D requires resource protocol 5")
             }

@@ -564,6 +564,9 @@ software_quality :: proc(test: ^testing.T) {
 
 @(test)
 shared_3d :: proc(test: ^testing.T) {
+    textured_resource_ownership(test)
+    textured_creation_rejects_old_protocols_and_invalid_data(test)
+    material_texture_edits_and_budget_rollback(test)
     mesh_depth_and_ownership(test)
     voxel_surfaces_and_atomic_edits(test)
     homogeneous_clipping_and_indices(test)

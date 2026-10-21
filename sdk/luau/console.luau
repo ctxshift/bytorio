@@ -5,6 +5,8 @@ local resources = require("./resources")
 local schema = require("./resource_schema")
 export type Texture = resources.Texture
 export type Mesh = resources.Mesh
+export type TexturedMesh = resources.TexturedMesh
+export type Material = resources.Material
 export type Depth = resources.Depth
 export type Camera = resources.Camera
 export type Voxel = resources.Voxel
@@ -48,23 +50,31 @@ export type Game = { init: () -> (), update: (number) -> (), draw: () -> () }
 local profileQuery = host.profile
 local profile = if profileQuery then profileQuery() else 1
 local preview = profile == c.PROFILE_3D
+local textured = profile == c.PROFILE_TEXTURED_3D
 local api = {
-    version = if preview then "0.3.0" elseif profile == c.PROFILE_RESOURCE then "0.2.0" else "0.1.0",
+    version = if textured
+        then "0.4.0"
+        elseif preview then "0.3.0"
+        elseif profile == c.PROFILE_RESOURCE then "0.2.0"
+        else "0.1.0",
 }
 function api.capabilities()
     return table.freeze({
         profile = profile,
         abi = if profile ~= 1 then c.RESOURCE_ABI_VERSION else 1,
-        sdk = if preview
-            then c.PREVIEW_3D_SDK
+        sdk = if textured
+            then c.TEXTURED_3D_SDK
+            elseif preview then c.PREVIEW_3D_SDK
             elseif profile == c.PROFILE_RESOURCE then c.RESOURCE_SDK_VERSION
             else 256,
-        features = if preview
-            then c.PREVIEW_3D_FEATURES
+        features = if textured
+            then c.TEXTURED_3D_FEATURES
+            elseif preview then c.PREVIEW_3D_FEATURES
             elseif profile == c.PROFILE_RESOURCE then c.RESOURCE_FEATURES
             else 0,
-        protocol = if preview
-            then c.PREVIEW_3D_PROTOCOL
+        protocol = if textured
+            then c.TEXTURED_3D_PROTOCOL
+            elseif preview then c.PREVIEW_3D_PROTOCOL
             elseif profile == c.PROFILE_RESOURCE then c.RESOURCE_PROTOCOL
             else 0,
         resource_bytes = schema.maxResourceBytes,

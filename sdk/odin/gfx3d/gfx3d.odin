@@ -7,6 +7,8 @@ import t "../resource"
 import "core:math"
 
 Mesh :: distinct t.Handle
+Textured_Mesh :: distinct t.Handle
+Material :: distinct t.Handle
 Depth :: distinct t.Handle
 Camera :: distinct t.Handle
 Voxel :: distinct t.Handle
@@ -16,6 +18,57 @@ IDENTITY :: Matrix{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}
 Vertex :: struct {
     position: [3]f32,
     color:    u32,
+}
+
+Textured_Vertex :: struct {
+    position: [3]f32,
+    color:    u32,
+    uv:       [2]f32,
+}
+
+Address_Mode :: enum u32 {
+    Clamp  = w.addressClamp,
+    Repeat = w.addressRepeat,
+}
+
+Material_Options :: struct {
+    address_u, address_v: Address_Mode,
+}
+
+material :: proc(texture: gfx.Texture, options := Material_Options{}) -> Material {
+    if !t.check(t.Handle(texture), u32(r.Kind.Texture)) { return {} }
+    if !t.valid(
+        t.slots[(texture.id & w.handleIndexMask) - 1].format == w.format_rgba8,
+        "material requires an RGBA texture",
+    ) { return {} }
+    h := t.reserve(w.kindMaterial, 0)
+    args := [8]u32{texture.id, u32(options.address_u), u32(options.address_v), 0, 0, 0, 0, 0}
+    t.emit(w.op_create_material, h, args[:])
+    return Material(h)
+}
+
+textured_mesh :: proc(vertices: []Textured_Vertex, indices: []u32) -> Textured_Mesh {
+    if !t.valid(
+        len(vertices) > 0 &&
+        len(vertices) <= w.maxMeshVertices &&
+        len(indices) > 0 &&
+        len(indices) <= w.maxMeshIndices &&
+        len(indices) % 3 == 0,
+        "invalid textured mesh counts",
+    ) { return {} }
+    bytes := make([]u8, len(vertices) * w.texturedVertexBytes + len(indices) * w.meshIndexBytes)
+    defer delete(bytes)
+    for vertex, i in vertices {
+        at := i * w.texturedVertexBytes
+        for p, axis in vertex.position { r.put32(bytes, at + axis * 4, transmute(u32)p) }
+        r.put32(bytes, at + w.meshColorOffset, vertex.color)
+        for uv, axis in vertex.uv { r.put32(bytes, at + w.texturedUvOffset + axis * 4, transmute(u32)uv) }
+    }
+    for index, i in indices { r.put32(bytes, len(vertices) * w.texturedVertexBytes + i * w.meshIndexBytes, index) }
+    h := t.reserve(w.kindTexturedMesh, 0)
+    args := [8]u32{u32(len(vertices)), u32(len(indices)), 0, 0, 0, 0, 0, 0}
+    t.emit(w.op_create_textured_mesh, h, args[:], bytes)
+    return Textured_Mesh(h)
 }
 
 Camera_Desc :: struct {
@@ -252,7 +305,14 @@ draw :: proc(pass: gfx.Pass, geometry: $Geometry, model := IDENTITY) {
 }
 
 destroy :: proc(value: $Resource) {
-    #assert(Resource == Mesh || Resource == Depth || Resource == Camera || Resource == Voxel)
+    #assert(
+        Resource == Mesh ||
+        Resource == Textured_Mesh ||
+        Resource == Material ||
+        Resource == Depth ||
+        Resource == Camera ||
+        Resource == Voxel,
+    )
     h := t.Handle(value)
     if !t.check(h, 0) || !t.valid(t.phase != 2, "3D destruction requires init/update") {
         return

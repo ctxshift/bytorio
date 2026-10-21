@@ -77,6 +77,10 @@ const exportSignatures = Object.entries(contract.requiredExports).map(([name, si
 });
 // Numeric encodings are fixed-width; policy limits and defaults come from the contract.
 const common = {
+  PROFILE_TEXTURED_3D: contract.profiles[3].id,
+  TEXTURED_3D_SDK: contract.profiles[3].sdkWord,
+  TEXTURED_3D_FEATURES: contract.profiles[3].features,
+  TEXTURED_3D_PROTOCOL: contract.profiles[3].protocol,
   PROFILE_3D: contract.profiles[2].id,
   PREVIEW_3D_SDK: contract.profiles[2].sdkWord,
   PREVIEW_3D_FEATURES: contract.profiles[2].features,

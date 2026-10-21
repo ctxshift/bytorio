@@ -2,6 +2,10 @@
 export const PRODUCT_NAME = "Bytorio";
 export const WEBSITE = "https://bytor.io";
 export const PLAYER_TITLE = "Bytorio player";
+export const PROFILE_TEXTURED_3D = 4;
+export const TEXTURED_3D_SDK = 1024;
+export const TEXTURED_3D_FEATURES = 31;
+export const TEXTURED_3D_PROTOCOL = 6;
 export const PROFILE_3D = 3;
 export const PREVIEW_3D_SDK = 768;
 export const PREVIEW_3D_FEATURES = 15;
@@ -79,9 +83,17 @@ export const RESOURCE_EXPORTS = Object.freeze([
   { name: "game_error_length", params: [], results: [127] },
 ]);
 export const resourceSchema = Object.freeze({
-  version: 5,
+  version: 6,
   stableVersion: 4,
   meshProtocol: 5,
+  texturedProtocol: 6,
+  texturedVertexBytes: 24,
+  texturedUvOffset: 16,
+  maxTextureCoordinate: 1024,
+  kindMaterial: 17,
+  kindTexturedMesh: 18,
+  addressClamp: 0,
+  addressRepeat: 1,
   meshVertexBytes: 16,
   meshIndexBytes: 4,
   maxMeshVertices: 65536,
@@ -228,6 +240,8 @@ export const resourceSchema = Object.freeze({
   op_edit_voxel: 68,
   op_begin_3d: 69,
   op_draw_mesh: 70,
+  op_create_textured_mesh: 71,
+  op_create_material: 72,
   format_index8: 1,
   format_rgba8: 2,
   format_f32: 3,
