@@ -112,9 +112,11 @@ native/browser combinations are removed.
 Mise dependency tasks `deps:trace:resources`, `deps:trace:graphics` and
 `deps:trace:audio` reuse compiled, speed-optimized harnesses under
 `build/validation-tools/`. Every verifier copies its harness into a fresh run
-directory and executes every check. Sources include runtime, SDK and test Odin
-files, build helpers and toolchain/task configuration; missing executables also
-trigger a rebuild. Use `mise run --force deps:trace:audio` (or the corresponding
+directory and executes every check. Sources cover the shared Odin packages each
+harness imports, its own player package, build helpers and toolchain/task
+configuration. Browser assets, SDK-only edits and unrelated test packages do not
+invalidate the harnesses. Missing executables also trigger a rebuild.
+Use `mise run --force deps:trace:audio` (or the corresponding
 task) when intentionally checking a clean harness build or after modifying an
 installed tool outside mise. Test results themselves are never cached.
 

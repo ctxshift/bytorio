@@ -25,7 +25,8 @@ function execute(args, cwd = repo, env = process.env) {
 }
 
 const tasks = JSON.parse(execute(["tasks", "ls", "--json"])).filter(
-  ({ name }) => name === "build:odin" || name.startsWith("deps:player:"),
+  ({ name }) =>
+    name === "build:odin" || name.startsWith("deps:player:") || name.startsWith("deps:trace:"),
 );
 const byName = new Map(tasks.map((task) => [task.name, task]));
 const forward = (path) => path.replaceAll("\\", "/");
@@ -71,6 +72,9 @@ test("compiled tasks cover local Odin imports and embedded shader inputs", () =>
     "deps:player:native-binary": "runtime/odin/native",
     "deps:player:hello": "examples/hello-odin",
     "deps:player:fixtures": "tests/odin/fixtures",
+    "deps:trace:resources": "tests/resources/player",
+    "deps:trace:graphics": "tests/graphics/player",
+    "deps:trace:audio": "tests/audio/player",
   };
   for (const [name, entry] of Object.entries(entries)) {
     const task = byName.get(name);
@@ -109,7 +113,7 @@ function fixture() {
     }
     if (task.outputs.length) {
       outputs[task.name] = task.outputs;
-      text += `run = ${JSON.stringify(`node cache-fixture.mjs ${task.name}`)}\n`;
+      text += `run = ${JSON.stringify(`"${process.execPath}" cache-fixture.mjs ${task.name}`)}\n`;
     }
     definitions.set(file, (definitions.get(file) || "") + text + "\n");
   }
@@ -155,9 +159,8 @@ appendFileSync("events.jsonl", JSON.stringify(name) + "\\n");
   }
   function run(...names) {
     writeFileSync(resolve(root, "events.jsonl"), "");
-    for (const name of names) {
-      execute(["run", "--jobs", "1", name], root, env);
-    }
+    const selection = names.flatMap((name, index) => (index ? [":::", name] : [name]));
+    execute(["run", "--jobs", "1", ...selection], root, env);
     return readFileSync(resolve(root, "events.jsonl"), "utf8")
       .trim()
       .split("\n")
@@ -170,7 +173,7 @@ appendFileSync("events.jsonl", JSON.stringify(name) + "\\n");
 
 test("mise rebuilds only the artifacts affected by edits and missing outputs", async () => {
   const { root, run, outputs } = fixture();
-  const targets = ["build:odin"];
+  const targets = ["build:odin", "deps:trace:resources", "deps:trace:graphics", "deps:trace:audio"];
   const all = Object.keys(outputs).sort();
   assert.deepEqual(run(...targets), all);
   assert.deepEqual(run(...targets), [], "unchanged inputs reuse every artifact");
@@ -196,11 +199,14 @@ test("mise rebuilds only the artifacts affected by edits and missing outputs", a
   assert.deepEqual(run(...targets), ["deps:player:web-cpu", "deps:player:web-gpu"]);
   unlinkSync(resolve(root, "runtime/odin/web/new_module.odin"));
   assert.deepEqual(run(...targets), ["deps:player:web-cpu", "deps:player:web-gpu"]);
-  await edit("tests/graphics/player/main_windows.odin", []);
+  await edit("tests/graphics/player/main_windows.odin", ["deps:trace:graphics"]);
   await edit("runtime/odin/resources/resources.odin", [
     "deps:player:web-cpu",
     "deps:player:web-gpu",
     "deps:player:native-binary",
+    "deps:trace:resources",
+    "deps:trace:graphics",
+    "deps:trace:audio",
   ]);
   await edit(".mise/toolchain.toml", all);
 
