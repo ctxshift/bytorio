@@ -133,7 +133,16 @@ function fixture() {
       text += `run = [${task.run.map((entry) => `{ task = ${JSON.stringify(entry.task)} }`).join(", ")}]\n`;
     } else if (task.outputs.length) {
       outputs[task.name] = task.outputs;
-      text += `run = ${JSON.stringify(`"${process.execPath}" cache-fixture.mjs ${task.name}`)}\n`;
+      // These substitute compilers only write tiny files. Shell builtins avoid
+      // starting another Node process for every artifact in every scenario.
+      const marker = `events/${task.name.replaceAll(":", "-")}`;
+      const files = [...task.outputs, marker];
+      for (const file of files) {
+        mkdirSync(dirname(resolve(root, file)), { recursive: true });
+      }
+      const commands = task.outputs.map((file) => `echo fixture > "${file}"`);
+      commands.push(`echo executed >> "${marker}"`);
+      text += `run = ${JSON.stringify(commands.join(" && "))}\n`;
     }
     definitions.set(file, (definitions.get(file) || "") + text + "\n");
   }
@@ -142,21 +151,6 @@ function fixture() {
   for (const [file, content] of definitions) {
     put(root, file, content);
   }
-  put(root, "outputs.json", JSON.stringify(outputs));
-  put(root, "events.jsonl", "");
-  put(
-    root,
-    "cache-fixture.mjs",
-    `import { mkdirSync, readFileSync, appendFileSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
-const name = process.argv[2];
-for (const file of JSON.parse(readFileSync("outputs.json"))[name]) {
-  mkdirSync(dirname(file), { recursive: true });
-  writeFileSync(file, name + "\\n");
-}
-appendFileSync("events.jsonl", JSON.stringify(name) + "\\n");
-`,
-  );
   // Only inputs needed for the invalidation scenarios: no compilers or real
   // build artifacts are used by this scheduler regression test.
   for (const file of [
@@ -179,14 +173,21 @@ appendFileSync("events.jsonl", JSON.stringify(name) + "\\n");
   }
   function run(...names) {
     const flags = names[0] === "--force" ? [names.shift()] : [];
-    writeFileSync(resolve(root, "events.jsonl"), "");
+    for (const file of readdirSync(resolve(root, "events"))) {
+      unlinkSync(resolve(root, "events", file));
+    }
     const selection = names.flatMap((name, index) => (index ? [":::", name] : [name]));
-    execute(["run", "--jobs", "1", ...flags, ...selection], root, env);
-    return readFileSync(resolve(root, "events.jsonl"), "utf8")
-      .trim()
-      .split("\n")
-      .filter(Boolean)
-      .map(JSON.parse)
+    execute(["run", "--jobs", "4", ...flags, ...selection], root, env);
+    return Object.keys(outputs)
+      .flatMap((name) => {
+        const marker = resolve(root, "events", name.replaceAll(":", "-"));
+        return existsSync(marker)
+          ? readFileSync(marker, "utf8")
+              .trim()
+              .split("\n")
+              .map(() => name)
+          : [];
+      })
       .sort();
   }
   return { root, run, outputs };
