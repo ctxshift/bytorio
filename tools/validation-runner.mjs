@@ -138,6 +138,7 @@ export async function validate({
     node: process.version,
     platform: process.platform,
     source: sourceState(cwd),
+    unitTests: `${directory}/unit-tests`,
     status: "running",
     steps: [],
   };
@@ -161,7 +162,11 @@ export async function validate({
         cwd,
         log: resolve(cwd, log),
         timeoutMs,
-        env: { ...process.env, VALIDATION_COMMAND_TIMINGS: resolve(cwd, commands) },
+        env: {
+          ...process.env,
+          VALIDATION_COMMAND_TIMINGS: resolve(cwd, commands),
+          VALIDATION_UNIT_TESTS: resolve(cwd, report.unitTests),
+        },
       });
       const after = sourceState(cwd);
       report.steps.push({ task, log, commands, before, after, ...result });

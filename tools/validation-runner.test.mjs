@@ -144,6 +144,20 @@ test("stops on failure and rejects results from changing sources", async () => {
   assert.deepEqual(visited, ["first"]);
   assert.equal(failed.steps[0].exitCode, 9);
 
+  const scopes = [];
+  const passing = {
+    ...options,
+    execute: async (step) => {
+      scopes.push(step.env.VALIDATION_UNIT_TESTS);
+      return { exitCode: 0, durationMs: 0 };
+    },
+  };
+  assert.equal((await validate(passing)).status, "passed");
+  assert.equal((await validate(passing)).status, "passed");
+  assert.equal(scopes[0], scopes[1]);
+  assert.equal(scopes[2], scopes[3]);
+  assert.notEqual(scopes[0], scopes[2]);
+
   const stale = await validate({
     ...options,
     tasks: ["first"],

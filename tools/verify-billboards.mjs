@@ -7,6 +7,7 @@ import { chromium } from "playwright";
 import { buildBillboards } from "./build-billboards.mjs";
 import { bundleLuau } from "./sdk/bundle.mjs";
 import { run, tool } from "./toolchain.mjs";
+import { odinUnitTests } from "./odin-unit-tests.mjs";
 import { serve } from "./serve.mjs";
 import { negotiateProfile } from "../runtime/odin/web/policy.js";
 import { RESOURCE_EXPORTS } from "../runtime/odin/web/constants.js";
@@ -69,7 +70,7 @@ for (const [name, wrong] of [
 ]) {
   assert.throws(() => negotiateProfile({ ...advertised, [name]: () => wrong }), /Unsupported/);
 }
-run(tool("odin"), ["test", "tests/3d", "-o:none", `-out:${root}/unit.exe`]);
+odinUnitTests("tests/3d", resolve(root, "unit.exe"));
 const projects = await buildBillboards();
 if (gpu) {
   run(tool("odin"), ["build", "tests/gpu/native", "-o:none", `-out:${root}/device.exe`]);

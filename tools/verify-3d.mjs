@@ -6,7 +6,7 @@ import { once } from "node:events";
 import { cpus, platform, arch } from "node:os";
 import { chromium } from "playwright";
 import { build3dExamples } from "./build-3d.mjs";
-import { tool } from "./toolchain.mjs";
+import { odinUnitTests } from "./odin-unit-tests.mjs";
 import { serve } from "./serve.mjs";
 import { negotiateProfile } from "../runtime/odin/web/policy.js";
 import { resourceSchema } from "../runtime/odin/web/constants.js";
@@ -60,7 +60,7 @@ function run(exe, args, options = {}) {
   assert.equal(output.status, 0, output.stderr + output.stdout);
   return output.stdout;
 }
-run(tool("odin"), ["test", "tests/3d", "-o:none", `-out:${resolve(root, "renderer-tests.exe")}`]);
+odinUnitTests("tests/3d", resolve(root, "renderer-tests.exe"));
 const projects = await build3dExamples(root);
 const cases = [
   ["scene", 0],

@@ -5,10 +5,11 @@ import { resolve } from "node:path";
 import { chromium } from "playwright";
 import { serve } from "./serve.mjs";
 import { tool, run } from "./toolchain.mjs";
+import { odinUnitTests } from "./odin-unit-tests.mjs";
 
 const root = resolve("build/gpu-validation");
 await mkdir(root, { recursive: true });
-run(tool("odin"), ["test", "tests/3d", "-o:none", `-out:${root}/resources.exe`]);
+odinUnitTests("tests/3d", resolve(root, "resources.exe"));
 run(tool("odin"), ["build", "tests/gpu/native", "-o:none", `-out:${root}/device.exe`]);
 await copyFile("build/odin-player/native/SDL3.dll", resolve(root, "SDL3.dll"));
 const report = {

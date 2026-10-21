@@ -6,7 +6,8 @@ import { timedSpawnSync as spawnSync } from "./command-timing.mjs";
 import { once } from "node:events";
 import { chromium } from "playwright";
 import { createProject, buildProject } from "./sdk/project.mjs";
-import { tool, dependencyRoot, toolRoot, task } from "./toolchain.mjs";
+import { dependencyRoot, toolRoot, task } from "./toolchain.mjs";
+import { odinUnitTests } from "./odin-unit-tests.mjs";
 import { serve } from "./serve.mjs";
 import { resourceSchema as limits } from "../runtime/odin/web/constants.js";
 import {
@@ -53,12 +54,7 @@ let packetReference, pcmReference;
 const projects = {};
 await writeFile(
   resolve(root, "unit.log"),
-  run(
-    tool("odin"),
-    ["test", "tests/audio", "-o:none", `-out:${resolve(root, "mixer-tests.exe")}`],
-    {},
-    true,
-  ),
+  odinUnitTests("tests/audio", resolve(root, "mixer-tests.exe")),
 );
 for (const language of ["odin", "luau"]) {
   const project = resolve(root, language);

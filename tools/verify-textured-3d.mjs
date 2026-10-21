@@ -20,7 +20,8 @@ import {
   FNV1A_PRIME,
   RESOURCE_EXPORTS,
 } from "../runtime/odin/web/constants.js";
-import { run, task, tool, dependencyRoot } from "./toolchain.mjs";
+import { run, task, dependencyRoot } from "./toolchain.mjs";
+import { odinUnitTests } from "./odin-unit-tests.mjs";
 import { serve } from "./serve.mjs";
 import { buildTexturedDrawing } from "./build-textured-3d.mjs";
 
@@ -46,7 +47,7 @@ await writeFile(
   resolve(root, "harness.html"),
   "<!doctype html><title>Textured resource verification</title>",
 );
-run(tool("odin"), ["test", "tests/3d", "-o:none", `-out:${root}/unit.exe`]);
+odinUnitTests("tests/3d", resolve(root, "unit.exe"));
 task("deps:trace:resources");
 await copyFile("build/validation-tools/resources/trace.exe", resolve(root, "trace.exe"));
 await copyFile(resolve(dependencyRoot(), "wasmtime.dll"), resolve(root, "wasmtime.dll"));
