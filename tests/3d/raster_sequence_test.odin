@@ -28,8 +28,17 @@ sequence_device :: proc(job: r.Raster_Job) -> bool {
     }
     if sequence_fail || (sequence_fail_sync && !job.defer_readback) { return false }
     if !job.defer_readback {
-        copy(job.color, sequence_color[:])
-        copy(job.depth, sequence_depth[:])
+        r.copy_raster_output(
+            job.color,
+            job.depth,
+            job.border,
+            job.mask,
+            sequence_color[:],
+            sequence_depth[:],
+            job.width,
+            job.height,
+            0,
+        )
         sequence_readbacks += 1
     }
     return true

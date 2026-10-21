@@ -141,7 +141,11 @@ try {
         stats.attachmentBatches > stats.attachmentSequences,
         "Compatible batches must reuse attachments",
       );
-      assert.equal(stats.attachmentUploadBytes, stats.attachmentReadbackBytes);
+      assert(stats.publishedFrames > 0);
+      assert(stats.directPresents > 0);
+      assert(stats.snapshotReadbackBytes > 0, "Explicit diagnostic hashes restore CPU visibility");
+      assert(stats.attachmentReadbackBytes < stats.attachmentUploadBytes);
+      assert(stats.frameBytes > 0);
       assert(stats.attachmentBytes > 0);
       assert(stats.cacheHits > stats.meshUploads);
     }

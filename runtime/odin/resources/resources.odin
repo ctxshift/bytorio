@@ -39,6 +39,9 @@ Slot :: struct {
     volume_depth, vertex_count, index_count, mesh_offset: u32,
 }
 Registry :: struct {
+    frame_device:                Frame_Proc,
+    gpu_frame:                   Committed_Frame,
+    gpu_lazy:                    bool,
     deferred_raster:             bool,
     resident_meshes:             bool,
     gpu_serial:                  u64,
@@ -86,6 +89,7 @@ within :: proc(offset, size: u32, length: int) -> bool {
     return u64(offset) + u64(size) <= u64(length)
 }
 close :: proc(r: ^Registry) {
+    if r.frame_device != nil { _ = r.frame_device({action = .Invalidate}) }
     when ODIN_ARCH == .wasm32 {
 
         context.allocator = wasm_allocator()
@@ -106,11 +110,13 @@ reset :: proc(r: ^Registry, session: u32, protocol: u32 = w.version) -> bool {
     rasterizer, pixel_snap, smooth_pan := r.rasterizer, r.pixel_snap, r.smooth_pan
     resident_meshes, gpu_serial := r.resident_meshes, r.gpu_serial
     deferred_raster := r.deferred_raster
+    frame_device := r.frame_device
     close(r)
     r.rasterizer, r.pixel_snap = rasterizer, pixel_snap
     r.smooth_pan = smooth_pan
     r.resident_meshes, r.gpu_serial = resident_meshes, gpu_serial
     r.deferred_raster = deferred_raster
+    r.frame_device = frame_device
     if session == 0 {
 
         r.error = "zero resource session"
@@ -217,6 +223,7 @@ submit :: proc(
         screen.height = display & abi.DISPLAY_DIMENSION_MASK
     }
     txn := Transaction {
+        draw_phase   = phase == 2,
         registry     = r,
         slots        = &shadow,
         screen       = &screen,
@@ -261,11 +268,12 @@ submit :: proc(
         return fail(r, "resource budget exceeded by packet snapshot")
     }
     for index in 0 ..< int(count) {
+        txn.last_command = index == int(count) - 1
         r.command = index
         cmd := packet[w.headerBytes + index * w.commandBytes:][:w.commandBytes]
         op, id := u16le(cmd, 0), u32le(cmd, 8)
         if (op != w.op_draw_mesh || len(txn.gpu_texture.pixels) != 0) &&
-           !flush_raster(&txn, synchronize = !r.deferred_raster || !raster_state_command(op)) {
+           !flush_raster(&txn, synchronize = !r.deferred_raster || !can_defer_command(&txn, op)) {
             return false
         }
         if r.protocol == 1 && op > w.op_destroy_sample {
@@ -553,11 +561,12 @@ submit :: proc(
         }
         txn.peak = max(txn.peak, txn.retained)
     }
-    if !flush_raster(&txn) { return false }
+    if !txn.gpu_present && !flush_raster(&txn) { return false }
     if phase == 2 && (txn.render.active || (count > 0 && txn.present_count != 1)) {
 
         return fail(r, "draw requires closed passes and exactly one presentation")
     }
+    if !prepare_frame(&txn) { return false }
     r.bytes = len(screen.data) + len(txn.output) * 4 + len(txn.audio_master.data)
     if raw_data(txn.audio_master.data) !=
        raw_data(r.audio_master.data) { delete(r.audio_master.data) }
@@ -582,6 +591,8 @@ submit :: proc(
     r.screen = screen
     r.output = txn.output
     if phase == 2 {
+        r.gpu_frame = txn.gpu_frame
+        r.gpu_lazy = txn.gpu_present
         delete(r.preview)
         delete(r.preview_mask)
         r.preview, r.preview_mask = txn.preview, txn.preview_mask
@@ -610,6 +621,7 @@ submit :: proc(
 }
 
 hash :: proc(r: ^Registry) -> u32 {
+    if !materialize(r) { return 0 }
     result := u32(abi.FNV1A_OFFSET_BASIS)
     for slot, i in r.slots {
         if slot.kind == .Empty {

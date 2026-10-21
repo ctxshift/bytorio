@@ -8,6 +8,7 @@ import "core:mem"
 // Calls are synchronous and retain no supplied pointer. A deferred call keeps
 // only device-private samples; a continuation consumes that same scratch.
 Raster_Job :: struct {
+    mask:                         []u8,
     continuation, defer_readback: bool,
     texture:                      Texture_View,
     draws:                        []Resident_Draw,
@@ -59,6 +60,7 @@ RASTER_STAGING_BYTES :: w.maxTrianglesPerCommit * 3 * RASTER_VERTEX_BYTES
 sync_raster :: proc(t: ^Transaction) -> bool {
     if !t.gpu_pending { return true }
     job := t.gpu_job
+    if t.gpu_overlay { job.mask = t.preview_mask }
     t.gpu_pending = false
     job.continuation = true
     if !t.registry.rasterizer(job) {
@@ -96,6 +98,8 @@ flush_raster :: proc(t: ^Transaction, synchronize := true) -> bool {
     if target == nil || depth == nil || camera == nil { return false }
     border: []u8
     if t.render.target == 0 {
+        if t.registry.frame_device !=
+           nil { _ = frame_mask(t, int(target.width) * int(target.height)) }
         t.screen_gpu_batches += 1
         if t.screen_gpu_batches > 1 { t.preview_disabled = true }
         full_clip := t.render.clip == [4]i32{0, 0, i32(target.width), i32(target.height)}
@@ -111,10 +115,7 @@ flush_raster :: proc(t: ^Transaction, synchronize := true) -> bool {
             pointer, error := mem.alloc(size, 4)
             if error == nil {
                 border = (cast([^]u8)pointer)[:size]
-                mask, mask_error := mem.alloc(mask_size, 1)
-                if mask_error == nil {
-                    t.preview_mask = (cast([^]u8)mask)[:mask_size]
-                    mem.zero(mask, mask_size)
+                if frame_mask(t, mask_size) {
                     t.preview = border
                 } else {
                     delete(border)
@@ -155,6 +156,7 @@ flush_raster :: proc(t: ^Transaction, synchronize := true) -> bool {
     }
     t.gpu_pending = job.defer_readback
     if t.gpu_pending {
+        t.gpu_target, t.gpu_depth = t.render.target, t.render.depth
         // Release staging immediately; the device has already consumed it.
         job.vertices, job.draws, job.texture = nil, nil, {}
         job.defer_readback = false

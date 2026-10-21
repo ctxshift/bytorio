@@ -757,6 +757,11 @@ apply_graphics :: proc(game: ^Game) {
 
     resources.apply_output(&game.resources)
 }
+materialize_graphics :: proc(game: ^Game) -> bool {
+    if !resources.materialize(&game.resources) { return fail(game, game.resources.error) }
+    apply_graphics(game)
+    return true
+}
 deliver_resources :: proc(game: ^Game) -> bool {
     if game.resource_protocol < 2 {
 

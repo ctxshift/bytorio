@@ -109,6 +109,9 @@ export async function createGpu(settings) {
     depth: texture(),
   };
   const low = { fbo: gl.createFramebuffer(), color: texture(), depthBits: texture() };
+  const frames = [null, null];
+  let committedFrame = 0;
+  let currentFactor = 1;
   const vao = gl.createVertexArray();
   gl.bindVertexArray(vao);
   const buffer = gl.createBuffer();
@@ -125,6 +128,11 @@ export async function createGpu(settings) {
   let queuedTexture = null;
   let cacheBytes = 0;
   const metrics = {
+    publishedFrames: 0,
+    directPresents: 0,
+    snapshotReadbackBytes: 0,
+    presentationUploadBytes: 0,
+    frameBytes: 0,
     attachmentUploadBytes: 0,
     attachmentReadbackBytes: 0,
     attachmentBatches: 0,
@@ -380,6 +388,131 @@ export async function createGpu(settings) {
   return {
     gl,
     metrics,
+    invalidateFrames() {
+      for (const frame of frames) {
+        if (frame) {
+          frame.version = null;
+        }
+      }
+      pendingAttachments = false;
+    },
+    publishFrame(low, high) {
+      const candidate = frames[1 - committedFrame];
+      if (!(low || high) || candidate?.version !== `${high}:${low}`) {
+        return 0;
+      }
+      committedFrame = 1 - committedFrame;
+      pendingAttachments = false;
+      metrics.publishedFrames++;
+      return 1;
+    },
+    stageFrame(memory, color, _depth, preview, mask, width, height, lowWord, highWord) {
+      const border = preview ? 1 : 0;
+      const rw = width + border * 2,
+        rh = height + border * 2;
+      if (!pendingAttachments || dimensions !== `${rw}/${rh}/${currentFactor}`) {
+        return 0;
+      }
+      const index = 1 - committedFrame;
+      const frame = (frames[index] ||= {
+        fbo: gl.createFramebuffer(),
+        color: texture(),
+        depthBits: texture(),
+        hud: texture(),
+        mask: texture(),
+        version: null,
+      });
+      frame.version = null;
+      target(frame, rw, rh);
+      gl.bindVertexArray(vao);
+      gl.disable(gl.SCISSOR_TEST);
+      gl.disable(gl.DEPTH_TEST);
+      quad(resolve, high.color, high.depthBits, currentFactor, rw, rh);
+      frame.hasHud = Boolean(mask);
+      if (mask) {
+        gl.activeTexture(gl.TEXTURE0);
+        allocate(
+          frame.hud,
+          width,
+          height,
+          false,
+          new Uint8Array(memory.buffer, color, width * height * 4),
+        );
+        allocate(
+          frame.mask,
+          width,
+          height,
+          false,
+          new Uint8Array(memory.buffer, mask, width * height),
+          true,
+        );
+        metrics.presentationUploadBytes += width * height * 5;
+      }
+      metrics.frameBytes = frames.reduce(
+        (sum, entry) =>
+          sum +
+          (entry
+            ? [entry.color, entry.depthBits, entry.hud, entry.mask].reduce(
+                (size, t) => size + (textureStorage.get(t)?.size || 0),
+                0,
+              )
+            : 0),
+        0,
+      );
+      if (gl.getError() !== gl.NO_ERROR || gl.isContextLost()) {
+        return 0;
+      }
+      Object.assign(frame, { width, height, border, version: `${highWord}:${lowWord}` });
+      return 1;
+    },
+    readFrame(memory, color, depth, preview, mask, width, height, lowWord, highWord) {
+      const frame = frames[committedFrame];
+      const border = preview ? 1 : 0;
+      if (
+        !(lowWord || highWord) ||
+        frame?.version !== `${highWord}:${lowWord}` ||
+        frame.width !== width ||
+        frame.height !== height ||
+        frame.border !== border
+      ) {
+        return 0;
+      }
+      const rw = width + border * 2,
+        rh = height + border * 2;
+      const colors = new Uint8Array(rw * rh * 4),
+        depths = new Uint8Array(colors.length);
+      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, frame.fbo);
+      gl.readBuffer(gl.COLOR_ATTACHMENT0);
+      gl.readPixels(0, 0, rw, rh, gl.RGBA, gl.UNSIGNED_BYTE, colors);
+      gl.readBuffer(gl.COLOR_ATTACHMENT1);
+      gl.readPixels(0, 0, rw, rh, gl.RGBA, gl.UNSIGNED_BYTE, depths);
+      metrics.snapshotReadbackBytes += colors.length + depths.length;
+      metrics.attachmentReadbackBytes += colors.length + depths.length;
+      if (gl.getError() !== gl.NO_ERROR || gl.isContextLost()) {
+        return 0;
+      }
+      const bytes = new Uint8Array(memory.buffer);
+      for (let y = 0; y < height; y++) {
+        const source = ((y + border) * rw + border) * 4;
+        const row = new Uint8Array(memory.buffer, color + y * width * 4, width * 4);
+        if (!mask) {
+          row.set(colors.subarray(source, source + row.length));
+        } else {
+          for (let x = 0; x < width; x++) {
+            if (!bytes[mask + y * width + x]) {
+              row.set(colors.subarray(source + x * 4, source + x * 4 + 4), x * 4);
+            }
+          }
+        }
+        new Uint8Array(memory.buffer, depth + y * width * 4, width * 4).set(
+          depths.subarray(source, source + width * 4),
+        );
+      }
+      if (preview) {
+        new Uint8Array(memory.buffer, preview, colors.length).set(colors);
+      }
+      return 1;
+    },
     queueTexture(
       pixels,
       width,
@@ -445,7 +578,19 @@ export async function createGpu(settings) {
       dx,
       dy,
       background,
+      versionLow = 0,
+      versionHigh = 0,
     ) {
+      const direct = Boolean(versionLow || versionHigh);
+      const snapshot = frames[committedFrame];
+      if (
+        direct &&
+        (snapshot?.version !== `${versionHigh}:${versionLow}` ||
+          snapshot.width !== width ||
+          snapshot.height !== height)
+      ) {
+        throw new Error("Committed GPU snapshot is unavailable.");
+      }
       const scale = preview
         ? Math.max(
             1,
@@ -471,25 +616,35 @@ export async function createGpu(settings) {
       gl.disable(gl.SCISSOR_TEST);
       gl.useProgram(presentProgram);
       gl.activeTexture(gl.TEXTURE0);
-      allocate(
-        presentInput[0],
-        smooth ? width + 2 : width,
-        smooth ? height + 2 : height,
-        false,
-        new Uint8Array(
-          memory.buffer,
-          smooth ? preview : output,
-          (smooth ? (width + 2) * (height + 2) : width * height) * 4,
-        ),
-      );
+      if (direct) {
+        gl.bindTexture(gl.TEXTURE_2D, snapshot.color);
+        metrics.directPresents++;
+      } else {
+        allocate(
+          presentInput[0],
+          smooth ? width + 2 : width,
+          smooth ? height + 2 : height,
+          false,
+          new Uint8Array(
+            memory.buffer,
+            smooth ? preview : output,
+            (smooth ? (width + 2) * (height + 2) : width * height) * 4,
+          ),
+        );
+      }
       gl.uniform1i(gl.getUniformLocation(presentProgram, "colorSource"), 0);
       for (const unit of [1, 2]) {
         gl.activeTexture(gl.TEXTURE0 + unit);
-        gl.bindTexture(gl.TEXTURE_2D, presentInput[0]);
+        gl.bindTexture(gl.TEXTURE_2D, direct ? snapshot.color : presentInput[0]);
       }
       gl.uniform1i(gl.getUniformLocation(presentProgram, "depthSource"), 1);
       gl.uniform1i(gl.getUniformLocation(presentProgram, "hudSource"), 2);
-      if (smooth) {
+      if (direct && snapshot.hasHud) {
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, snapshot.hud);
+        gl.activeTexture(gl.TEXTURE2);
+        gl.bindTexture(gl.TEXTURE_2D, snapshot.mask);
+      } else if (!direct && smooth) {
         gl.activeTexture(gl.TEXTURE1);
         allocate(
           presentInput[1],
@@ -520,6 +675,14 @@ export async function createGpu(settings) {
       );
       gl.uniform1i(gl.getUniformLocation(presentProgram, "scale"), scale);
       gl.uniform1i(gl.getUniformLocation(presentProgram, "useSmooth"), Number(smooth));
+      gl.uniform1i(
+        gl.getUniformLocation(presentProgram, "useHud"),
+        Number(direct ? snapshot.hasHud : smooth),
+      );
+      gl.uniform1i(
+        gl.getUniformLocation(presentProgram, "sourceBorder"),
+        direct ? snapshot.border : smooth ? 1 : 0,
+      );
       gl.uniform4f(
         gl.getUniformLocation(presentProgram, "background"),
         (background & 255) / 255,
@@ -545,6 +708,15 @@ export async function createGpu(settings) {
     close() {
       clearMeshes();
       clearTextures();
+      for (const frame of frames) {
+        if (!frame) {
+          continue;
+        }
+        for (const entry of [frame.color, frame.depthBits, frame.hud, frame.mask]) {
+          gl.deleteTexture(entry);
+        }
+        gl.deleteFramebuffer(frame.fbo);
+      }
       const lose = gl.getExtension("WEBGL_lose_context");
       lose?.loseContext();
     },
@@ -566,6 +738,7 @@ export async function createGpu(settings) {
       borderOutput = 0,
       continuation = 0,
       deferReadback = 0,
+      maskOutput = 0,
     ) {
       const wasPending = pendingAttachments;
       pendingAttachments = false;
@@ -594,6 +767,7 @@ export async function createGpu(settings) {
         return 0;
       }
       const key = `${rw}/${rh}/${factor}`;
+      currentFactor = factor;
       if (continuation && (!wasPending || dimensions !== key)) {
         return 0;
       }
@@ -747,11 +921,19 @@ export async function createGpu(settings) {
       if (gl.getError() !== gl.NO_ERROR || gl.isContextLost()) {
         return 0;
       }
+      const bytes = new Uint8Array(memory.buffer);
       for (let y = 0; y < height; y++) {
         const source = ((y + border) * rw + border) * 4;
-        new Uint8Array(memory.buffer, color + y * width * 4, width * 4).set(
-          resultColor.subarray(source, source + width * 4),
-        );
+        const row = new Uint8Array(memory.buffer, color + y * width * 4, width * 4);
+        if (!maskOutput) {
+          row.set(resultColor.subarray(source, source + width * 4));
+        } else {
+          for (let x = 0; x < width; x++) {
+            if (!bytes[maskOutput + y * width + x]) {
+              row.set(resultColor.subarray(source + x * 4, source + x * 4 + 4), x * 4);
+            }
+          }
+        }
         new Uint8Array(memory.buffer, depth + y * width * 4, width * 4).set(
           resultDepth.subarray(source, source + width * 4),
         );

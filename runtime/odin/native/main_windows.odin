@@ -496,6 +496,7 @@ run :: proc() -> int {
         if gpu.open(quality, surface_samples) {
             app.gpu_enabled = true
             app.game.resources.rasterizer = gpu.raster
+            app.game.resources.frame_device = gpu.frame
             app.game.resources.deferred_raster = true
             app.game.resources.pixel_snap = pixel_snap
             app.game.resources.smooth_pan = smooth_pan
@@ -556,6 +557,7 @@ run :: proc() -> int {
 
                 return error(app.game.error)
             }
+            if !guest.materialize_graphics(&app.game) { return error(app.game.error) }
             fmt.printf("{{\"hash\":%d,\"sounds\":%d}}\n", core.hash(), app.frame.sounds)
         }
         if raw_capture != "" {
@@ -753,6 +755,7 @@ run :: proc() -> int {
             running = false
         }
     }
+    if !guest.materialize_graphics(&app.game) { return error(app.game.error) }
     if capture != "" && !check_only {
         surface := sdl.CreateSurfaceFrom(
             i32(core.width),

@@ -291,7 +291,7 @@ Keep CPU as the deterministic reference and GPU hardware checks opt-in.
 The streamed mode transforms/lights triangles on CPU. The separately opt-in
 resident mode caches versioned geometry and moves render transforms/lighting
 onto the GPU, retaining exact CPU work accounting. Both GPU modes present on the
-GPU and synchronize attachments at CPU consumers and publication. Qualify actual costs separately from the
+GPU and synchronize attachments at actual CPU consumers. Qualify actual costs separately from the
 independent riverside renderer; do not extrapolate that renderer's timings.
 
 Next slices:
@@ -304,11 +304,14 @@ Next slices:
   independent walking/pan/orbit controls in both SDKs, verified across hosts.
 - Implemented: retain private color/depth samples across compatible batches and
   load passes, including material/camera/clip changes. CPU consumers, clears,
-  attachment switches, software fallback and publication synchronize them.
+  attachment switches and software fallback synchronize them.
   Retain rollback, stale handles, target feedback checks and CPU reference mode.
-- Publish committed GPU attachments directly to final presentation, avoiding the
-  remaining publication readback and presentation upload when CPU snapshots are
-  not consumed. Preserve HUD ordering, rollback and device-failure recovery.
+- Implemented: publish committed GPU attachments directly to final presentation,
+  avoiding world readback/re-upload until a CPU consumer needs the logical
+  snapshot. Versioned double buffering preserves rollback; opaque HUD layers
+  compose on GPU, with conservative barriers for other ordering/blending.
+  Qualify both SDKs on native/browser; keep acceleration opt-in and retain CPU
+  conformance, explicit diagnostics and device-failure reporting.
 - Experimental riverside comparison: opt-in whole-scene object-local surface
   samples on native/browser GPU hosts. Flat rectangular patches reuse resident
   geometry, expand fixed sample identities in the shared vertex shader, and retain

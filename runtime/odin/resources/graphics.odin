@@ -8,6 +8,9 @@ import "core:math"
 import "core:mem"
 
 Transaction :: struct {
+    gpu_present, gpu_overlay, last_command, draw_phase:   bool,
+    gpu_target, gpu_depth:                                u32,
+    gpu_frame:                                            Committed_Frame,
     gpu_pending:                                          bool,
     gpu_job:                                              Raster_Job,
     gpu_texture:                                          Texture_View,
@@ -140,6 +143,7 @@ owned :: proc(t: ^Transaction, id: u32, preserve := true) -> ^Slot {
     original := &t.registry.screen if id == 0 else &t.registry.slots[(id & w.handleIndexMask) - 1]
     size := int(slot.width) * int(slot.height) * (4 if slot.format == w.format_rgba8 else 1)
     if raw_data(slot.data) == raw_data(original.data) || len(slot.data) != size {
+        if preserve && !ensure_cpu_slot(t, slot) { return nil }
         data, ok := allocate(t, size, zero = false)
         if !ok {
 
@@ -643,7 +647,7 @@ graphics_command :: proc(
 
             return fail(r, "draw feedback, missing pass or invalid quad descriptor")
         }
-        source := image(t, id)
+        source := read_image(t, id)
         if source == nil || source.format == w.format_stencil8 {
 
             return fail(r, "invalid sampled image")
@@ -701,7 +705,7 @@ graphics_command :: proc(
 
             return fail(r, "copy requires distinct images outside passes")
         }
-        source := image(t, id)
+        source := read_image(t, id)
         dest := image(t, args[0])
         if source == nil ||
            dest == nil ||
@@ -753,7 +757,7 @@ graphics_command :: proc(
 
             return fail(r, "readback inside pass")
         }
-        source := image(t, args[0]); slot := unused(t, id)
+        source := read_image(t, args[0]); slot := unused(t, id)
         if source == nil ||
            source.format == w.format_stencil8 ||
            slot == nil ||
@@ -911,6 +915,18 @@ tint_color :: proc(src, tint: u32) -> u32 {
 }
 fragment :: proc(t: ^Transaction, target: ^Slot, x, y: int, value: u32) -> bool {
     p := t.render.pipeline
+    if t.gpu_pending && t.registry.frame_device != nil && target == t.screen {
+        at := y * int(target.width) + x
+        if p == default_pipeline(w.format_rgba8) &&
+           value >> 24 == 255 &&
+           len(t.preview_mask) == int(target.width) * int(target.height) {
+            put32(target.data, at * 4, value)
+            t.preview_mask[at] = 1
+            t.gpu_overlay = true
+            return true
+        }
+        if !sync_raster(t) { return false }
+    }
     if target.format == w.format_index8 && p[7] != 0 && value == p[7] - 1 {
 
         return true
@@ -1199,6 +1215,16 @@ present :: proc(t: ^Transaction, id: u32, descriptor: [8]u32) -> bool {
 
         return false
     }
+    if t.registry.frame_device != nil &&
+       t.last_command &&
+       t.gpu_pending &&
+       t.gpu_target == id &&
+       raw_data(source.data) == raw_data(t.gpu_job.color) {
+        t.gpu_present = true
+        t.present_count += 1
+        return true
+    }
+    if !sync_raster(t) || !ensure_cpu_slot(t, source) { return false }
     for y in 0 ..< t.height {
         for x in 0 ..< t.width {
             value: u32
@@ -1310,7 +1336,7 @@ convenience :: proc(t: ^Transaction, op: u32, descriptor: [8]u32, data: []u8) ->
     )
 }
 apply_output :: proc(r: ^Registry) {
-    if r.has_output {
+    if r.has_output && !r.gpu_lazy {
 
         copy(core.pixels[:r.output_width * r.output_height], r.output)
         r.stats.copy_bytes += u64(len(r.output) * 4)

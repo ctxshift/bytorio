@@ -5,31 +5,56 @@ import gl "vendor:OpenGL"
 import sdl "vendor:sdl3"
 
 Device :: struct {
-    pending:                                                    bool,
-    attachment_upload_bytes, attachment_readback_bytes:         u64,
-    attachment_batches, attachment_sequences:                   u64,
-    material_cache:                                             map[u64]Cached_Texture,
-    material_cache_bytes:                                       int,
-    texture_uploads, texture_cache_hits, texture_upload_bytes:  u64,
-    surface_samples:                                            bool,
-    present_program, present_fbo, present_texture, hud_texture: u32,
-    present_width, present_height:                              int,
-    resident, resident_vao:                                     u32,
-    cache:                                                      map[u64]Cached_Mesh,
-    cache_bytes:                                                int,
-    mesh_uploads, cache_hits, upload_bytes:                     u64,
-    window:                                                     ^sdl.Window,
-    gl_context:                                                 sdl.GLContext,
-    initialize, mesh, resolve:                                  u32,
-    vao, vertices:                                              u32,
-    input:                                                      [2]u32,
-    present_input:                                              [2]u32,
-    high, low:                                                  u32,
-    high_textures:                                              [3]u32,
-    low_textures:                                               [2]u32,
-    width, height, factor, quality:                             int,
-    color, depth:                                               []u8,
-    texture_storage:                                            map[u32][3]int,
+    frames:                    [2]GPU_Frame,
+    committed_frame:           int,
+    published_frames:          u64,
+    direct_presents:           u64,
+    snapshot_readback_bytes:   u64,
+    presentation_upload_bytes: u64,
+    pending:                   bool,
+    attachment_upload_bytes:   u64,
+    attachment_readback_bytes: u64,
+    attachment_batches:        u64,
+    attachment_sequences:      u64,
+    material_cache:            map[u64]Cached_Texture,
+    material_cache_bytes:      int,
+    texture_uploads:           u64,
+    texture_cache_hits:        u64,
+    texture_upload_bytes:      u64,
+    surface_samples:           bool,
+    present_program:           u32,
+    present_fbo:               u32,
+    present_texture:           u32,
+    hud_texture:               u32,
+    present_width:             int,
+    present_height:            int,
+    resident:                  u32,
+    resident_vao:              u32,
+    cache:                     map[u64]Cached_Mesh,
+    cache_bytes:               int,
+    mesh_uploads:              u64,
+    cache_hits:                u64,
+    upload_bytes:              u64,
+    window:                    ^sdl.Window,
+    gl_context:                sdl.GLContext,
+    initialize:                u32,
+    mesh:                      u32,
+    resolve:                   u32,
+    vao:                       u32,
+    vertices:                  u32,
+    input:                     [2]u32,
+    present_input:             [2]u32,
+    high:                      u32,
+    low:                       u32,
+    high_textures:             [3]u32,
+    low_textures:              [2]u32,
+    width:                     int,
+    height:                    int,
+    factor:                    int,
+    quality:                   int,
+    color:                     []u8,
+    depth:                     []u8,
+    texture_storage:           map[u32][3]int,
 }
 device: Device
 
@@ -117,6 +142,7 @@ open :: proc(quality: int, surface_samples := false) -> bool {
 close :: proc() {
     if device.gl_context != nil {
         _ = sdl.GL_MakeCurrent(device.window, device.gl_context)
+        close_frames()
         clear_meshes()
         clear_textures()
         gl.DeleteProgram(device.present_program)
@@ -316,12 +342,17 @@ raster :: proc(job: resources.Raster_Job) -> bool {
     gl.ReadPixels(0, 0, i32(rw), i32(rh), gl.RGBA, gl.UNSIGNED_BYTE, raw_data(device.depth))
     device.attachment_readback_bytes += u64(rw * rh * 8)
     if gl.GetError() != gl.NO_ERROR { return false }
-    for y in 0 ..< h {
-        source := ((y + border) * rw + border) * 4
-        copy(job.color[y * w * 4:][:w * 4], device.color[source:][:w * 4])
-        copy(job.depth[y * w * 4:][:w * 4], device.depth[source:][:w * 4])
-    }
-    copy(job.border, device.color)
+    resources.copy_raster_output(
+        job.color,
+        job.depth,
+        job.border,
+        job.mask,
+        device.color,
+        device.depth,
+        w,
+        h,
+        border,
+    )
     succeeded = true
     return true
 }

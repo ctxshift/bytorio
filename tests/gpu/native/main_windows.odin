@@ -125,6 +125,105 @@ main :: proc() {
     verify_textured_meshes()
     verify_cutout_depth()
     verify_attachment_sequences()
+    verify_committed_frames()
+}
+
+verify_committed_frames :: proc() {
+    for quality in ([3]int{1, 2, 6}) {
+        if !gpu.open(quality) { os.exit(1) }
+        color, depth: [32 * 32 * 4]u8
+        mask: [32 * 32]u8
+        for at := 0; at < len(depth); at += 4 { r.putf(depth[:], at, 1) }
+        vertices := [21]f32 {
+            -0.8,
+            -0.8,
+            0.25,
+            1,
+            255,
+            0,
+            0,
+            0,
+            0.8,
+            0.25,
+            1,
+            255,
+            0,
+            0,
+            0.8,
+            -0.8,
+            0.25,
+            1,
+            255,
+            0,
+            0,
+        }
+        job := r.Raster_Job {
+            vertices       = (cast([^]u8)&vertices[0])[:size_of(vertices)],
+            color          = color[:],
+            depth          = depth[:],
+            width          = 32,
+            height         = 32,
+            clip           = {0, 0, 32, 32},
+            fog_start      = 1,
+            fog_end        = 2,
+            defer_readback = true,
+        }
+        if !gpu.raster(job) { os.exit(1) }
+        center := 16 * 32 + 16
+        mask[center] = 1
+        r.put32(color[:], center * 4, 0xff00ff00)
+        frame := r.Frame_Job {
+            action  = .Stage,
+            version = 101,
+            color   = color[:],
+            depth   = depth[:],
+            mask    = mask[:],
+            width   = 32,
+            height  = 32,
+        }
+        if !gpu.frame(frame) { os.exit(1) }
+        frame.action = .Publish
+        if !gpu.frame(frame) || gpu.attachment_statistics()[1] != 0 { os.exit(1) }
+        registry: r.Registry
+        registry.preview_background = 0xff000000
+        registry.gpu_frame.job = frame
+        output: [32 * 32]u32
+        // The presenter must use the committed GPU image even though this CPU
+        // output is empty. Repeated presentation performs no additional uploads.
+        for _ in 0 ..< 2 {
+            if !gpu.present(&registry, output[:], 32, 32, 32, 32) { os.exit(1) }
+            captured := gpu.capture_presentation()
+            if r.u32le(captured, center * 4) != 0xff00ff00 ||
+               r.u32le(captured, (18 * 32 + 16) * 4) != 0xff0000ff { os.exit(1) }
+            delete(captured)
+        }
+        stats := gpu.frame_statistics()
+        if stats[0] != 1 ||
+           stats[1] != 2 ||
+           stats[2] != 0 ||
+           stats[3] != 32 * 32 * 5 ||
+           stats[4] == 0 { os.exit(1) }
+        // Private rendering/staging cannot change the displayed snapshot until
+        // Publish. It must also not change what an explicit logical read sees.
+        for i in 0 ..< 3 { vertices[i * 7 + 4], vertices[i * 7 + 6] = 0, 255 }
+        if !gpu.raster(job) { os.exit(1) }
+        candidate := frame
+        candidate.action, candidate.version = .Stage, 102
+        if !gpu.frame(candidate) ||
+           !gpu.present(&registry, output[:], 32, 32, 32, 32) { os.exit(1) }
+        captured := gpu.capture_presentation()
+        if r.u32le(captured, (18 * 32 + 16) * 4) != 0xff0000ff { os.exit(1) }
+        delete(captured)
+        frame.action = .Read
+        if !gpu.frame(frame) ||
+           r.u32le(color[:], center * 4) != 0xff00ff00 ||
+           r.u32le(color[:], (18 * 32 + 16) * 4) != 0xff0000ff ||
+           r.f32le(depth[:], center * 4) != 0.25 { os.exit(1) }
+        candidate.action = .Publish
+        if !gpu.frame(candidate) || gpu.frame(frame) { os.exit(1) }
+        if !gpu.frame({action = .Invalidate}) || gpu.frame(candidate) { os.exit(1) }
+        gpu.close()
+    }
 }
 
 verify_attachment_sequences :: proc() {

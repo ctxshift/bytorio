@@ -14,6 +14,7 @@ presenter: presentation.State
 @(export)
 runtime_presentation :: proc "c" (width, height: u32) -> u32 {
     context = runtime.default_context()
+    if runtime_materialize() == 0 { return 0 }
     pixels := presentation.prepare(
         &presenter,
         &resource_registry,
@@ -31,9 +32,38 @@ runtime_presentation_active :: proc "c" () -> u32 { return u32(presenter.active)
 when #config(GPU_RASTER, false) {
     foreign import gpu "env"
     foreign gpu {
+        stage_frame_gpu :: proc "c" (color, depth, preview, mask, width, height, low, high: u32) -> u32 ---
+        read_frame_gpu :: proc "c" (color, depth, preview, mask, width, height, low, high: u32) -> u32 ---
+        publish_frame_gpu :: proc "c" (low, high: u32) -> u32 ---
+        invalidate_frame_gpu :: proc "c" () ---
         texture_gpu :: proc "c" (pixels, width, height, low, high, address_u, address_v, cutout, alpha_cutoff: u32) ---
         mesh_gpu :: proc "c" (low, high, data, vertices, indices, palette, model, view, light: u32, ambient: f32, textured: u32) ---
-        raster_gpu :: proc "c" (vertices, count, color, depth, width, height: u32, x, y, w, h: i32, fog: u32, fog_start, fog_end: f32, border, continuation, defer_readback: u32) -> u32 ---
+        raster_gpu :: proc "c" (vertices, count, color, depth, width, height: u32, x, y, w, h: i32, fog: u32, fog_start, fog_end: f32, border, continuation, defer_readback, mask: u32) -> u32 ---
+    }
+    gpu_frame :: proc(job: resources.Frame_Job) -> bool {
+        low, high := u32(job.version), u32(job.version >> 32)
+        switch job.action {
+        case .Invalidate:
+            invalidate_frame_gpu(); return true
+        case .Publish:
+            return publish_frame_gpu(low, high) == 1
+        case .Stage, .Read:
+            execute := stage_frame_gpu if job.action == .Stage else read_frame_gpu
+            return(
+                execute(
+                    u32(uintptr(raw_data(job.color))),
+                    u32(uintptr(raw_data(job.depth))),
+                    u32(uintptr(raw_data(job.preview))),
+                    u32(uintptr(raw_data(job.mask))),
+                    u32(job.width),
+                    u32(job.height),
+                    low,
+                    high,
+                ) ==
+                1 \
+            )
+        }
+        return false
     }
     gpu_raster :: proc(job: resources.Raster_Job) -> bool {
         texture_gpu(
@@ -81,6 +111,7 @@ when #config(GPU_RASTER, false) {
                 u32(uintptr(raw_data(job.border))),
                 u32(job.continuation),
                 u32(job.defer_readback),
+                u32(uintptr(raw_data(job.mask))),
             ) ==
             1 \
         )
@@ -92,6 +123,12 @@ runtime_cpu_bytes :: proc "c" () -> u32 { return u32(resources.software_storage_
 runtime_cpu_configure :: proc "c" (quality, pixel_snap, smooth_pan: u32) -> u32 {
     context = runtime.default_context()
     if quality != 1 && quality != 2 && quality != 6 { return 0 }
+    if !resources.materialize(&resource_registry) { return 0 }
+    resources.apply_output(&resource_registry)
+    if resource_registry.frame_device != nil {
+        _ = resource_registry.frame_device({action = .Invalidate})
+        resource_registry.gpu_frame = {}
+    }
     resources.software_configure(int(quality))
     resource_registry.rasterizer =
         resources.software_raster if quality > 1 || pixel_snap != 0 || smooth_pan != 0 else nil
@@ -99,6 +136,7 @@ runtime_cpu_configure :: proc "c" (quality, pixel_snap, smooth_pan: u32) -> u32 
     resource_registry.smooth_pan = smooth_pan != 0
     resource_registry.resident_meshes = false
     resource_registry.deferred_raster = false
+    resource_registry.frame_device = nil
     return 1
 }
 @(export)
@@ -106,6 +144,7 @@ runtime_gpu_configure :: proc "c" (pixel_snap, smooth_pan: u32, resident_meshes:
     context = runtime.default_context()
     when #config(GPU_RASTER, false) {
         resource_registry.rasterizer = gpu_raster
+        resource_registry.frame_device = gpu_frame
         resource_registry.deferred_raster = true
         resource_registry.pixel_snap = pixel_snap != 0
         resource_registry.smooth_pan = smooth_pan != 0
@@ -121,9 +160,10 @@ runtime_gpu_preview :: proc "c" () -> u32 {
     )
 }
 @(export)
-runtime_gpu_mask :: proc "c" () -> u32 {return u32(
-        uintptr(raw_data(resource_registry.preview_mask)),
-    )}
+runtime_gpu_mask :: proc "c" () -> u32 {
+    mask := raw_data(resource_registry.preview_mask)
+    return u32(uintptr(mask))
+}
 @(export)
 runtime_gpu_background :: proc "c" () -> u32 { return resource_registry.preview_background }
 @(export)
@@ -132,6 +172,23 @@ runtime_gpu_dx :: proc "c" () -> f64 { return resource_registry.preview_residual
 runtime_gpu_dy :: proc "c" () -> f64 { return resource_registry.preview_residual[1] }
 @(export)
 runtime_logical_pixels :: proc "c" () -> u32 { return u32(uintptr(&core.pixels[0])) }
+@(export)
+runtime_gpu_version_low :: proc "c" () -> u32 {
+    version := resource_registry.gpu_frame.job.version
+    return u32(version)
+}
+@(export)
+runtime_gpu_version_high :: proc "c" () -> u32 {
+    version := resource_registry.gpu_frame.job.version
+    return u32(version >> 32)
+}
+@(export)
+runtime_materialize :: proc "c" () -> u32 {
+    context = runtime.default_context()
+    if !resources.materialize(&resource_registry) { return 0 }
+    resources.apply_output(&resource_registry)
+    return 1
+}
 @(export)
 runtime_resource_close :: proc "c" () {
     context = runtime.default_context()
@@ -374,6 +431,7 @@ runtime_frame :: proc "c" () -> u32 {
 }
 @(export)
 runtime_pixels :: proc "c" () -> u32 {
+    if runtime_materialize() == 0 { return 0 }
 
     return u32(uintptr(&core.pixels))
 }
@@ -390,6 +448,7 @@ runtime_render :: proc "c" () -> u32 {
 @(export)
 runtime_hash :: proc "c" () -> u32 {
     context = runtime.default_context()
+    if runtime_materialize() == 0 { return 0 }
     return core.hash()
 }
 

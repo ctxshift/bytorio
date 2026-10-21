@@ -407,6 +407,103 @@ try {
         throw new Error("Attachment continuation failure/recovery failed");
       }
       rows[rows.length - 1].attachments = { ...device.metrics };
+      // The committed GPU image is independent of CPU output and later private
+      // rendering. The HUD mask is deliberately a color-independent assertion.
+      new Uint8Array(memory.buffer, color, 32 * 32 * 4).fill(0);
+      new Float32Array(memory.buffer, depth, 32 * 32).fill(1);
+      for (let i = 0; i < 3; i++) {
+        vertices[i * 7 + 2] = 0.25;
+        vertices[i * 7 + 4] = 255;
+        vertices[i * 7 + 6] = 0;
+      }
+      const mask = 24576;
+      new Uint8Array(memory.buffer, mask, 32 * 32).fill(0);
+      const beforeFrame = { ...device.metrics };
+      if (draw(3, 0, 1) !== 1) {
+        throw new Error("Private frame raster failed");
+      }
+      new Uint8Array(memory.buffer)[mask + center / 4] = 1;
+      packed.setUint32(color + center, 0xff00ff00, true);
+      if (
+        device.stageFrame(memory, color, depth, 0, mask, 32, 32, 101, 0) !== 1 ||
+        device.publishFrame(101, 0) !== 1
+      ) {
+        throw new Error("GPU frame publication failed");
+      }
+      const present = () => {
+        const frame = device.present(memory, color, 0, 0, 32, 32, 32, 32, 0, 0, 0xff000000, 101, 0);
+        const context = new OffscreenCanvas(32, 32).getContext("2d");
+        context.drawImage(frame.bitmap, 0, 0);
+        frame.bitmap.close();
+        if (
+          String(context.getImageData(16, 16, 1, 1).data) !== "0,255,0,255" ||
+          String(context.getImageData(16, 18, 1, 1).data) !== "255,0,0,255"
+        ) {
+          throw new Error("Direct GPU world/HUD presentation failed");
+        }
+      };
+      present();
+      present();
+      if (
+        device.metrics.attachmentReadbackBytes !== beforeFrame.attachmentReadbackBytes ||
+        device.metrics.presentationUploadBytes - beforeFrame.presentationUploadBytes !==
+          32 * 32 * 5 ||
+        device.metrics.directPresents - beforeFrame.directPresents !== 2
+      ) {
+        throw new Error("Direct frame unexpectedly transferred CPU snapshots");
+      }
+      for (let i = 0; i < 3; i++) {
+        vertices[i * 7 + 4] = 0;
+        vertices[i * 7 + 6] = 255;
+      }
+      if (
+        draw(3, 0, 1) !== 1 ||
+        device.stageFrame(memory, color, depth, 0, mask, 32, 32, 102, 0) !== 1
+      ) {
+        throw new Error("Candidate frame failed");
+      }
+      present();
+      if (
+        device.readFrame(memory, color, depth, 0, mask, 32, 32, 101, 0) !== 1 ||
+        packed.getUint32(color + center, true) !== 0xff00ff00 ||
+        packed.getUint32(color + (18 * 32 + 16) * 4, true) !== 0xff0000ff ||
+        packed.getFloat32(depth + center, true) !== 0.25 ||
+        device.publishFrame(102, 0) !== 1 ||
+        device.readFrame(memory, color, depth, 0, mask, 32, 32, 101, 0) !== 0
+      ) {
+        throw new Error("Committed frame isolation/readback failed");
+      }
+      const lose = device.gl.getExtension("WEBGL_lose_context");
+      if (lose) {
+        await new Promise((resolve) => {
+          device.gl.canvas.addEventListener(
+            "webglcontextlost",
+            (event) => {
+              event.preventDefault();
+              resolve();
+            },
+            { once: true },
+          );
+          lose.loseContext();
+        });
+        if (device.readFrame(memory, color, depth, 0, mask, 32, 32, 102, 0) !== 0) {
+          throw new Error("Lost device accepted a committed snapshot read");
+        }
+        let failed = false;
+        try {
+          device.present(memory, color, 0, 0, 32, 32, 32, 32, 0, 0, 0xff000000, 102, 0);
+        } catch {
+          failed = true;
+        }
+        if (!failed) {
+          throw new Error("Lost device accepted direct presentation");
+        }
+      }
+      device.invalidateFrames();
+      if (device.publishFrame(102, 0) !== 0) {
+        throw new Error("Stale frame survived invalidation");
+      }
+      rows[rows.length - 1].committed = { ...device.metrics };
       device.gl.getExtension("WEBGL_lose_context")?.loseContext();
     }
     const device = await createGpu(normalizeGraphics({ backend: "gpu" }));

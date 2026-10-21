@@ -121,11 +121,19 @@ function submit() {
 function rasterize(drawing) {
   rasterizeDrawing(runtime, drawing);
 }
+function logicalHash() {
+  if (!runtime.runtime_materialize()) {
+    throw new Error("GPU logical snapshot synchronization failed.");
+  }
+  return runtime.runtime_hash() >>> 0;
+}
 function presentFrame(width, height) {
   if (gpu) {
     return gpu.present(
       runtime.memory,
-      runtime.runtime_logical_pixels(),
+      runtime.runtime_gpu_version_low() || runtime.runtime_gpu_version_high()
+        ? 0
+        : runtime.runtime_logical_pixels(),
       runtime.runtime_gpu_preview(),
       runtime.runtime_gpu_mask(),
       width,
@@ -134,6 +142,8 @@ function presentFrame(width, height) {
       runtime.runtime_gpu_dx(),
       runtime.runtime_gpu_dy(),
       runtime.runtime_gpu_background(),
+      runtime.runtime_gpu_version_low(),
+      runtime.runtime_gpu_version_high(),
     );
   }
   const pointer = runtime.runtime_presentation(...presentationSize);
@@ -151,7 +161,7 @@ function presentFrame(width, height) {
   };
 }
 
-function frame(present = true) {
+function frame(present = true, diagnostics = true) {
   const started = performance.now();
   const uploads = gpu ? gpu.metrics.uploadBytes + gpu.metrics.textureUploadBytes : 0;
   const drawing = submit();
@@ -171,6 +181,10 @@ function frame(present = true) {
       gpuAttachmentUploadBytes: gpu?.metrics.attachmentUploadBytes || 0,
       gpuAttachmentReadbackBytes: gpu?.metrics.attachmentReadbackBytes || 0,
       gpuAttachmentBytes: gpu?.metrics.attachmentBytes || 0,
+      gpuFrameBytes: gpu?.metrics.frameBytes || 0,
+      gpuSnapshotReadbackBytes: gpu?.metrics.snapshotReadbackBytes || 0,
+      gpuPresentationUploadBytes: gpu?.metrics.presentationUploadBytes || 0,
+      gpuDirectPresents: gpu?.metrics.directPresents || 0,
       meshUploads: gpu?.metrics.meshUploads || 0,
       memory: memoryReport(),
       resourceBytes: runtime.runtime_resource_bytes(),
@@ -183,7 +197,7 @@ function frame(present = true) {
     spriteY: record.spriteY,
     x: record.x,
     y: record.y,
-    hash: runtime.runtime_hash() >>> 0,
+    hash: diagnostics || smoke || resourceTrace || !gpu ? logicalHash() : null,
     ...(resourceTrace
       ? {
           resourceHash: runtime.runtime_resource_hash() >>> 0,
@@ -255,6 +269,10 @@ self.onmessage = async ({ data }) => {
         }
       }
       imports.env.raster_gpu = (...args) => gpu.raster(runtime.memory, ...args);
+      imports.env.stage_frame_gpu = (...args) => gpu.stageFrame(runtime.memory, ...args);
+      imports.env.read_frame_gpu = (...args) => gpu.readFrame(runtime.memory, ...args);
+      imports.env.publish_frame_gpu = (...args) => gpu.publishFrame(...args);
+      imports.env.invalidate_frame_gpu = () => gpu.invalidateFrames();
       imports.env.mesh_gpu = (...args) => gpu.queueMesh(runtime.memory, ...args);
       imports.env.texture_gpu = (...args) => gpu.queueTexture(...args);
       resourceTrace = !!data.resourceTrace;
@@ -330,7 +348,7 @@ self.onmessage = async ({ data }) => {
         runtime.runtime_sample(),
         16000,
       ).slice();
-      const output = frame();
+      const output = frame(true, false);
       drainAudio();
       startup = {
         fetchMs: fetched - start,
@@ -388,7 +406,7 @@ self.onmessage = async ({ data }) => {
         lastTick++;
       }
       if (data.render !== false) {
-        output = frame(false);
+        output = frame(false, data.diagnostics !== false);
         const started = performance.now();
         const uploads = gpu ? gpu.metrics.textureUploadBytes : 0;
         Object.assign(output, presentFrame(output.width, output.height));
@@ -409,6 +427,7 @@ self.onmessage = async ({ data }) => {
       if (!game) {
         throw new Error("No game is loaded.");
       }
+      logicalHash();
       const pixels = new Uint8Array(
         runtime.memory.buffer,
         runtime.runtime_logical_pixels(),
@@ -470,7 +489,7 @@ self.onmessage = async ({ data }) => {
             timings.push([t1 - t0, t2 - t1, t3 - t2, t4 - t3]);
           }
           if (pass === 2) {
-            traces.push({ hash: runtime.runtime_hash() >>> 0, sounds: record.sounds });
+            traces.push({ hash: logicalHash(), sounds: record.sounds });
           }
           peakLinear = Math.max(peakLinear, game.memory.buffer.byteLength);
           peakHeap = Math.max(peakHeap, game.game_heap_peak?.() || 0);

@@ -458,6 +458,7 @@ async function load(restart = false) {
           `${started && elapsed >= 500 ? ((statsFrames * 1000) / elapsed).toFixed(1) : "—"} FPS delivered · render ${m.renderMs.toFixed(1)} ms\n` +
           `GPU uploads ${mib((statsUploads * 1000) / Math.max(1, elapsed))} MiB/s · mesh uploads ${m.meshUploads}\n` +
           `GPU meshes ${mib(m.gpuCacheBytes)} MiB · textures ${mib(m.gpuTextureBytes)} MiB (est.)\n` +
+          `GPU snapshots ${mib(m.gpuFrameBytes)} MiB (included above) · read back ${mib(m.gpuSnapshotReadbackBytes)} MiB total\n` +
           `Wasm guest ${mib(m.memory.currentLinear)} MiB · runtime ${mib(m.memory.runtimeLinear)} MiB\n` +
           `Resources ${mib(m.resourceBytes)} MiB · CPU quality ${mib(m.cpuQualityBytes)} MiB (overlaps runtime)`;
         statsStarted = now;
@@ -661,6 +662,7 @@ function requestFrame(now = performance.now(), displayOpportunity = false) {
       armWatchdog(1000);
       worker.postMessage({
         type: "step",
+        diagnostics: false,
         steps,
         render,
         input: input(),

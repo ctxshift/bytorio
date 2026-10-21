@@ -140,7 +140,7 @@ material, camera, clip and pipeline state changes and across load passes using
 the same color/depth pair. These boundaries execute pending geometry without
 resolving or transferring its samples. One active attachment pair is retained;
 switching targets, clearing color/depth, CPU composition, explicit readbacks,
-CPU fallback under memory pressure and transaction publication synchronize it.
+and CPU fallback under memory pressure synchronize it.
 Synchronization resolves color and packed f32 depth into transaction-owned
 attachments, so CPU consumers observe completed drawing. Only successful commit publishes
 attachments and presentation data. Rollback frees temporary staging and keeps
@@ -170,13 +170,31 @@ replace transaction-owned attachments without copying discarded old pixels;
 failed packets preserve the original attachments. Checked packed word decoding
 replaces repeated per-byte decoding, and fully overwritten scratch skips zeroing.
 
-CPU 2D composition and logical color/depth readback barriers remain. Residency
-ends at transaction publication; committed resource snapshots remain CPU-owned.
-No supplied pointer survives a synchronous device call, and the next transaction
-initializes fresh scratch even after a rejected packet or device failure. Final GPU
-presentation currently uploads these logical snapshots; it avoids constructing
-or transferring an enlarged CPU image. Publishing committed GPU attachments for
-direct final presentation remains a later slice.
+When the final presentation consumes the pending RGBA attachment, successful
+commit publishes a versioned GPU snapshot. A second snapshot slot protects the
+previous committed image while a candidate resolves; publication itself swaps
+host metadata after validation and device work succeed. Failed packets and
+staging failures leave the displayed snapshot unchanged. The presenter samples
+that committed texture directly, without reading the world back or uploading a
+CPU copy. Opaque default-pipeline screen HUD draws use a separate color/coverage
+layer. Translucent/custom composition and 3D following a HUD synchronize normally.
+
+CPU resource bytes become current lazily before copy-on-write preservation,
+readback, texture/copy consumption, hashes, captures, software fallback, or
+releasing backing storage that the last snapshot still represents. Fully
+overwritten color/depth pairs need no old-frame readback. Final presentation
+followed by additional commands uses the conservative CPU snapshot path. Device
+callbacks consume supplied pointers synchronously; the GPU owns its copies.
+Snapshot versions survive neither session reset nor device invalidation. A lost
+device reports an error rather than silently displaying a stale or partial frame;
+restart with CPU rendering remains available. The default CPU path allocates no
+GPU snapshots. These rules apply equally to both cartridge SDKs.
+
+Two logical resolved color/depth snapshot pairs, with optional HUD color/mask,
+are bounded by the display modes (plus smooth-pan overscan), independent of SSAA
+working storage. Diagnostic hashes intentionally synchronize; ordinary browser
+player steps omit hashes and explicit diagnostic steps retain them. CPU hashes
+and captures continue to represent logical game pixels.
 Use [riverside measurements](riverside-console-measurements.md) for qualified
 costs; this experimental integration does not guarantee 60 fps on every device.
 
@@ -218,13 +236,22 @@ of hardware GPU availability.
 
 Attachment diagnostics report cumulative `attachmentUploadBytes`,
 `attachmentReadbackBytes`, `attachmentBatches` and `attachmentSequences` in native
-and browser benchmark `gpuStats`. A sequence uploads one logical color/depth pair,
-executes compatible batches, then reads one resolved pair at its barrier.
+and browser benchmark `gpuStats`. A sequence uploads one logical color/depth pair
+and executes compatible batches. CPU barriers read one resolved pair; successful
+direct publication resolves into an inactive GPU snapshot instead.
 `attachmentBytes` estimates currently allocated input and scratch texture storage;
 it is not transferred bytes or a driver memory measurement. In browser metrics it
 is already included in `textureBytes`, so do not add it twice. Geometry/material
 cache counters remain separate. Live browser frame metrics expose the cumulative
-attachment byte counters with a `gpuAttachment` prefix.
+attachment byte counters with a `gpuAttachment` prefix. `publishedFrames` and
+`directPresents` count successful publications and direct presentation calls.
+`snapshotReadbackBytes` is the subset of attachment readbacks requested from
+committed snapshots. `presentationUploadBytes` counts direct-path HUD color/mask
+uploads; an eligible world-only frame transfers zero presentation bytes.
+`frameBytes` estimates both GPU snapshot slots and is already included in browser
+`textureBytes`. It excludes the final display framebuffer and driver overhead.
+Browser live metrics expose these with a `gpu` prefix. None of these allocation
+estimates should be summed with overlapping totals.
 
 Use `mise run bench:attachments` for the rotating imported-model proxy. An optional
 `-- --baseline <old-export-root>` compares preserved exports containing the same

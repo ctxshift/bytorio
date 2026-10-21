@@ -94,6 +94,7 @@ mesh_owned :: proc(t: ^Transaction, id: u32, kind: Kind, preserve := true) -> ^S
 
     original := &t.registry.slots[(id & w.handleIndexMask) - 1]
     if raw_data(slot.data) == raw_data(original.data) {
+        if preserve && !ensure_cpu_slot(t, slot) { return nil }
         bytes, ok := allocate(t, len(slot.data), zero = false)
         if !ok {
             return nil
@@ -398,6 +399,11 @@ cross3 :: proc(a, b: [3]f64) -> [3]f64 {
 }
 
 raster_mesh :: proc(t: ^Transaction, mesh: ^Slot, model: Matrix, material: ^Slot = nil) -> bool {
+    if t.gpu_overlay {
+        if !sync_raster(t) { return false }
+        t.gpu_overlay = false
+        for &value in t.preview_mask { value = 0 }
+    }
     camera := lookup(t, t.render.camera, .Camera)
     view, _ := matrix_read(camera.data[:w.modelBytes])
     texture_view: Texture_View

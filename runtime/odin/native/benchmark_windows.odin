@@ -103,6 +103,7 @@ benchmark :: proc(app: ^App, path: string, startup_ms: f64, baseline_working: ui
                 append(&timings, [3]f64{t1 - t0, t2 - t1, t3 - t2})
             }
             if pass == 2 {
+                if !guest.materialize_graphics(&app.game) { return error(app.game.error) }
 
                 append(&hashes, core.hash())
                 append(&sounds, app.frame.sounds)
@@ -132,8 +133,9 @@ benchmark :: proc(app: ^App, path: string, startup_ms: f64, baseline_working: ui
         counts := gpu.statistics()
         textures := gpu.texture_statistics()
         attachments := gpu.attachment_statistics()
+        frames := gpu.frame_statistics()
         fmt.printf(
-            "\"gpuStats\":{{\"meshUploads\":%d,\"cacheHits\":%d,\"uploadBytes\":%d,\"materialUploads\":%d,\"materialCacheHits\":%d,\"materialUploadBytes\":%d,\"materialCacheBytes\":%d,\"attachmentUploadBytes\":%d,\"attachmentReadbackBytes\":%d,\"attachmentBatches\":%d,\"attachmentSequences\":%d,\"attachmentBytes\":%d,\"gpuPresentation\":true}},",
+            "\"gpuStats\":{{\"meshUploads\":%d,\"cacheHits\":%d,\"uploadBytes\":%d,\"materialUploads\":%d,\"materialCacheHits\":%d,\"materialUploadBytes\":%d,\"materialCacheBytes\":%d,\"attachmentUploadBytes\":%d,\"attachmentReadbackBytes\":%d,\"attachmentBatches\":%d,\"attachmentSequences\":%d,\"attachmentBytes\":%d,\"publishedFrames\":%d,\"directPresents\":%d,\"snapshotReadbackBytes\":%d,\"presentationUploadBytes\":%d,\"frameBytes\":%d,\"gpuPresentation\":true}},",
             counts[0],
             counts[1],
             counts[2],
@@ -146,6 +148,11 @@ benchmark :: proc(app: ^App, path: string, startup_ms: f64, baseline_working: ui
             attachments[2],
             attachments[3],
             gpu.attachment_storage_bytes(),
+            frames[0],
+            frames[1],
+            frames[2],
+            frames[3],
+            frames[4],
         )
     }
     storage := resources.mesh_storage(&app.game.resources)

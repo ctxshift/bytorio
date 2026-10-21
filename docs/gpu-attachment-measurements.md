@@ -7,7 +7,7 @@ a CPU text HUD. It exercises two material batches per frame through both SDKs.
 It is a small renderer proxy, not a complete racing game or a minimum-device
 qualification. GPU acceleration and resident geometry were explicitly enabled.
 
-## Comparison
+## Compatible-batch residency
 
 The baseline preserves player exports from before attachment residency
 (source revision `b35d4b3`). Both versions load the same newly built PNG cartridge,
@@ -46,6 +46,62 @@ geometry/material caches, CPU snapshots and final presentation storage. Browser
 `textureBytes` already includes attachment storage. These are allocation
 estimates, not measurements of driver memory.
 
+## Direct committed presentation
+
+A second comparison preserves the compatible-batch player at `cf4226c`, before
+direct committed presentation, and uses the same method and identical current
+cartridge bytes on both players. These are separate sequential runs from the
+first table; compare within each table rather than across sessions.
+
+| SDK | SSAA | Native before → after (ms) | Browser before → after (ms) |
+| --- | --- | --- | --- |
+| Odin | Off | 0.757 → 0.702 | 1.600 → 1.200 |
+| Luau | Off | 1.274 → 0.715 | 1.600 → 1.100 |
+| Odin | 1080p | 0.934 → 0.860 | 3.200 → 1.300 |
+| Luau | 1080p | 1.356 → 1.044 | 1.800 → 1.200 |
+
+The 225 frames now publish 225 GPU snapshots. Native presents 224 times because
+its initialization frame is not displayed; the browser presents all 225.
+Readbacks fall from 103,680,000 to 14,745,600 bytes (85.8%). All remaining
+readbacks are the 32 explicit logical diagnostic hashes in one replay, outside
+the measured phases. Ordinary eligible frames perform no world readback or
+final world upload. Initial attachment uploads remain 103,680,000 bytes; this
+change does not retain per-sample depth across separate transactions.
+
+Opaque HUD composition currently uploads full logical color/mask textures:
+288,000 bytes per frame, compared with the old 230,400-byte final color upload.
+Thus browser total texture uploads rise 8.3%, from 155,520,256 to 168,480,256
+bytes, while total attachment readback plus texture upload falls 29.3%.
+This is an explicit tradeoff, not a zero-transfer claim. Sparse HUD upload
+regions could reduce it later. A world-only frame uploads no HUD textures.
+
+The two committed snapshot slots allocate 1,497,600 bytes at this logical
+resolution, including color, packed depth and HUD color/mask. This cost is
+independent of SSAA, additional to working attachments, and already included
+in browser `textureBytes`. Geometry reuse is unchanged: 16 uploads and 434 hits.
+Native/browser output traces agree, and SSAA-off traces match the baseline.
+
+The full riverside cartridge also passes both SDKs/native/browser at 320×180
+and 640×360 with resident geometry, 1080p SSAA, snapping and smooth presentation.
+Five measured 30-frame pan and orbit replays follow two warmups, excluding each
+replay's 58 loading/settling frames. The table shows the larger p95 of pan/orbit:
+
+| SDK | Logical width | Native p95 (ms) | Browser p95 (ms) |
+| --- | --- | --- | --- |
+| Odin | 320 | 3.347 | 4.600 |
+| Odin | 640 | 4.725 | 4.600 |
+| Luau | 320 | 3.353 | 3.700 |
+| Luau | 640 | 5.143 | 4.600 |
+
+Every measured sample stays below 16.67 ms on this machine. These timings include
+GPU completion and exclude window/compositor/scanout, audio and Worker delivery;
+they do not establish delivered 60 FPS on other hardware. Same-host SDK hashes
+match exactly; cross-host pixels satisfy the existing bounded SSAA edge tolerance.
+Each run publishes/presents 266 GPU frames with zero HUD upload bytes. Explicit
+logical diagnostics still read snapshots; CPU loading frames also upload their
+presentation. Run `mise run bench:riverside`; its raw report is
+`build/compact-3d/riverside/performance.json`.
+
 ## Reproduction and limits
 
 Preserve the older exports before rebuilding, then run from the repository root:
@@ -68,10 +124,15 @@ readbacks, stale handles and rollback after draw/synchronization failures.
 Textured-mesh, billboard and imported-model GPU integration suites exercise both
 SDKs, streamed/resident geometry and native/browser hosts.
 
-Residency currently ends at CPU consumers and transaction publication. Final
-presentation still uploads the committed logical snapshot. Clears and target
-switches synchronize conservatively, and multiple screen batches retain the
-existing restrictions on smooth presentation. Direct publication/presentation,
-a representative complete racer and integrated/mobile GPU qualification remain
-separate work. CPU rendering remains the default and its conformance remains
-independent of GPU availability.
+Direct snapshot fixtures independently check displayed world/HUD pixels, lazy
+color/depth reads, version isolation, repeated presentation without transfers,
+and invalidation at all three qualities. Common transaction tests cover staging,
+publication and read failures, late rejection, destruction, offscreen readback,
+HUD/3D ordering and partial-alpha fallback. Browser fixtures additionally inject
+real context loss. Hashes and captures intentionally restore logical CPU data.
+
+Clears, target switches and CPU consumers synchronize conservatively. Multiple
+screen batches retain the existing restrictions on smooth presentation. A
+representative complete racer and integrated/mobile GPU qualification remain
+separate work; the fixture cannot establish their performance. CPU rendering
+remains the default and its conformance remains independent of GPU availability.

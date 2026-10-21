@@ -22,6 +22,12 @@ present :: proc(
     window := false,
 ) -> bool {
     if !sdl.GL_MakeCurrent(device.window, device.gl_context) { return false }
+    snapshot := &device.frames[device.committed_frame]
+    direct := r.gpu_frame.job.version != 0
+    if direct &&
+       (snapshot.version != r.gpu_frame.job.version ||
+               snapshot.width != width ||
+               snapshot.height != height) { return false }
     scale :=
         max(1, min(6, 1920 / width, 1080 / height, available_width / width, available_height / height)) if r.preview_enabled else 1
     smooth := r.preview_enabled && scale > 1
@@ -48,7 +54,10 @@ present :: proc(
     program := device.present_program
     gl.UseProgram(program)
     gl.ActiveTexture(gl.TEXTURE0)
-    if smooth {
+    if direct {
+        gl.BindTexture(gl.TEXTURE_2D, snapshot.textures[0])
+        device.direct_presents += 1
+    } else if smooth {
         allocate(device.present_input[0], width + 2, height + 2, data = raw_data(r.preview))
     } else {
         allocate(device.present_input[0], width, height, data = raw_data(pixels))
@@ -57,11 +66,16 @@ present :: proc(
     // All samplers must point at initialized inputs, never the attached output.
     for unit in 1 ..< 3 {
         gl.ActiveTexture(gl.TEXTURE0 + u32(unit))
-        gl.BindTexture(gl.TEXTURE_2D, device.present_input[0])
+        gl.BindTexture(gl.TEXTURE_2D, snapshot.textures[0] if direct else device.present_input[0])
     }
     gl.Uniform1i(gl.GetUniformLocation(program, "depthSource"), 1)
     gl.Uniform1i(gl.GetUniformLocation(program, "hudSource"), 2)
-    if smooth {
+    if direct && snapshot.has_hud {
+        gl.ActiveTexture(gl.TEXTURE1)
+        gl.BindTexture(gl.TEXTURE_2D, snapshot.hud)
+        gl.ActiveTexture(gl.TEXTURE2)
+        gl.BindTexture(gl.TEXTURE_2D, snapshot.mask)
+    } else if !direct && smooth {
         gl.ActiveTexture(gl.TEXTURE1)
         allocate(device.present_input[1], width, height, data = raw_data(pixels))
         gl.Uniform1i(gl.GetUniformLocation(program, "depthSource"), 1)
@@ -77,6 +91,14 @@ present :: proc(
     )
     gl.Uniform1i(gl.GetUniformLocation(program, "scale"), i32(scale))
     gl.Uniform1i(gl.GetUniformLocation(program, "useSmooth"), i32(smooth))
+    gl.Uniform1i(
+        gl.GetUniformLocation(program, "useHud"),
+        i32(snapshot.has_hud if direct else smooth),
+    )
+    gl.Uniform1i(
+        gl.GetUniformLocation(program, "sourceBorder"),
+        i32(snapshot.border) if direct else i32(smooth),
+    )
     gl.Uniform1i(gl.GetUniformLocation(program, "flipY"), 0)
     gl.Uniform1i(gl.GetUniformLocation(program, "outputHeight"), i32(out_height))
     background := r.preview_background
