@@ -1,5 +1,6 @@
-min_version = "2026.10.15"
 include = [".mise/toolchain.toml"]
+# Do not bump without permission
+min_version = "2026.10.8"
 monorepo_root = true
 
 [monorepo]
@@ -55,37 +56,6 @@ run = "node tools/format-code.mjs cpp"
 [tasks."build:odin"]
 description = "Build standalone native/browser players and fixtures"
 # Skip the nested graph on unchanged builds; tests verify this aggregate contract.
-sources = [
-  ".mise/tasks/player.toml",
-  ".mise/toolchain.toml",
-  "examples/hello/odin/**/*.odin",
-  "runtime/odin/abi/**/*.odin",
-  "runtime/odin/audio/**/*.odin",
-  "runtime/odin/audio_web/**/*.odin",
-  "runtime/odin/branding/**/*.odin",
-  "runtime/odin/cartridge/**/*.odin",
-  "runtime/odin/core/**/*.odin",
-  "runtime/odin/gpu/*.frag",
-  "runtime/odin/gpu/*.vert",
-  "runtime/odin/gpu/native/**/*.odin",
-  "runtime/odin/gpu/surface/**/*.odin",
-  "runtime/odin/guest/**/*.odin",
-  "runtime/odin/native/**/*.odin",
-  "runtime/odin/presentation/**/*.odin",
-  "runtime/odin/resource_protocol/**/*.odin",
-  "runtime/odin/resources/**/*.odin",
-  "runtime/odin/timing/**/*.odin",
-  "runtime/odin/web/**/*.odin",
-  "runtime/odin/web/*.html",
-  "runtime/odin/web/*.js",
-  "runtime/odin/web/constants.js",
-  "tests/odin/fixtures/**/*.odin",
-  "tools/command-timing.mjs",
-  "tools/player-build.mjs",
-  "tools/player-export.mjs",
-  "tools/stage-player.mjs",
-  "tools/toolchain.mjs",
-]
 outputs = [
   "build/odin-player/native/SDL3.dll",
   "build/odin-player/native/game.wasm",
@@ -129,7 +99,38 @@ outputs = [
   "build/odin-player/web/runtime.wasm",
   "build/odin-player/web/worker.js",
 ]
-run = [{ task = "deps:player:all" }]
+run = [{task = "deps:player:all"}]
+sources = [
+  ".mise/tasks/player.toml",
+  ".mise/toolchain.toml",
+  "examples/hello/odin/**/*.odin",
+  "runtime/odin/abi/**/*.odin",
+  "runtime/odin/audio/**/*.odin",
+  "runtime/odin/audio_web/**/*.odin",
+  "runtime/odin/branding/**/*.odin",
+  "runtime/odin/cartridge/**/*.odin",
+  "runtime/odin/core/**/*.odin",
+  "runtime/odin/gpu/*.frag",
+  "runtime/odin/gpu/*.vert",
+  "runtime/odin/gpu/native/**/*.odin",
+  "runtime/odin/gpu/surface/**/*.odin",
+  "runtime/odin/guest/**/*.odin",
+  "runtime/odin/native/**/*.odin",
+  "runtime/odin/presentation/**/*.odin",
+  "runtime/odin/resource_protocol/**/*.odin",
+  "runtime/odin/resources/**/*.odin",
+  "runtime/odin/timing/**/*.odin",
+  "runtime/odin/web/**/*.odin",
+  "runtime/odin/web/*.html",
+  "runtime/odin/web/*.js",
+  "runtime/odin/web/constants.js",
+  "tests/odin/fixtures/**/*.odin",
+  "tools/command-timing.mjs",
+  "tools/player-build.mjs",
+  "tools/player-export.mjs",
+  "tools/stage-player.mjs",
+  "tools/toolchain.mjs",
+]
 
 [tasks."test:sdk"]
 run = ["node tools/verify-sdk.mjs", "node tools/verify-sdk-cli.mjs"]
@@ -206,7 +207,7 @@ run = [
   {task = "test:3d"},
   {task = "test:textured3d"},
   {task = "test:billboards"},
-    {task = "//examples/effects:test"},
+  {task = "//examples/effects:test"},
   {task = "test:models"},
   {task = "//examples/kart3d:test"},
   {task = "test:riverside:geometry"},
@@ -250,25 +251,25 @@ description = "Measure cold, warm and edited builds in an isolated checkout"
 run = "node tools/measure-build-tasks.mjs"
 
 [tasks."test:kart3d"]
-run = [{ task = "//examples/kart3d:test" }]
+run = [{task = "//examples/kart3d:test"}]
 
 [tasks."test:kart3d:gpu"]
-run = [{ task = "//examples/kart3d:test:gpu" }]
+run = [{task = "//examples/kart3d:test:gpu"}]
 
 [tasks."test:rpg"]
-run = [{ task = "//examples/rpg:test" }]
+run = [{task = "//examples/rpg:test"}]
 
 [tasks."test:racing"]
-run = [{ task = "//examples/racing:test" }]
+run = [{task = "//examples/racing:test"}]
 
 [tasks."test:voxel-resolution"]
-run = [{ task = "//experiments/voxel-resolution:test" }]
+run = [{task = "//experiments/voxel-resolution:test"}]
 
 [tasks."test:riverside:geometry"]
-run = [{ task = "//experiments/voxel-resolution:test:geometry" }]
+run = [{task = "//experiments/voxel-resolution:test:geometry"}]
 
 [tasks."test:riverside:surface"]
-run = [{ task = "//experiments/voxel-resolution:test:surface" }]
+run = [{task = "//experiments/voxel-resolution:test:surface"}]
 
 [tasks."test:riverside:controls"]
-run = [{ task = "//experiments/voxel-resolution:test:controls" }]
+run = [{task = "//experiments/voxel-resolution:test:controls"}]

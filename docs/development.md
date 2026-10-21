@@ -6,7 +6,7 @@ root CMake build have been removed; historical implementations remain in Git.
 
 ## Prerequisites
 
-Use [mise](https://mise.jdx.dev/) 2026.10.15 or newer and the pinned toolchain in
+Use [mise](https://mise.jdx.dev/) 2026.10.8 or newer and the pinned toolchain in
 `.mise/toolchain.toml`, included by `mise.toml` and also described in
 [Odin development](odin-development.md). The SDK CLI currently targets Windows
 x64 development. Players need neither a compiler nor Node.js to run.
