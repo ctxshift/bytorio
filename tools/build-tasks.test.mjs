@@ -13,6 +13,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, matchesGlob, relative, resolve } from "node:path";
 import { test } from "node:test";
+import { stagePlayerSupport } from "./player-export.mjs";
 import { repo } from "./toolchain.mjs";
 
 const mise = process.env.MISE_BIN || "mise";
@@ -30,6 +31,22 @@ const tasks = JSON.parse(execute(["tasks", "ls", "--json"])).filter(
 );
 const byName = new Map(tasks.map((task) => [task.name, task]));
 const forward = (path) => path.replaceAll("\\", "/");
+
+test("aggregate cache covers every player input and output", () => {
+  const aggregate = byName.get("build:odin");
+  assert.ok(aggregate.sources.includes(".mise/tasks/player.toml"));
+  for (const task of tasks.filter(({ name }) => name.startsWith("deps:player:"))) {
+    for (const source of task.sources) {
+      assert.ok(aggregate.sources.includes(source), `aggregate omits ${task.name} input ${source}`);
+    }
+    for (const output of task.outputs) {
+      assert.ok(
+        aggregate.outputs.includes(output),
+        `aggregate omits ${task.name} output ${output}`,
+      );
+    }
+  }
+});
 
 function covered(file, sources) {
   return sources.some((pattern) => matchesGlob(forward(file), pattern));
@@ -111,7 +128,10 @@ function fixture() {
         text += `${key} = ${JSON.stringify(task[key])}\n`;
       }
     }
-    if (task.outputs.length) {
+    if (task.name === "build:odin") {
+      assert.ok(task.run.every((entry) => Object.keys(entry).length === 1 && entry.task));
+      text += `run = [${task.run.map((entry) => `{ task = ${JSON.stringify(entry.task)} }`).join(", ")}]\n`;
+    } else if (task.outputs.length) {
       outputs[task.name] = task.outputs;
       text += `run = ${JSON.stringify(`"${process.execPath}" cache-fixture.mjs ${task.name}`)}\n`;
     }
@@ -158,9 +178,10 @@ appendFileSync("events.jsonl", JSON.stringify(name) + "\\n");
     put(root, file, "fixture\n");
   }
   function run(...names) {
+    const flags = names[0] === "--force" ? [names.shift()] : [];
     writeFileSync(resolve(root, "events.jsonl"), "");
     const selection = names.flatMap((name, index) => (index ? [":::", name] : [name]));
-    execute(["run", "--jobs", "1", ...selection], root, env);
+    execute(["run", "--jobs", "1", ...flags, ...selection], root, env);
     return readFileSync(resolve(root, "events.jsonl"), "utf8")
       .trim()
       .split("\n")
@@ -177,6 +198,7 @@ test("mise rebuilds only the artifacts affected by edits and missing outputs", a
   const all = Object.keys(outputs).sort();
   assert.deepEqual(run(...targets), all);
   assert.deepEqual(run(...targets), [], "unchanged inputs reuse every artifact");
+  assert.deepEqual(run("--force", ...targets), all, "force reaches the nested player graph");
 
   async function edit(file, expected) {
     // Separate modification times on filesystems whose clock has millisecond precision.
@@ -213,10 +235,42 @@ test("mise rebuilds only the artifacts affected by edits and missing outputs", a
   for (const [name, files] of Object.entries(outputs)) {
     const missing = files.at(-1);
     unlinkSync(resolve(root, missing));
-    assert.deepEqual(run(name), [name], `recover missing ${missing}`);
+    assert.deepEqual(run(...targets), [name], `recover missing ${missing} through aggregate`);
     for (const file of files) {
       assert.ok(existsSync(resolve(root, file)));
     }
   }
   assert.deepEqual(run(...targets), []);
+});
+
+test("support task outputs cover every staged file", async () => {
+  const root = mkdtempSync(join(tmpdir(), "player-support-inventory-"));
+  const compilerRoot = resolve(root, "compiler");
+  const dependency = resolve(root, "dependency/lib");
+  for (const file of [
+    "LICENSE",
+    "vendor/sdl3/SDL3.dll",
+    "vendor/sdl3/LICENSE.txt",
+    "vendor/OpenGL/LICENSE",
+    "vendor/OpenGL/LICENSE_glad",
+  ]) {
+    put(compilerRoot, file, "fixture");
+  }
+  put(dependency, "wasmtime.dll", "fixture");
+  put(dependency, "../LICENSE", "fixture");
+  function files(directory, prefix = "") {
+    return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+      const name = prefix + entry.name;
+      return entry.isDirectory() ? files(resolve(directory, entry.name), name + "/") : [name];
+    });
+  }
+  for (const platform of ["web", "native"]) {
+    const target = resolve(root, platform);
+    await stagePlayerSupport({ platform, target, compilerRoot, dependency });
+    const declared = byName
+      .get(`deps:player:${platform}-support`)
+      .outputs.map((file) => file.replace(`build/odin-player/${platform}/`, ""))
+      .sort();
+    assert.deepEqual(files(target).sort(), declared, platform);
+  }
 });

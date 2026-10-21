@@ -43,7 +43,82 @@ run = "node tools/format-code.mjs cpp"
 
 [tasks."build:odin"]
 description = "Build standalone native/browser players and fixtures"
-depends = ["deps:player:web", "deps:player:native", "deps:player:fixtures"]
+# Skip the nested graph on unchanged builds; tests verify this aggregate contract.
+sources = [
+  ".mise/tasks/player.toml",
+  ".mise/toolchain.toml",
+  "examples/hello-odin/**/*.odin",
+  "runtime/odin/abi/**/*.odin",
+  "runtime/odin/audio/**/*.odin",
+  "runtime/odin/audio_web/**/*.odin",
+  "runtime/odin/branding/**/*.odin",
+  "runtime/odin/cartridge/**/*.odin",
+  "runtime/odin/core/**/*.odin",
+  "runtime/odin/gpu/*.frag",
+  "runtime/odin/gpu/*.vert",
+  "runtime/odin/gpu/native/**/*.odin",
+  "runtime/odin/gpu/surface/**/*.odin",
+  "runtime/odin/guest/**/*.odin",
+  "runtime/odin/native/**/*.odin",
+  "runtime/odin/presentation/**/*.odin",
+  "runtime/odin/resource_protocol/**/*.odin",
+  "runtime/odin/resources/**/*.odin",
+  "runtime/odin/timing/**/*.odin",
+  "runtime/odin/web/**/*.odin",
+  "runtime/odin/web/*.html",
+  "runtime/odin/web/*.js",
+  "runtime/odin/web/constants.js",
+  "tests/odin/fixtures/**/*.odin",
+  "tools/command-timing.mjs",
+  "tools/player-build.mjs",
+  "tools/player-export.mjs",
+  "tools/stage-player.mjs",
+  "tools/toolchain.mjs",
+]
+outputs = [
+  "build/odin-player/native/SDL3.dll",
+  "build/odin-player/native/game.wasm",
+  "build/odin-player/native/licenses/glad.txt",
+  "build/odin-player/native/licenses/odin.txt",
+  "build/odin-player/native/licenses/opengl.txt",
+  "build/odin-player/native/licenses/sdl3.txt",
+  "build/odin-player/native/licenses/wasmtime.txt",
+  "build/odin-player/native/player.exe",
+  "build/odin-player/native/wasmtime.dll",
+  "build/odin-player/web/audio-worklet.js",
+  "build/odin-player/web/audio.wasm",
+  "build/odin-player/web/cartridge.js",
+  "build/odin-player/web/constants.js",
+  "build/odin-player/web/executor-cache-core.js",
+  "build/odin-player/web/executor-cache.js",
+  "build/odin-player/web/fixtures/abi.wasm",
+  "build/odin-player/web/fixtures/command.wasm",
+  "build/odin-player/web/fixtures/list-command.wasm",
+  "build/odin-player/web/fixtures/list-count.wasm",
+  "build/odin-player/web/fixtures/list-offset.wasm",
+  "build/odin-player/web/fixtures/loop.wasm",
+  "build/odin-player/web/fixtures/offset.wasm",
+  "build/odin-player/web/fixtures/trap.wasm",
+  "build/odin-player/web/frame-clock.js",
+  "build/odin-player/web/game.wasm",
+  "build/odin-player/web/gpu-shaders/fullscreen.vert",
+  "build/odin-player/web/gpu-shaders/initialize.frag",
+  "build/odin-player/web/gpu-shaders/mesh.frag",
+  "build/odin-player/web/gpu-shaders/mesh.vert",
+  "build/odin-player/web/gpu-shaders/present.frag",
+  "build/odin-player/web/gpu-shaders/resident.vert",
+  "build/odin-player/web/gpu-shaders/resolve.frag",
+  "build/odin-player/web/gpu-surface.js",
+  "build/odin-player/web/gpu.js",
+  "build/odin-player/web/licenses/odin.txt",
+  "build/odin-player/web/player.html",
+  "build/odin-player/web/player.js",
+  "build/odin-player/web/policy.js",
+  "build/odin-player/web/runtime-gpu.wasm",
+  "build/odin-player/web/runtime.wasm",
+  "build/odin-player/web/worker.js",
+]
+run = [{ task = "deps:player:all" }]
 
 [tasks."build:rpg"]
 depends = ["deps:luau"]
@@ -224,3 +299,7 @@ run = "node experiments/luau-executor/verify-cache.mjs"
 [tasks."test:build-tasks"]
 description = "Check build input coverage and artifact invalidation"
 run = "node --test tools/build-tasks.test.mjs"
+
+[tasks."bench:build-tasks"]
+description = "Measure cold, warm and edited builds in an isolated checkout"
+run = "node tools/measure-build-tasks.mjs"

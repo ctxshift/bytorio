@@ -1,3 +1,6 @@
+["deps:player:all"]
+depends = ["deps:player:web", "deps:player:native", "deps:player:fixtures"]
+
 # Cache compiled artifacts independently from copied support files. Tests always run.
 
 ["deps:player:web"]

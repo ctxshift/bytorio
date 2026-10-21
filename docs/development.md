@@ -65,7 +65,7 @@ one start/result line per task and retains complete output in unique
 `build/validation/<run>/` logs. `report.json` is updated after every task with
 durations, exit codes, timeout state, Node/platform information, Git revision,
 and content fingerprints of tracked and nonignored untracked files. Tool pins
-are included through the fingerprinted `mise.toml` and dependency task files.
+are included through the fingerprinted `.mise/toolchain.toml` and task files.
 Logs may contain local diagnostic paths; they remain ignored build artifacts.
 
 A failed launch or a 30-minute task deadline fails validation. A detected source
@@ -127,6 +127,8 @@ tasks from `.mise/tasks/player.toml`: native, CPU Wasm, GPU Wasm, audio Wasm,
 hello cartridge, fault fixtures, and native/browser support files. A missing
 output rebuilds its owning task. Browser script edits restage browser support;
 shader edits also rebuild the native player, which embeds the shaders.
+An aggregate input/output check skips the nested task graph for unchanged builds.
+Its inventory must cover every player task; the regression suite checks this.
 
 Tool pins live in `.mise/toolchain.toml` so ordinary command changes in
 `mise.toml` do not invalidate compiled players. Update pins in that file. After
@@ -135,6 +137,12 @@ an external tool override or an in-place tool installation change, use
 Odin imports and embedded shaders, then exercises mise invalidation in a temporary
 fixture with inexpensive substitute commands. Existing conformance suites still
 compile and execute the real players.
+
+Run `mise run bench:build-tasks -- --label comparison` in an idle isolated
+checkout to retain cold, warm and representative edit timings. It temporarily
+adds comments to source files and restores their original bytes and timestamps.
+See [build iteration measurements](build-iteration-measurements.md) for results,
+methodology and limits.
 
 ```text
 npm run lint
