@@ -9,9 +9,9 @@ console backend separately from the independent WebGL viewer.
 From the repository root:
 
 ```text
-mise run build:riverside
-mise run bench:riverside
-mise run bench:riverside:startup
+mise run //experiments/voxel-resolution:build:console
+mise run //experiments/voxel-resolution:benchmark:console
+mise run //experiments/voxel-resolution:benchmark:startup
 ```
 
 The hardware benchmark requires native OpenGL and installed Chrome with WebGL2;
@@ -218,7 +218,7 @@ instead of waiting for another monitor refresh before dispatching to the Worker.
 Native catch-up uses the same update-then-draw ordering. Replay benchmarks retain
 one draw per recorded tick, so their deterministic traces do not change.
 
-`mise run bench:riverside:cpu` measures actual browser frame delivery through the
+`mise run //experiments/voxel-resolution:benchmark:cpu` measures actual browser frame delivery through the
 player UI, with 1920×1080 presentation and two seconds of observation per case.
 Loading plus 12 updates precede measurement. It records runtime/script/cartridge
 hashes, FPS, render p50/p95 and memory in
@@ -278,7 +278,7 @@ With a warm native executor cache, Luau reaches the complete scene in about
 reload does not report an application cache hit. Restarting within the same page
 does reuse the compiled executor, verified by the benchmark's cache-hit checks.
 
-Run `mise run validate bench:riverside:startup`. The retained report is
+Run `mise run validate //experiments/voxel-resolution:benchmark:startup`. The retained report is
 `build/riverside-startup/report.json`, including sizes, hashes, individual samples,
 cache behavior and native stock-player image checks. The benchmark builds a
 speed-optimized copy of native player sources under ignored build output, with

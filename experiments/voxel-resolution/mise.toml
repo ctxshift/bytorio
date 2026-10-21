@@ -1,0 +1,67 @@
+[tasks."build"]
+dir = "../.."
+description = "Render both voxel scenes at three output resolutions"
+run = ["node experiments/voxel-resolution/render.mjs", "node experiments/voxel-resolution/river.mjs"]
+
+[tasks."serve"]
+dir = "../.."
+depends = ["//experiments/voxel-resolution:build"]
+description = "Serve the generated voxel resolution comparison"
+run = "node tools/serve.mjs build/compact-3d/resolution"
+
+[tasks."test"]
+dir = "../.."
+depends = ["//experiments/voxel-resolution:build"]
+description = "Verify live supersampling, native dimensions and rabbit/camera controls"
+run = [
+  "node experiments/voxel-resolution/verify-river.mjs",
+  "node experiments/voxel-resolution/verify-stability.mjs",
+  "node experiments/voxel-resolution/verify-presentation.mjs",
+]
+
+[tasks."benchmark"]
+dir = "../.."
+depends = ["//experiments/voxel-resolution:build"]
+description = "Measure riverside CPU, GPU and frame pacing on installed Chrome"
+run = "node experiments/voxel-resolution/benchmark.mjs"
+
+[tasks."build:console"]
+dir = "../.."
+depends = ["//:build:odin", "//experiments/voxel-resolution:build"]
+description = "Package the full riverside surface field through both SDKs"
+run = "node experiments/voxel-resolution/console-build.mjs"
+
+[tasks."benchmark:console"]
+dir = "../.."
+depends = ["//experiments/voxel-resolution:build:console"]
+description = "Verify and measure the full riverside cartridges on native and browser GPU hosts"
+run = "node experiments/voxel-resolution/console-benchmark.mjs"
+
+[tasks."test:geometry"]
+dir = "../.."
+description = "Check riverside face coverage, encoding and bounded compression"
+run = "node --test experiments/voxel-resolution/console-mesh.test.mjs tools/gpu-surface.test.mjs"
+
+[tasks."test:surface"]
+dir = "../.."
+depends = ["//experiments/voxel-resolution:build:console"]
+description = "Verify whole-scene surface samples on native and browser GPU hosts"
+run = "node experiments/voxel-resolution/verify-console-surface.mjs"
+
+[tasks."benchmark:cpu"]
+dir = "../.."
+depends = ["//experiments/voxel-resolution:build:console"]
+description = "Measure interactive CPU quality modes and final canvas delivery"
+run = "node experiments/voxel-resolution/console-cpu-benchmark.mjs"
+
+[tasks."benchmark:startup"]
+dir = "../.."
+depends = ["//experiments/voxel-resolution:build:console"]
+description = "Measure cartridge sizes and first complete scene on native and browser"
+run = "node experiments/voxel-resolution/console-startup-benchmark.mjs"
+
+[tasks."test:controls"]
+dir = "../.."
+depends = ["//experiments/voxel-resolution:build:console"]
+description = "Verify riverside controls and counters in both SDKs and exact CPU host replays"
+run = "node experiments/voxel-resolution/verify-console-controls.mjs"

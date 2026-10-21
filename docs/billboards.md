@@ -71,8 +71,8 @@ explicit error if a game calls the newer transform helper.
 
 ## Examples and verification
 
-[Luau](../examples/billboards-luau/main.luau) and
-[Odin](../examples/billboards-odin/main.odin) render matching perspective gardens.
+[Luau](../examples/billboards/luau/main.luau) and
+[Odin](../examples/billboards/odin/main.odin) render matching perspective gardens.
 Trees and fences remain upright during orbit; the item faces the camera and the
 kart occludes artwork through ordinary depth. The examples precreate 32 view/camera
 pairs and reuse them, so orbit does not rebuild geometry or resources.
@@ -82,12 +82,12 @@ rotates its plane onto world XZ, scales it under the kart and offsets it slightl
 above the track to avoid depth ties. It is an opaque art decal, without shadow maps.
 
 ```text
-mise run build:billboards
-mise run serve:billboards
+mise run //examples/billboards:build
+mise run //examples/billboards:serve
 ```
 
 Open the printed local URL and choose a player. Native executables are in
-`build/billboards/odin/build/native` and `build/billboards/luau/build/native`.
+`examples/billboards/build/odin/build/native` and `examples/billboards/build/luau/build/native`.
 Left/right arrows select orbit views; Action chooses 640×360 instead of 320×180.
 The players default to CPU rendering. GPU, resident meshes and SSAA remain opt-in.
 

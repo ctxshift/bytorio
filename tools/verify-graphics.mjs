@@ -47,7 +47,7 @@ for (const language of ["odin", "luau"]) {
   manifest.display = [320, 180];
   await writeFile(resolve(project, "console.json"), JSON.stringify(manifest));
   await copyFile(
-    `tests/graphics/cartridges/game.${language}`,
+    `examples/resources/graphics/${language}/main.${language}`,
     resolve(project, `src/main.${language}`),
   );
   await buildProject(project);

@@ -1,0 +1,15 @@
+[tasks.build]
+description = "Build and export the native/browser hello example"
+dir = "../.."
+run = "node examples/hello/tools/build.mjs"
+
+[tasks.serve]
+description = "Serve the hello example"
+run = "node ../../tools/serve.mjs build/web"
+env.PORT = "8087"
+
+[tasks.test]
+description = "Verify the shared native/browser hello boot path"
+dir = "../.."
+depends = ["//:build:odin"]
+run = "node tools/verify-odin.mjs"

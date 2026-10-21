@@ -27,10 +27,12 @@ function execute(args, cwd = repo, env = process.env) {
   return result.stdout;
 }
 
-const tasks = JSON.parse(execute(["tasks", "ls", "--json"])).filter(
-  ({ name }) =>
-    name === "build:odin" || name.startsWith("deps:player:") || name.startsWith("deps:trace:"),
-);
+const tasks = JSON.parse(execute(["tasks", "ls", "--json"]))
+  .map((task) => ({ ...task, name: task.name.replace(/^\/\/:/, "") }))
+  .filter(
+    ({ name }) =>
+      name === "build:odin" || name.startsWith("deps:player:") || name.startsWith("deps:trace:"),
+  );
 const byName = new Map(tasks.map((task) => [task.name, task]));
 const forward = (path) => path.replaceAll("\\", "/");
 
@@ -89,7 +91,7 @@ test("compiled tasks cover local Odin imports and embedded shader inputs", () =>
     "deps:player:web-gpu": "runtime/odin/web",
     "deps:player:web-audio": "runtime/odin/audio_web",
     "deps:player:native-binary": "runtime/odin/native",
-    "deps:player:hello": "examples/hello-odin",
+    "deps:player:hello": "examples/hello/odin",
     "deps:player:fixtures": "tests/odin/fixtures",
     "deps:trace:resources": "tests/resources/player",
     "deps:trace:graphics": "tests/graphics/player",
@@ -165,7 +167,7 @@ function fixture() {
     "runtime/odin/gpu/mesh.frag",
     "runtime/odin/abi/abi.odin",
     "tests/odin/fixtures/main.odin",
-    "examples/hello-odin/main.odin",
+    "examples/hello/odin/main.odin",
     "tests/3d/renderer_test.odin",
     "tests/resources/player/main_windows.odin",
     "tests/graphics/player/main_windows.odin",
@@ -217,7 +219,7 @@ test("mise rebuilds only the artifacts affected by edits and missing outputs", a
     "deps:player:web-support",
   ]);
   await edit("tests/odin/fixtures/main.odin", ["deps:player:fixtures"]);
-  await edit("examples/hello-odin/main.odin", ["deps:player:hello"]);
+  await edit("examples/hello/odin/main.odin", ["deps:player:hello"]);
   await edit("runtime/odin/web/main.odin", ["deps:player:web-cpu", "deps:player:web-gpu"]);
   await edit("runtime/odin/native/main_windows.odin", ["deps:player:native-binary"]);
   put(root, "runtime/odin/web/new_module.odin", "package web\n");

@@ -41,7 +41,7 @@ native/browser examples in both languages:
 ```text
 npm run build:rpg
 npm run serve:rpg
-# Open http://127.0.0.1:8080/comparison.html
+# Open http://127.0.0.1:8083/comparison.html
 
 npm run build:racing
 npm run serve:racing
@@ -51,8 +51,13 @@ See the [RPG guide](rpg-comparison.md) and [racing guide](racing-demo.md) for
 controls, standalone launch commands, and cartridge sources. `build:unified`
 and `serve:unified` remain aliases for the shared RPG setup.
 
-The true 3D eight-kart baseline uses `mise run build:kart3d` and
-`mise run serve:kart3d`. Its [guide](kart-racing.md) covers controls, both SDKs,
+Playable demos are [nested mise projects](../examples/README.md). Run
+`mise run build` and `mise run serve` inside one, or select its `//examples/...` task path
+from the root. Each project owns its sources, tooling and local ignored exports.
+Root quality gates aggregate their integration coverage with SDK/runtime checks.
+
+The true 3D eight-kart baseline uses `mise run //examples/kart3d:build` and
+`mise run //examples/kart3d:serve`. Its [guide](kart-racing.md) covers controls, both SDKs,
 CPU-default and opt-in GPU execution, and benchmark limits. `test:kart3d` is
 part of the full gate; `test:kart3d:gpu` additionally requires a usable GPU.
 
@@ -85,7 +90,7 @@ Do not benchmark concurrently with heavy builds or tests.
 Hardware GPU checks and riverside interactive controls have separate opt-in
 gates: `mise run validate test:gpu test:riverside:controls`. The latter verifies
 WASD walking, Q/E orbit, arrow panning, reset, counters and native/browser CPU
-quality replays for both SDKs. `mise run validate bench:riverside` retains the
+quality replays for both SDKs. `mise run validate //experiments/voxel-resolution:benchmark:console` retains the
 resident GPU qualification report; see [measurements](riverside-console-measurements.md).
 `mise run validate test:textured3d:gpu` additionally qualifies the experimental
 textured mesh/material path across native/browser GPU hosts, both SDKs, display
@@ -95,11 +100,11 @@ The billboard/cutout preview uses `test:billboards` and the optional hardware ga
 `test:models` validates static glTF/GLB import, generated examples and both SDKs
 on native/browser CPU; `test:models:gpu` additionally checks optional streamed and
 resident GPU execution. See [the import subset and authoring workflow](model-import.md).
-`bench:attachments` measures a rotating imported-model proxy through both SDKs
+`//examples/models:benchmark` measures a rotating imported-model proxy through both SDKs
 on native/browser GPU, optionally comparing preserved exports. It records raw
 phase timings and separate attachment transfer/allocation counters; see
 [attachment measurements](gpu-attachment-measurements.md).
-`mise run validate bench:riverside:startup` measures PNG sizes, player readiness
+`mise run validate //experiments/voxel-resolution:benchmark:startup` measures PNG sizes, player readiness
 and the first complete scene through native/browser CPU/GPU paths, including
 fresh, reload and same-page executor cache behavior. It retains its observer
 build and results under `build/riverside-startup/`.
@@ -299,7 +304,7 @@ assembled players. Add player dependencies to this module and update the
 `build:odin` outputs in `mise.toml` so missing cached files trigger a rebuild.
 
 `mise.toml` defines the project commands: `format`, `format:check`, `lint`,
-`build:odin`, `build:rpg`, `build:racing`, `test`, and each `test:*` suite.
+`build:odin`, `//examples/rpg:build`, `//examples/racing:build`, `test`, and each `test:*` suite.
 Dependency tasks are declared in `.mise/tasks/deps.toml`:
 
 - `mise run deps:luau:configure` fetches/configures the executor's pinned sources.

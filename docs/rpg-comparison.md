@@ -19,7 +19,7 @@ npm run build:rpg
 npm run serve:rpg
 ```
 
-Open `http://127.0.0.1:8080/comparison.html` and choose a language. Click
+Open `http://127.0.0.1:8083/comparison.html` and choose a language. Click
 **Start game** for audio. Arrows/WASD move; Space talks and confirms. In battle,
 arrows select an action and Space takes a turn. On-screen controls use the same
 input path. Physical touch hardware remains unverified.
@@ -28,12 +28,12 @@ Both standalone choices use the same executable:
 
 ```text
 # Odin
-./build/unified-player/native/player.exe --game build/unified-player/native/rpg-odin.png
+./examples/rpg/build/player/native/player.exe --game examples/rpg/build/player/native/rpg-odin.png
 # Luau
-./build/unified-player/native/player.exe --game build/unified-player/native/rpg-luau.png
+./examples/rpg/build/player/native/player.exe --game examples/rpg/build/player/native/rpg-luau.png
 ```
 
-`build:unified` remains an alias for `build:rpg`. The earlier C++ player,
+`build:unified` remains an alias for `//examples/rpg:build`. The earlier C++ player,
 rectangle-expansion helper, separate RPG staging path, and CTest suite have been
 removed. C++ remains in the Luau executor and development analyzer only.
 
@@ -41,13 +41,13 @@ removed. C++ remains in the Luau executor and development analyzer only.
 
 | Concern | Luau | Odin |
 | --- | --- | --- |
-| Gameplay and presentation | [main.luau](../examples/rpg-luau/main.luau) | [main.odin](../examples/rpg-odin/main.odin) |
+| Gameplay and presentation | [main.luau](../examples/rpg/luau/main.luau) | [main.odin](../examples/rpg/odin/main.odin) |
 | Bytorio API | [Luau SDK](../sdk/luau/bytorio.luau) | [Odin SDK](../sdk/odin/bytorio/bytorio.odin) |
-| Lifecycle | SDK game callbacks | SDK-generated [entry point](../examples/rpg-odin/cartridge.odin) |
+| Lifecycle | SDK game callbacks | SDK-generated [entry point](../examples/rpg/odin/cartridge.odin) |
 | Assets | Bundled graphics packet | Compiled graphics packet |
 
-[Shared assets](../examples/rpg-shared/assets.json) define the palette, sprites,
-map, and bitmap font. `tools/build-rpg-assets.mjs` generates checked-in asset
+[Shared assets](../examples/rpg/shared/assets.json) define the palette, sprites,
+map, and bitmap font. `examples/rpg/tools/assets.mjs` generates checked-in asset
 modules and `build/rpg/batched.luau`. Gameplay implementations are handwritten;
 asset generation does not translate rules between languages.
 
@@ -70,7 +70,7 @@ routes against historical art-region goldens, then compares full-frame output
 and cumulative sound events across Node, native, and browser execution in both
 languages. It also checks native SDL audio, browser audio, diagnostics, reload,
 and compiled-executor cache reuse/invalidation. Reports and screenshots go in
-`build/unified-player/benchmark-batched/`. The test uses one sample per variant;
+`examples/rpg/build/player/benchmark-batched/`. The test uses one sample per variant;
 use `npm run bench:unified` for repeated performance measurements.
 
 The demo has no saves, music, custom sound samples, or full 3D pipeline. Both

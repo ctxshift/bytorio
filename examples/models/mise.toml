@@ -1,0 +1,29 @@
+[tasks."build"]
+dir = "../.."
+description = "Import a rigid model and build both SDK examples"
+run = "node examples/models/tools/build.mjs"
+
+[tasks."generate"]
+dir = "../.."
+description = "Regenerate the checked imported-model example modules"
+run = "node examples/models/tools/build.mjs --update-examples"
+
+[tasks."serve"]
+env.PORT = "8085"
+run = "node ../../tools/serve.mjs build"
+
+[tasks."benchmark"]
+dir = "../.."
+depends = ["//examples/models:build"]
+description = "Measure compatible GPU batches using both SDK model cartridges"
+run = "node examples/models/tools/benchmark.mjs"
+
+[tasks.test]
+description = "Verify model import and both SDK examples on native/browser CPU"
+dir = "../.."
+run = ["node --test tools/sdk/gltf.test.mjs", "node tools/verify-models.mjs"]
+
+[tasks."test:gpu"]
+description = "Verify both SDK examples with opt-in GPU rendering"
+dir = "../.."
+run = "node tools/verify-models.mjs --gpu"

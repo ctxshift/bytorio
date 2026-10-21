@@ -1,0 +1,30 @@
+[tasks."generate"]
+dir = "../.."
+description = "Generate the original racing course data for both SDKs"
+run = "node examples/kart3d/tools/build.mjs --generate"
+
+[tasks."build"]
+dir = "../.."
+description = "Build both perspective kart-racing cartridges and players"
+run = "node examples/kart3d/tools/build.mjs"
+
+[tasks."serve"]
+description = "Serve the perspective kart-racing comparison"
+env.PORT = "8082"
+run = "node ../../tools/serve.mjs build"
+
+[tasks."test"]
+dir = "../.."
+description = "Verify perspective kart gameplay and both SDKs on native/browser CPU"
+run = "node examples/kart3d/tools/verify.mjs"
+
+[tasks."test:gpu"]
+dir = "../.."
+description = "Verify the optional GPU kart-racing path on native/browser"
+run = "node examples/kart3d/tools/verify.mjs --gpu"
+
+[tasks."benchmark"]
+dir = "../.."
+depends = ["//examples/kart3d:build"]
+description = "Measure the eight-kart rollout in both SDKs on native/browser CPU and opt-in GPU"
+run = "node examples/kart3d/tools/benchmark.mjs"

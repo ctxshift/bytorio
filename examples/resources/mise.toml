@@ -1,0 +1,14 @@
+[tasks."build"]
+dir = "../.."
+description = "Build playable graphics and synthesis PNGs for both SDKs and hosts"
+run = "node examples/resources/tools/build.mjs"
+
+[tasks.serve]
+description = "Serve graphics and synthesis examples in both SDKs"
+env.PORT = "8088"
+run = "node ../../tools/serve.mjs build"
+
+[tasks.test]
+description = "Verify graphics, synthesis and resource-profile conformance"
+dir = "../.."
+run = [{ task = "//:test:graphics" }, { task = "//:test:synthesis" }, { task = "//:test:profile" }]

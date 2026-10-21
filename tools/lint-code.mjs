@@ -54,7 +54,7 @@ if (language === "cpp") {
       pkg === "experiments/odin" ||
       pkg === "tests/graphics" ||
       pkg === "tests/3d" ||
-      pkg === "tests/kart3d" ||
+      pkg === "examples/kart3d/tests" ||
       pkg === "tests/resources" ||
       pkg === "tests/timing" ||
       pkg === "tests/audio";

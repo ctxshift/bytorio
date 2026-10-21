@@ -21,23 +21,23 @@ npm run build:racing
 npm run serve:racing
 ```
 
-Open `http://127.0.0.1:8080/comparison.html`, choose a cartridge, and press
+Open `http://127.0.0.1:8084/comparison.html`, choose a cartridge, and press
 **Start game** to unlock sound. Arrows/WASD steer, accelerate and brake;
 Space boosts. Release Space after finishing and press it again to restart.
 The browser includes touch controls and a Fullscreen button. Native fullscreen
 is F11. Native builds are standalone applications without a webview.
 
 ```text
-./build/racing-player/native/player.exe --game build/racing-player/native/racing-odin.png
-./build/racing-player/native/player.exe --game build/racing-player/native/racing-luau.png
+./examples/racing/build/player/native/player.exe --game examples/racing/build/player/native/racing-odin.png
+./examples/racing/build/player/native/player.exe --game examples/racing/build/player/native/racing-luau.png
 ```
 
 Sources:
 
-- [Odin gameplay](../examples/racing-odin/main.odin) and [cartridge interface](../examples/racing-odin/cartridge.odin).
-- [Luau gameplay](../examples/racing-luau/main.luau).
-- [Shared artwork generator](../tools/build-racing-assets.mjs).
-- [Browser launcher](../examples/racing-shared/launcher.html).
+- [Odin gameplay](../examples/racing/odin/main.odin) and [cartridge interface](../examples/racing/odin/cartridge.odin).
+- [Luau gameplay](../examples/racing/luau/main.luau).
+- [Shared artwork generator](../examples/racing/tools/assets.mjs).
+- [Browser launcher](../examples/racing/shared/launcher.html).
 
 Both games use fixed 60 Hz simulation and integer arithmetic for state and
 projection. Odin explicitly uses floor division where Luau's floating-point
@@ -85,14 +85,14 @@ frame before opening a native window. Results are in the [benchmark report](../e
 For display regression checks, build the RPG runtime and executor first, then run:
 
 ```text
-mise exec -- node tools/build-odin.mjs --game rpg
+mise exec -- node examples/_shared/build-legacy.mjs --game rpg
 npm run test:display
 ```
 
 That suite checks both resolutions, frame-boundary switches, bounded transfers,
 SDL texture recreation, fullscreen integer scaling and invalid mode rejection.
 Artifacts, replays, screenshots and complete measurement logs are under ignored
-`build/racing-player/`. Builds also produce `racing-luau.png` and `racing-odin.png`
+`examples/racing/build/player/`. Builds also produce `racing-luau.png` and `racing-odin.png`
 for both hosts; the comparison launcher loads these self-contained PNGs.
 Loose source/module files remain available for development benchmarks. See
 [PNG cartridges](png-cartridges.md) for packaging and loading other games.

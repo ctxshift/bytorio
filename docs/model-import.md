@@ -136,12 +136,12 @@ or power-loss durability guarantee.
 The checked-in fixture is original diagnostic box and wheel-panel geometry with
 an interleaved color/UV stream, hierarchy and a small RGBA texture. It exercises
 material conversion and rigid transforms rather than providing finished vehicle art.
-The [Luau](../examples/model-luau/main.luau) and
-[Odin](../examples/model-odin/main.odin) games use the generated modules:
+The [Luau](../examples/models/luau/main.luau) and
+[Odin](../examples/models/odin/main.odin) games use the generated modules:
 
 ```text
-mise run build:models
-mise run serve:models
+mise run //examples/models:build
+mise run //examples/models:serve
 mise run validate test:models
 mise run validate test:models:gpu
 ```
@@ -153,5 +153,5 @@ data, malformed-input checks and reproducible/failure-safe publication. The opti
 GPU check exercises the same packaged models, transforms and lifecycle on both
 hosts, with streamed and resident meshes. Both suites also exercise an opaque-only
 version under SDK 0.4.0. Checked generated modules alongside the examples are
-compared with a fresh import; use `mise run generate:models` to update them after
+compared with a fresh import; use `mise run //examples/models:generate` to update them after
 an intentional fixture or generator change.

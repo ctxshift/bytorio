@@ -1,0 +1,26 @@
+[tasks."build"]
+dir = "../.."
+depends = ["//:deps:luau"]
+description = "Build and package both RPG cartridges"
+run = ["node examples/_shared/build-legacy.mjs --game rpg --fixtures", "node examples/_shared/stage-legacy.mjs"]
+
+[tasks."test"]
+dir = "../.."
+depends = ["//examples/rpg:build"]
+run = "node examples/rpg/tools/benchmark.mjs --verify"
+
+[tasks.serve]
+description = "Serve both RPG cartridges"
+env.PORT = "8083"
+run = "node ../../tools/serve.mjs build/player/web"
+
+[tasks.benchmark]
+description = "Compare the RPG cartridges on native and browser"
+dir = "../.."
+depends = ["build"]
+run = "node examples/rpg/tools/benchmark.mjs"
+
+[tasks.generate]
+description = "Generate shared RPG art and bundle Luau"
+dir = "../.."
+run = "node examples/rpg/tools/assets.mjs"

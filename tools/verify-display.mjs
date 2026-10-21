@@ -12,7 +12,7 @@ import {
   loadSource,
   checkExecutor,
 } from "../runtime/odin/web/policy.js";
-const root = "build/rpg-odin",
+const root = "examples/rpg/build/odin",
   web = `${root}/web`;
 await mkdir(`${web}/display`, { recursive: true });
 for (const invalid of [false, true]) {

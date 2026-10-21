@@ -183,17 +183,7 @@ export async function createProject(path, language = "luau") {
     resolve(project, `src/main.${extension}`),
     template.replaceAll("__STARTER_MESSAGE__", branding.starterMessage),
   );
-  const shared = JSON.parse(
-    await readFile(resolve(repo, "examples/rpg-shared/assets.json"), "utf8"),
-  );
-  await writeFile(
-    resolve(project, "assets.json"),
-    JSON.stringify(
-      { palette: shared.palette, sprites: [shared.sprites[6]], font: shared.font },
-      null,
-      2,
-    ) + "\n",
-  );
+  await copyFile(resolve(repo, "sdk/templates/assets.json"), resolve(project, "assets.json"));
   await syncEditor(project);
   console.log(`Created ${language} project: ${path}`);
   return project;

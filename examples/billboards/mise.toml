@@ -1,0 +1,19 @@
+[tasks."build"]
+dir = "../.."
+description = "Build both SDK billboard and cutout gardens for native/browser"
+run = "node examples/billboards/tools/build.mjs"
+
+[tasks."serve"]
+env.PORT = "8086"
+description = "Serve the built billboard garden comparison"
+run = "node ../../tools/serve.mjs build"
+
+[tasks.test]
+description = "Verify both billboard examples on native/browser CPU"
+dir = "../.."
+run = "node tools/verify-billboards.mjs"
+
+[tasks."test:gpu"]
+description = "Verify both billboard examples with opt-in GPU rendering"
+dir = "../.."
+run = "node tools/verify-billboards.mjs --gpu"

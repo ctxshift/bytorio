@@ -253,7 +253,7 @@ uploads; an eligible world-only frame transfers zero presentation bytes.
 Browser live metrics expose these with a `gpu` prefix. None of these allocation
 estimates should be summed with overlapping totals.
 
-Use `mise run bench:attachments` for the rotating imported-model proxy. An optional
+Use `mise run //examples/models:benchmark` for the rotating imported-model proxy. An optional
 `-- --baseline <old-export-root>` compares preserved exports containing the same
 `odin/build/` and `luau/build/` layout against current builds. The verifier checks
 identical PNG bytes, direct-render output, native/browser output and geometry reuse;

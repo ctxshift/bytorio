@@ -1,8 +1,8 @@
 # Readable language examples
 
 The canonical resource lifecycle examples are
-[Luau](../examples/resource-lifecycle-luau/main.luau) and
-[Odin](../examples/resource-lifecycle-odin/main.odin). They were promoted from the
+[Luau](../examples/resources/lifecycle/luau/main.luau) and
+[Odin](../examples/resources/lifecycle/odin/main.odin). They were promoted from the
 resource conformance fixtures; the verifier consumes these exact files, rather
 than maintaining separate copies. They illustrate code structure and resource
 ownership, not a playable graphics or audio demo: drawing only clears the screen.

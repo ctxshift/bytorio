@@ -62,7 +62,7 @@ switch (artifact) {
     break;
   case "hello":
     await build(
-      "examples/hello-odin",
+      "examples/hello/odin",
       [...guest, "-extra-linker-flags:--max-memory=8388608"],
       resolve(web, "game.wasm"),
     );

@@ -11,8 +11,8 @@ kart, purple-haired driver, bright palette and single-screen HUD.
 Use the pinned tools described in [development](development.md):
 
 ```text
-mise run build:kart3d
-mise run serve:kart3d
+mise run //examples/kart3d:build
+mise run //examples/kart3d:serve
 ```
 
 Open `http://127.0.0.1:8082/` and choose either SDK. CPU rendering is the default;
@@ -23,10 +23,10 @@ sits below the game so it does not obscure the HUD.
 Standalone native players use the same PNG cartridges:
 
 ```text
-build/kart3d/odin/build/native/player.exe
-build/kart3d/luau/build/native/player.exe
-build/kart3d/odin/build/native/player.exe --renderer gpu --gpu-meshes
-build/kart3d/luau/build/native/player.exe --renderer gpu --gpu-meshes
+examples/kart3d/build/odin/build/native/player.exe
+examples/kart3d/build/luau/build/native/player.exe
+examples/kart3d/build/odin/build/native/player.exe --renderer gpu --gpu-meshes
+examples/kart3d/build/luau/build/native/player.exe --renderer gpu --gpu-meshes
 ```
 
 | Control | Action |
@@ -48,14 +48,14 @@ Countdown, contact, boost and lap events use the existing sound cue.
 
 ## Implementation and limits
 
-- [Odin game](../examples/kart3d-odin/main.odin),
-  [simulation](../examples/kart3d-odin/race/race.odin) and
-  [scene](../examples/kart3d-odin/scene.odin).
-- [Luau game](../examples/kart3d-luau/main.luau),
-  [simulation](../examples/kart3d-luau/race.luau) and
-  [scene](../examples/kart3d-luau/scene.luau).
-- [Course generator](../tools/kart-course.mjs) emits the same closed, elevated
-  course for both games. `mise run generate:kart3d` regenerates checked data.
+- [Odin game](../examples/kart3d/odin/main.odin),
+  [simulation](../examples/kart3d/odin/race/race.odin) and
+  [scene](../examples/kart3d/odin/scene.odin).
+- [Luau game](../examples/kart3d/luau/main.luau),
+  [simulation](../examples/kart3d/luau/race.luau) and
+  [scene](../examples/kart3d/luau/scene.luau).
+- [Course generator](../examples/kart3d/tools/course.mjs) emits the same closed, elevated
+  course for both games. `mise run //examples/kart3d:generate` regenerates checked data.
 - [Reference research](kart-racing-reference-research.md) separates documented
   controls and feedback from original tuning choices.
 
@@ -76,7 +76,7 @@ but matching a commercial racer's feel requires further hands-on tuning.
 ```text
 mise run validate test:kart3d
 mise run validate test:kart3d:gpu
-mise run bench:kart3d
+mise run //examples/kart3d:benchmark
 ```
 
 Pure simulation tests assert independent expected results for countdown,
@@ -87,9 +87,9 @@ Internal state is compared between SDKs; CPU images match across SDKs and
 native/browser hosts. GPU images match between SDKs on each host. Cross-host
 GPU captures permit bounded edge/raster rounding differences: at most 0.1% of
 pixels differ by more than two channel levels, with RGB RMS at most two levels.
-Raw captures and replay inputs are retained under `build/kart3d-validation/`.
+Raw captures and replay inputs are retained under `examples/kart3d/build/validation/`.
 
-The benchmark retains raw native/browser data under `build/kart3d-benchmarks/`.
+The benchmark retains raw native/browser data under `examples/kart3d/build/benchmarks/`.
 It runs two warm-up and five measured 300-frame race starts, excluding the first
 180 countdown frames from frame summaries: 600 moving samples per case at
 320×180, SSAA off. GPU cases explicitly enable resident meshes. Measurements

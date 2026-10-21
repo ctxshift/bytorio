@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { once } from "node:events";
 import { chromium } from "../../tools/browser-timing.mjs";
 import { serve } from "../../tools/serve.mjs";
-const server = serve("build/unified-player/web", 0);
+const server = serve("examples/rpg/build/player/web", 0);
 await once(server, "listening");
 const browser = await chromium.launch({ channel: process.env.PLAYER_BROWSER_CHANNEL || undefined });
 try {
@@ -20,7 +20,7 @@ try {
   assert.equal(first.b.hit, true);
   assert.equal(first.b.downloadedExecutor, false);
   assert.ok(first.same);
-  const original = await readFile("build/unified-player/web/luau-executor.wasm");
+  const original = await readFile("examples/rpg/build/player/web/luau-executor.wasm");
   const changed = Buffer.concat([original, Buffer.from([0, 1, 0])]);
   const hash = createHash("sha256").update(changed).digest("hex");
   await page.route("**/executor-version.json", (route) =>

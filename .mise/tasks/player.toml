@@ -97,7 +97,7 @@ run = "node tools/player-build.mjs native"
 
 ["deps:player:hello"]
 sources = [
-  "examples/hello-odin/**/*.odin",
+  "examples/hello/odin/**/*.odin",
   "runtime/odin/abi/**/*.odin",
   "tools/player-build.mjs",
   "tools/toolchain.mjs",

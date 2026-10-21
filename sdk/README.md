@@ -32,7 +32,7 @@ API. Existing profiles keep their original contracts and defaults.
 
 SDK 0.5.0 / `alpha-3d-preview-1` adds [depth-tested billboards and alpha cutout](../docs/billboards.md).
 It reuses typed UV meshes/materials on CPU and optional GPU paths. Set both manifest
-fields explicitly to use it; `mise run build:billboards` builds matching examples.
+fields explicitly to use it; `mise run //examples/billboards:build` builds matching examples.
 
 The [static glTF/GLB importer](../docs/model-import.md) generates ready-to-use Luau
 and Odin model modules, preserving named rigid parts for game-side animation.

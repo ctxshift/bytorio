@@ -168,8 +168,8 @@ not a millisecond guarantee. The resource quota remains 64 MiB, guest memory
 transaction snapshots and old/new versions are charged to the resource quota.
 
 Run `npm run test:graphics`. The equivalent
-[Luau cartridge](../tests/graphics/cartridges/game.luau) and
-[Odin cartridge](../tests/graphics/cartridges/game.odin) exercise all these paths.
+[Luau cartridge](../examples/resources/graphics/luau/main.luau) and
+[Odin cartridge](../examples/resources/graphics/odin/main.odin) exercise all these paths.
 The verifier compares complete pixel buffers for 13 frames per language on
 native and browser, tests failure/reload and pointer/mode transitions, checks
 independent reference pixels with allocation tracking, and measures a full-frame

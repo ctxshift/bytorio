@@ -1,8 +1,8 @@
 # Voxel resolution study
 
 The riverside scene also has [console GPU qualification cartridges](../../docs/riverside-console-measurements.md)
-in both SDKs. Use `mise run build:riverside` to package them and
-`mise run bench:riverside` to verify and measure native/browser execution.
+in both SDKs. Use `mise run //experiments/voxel-resolution:build:console` to package them and
+`mise run //experiments/voxel-resolution:benchmark:console` to verify and measure native/browser execution.
 
 Two independent scenes compare the same geometry at 320 × 180, 640 × 360 and
 1920 × 1080. The build task renders both; the comparison pages link to each other.
@@ -146,8 +146,8 @@ Its page is generated at `build/compact-3d/resolution/river/index.html`, or
 From the repository root:
 
 ```sh
-mise run build:voxel-resolution
-mise run serve:voxel-resolution
+mise run //experiments/voxel-resolution:build
+mise run //experiments/voxel-resolution:serve
 # Verify GPU filtering, output sizes and movement controls:
 mise run test:voxel-resolution
 ```
@@ -214,7 +214,7 @@ deterministic mode switching and independence from the world triangle draw count
 
 ## Rendering performance
 
-Run `mise run bench:voxel-resolution` with installed Chrome. Set
+Run `mise run //experiments/voxel-resolution:benchmark` with installed Chrome. Set
 `PLAYER_BROWSER_CHANNEL` to select another installed Playwright browser channel.
 The build finishes before measurement begins. The report is retained at
 `build/compact-3d/resolution/river/performance.json`, including renderer identity,

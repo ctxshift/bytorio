@@ -99,7 +99,7 @@ they do not establish delivered 60 FPS on other hardware. Same-host SDK hashes
 match exactly; cross-host pixels satisfy the existing bounded SSAA edge tolerance.
 Each run publishes/presents 266 GPU frames with zero HUD upload bytes. Explicit
 logical diagnostics still read snapshots; CPU loading frames also upload their
-presentation. Run `mise run bench:riverside`; its raw report is
+presentation. Run `mise run //experiments/voxel-resolution:benchmark:console`; its raw report is
 `build/compact-3d/riverside/performance.json`.
 
 ## Reproduction and limits
@@ -107,7 +107,7 @@ presentation. Run `mise run bench:riverside`; its raw report is
 Preserve the older exports before rebuilding, then run from the repository root:
 
 ```text
-mise run bench:attachments -- --baseline <old-export-root>
+mise run //examples/models:benchmark -- --baseline <old-export-root>
 ```
 
 The old root must contain `odin/build/native`, `odin/build/web` and equivalent

@@ -190,8 +190,8 @@ quota. No arbitrary guest DSP callbacks, topology feedback or host-device access
 is exposed. [Profile negotiation](../docs/resource-profile.md) is published;
 minimum hardware and physical device latency remain unqualified.
 
-The matching [Luau tone cartridge](../tests/synthesis/cartridges/game.luau) and
-[Odin tone cartridge](../tests/synthesis/cartridges/game.odin) demonstrate the
+The matching [Luau tone cartridge](../examples/resources/synthesis/luau/main.luau) and
+[Odin tone cartridge](../examples/resources/synthesis/odin/main.odin) demonstrate the
 interface. After the opening phrase, arrows change pitch/filter and Space morphs
 the sustained waveform. The [stress cartridge](../tests/synthesis/stress/game.luau)
 uses all voice/bus/node slots with live edits and ramps. Run `mise run test:synthesis`

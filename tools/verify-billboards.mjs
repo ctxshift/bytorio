@@ -4,7 +4,7 @@ import { once } from "node:events";
 import { randomUUID } from "node:crypto";
 import { relative, resolve } from "node:path";
 import { chromium } from "./browser-timing.mjs";
-import { buildBillboards } from "./build-billboards.mjs";
+import { buildBillboards } from "../examples/billboards/tools/build.mjs";
 import { bundleLuau } from "./sdk/bundle.mjs";
 import { run, tool } from "./toolchain.mjs";
 import { odinUnitTests } from "./odin-unit-tests.mjs";

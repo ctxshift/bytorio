@@ -61,7 +61,9 @@ for (const language of ["odin", "luau"]) {
   await createProject(project, language);
   await copyFile(
     synthesis
-      ? `tests/synthesis/${stress ? "stress" : "cartridges"}/game.${language}`
+      ? stress
+        ? `tests/synthesis/stress/game.${language}`
+        : `examples/resources/synthesis/${language}/main.${language}`
       : `tests/audio/cartridges/game.${language}`,
     resolve(project, `src/main.${language}`),
   );

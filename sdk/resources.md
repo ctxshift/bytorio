@@ -61,8 +61,8 @@ or previous session fail. Version 2 also retains pipeline/table, row/palette and
 target/stencil dependencies; destroy dependants before resources they reference.
 
 For complete, type-checked usage, see the equivalent
-[Luau example](../examples/resource-lifecycle-luau/main.luau) and
-[Odin example](../examples/resource-lifecycle-odin/main.odin). They upload, mutate and
+[Luau example](../examples/resources/lifecycle/luau/main.luau) and
+[Odin example](../examples/resources/lifecycle/odin/main.odin). They upload, mutate and
 destroy resources, then reuse a slot with a new generation.
 
 ## Internal transport and ownership

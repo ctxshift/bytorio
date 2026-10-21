@@ -1,5 +1,9 @@
 min_version = "2026.10.15"
 include = [".mise/toolchain.toml"]
+monorepo_root = true
+
+[monorepo]
+config_roots = ["examples/*", "experiments/voxel-resolution"]
 
 [env]
 MISE_BIN = "{{ mise_bin }}"
@@ -24,54 +28,12 @@ run = "node tools/generate-constants.mjs"
 description = "Run the Bytorio developer CLI"
 run = "node tools/byt.mjs"
 
-[tasks."build:models"]
-description = "Import a rigid model and build both SDK examples"
-run = "node tools/build-models.mjs"
-
-[tasks."generate:kart3d"]
-description = "Generate the original racing course data for both SDKs"
-run = "node tools/build-kart3d.mjs --generate"
-
-[tasks."build:kart3d"]
-description = "Build both perspective kart-racing cartridges and players"
-run = "node tools/build-kart3d.mjs"
-
-[tasks."serve:kart3d"]
-description = "Serve the perspective kart-racing comparison"
-env.PORT = "8082"
-run = "node tools/serve.mjs build/kart3d"
-
-[tasks."test:kart3d"]
-description = "Verify perspective kart gameplay and both SDKs on native/browser CPU"
-run = "node tools/verify-kart3d.mjs"
-
-[tasks."test:kart3d:gpu"]
-description = "Verify the optional GPU kart-racing path on native/browser"
-run = "node tools/verify-kart3d.mjs --gpu"
-
-[tasks."bench:kart3d"]
-depends = ["build:kart3d"]
-description = "Measure the eight-kart rollout in both SDKs on native/browser CPU and opt-in GPU"
-run = "node tools/bench-kart3d.mjs"
-
-[tasks."generate:models"]
-description = "Regenerate the checked imported-model example modules"
-run = "node tools/build-models.mjs --update-examples"
-
-[tasks."serve:models"]
-run = "node tools/serve.mjs build/models"
-
 [tasks."test:models"]
 description = "Verify glTF import and both SDKs on native/browser"
 run = ["node --test tools/sdk/gltf.test.mjs", "node tools/verify-models.mjs"]
 
 [tasks."test:models:gpu"]
 run = "node tools/verify-models.mjs --gpu"
-
-[tasks."bench:attachments"]
-depends = ["build:models"]
-description = "Measure compatible GPU batches using both SDK model cartridges"
-run = "node tools/bench-attachments.mjs"
 
 [tasks."generate:check"]
 description = "Check generated constants against their contracts"
@@ -96,7 +58,7 @@ description = "Build standalone native/browser players and fixtures"
 sources = [
   ".mise/tasks/player.toml",
   ".mise/toolchain.toml",
-  "examples/hello-odin/**/*.odin",
+  "examples/hello/odin/**/*.odin",
   "runtime/odin/abi/**/*.odin",
   "runtime/odin/audio/**/*.odin",
   "runtime/odin/audio_web/**/*.odin",
@@ -169,19 +131,6 @@ outputs = [
 ]
 run = [{ task = "deps:player:all" }]
 
-[tasks."build:rpg"]
-depends = ["deps:luau"]
-description = "Build and package both RPG cartridges"
-run = ["node tools/build-odin.mjs --game rpg --fixtures", "node experiments/luau-executor/stage.mjs"]
-
-[tasks."build:racing"]
-depends = ["deps:luau"]
-description = "Build and package both racing cartridges"
-run = [
-  "node tools/build-odin.mjs --game racing",
-  "node experiments/luau-executor/stage.mjs build/racing-player racing",
-]
-
 [tasks."test:sdk"]
 run = ["node tools/verify-sdk.mjs", "node tools/verify-sdk-cli.mjs"]
 
@@ -199,10 +148,6 @@ run = "node tools/verify-audio.mjs"
 description = "Verify synthesis, effects and the full DSP workload on native/browser"
 run = ["node tools/verify-audio.mjs --synthesis", "node tools/verify-audio.mjs --synthesis --stress"]
 
-[tasks."build:resource-examples"]
-description = "Build playable graphics and synthesis PNGs for both SDKs and hosts"
-run = "node tools/build-resource-profile.mjs"
-
 [tasks."test:profile"]
 description = "Verify published profile negotiation, packaging and lifecycle on both hosts"
 run = "node tools/verify-profile.mjs"
@@ -213,71 +158,6 @@ run = "node tools/verify-graphics.mjs"
 [tasks."build:3d"]
 description = "Build both experimental mesh and voxel cartridges for native/browser"
 run = "node tools/build-3d.mjs"
-
-[tasks."build:billboards"]
-description = "Build both SDK billboard and cutout gardens for native/browser"
-run = "node tools/build-billboards.mjs"
-
-[tasks."serve:billboards"]
-description = "Serve the built billboard garden comparison"
-run = "node tools/serve.mjs build/billboards"
-
-[tasks."build:voxel-resolution"]
-description = "Render both voxel scenes at three output resolutions"
-run = ["node experiments/voxel-resolution/render.mjs", "node experiments/voxel-resolution/river.mjs"]
-
-[tasks."serve:voxel-resolution"]
-depends = ["build:voxel-resolution"]
-description = "Serve the generated voxel resolution comparison"
-run = "node tools/serve.mjs build/compact-3d/resolution"
-
-[tasks."test:voxel-resolution"]
-depends = ["build:voxel-resolution"]
-description = "Verify live supersampling, native dimensions and rabbit/camera controls"
-run = [
-  "node experiments/voxel-resolution/verify-river.mjs",
-  "node experiments/voxel-resolution/verify-stability.mjs",
-  "node experiments/voxel-resolution/verify-presentation.mjs",
-]
-
-[tasks."bench:voxel-resolution"]
-depends = ["build:voxel-resolution"]
-description = "Measure riverside CPU, GPU and frame pacing on installed Chrome"
-run = "node experiments/voxel-resolution/benchmark.mjs"
-
-[tasks."build:riverside"]
-depends = ["build:odin", "build:voxel-resolution"]
-description = "Package the full riverside surface field through both SDKs"
-run = "node experiments/voxel-resolution/console-build.mjs"
-
-[tasks."bench:riverside"]
-depends = ["build:riverside"]
-description = "Verify and measure the full riverside cartridges on native and browser GPU hosts"
-run = "node experiments/voxel-resolution/console-benchmark.mjs"
-
-[tasks."test:riverside:geometry"]
-description = "Check riverside face coverage, encoding and bounded compression"
-run = "node --test experiments/voxel-resolution/console-mesh.test.mjs tools/gpu-surface.test.mjs"
-
-[tasks."test:riverside:surface"]
-depends = ["build:riverside"]
-description = "Verify whole-scene surface samples on native and browser GPU hosts"
-run = "node experiments/voxel-resolution/verify-console-surface.mjs"
-
-[tasks."bench:riverside:cpu"]
-depends = ["build:riverside"]
-description = "Measure interactive CPU quality modes and final canvas delivery"
-run = "node experiments/voxel-resolution/console-cpu-benchmark.mjs"
-
-[tasks."bench:riverside:startup"]
-depends = ["build:riverside"]
-description = "Measure cartridge sizes and first complete scene on native and browser"
-run = "node experiments/voxel-resolution/console-startup-benchmark.mjs"
-
-[tasks."test:riverside:controls"]
-depends = ["build:riverside"]
-description = "Verify riverside controls and counters in both SDKs and exact CPU host replays"
-run = "node experiments/voxel-resolution/verify-console-controls.mjs"
 
 [tasks."test:gpu"]
 depends = ["build:3d"]
@@ -310,16 +190,8 @@ env = {SDL_VIDEODRIVER = "dummy", SDL_AUDIODRIVER = "dummy", SDL_RENDER_DRIVER =
 run = "node tools/verify-odin.mjs"
 
 [tasks."test:display"]
-depends = ["build:rpg"]
+depends = ["//examples/rpg:build"]
 run = "node tools/verify-display.mjs"
-
-[tasks."test:rpg"]
-depends = ["build:rpg"]
-run = "node experiments/luau-executor/benchmark.mjs --verify"
-
-[tasks."test:racing"]
-depends = ["build:racing"]
-run = "node tools/verify-racing.mjs"
 
 [tasks.test]
 description = "Run the conformance suites sequentially"
@@ -335,15 +207,15 @@ run = [
   {task = "test:textured3d"},
   {task = "test:billboards"},
   {task = "test:models"},
-  {task = "test:kart3d"},
+  {task = "//examples/kart3d:test"},
   {task = "test:riverside:geometry"},
   {task = "test:audio"},
   {task = "test:synthesis"},
   {task = "test:profile"},
   {task = "test:odin"},
   {task = "test:display"},
-  {task = "test:rpg"},
-  {task = "test:racing"},
+  {task = "//examples/rpg:test"},
+  {task = "//examples/racing:test"},
 ]
 
 [tasks.validate]
@@ -375,3 +247,27 @@ run = 'node --test --test-name-pattern="copied support" tools/build-tasks.test.m
 [tasks."bench:build-tasks"]
 description = "Measure cold, warm and edited builds in an isolated checkout"
 run = "node tools/measure-build-tasks.mjs"
+
+[tasks."test:kart3d"]
+run = [{ task = "//examples/kart3d:test" }]
+
+[tasks."test:kart3d:gpu"]
+run = [{ task = "//examples/kart3d:test:gpu" }]
+
+[tasks."test:rpg"]
+run = [{ task = "//examples/rpg:test" }]
+
+[tasks."test:racing"]
+run = [{ task = "//examples/racing:test" }]
+
+[tasks."test:voxel-resolution"]
+run = [{ task = "//experiments/voxel-resolution:test" }]
+
+[tasks."test:riverside:geometry"]
+run = [{ task = "//experiments/voxel-resolution:test:geometry" }]
+
+[tasks."test:riverside:surface"]
+run = [{ task = "//experiments/voxel-resolution:test:surface" }]
+
+[tasks."test:riverside:controls"]
+run = [{ task = "//experiments/voxel-resolution:test:controls" }]

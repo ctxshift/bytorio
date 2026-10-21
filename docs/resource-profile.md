@@ -53,17 +53,17 @@ sequence before any later callback; failures terminate that session.
 From the repository root:
 
 ```text
-mise run build:resource-examples
-mise exec -- node tools/serve.mjs build/resource-profile/synthesis-luau/build/web
+mise run //examples/resources:build
+mise run //examples/resources:serve
 ```
 
-Open `http://127.0.0.1:8080/player.html` and click **Start game**. Native runs
-`build/resource-profile/synthesis-luau/build/native/player.exe`. Replace
+Open `http://127.0.0.1:8088/`, select a cartridge and click **Start game**. Native runs
+`examples/resources/build/synthesis-luau/build/native/player.exe`. Replace
 `synthesis-luau` with `synthesis-odin`, `graphics-luau` or `graphics-odin`.
 The graphics cartridges cover passes, indexed palettes, tables, stencil,
 readback and full-frame uploads. The synthesis cartridges expose pitch, filter
 and waveform controls. Their checked-in sources live under
-`tests/graphics/cartridges` and `tests/synthesis/cartridges`.
+`examples/resources/graphics` and `examples/resources/synthesis`.
 
 New CLI projects request SDK 0.2.0 and `profile: "resource-av-1"`. Existing
 `sdk: "0.1.0"` manifests remain supported. Declaring a contradictory profile is

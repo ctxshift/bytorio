@@ -129,7 +129,7 @@ for (const language of ["odin", "luau"]) {
   const project = resolve(root, language);
   await createProject(project, language);
   await copyFile(
-    `examples/resource-lifecycle-${language}/main.${language}`,
+    `examples/resources/lifecycle/${language}/main.${language}`,
     resolve(project, `src/main.${language}`),
   );
   await buildProject(project);

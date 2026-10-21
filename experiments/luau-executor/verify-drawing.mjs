@@ -6,7 +6,7 @@ import {
   submitDrawing,
   rasterizeDrawing,
 } from "../../runtime/odin/web/policy.js";
-const dir = "build/unified-player/web",
+const dir = "examples/rpg/build/player/web",
   imports = { env: { sin: Math.sin } };
 const game = (await WebAssembly.instantiate(await readFile(`${dir}/game.wasm`), imports)).instance
   .exports;

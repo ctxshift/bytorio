@@ -1,6 +1,6 @@
 # Odin reproduction
 
-The Odin player reproduces the original sprite-and-sound example on Windows native and web. Both hosts load **identical game.wasm bytes** compiled from [the game source](../examples/hello-odin/main.odin). Rendering, sprite pixels, PCM generation, command validation, and framebuffer hashing live in [shared Odin runtime code](../runtime/odin/core/core.odin).
+The Odin player reproduces the original sprite-and-sound example on Windows native and web. Both hosts load **identical game.wasm bytes** compiled from [the game source](../examples/hello/odin/main.odin). Rendering, sprite pixels, PCM generation, command validation, and framebuffer hashing live in [shared Odin runtime code](../runtime/odin/core/core.odin).
 
 The native player is an Odin executable using SDL3 and Wasmtime's C API. It has no maintained C++ core and needs no webview, Node.js, or compiler to play. The browser loads the Odin game and Odin runtime as separate Wasm instances in a Worker. JavaScript handles browser input, scheduling, pixel presentation, audio output, and Worker lifecycle.
 
@@ -19,7 +19,10 @@ mise run build:odin
 
 Mise installs Odin `dev-2026-10` revision `84bc3fc` and Wasmtime C API **49.0.3**, with download verification handled by mise. Build commands resolve these managed installations rather than downloading tools themselves. The build uses basename-only source locations to avoid embedding machine paths in exported binaries.
 
-`mise exec -- node tools/build-odin.mjs --target native` and `--target web` build one host. Use `--game rpg` or `--game racing` for an example cartridge. Native currently targets Windows x64. Other native hosts remain unvalidated.
+`mise run deps:player:native` and `mise run deps:player:web` build one host.
+Playable games own their [nested project tasks](../examples/README.md), such as
+`mise run //examples/rpg:build`. Native currently targets Windows x64. Other
+native hosts remain unvalidated.
 
 The native player finds `game.wasm` beside its executable, independent of the working directory. Distribute `player.exe`, `game.wasm`, `SDL3.dll`, `wasmtime.dll`, and `licenses/` together. An import-table inspection found only those bundled libraries and Windows system dependencies; a clean-machine packaging test remains outstanding.
 

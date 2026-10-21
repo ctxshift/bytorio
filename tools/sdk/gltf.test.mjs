@@ -9,7 +9,7 @@ import { signature, chunk } from "./cartridge.mjs";
 
 await mkdir("build", { recursive: true });
 const root = await mkdtemp(resolve("build/model-unit-"));
-const original = JSON.parse(await readFile("tests/models/rigid-kart.gltf"));
+const original = JSON.parse(await readFile("examples/models/assets/rigid-kart.gltf"));
 after(async () => {
   assert.equal(dirname(root), resolve("build"));
   await rm(root, { recursive: true, force: true });

@@ -1,0 +1,29 @@
+[tasks."build"]
+dir = "../.."
+depends = ["//:deps:luau"]
+description = "Build and package both racing cartridges"
+run = [
+  "node examples/_shared/build-legacy.mjs --game racing",
+  "node examples/_shared/stage-legacy.mjs examples/racing/build/player racing",
+]
+
+[tasks."test"]
+dir = "../.."
+depends = ["//examples/racing:build"]
+run = "node examples/racing/tools/verify.mjs"
+
+[tasks.serve]
+description = "Serve both span-rendered racing cartridges"
+env.PORT = "8084"
+run = "node ../../tools/serve.mjs build/player/web"
+
+[tasks.benchmark]
+description = "Compare the span-rendered racing cartridges"
+dir = "../.."
+depends = ["test"]
+run = "node examples/racing/tools/benchmark.mjs"
+
+[tasks.generate]
+description = "Generate shared racing art and bundle Luau"
+dir = "../.."
+run = "node examples/racing/tools/assets.mjs"

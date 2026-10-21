@@ -126,7 +126,13 @@ export async function validate({
 }) {
   if (
     !tasks.length ||
-    tasks.some((task) => !/^[a-z][a-z0-9:-]*$/.test(task) || task.startsWith("validate"))
+    tasks.some((task) => {
+      const name = task.startsWith("//") ? task.slice(task.indexOf(":") + 1) : task;
+      return (
+        !/^(?:\/\/(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_-]*:)?[a-z][a-z0-9:-]*$/.test(task) ||
+        name.startsWith("validate")
+      );
+    })
   ) {
     throw new Error("Select at least one non-recursive mise task");
   }
@@ -151,7 +157,7 @@ export async function validate({
   notify(`Validation report: ${directory}/report.json`);
   try {
     for (const [index, task] of tasks.entries()) {
-      const log = `${directory}/${String(index + 1).padStart(2, "0")}-${task.replaceAll(":", "-")}.log`;
+      const log = `${directory}/${String(index + 1).padStart(2, "0")}-${task.replaceAll(/[^a-zA-Z0-9_-]/g, "-")}.log`;
       notify(`[${index + 1}/${tasks.length}] ${task}`);
       const before = sourceState(cwd);
       const commands = log.replace(/\.log$/, ".commands.jsonl");

@@ -4,7 +4,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { relative, resolve } from "node:path";
 import { chromium } from "playwright";
-import { buildModels } from "./build-models.mjs";
+import { buildModels } from "../examples/models/tools/build.mjs";
 import { serve } from "./serve.mjs";
 import { run } from "./toolchain.mjs";
 
@@ -12,13 +12,13 @@ const gpu = process.argv.includes("--gpu");
 const root = resolve("build/model-verification", randomUUID());
 await mkdir(root, { recursive: true });
 const projects = await buildModels();
-const opaque = JSON.parse(await readFile("tests/models/rigid-kart.gltf"));
+const opaque = JSON.parse(await readFile("examples/models/assets/rigid-kart.gltf"));
 for (const material of opaque.materials) {
   material.alphaMode = "OPAQUE";
 }
 const opaqueFile = resolve(root, "opaque.gltf");
 await writeFile(opaqueFile, JSON.stringify(opaque));
-const opaqueProjects = await buildModels("build/models-opaque", opaqueFile);
+const opaqueProjects = await buildModels("examples/models/build/opaque", opaqueFile);
 const server = serve(".", 0);
 await once(server, "listening");
 const browser = await chromium.launch({

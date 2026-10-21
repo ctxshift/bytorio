@@ -184,4 +184,16 @@ test("stops on failure and rejects results from changing sources", async () => {
   assert.equal(stale.steps[0].exitCode, 0);
 
   await assert.rejects(validate({ ...options, tasks: ["validate"] }), /non-recursive/);
+  for (const task of [
+    "//:validate",
+    "//examples/kart3d:validate",
+    "//../outside:test",
+    "//examples/kart3d:test --force",
+  ]) {
+    await assert.rejects(validate({ ...options, tasks: [task] }), /non-recursive/);
+  }
+  const nested = await validate({ ...passing, tasks: ["//examples/kart3d:test"] });
+  assert.equal(nested.status, "passed");
+  assert.equal(nested.steps[0].task, "//examples/kart3d:test");
+  assert.match(nested.steps[0].log, /01---examples-kart3d-test\.log$/);
 });

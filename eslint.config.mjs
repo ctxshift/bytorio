@@ -3,7 +3,7 @@ import globals from "globals";
 import html from "eslint-plugin-html";
 
 export default [
-  { ignores: ["build/**", ".tools/**", "node_modules/**"] },
+  { ignores: ["**/build/**", ".tools/**", "node_modules/**"] },
   {
     files: ["**/*.js", "**/*.mjs", "**/*.html"],
     ...js.configs.recommended,
@@ -26,11 +26,17 @@ export default [
     languageOptions: { sourceType: "script", globals: globals.browser },
   },
   {
-    files: ["*.mjs", "tools/**/*.mjs", "experiments/**/*.mjs"],
+    files: [
+      "*.mjs",
+      "tools/**/*.mjs",
+      "experiments/**/*.mjs",
+      "examples/**/tools/**/*.mjs",
+      "examples/_shared/*.mjs",
+    ],
     languageOptions: { globals: globals.node },
   },
   {
-    files: ["runtime/**/web/*.js", "examples/*-shared/*.js"],
+    files: ["runtime/**/web/*.js", "examples/**/shared/*.js"],
     languageOptions: { globals: { ...globals.browser, ...globals.worker } },
   },
   {
@@ -49,7 +55,12 @@ export default [
   },
   {
     // Browser verification callbacks are serialized by Playwright.
-    files: ["tools/verify-*.mjs", "experiments/**/*.mjs"],
+    files: [
+      "tools/verify-*.mjs",
+      "experiments/**/*.mjs",
+      "examples/**/tools/verify.mjs",
+      "examples/**/tools/benchmark.mjs",
+    ],
     languageOptions: {
       globals: { ...globals.browser, playerStatus: "readonly", playerAudio: "readonly" },
     },
