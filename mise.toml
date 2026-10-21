@@ -28,6 +28,32 @@ run = "node tools/byt.mjs"
 description = "Import a rigid model and build both SDK examples"
 run = "node tools/build-models.mjs"
 
+[tasks."generate:kart3d"]
+description = "Generate the original racing course data for both SDKs"
+run = "node tools/build-kart3d.mjs --generate"
+
+[tasks."build:kart3d"]
+description = "Build both perspective kart-racing cartridges and players"
+run = "node tools/build-kart3d.mjs"
+
+[tasks."serve:kart3d"]
+description = "Serve the perspective kart-racing comparison"
+env.PORT = "8082"
+run = "node tools/serve.mjs build/kart3d"
+
+[tasks."test:kart3d"]
+description = "Verify perspective kart gameplay and both SDKs on native/browser CPU"
+run = "node tools/verify-kart3d.mjs"
+
+[tasks."test:kart3d:gpu"]
+description = "Verify the optional GPU kart-racing path on native/browser"
+run = "node tools/verify-kart3d.mjs --gpu"
+
+[tasks."bench:kart3d"]
+depends = ["build:kart3d"]
+description = "Measure the eight-kart rollout in both SDKs on native/browser CPU and opt-in GPU"
+run = "node tools/bench-kart3d.mjs"
+
 [tasks."generate:models"]
 description = "Regenerate the checked imported-model example modules"
 run = "node tools/build-models.mjs --update-examples"
@@ -309,6 +335,7 @@ run = [
   {task = "test:textured3d"},
   {task = "test:billboards"},
   {task = "test:models"},
+  {task = "test:kart3d"},
   {task = "test:riverside:geometry"},
   {task = "test:audio"},
   {task = "test:synthesis"},

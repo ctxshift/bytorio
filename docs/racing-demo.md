@@ -1,5 +1,7 @@
 # Copper Circuit
 
+For the newer depth-tested mesh racer, see [Sunline Sprint](kart-racing.md).
+
 A small original kart-racing demo, independently written in Luau and Odin.
 Both cartridges run at **320×180** through the same Odin player on native
 Windows and in the browser. The console's other supported mode is 640×360;

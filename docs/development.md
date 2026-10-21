@@ -51,6 +51,11 @@ See the [RPG guide](rpg-comparison.md) and [racing guide](racing-demo.md) for
 controls, standalone launch commands, and cartridge sources. `build:unified`
 and `serve:unified` remain aliases for the shared RPG setup.
 
+The true 3D eight-kart baseline uses `mise run build:kart3d` and
+`mise run serve:kart3d`. Its [guide](kart-racing.md) covers controls, both SDKs,
+CPU-default and opt-in GPU execution, and benchmark limits. `test:kart3d` is
+part of the full gate; `test:kart3d:gpu` additionally requires a usable GPU.
+
 ## Checks
 
 Use `mise run validate` for the complete quality and conformance gates, including
