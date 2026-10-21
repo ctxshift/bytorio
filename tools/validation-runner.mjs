@@ -155,7 +155,9 @@ export async function validate({
       notify(`[${index + 1}/${tasks.length}] ${task}`);
       const before = sourceState(cwd);
       const commands = log.replace(/\.log$/, ".commands.jsonl");
+      const browser = log.replace(/\.log$/, ".browser.jsonl");
       await writeFile(resolve(cwd, commands), "");
+      await writeFile(resolve(cwd, browser), "");
       const result = await execute({
         executable: mise,
         args: ["run", task],
@@ -166,10 +168,19 @@ export async function validate({
           ...process.env,
           VALIDATION_COMMAND_TIMINGS: resolve(cwd, commands),
           VALIDATION_UNIT_TESTS: resolve(cwd, report.unitTests),
+          VALIDATION_BROWSER_TIMINGS: resolve(cwd, browser),
         },
       });
       const after = sourceState(cwd);
-      report.steps.push({ task, log, commands, before, after, ...result });
+      const browserSummary = {};
+      for (const line of readFileSync(resolve(cwd, browser), "utf8").split("\n").filter(Boolean)) {
+        const event = JSON.parse(line);
+        const phase = (browserSummary[event.phase] ??= { calls: 0, durationMs: 0, failures: 0 });
+        phase.calls++;
+        phase.durationMs += event.durationMs;
+        phase.failures += event.error === null ? 0 : 1;
+      }
+      report.steps.push({ task, log, commands, browser, browserSummary, before, after, ...result });
       notify(
         `${task}: ${result.exitCode === 0 ? "PASS" : "FAIL"} (${(result.durationMs / 1000).toFixed(1)}s); ${log}`,
       );

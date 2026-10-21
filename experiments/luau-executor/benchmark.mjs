@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 import { cpus, platform, arch, release } from "node:os";
 import { once } from "node:events";
-import { chromium } from "playwright";
+import { chromium } from "../../tools/browser-timing.mjs";
 import { serve } from "../../tools/serve.mjs";
 import {
   loadSource,

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { once } from "node:events";
-import { chromium } from "playwright";
+import { chromium } from "../../tools/browser-timing.mjs";
 import { serve } from "../../tools/serve.mjs";
 const server = serve("build/unified-player/web", 0);
 await once(server, "listening");

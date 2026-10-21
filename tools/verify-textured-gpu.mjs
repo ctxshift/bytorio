@@ -3,7 +3,7 @@ import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { once } from "node:events";
 import { randomUUID } from "node:crypto";
 import { relative, resolve } from "node:path";
-import { chromium } from "playwright";
+import { chromium } from "./browser-timing.mjs";
 import { buildTexturedDrawing } from "./build-textured-3d.mjs";
 import { run, tool } from "./toolchain.mjs";
 import { serve } from "./serve.mjs";

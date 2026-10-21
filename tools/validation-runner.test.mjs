@@ -149,10 +149,19 @@ test("stops on failure and rejects results from changing sources", async () => {
     ...options,
     execute: async (step) => {
       scopes.push(step.env.VALIDATION_UNIT_TESTS);
+      await writeFile(
+        step.env.VALIDATION_BROWSER_TIMINGS,
+        JSON.stringify({ phase: "page.goto", durationMs: 12, error: "expected failure" }) + "\n",
+      );
       return { exitCode: 0, durationMs: 0 };
     },
   };
-  assert.equal((await validate(passing)).status, "passed");
+  const timed = await validate(passing);
+  assert.equal(timed.status, "passed");
+  assert.deepEqual(timed.steps[0].browserSummary, {
+    "page.goto": { calls: 1, durationMs: 12, failures: 1 },
+  });
+  assert.notEqual(timed.steps[0].browser, timed.steps[1].browser);
   assert.equal((await validate(passing)).status, "passed");
   assert.equal(scopes[0], scopes[1]);
   assert.equal(scopes[2], scopes[3]);

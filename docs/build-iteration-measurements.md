@@ -76,10 +76,34 @@ so a new leaf input cannot silently bypass the warm-build shortcut.
 
 Run `mise run validate` for complete lint, formatting, generated-code and
 conformance checks, and `mise run validate test:textured3d:gpu` for the additional
-native/browser GPU qualification. Test results are never cached. Production
+native/browser GPU qualification. Test results are not reused across invocations. Production
 optimization flags, fault fixtures, assertions and native/browser combinations
-are preserved. The scheduler regression suite itself adds approximately one
-minute to full validation; use focused validation during normal iteration.
+are preserved. Use focused validation during normal iteration.
 
 Further savings for shared-runtime changes require a separate compiler or
 architecture investigation. This task split addresses unnecessary rebuilds.
+
+## Validation overhead follow-up
+
+A fresh focused `test:build-tasks` baseline took **72.2 seconds**. With the same
+invalidation scenarios, the revised fixture took **37.1 seconds**, a **49%**
+reduction. It still uses mise's real scheduler, declared inputs/outputs and
+nested aggregate. Tiny fake compiler outputs now use shell builtins instead of
+one Node process per artifact; independent leaves run with four jobs. Separate
+per-task journals preserve duplicate-execution detection without concurrent
+writers sharing a file. No edit, force, added/deleted source, missing-output or
+warm-cache assertions were removed. These are single samples on the same host.
+
+The retained full baseline executed `tests/3d` three times (28.6 seconds total)
+and `tests/audio` three times (1.3 seconds total). The focused follow-up across
+3D, textured 3D, billboards, audio and both synthesis workloads executed each
+unit suite once: 9.6 and 0.5 seconds respectively. The removed duplicate commands
+account for about 20 seconds at those timings. Integration workloads remain
+unchanged; their elapsed time varies, so this is not a promised full-suite
+speedup. Every new validation invocation reruns the unit suites.
+
+Browser journals now separate launch, navigation, evaluation, waits and
+screenshots from compiler timings. Full-run comparisons should use the
+runner's wall time and source-stable report; do not sum nested commands or
+overlapping browser phases. The follow-up uses focused checks and one final
+full run rather than repeating a cold-build benchmark matrix.

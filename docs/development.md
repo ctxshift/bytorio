@@ -103,6 +103,25 @@ time, arguments, duration and exit status. A parent build command can contain
 other recorded commands: do not sum nested durations as independent wall time.
 An empty journal means that task did not use the instrumented command helpers.
 
+Browser verifiers also retain `*.browser.jsonl` journals. The report's
+`browserSummary` groups calls, durations and failures for browser launch, page
+and context creation, navigation, evaluation, waits, screenshots and shutdown.
+Each event includes a process/object identity and calling source location. An
+evaluation includes everything awaited inside that callback; it is not a pure
+rendering measurement. Concurrent operations can overlap, so phase totals are
+not necessarily additive wall time. Timings observe the existing calls without
+changing their callbacks, timeouts or workloads. Standalone scripts use ordinary
+Playwright unless `VALIDATION_BROWSER_TIMINGS` names a writable journal.
+
+Within one `validate` invocation, repeated `tests/3d` and `tests/audio` unit
+checks share a successful receipt under that report's `unit-tests/` directory.
+The suite, compiler path, flags and source fingerprint must match. A failed
+check never creates a receipt. Source edits require another execution, and each
+new validation invocation starts a fresh scope. Standalone verifiers always run
+the unit checks. Integration replays and their assertions still run for every
+selected gate. This removes duplicate executions, not test cases; receipts are
+not a persistent test-result cache.
+
 Unit-test packages compile with `-o:none`: the pinned compiler's default
 optimization took about 64 seconds for the resource unit package, compared with
 0.21 seconds without optimization. The same test body then ran in under a
@@ -118,7 +137,7 @@ directory and executes every check. Sources cover the shared Odin packages each
 harness imports, its own player package, build helpers and toolchain/task
 configuration. Browser assets, SDK-only edits and unrelated test packages do not
 invalidate the harnesses. Missing executables also trigger a rebuild.
-Test results themselves are never cached.
+Test results are never reused across validation invocations.
 
 All-target RPG/racing builds reuse `build:odin`'s optimized native player and
 browser runtime/audio modules. They still build their own cartridges and fault
@@ -180,9 +199,9 @@ an invalid report. Preserve test workloads and production optimization settings.
 
 Keep `build/` artifacts and retained reports between iterations. A blanket clean
 discards useful compiled dependencies and diagnosis evidence. Caching applies
-only to artifacts: every selected verifier still executes its assertions and
-native/browser replays. Read the task log before treating a long run as a cache
-miss; a warm suite may spend its time exercising the actual player.
+only to artifacts across invocations: each run executes every selected unit suite
+once and every selected native/browser replay. Read the task log before treating
+a long run as a cache miss; a warm suite may spend its time exercising the actual player.
 
 `.gitattributes` checks out text with LF, matching formatters and generators on
 Windows as well as other hosts. For an older checkout with CRLF drift, inspect

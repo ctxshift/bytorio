@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { once } from "node:events";
-import { chromium } from "playwright";
+import { chromium } from "./browser-timing.mjs";
 import { createProject, buildProject, checkProject } from "./sdk/project.mjs";
 import { bundleLuau } from "./sdk/bundle.mjs";
 import { graphicsPacket } from "./sdk/assets.mjs";

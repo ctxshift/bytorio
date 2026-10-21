@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import { once } from "node:events";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
-import { chromium } from "playwright";
+import { chromium } from "./browser-timing.mjs";
 import { serve } from "./serve.mjs";
 import { tool, run } from "./toolchain.mjs";
 

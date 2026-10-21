@@ -4,7 +4,7 @@ import { resolve, relative } from "node:path";
 import { randomUUID } from "node:crypto";
 import { timedSpawnSync as spawnSync } from "./command-timing.mjs";
 import { once } from "node:events";
-import { chromium } from "playwright";
+import { chromium } from "./browser-timing.mjs";
 import { createProject, buildProject } from "./sdk/project.mjs";
 import { dependencyRoot, toolRoot, task } from "./toolchain.mjs";
 import { odinUnitTests } from "./odin-unit-tests.mjs";

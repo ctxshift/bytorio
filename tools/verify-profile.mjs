@@ -4,7 +4,7 @@ import { resolve, relative } from "node:path";
 import { randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { once } from "node:events";
-import { chromium } from "playwright";
+import { chromium } from "./browser-timing.mjs";
 import { buildResourceExamples } from "./build-resource-profile.mjs";
 import { manifest } from "./sdk/project.mjs";
 import { chunks, chunk } from "./sdk/cartridge.mjs";

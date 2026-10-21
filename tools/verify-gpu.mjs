@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { once } from "node:events";
 import { mkdir, copyFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { chromium } from "playwright";
+import { chromium } from "./browser-timing.mjs";
 import { serve } from "./serve.mjs";
 import { tool, run } from "./toolchain.mjs";
 import { odinUnitTests } from "./odin-unit-tests.mjs";

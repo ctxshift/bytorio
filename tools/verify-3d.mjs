@@ -4,7 +4,7 @@ import { resolve, relative } from "node:path";
 import { timedSpawnSync as spawnSync } from "./command-timing.mjs";
 import { once } from "node:events";
 import { cpus, platform, arch } from "node:os";
-import { chromium } from "playwright";
+import { chromium } from "./browser-timing.mjs";
 import { build3dExamples } from "./build-3d.mjs";
 import { odinUnitTests } from "./odin-unit-tests.mjs";
 import { serve } from "./serve.mjs";

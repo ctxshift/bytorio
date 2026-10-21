@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { once } from "node:events";
-import { chromium } from "playwright";
+import { chromium } from "./browser-timing.mjs";
 import { createProject, packProject } from "./sdk/project.mjs";
 import { chunks, chunk, signature, PNG_LIMIT, defaultCover } from "./sdk/cartridge.mjs";
 import { decodeCartridge } from "../runtime/odin/web/cartridge.js";
