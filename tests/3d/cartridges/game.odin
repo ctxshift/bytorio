@@ -1,6 +1,6 @@
 package main
 
-import console "sdk:console"
+import byt "sdk:bytorio"
 import gfx "sdk:gfx"
 import g "sdk:gfx3d"
 
@@ -14,9 +14,9 @@ tick: u32
 BACKGROUND :: u32(0xff291b16)
 
 init :: proc() {
-    assert(console.capabilities().profile == 3)
+    assert(byt.capabilities().profile == 3)
     tick = 0
-    console.display(.Low)
+    byt.display(.Low)
     depth_low = g.depth(320, 180)
     depth_high = g.depth(640, 360)
     colors: [256]u32
@@ -142,8 +142,8 @@ init :: proc() {
 
 update :: proc(_dt: f64) {
     tick += 1
-    console.display(.High if console.button(.Action) else .Low)
-    if console.button(.Down) {
+    byt.display(.High if byt.button(.Action) else .Low)
+    if byt.button(.Down) {
         cell := [1]u8{u8(tick % 2) * 3}
 
         g.edit(room, 5, 3, 11, 1, 1, 1, cell[:])
@@ -156,19 +156,19 @@ draw :: proc() {
         clear = true,
         color = BACKGROUND,
     })
-    high := console.button(.Action)
-    view := perspective if console.button(.Right) else ortho
+    high := byt.button(.Action)
+    view := perspective if byt.button(.Right) else ortho
     g.bind(pass, depth_high if high else depth_low, view)
     g.draw(pass, room)
     g.draw(pass, actors[(tick / 15) % 2], g.pose(3, 1, 3, 0, 0.65))
     g.draw(pass, pyramid, g.pose(7, 1, 6, 0, 0.7))
     angle := f64(tick) * 0.015
     g.draw(pass, prop, g.pose(7, 2, 2, angle, 0.65))
-    if console.button(.Up) {
+    if byt.button(.Up) {
         g.draw(pass, checker, g.pose(2, 2, 4, angle, 0.35))
     }
 
-    if console.button(.Left) {
+    if byt.button(.Left) {
         for z in 0 ..< 8 {
             for x in 0 ..< 8 {
                 g.draw(pass, prop, g.pose(1 + f64(x) * 1.2, 1, 1 + f64(z) * 1.2, angle, 0.2))

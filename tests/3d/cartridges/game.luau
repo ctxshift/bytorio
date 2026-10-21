@@ -1,22 +1,22 @@
 --!strict
-local console = require("@console")
-local gfx, g = console.gfx, console.gfx3d
-local room: console.Voxel
-local prop: console.Voxel
-local checker: console.Voxel
-local actors: { console.Voxel } = {}
-local depthLow: console.Depth
-local depthHigh: console.Depth
-local ortho: console.Camera
-local perspective: console.Camera
-local pyramid: console.Mesh
+local byt = require("@bytorio")
+local gfx, g = byt.gfx, byt.gfx3d
+local room: byt.Voxel
+local prop: byt.Voxel
+local checker: byt.Voxel
+local actors: { byt.Voxel } = {}
+local depthLow: byt.Depth
+local depthHigh: byt.Depth
+local ortho: byt.Camera
+local perspective: byt.Camera
+local pyramid: byt.Mesh
 local tick = 0
 local BACKGROUND = 0xff291b16
 return {
     init = function()
-        assert(console.capabilities().profile == 3)
+        assert(byt.capabilities().profile == 3)
         tick = 0
-        console.display(320, 180)
+        byt.display(320, 180)
         depthLow = g.depth(320, 180)
         depthHigh = g.depth(640, 360)
         local colors = buffer.create(1024)
@@ -123,9 +123,9 @@ return {
     end,
     update = function(_dt: number)
         tick += 1
-        local high = console.button("action")
-        console.display(if high then 640 else 320, if high then 360 else 180)
-        if console.button("down") then
+        local high = byt.button("action")
+        byt.display(if high then 640 else 320, if high then 360 else 180)
+        if byt.button("down") then
             local cell = buffer.create(1)
             buffer.writeu8(cell, 0, (tick % 2) * 3)
             g.edit(room, 5, 3, 11, 1, 1, 1, cell)
@@ -134,21 +134,21 @@ return {
     draw = function()
         local screen = gfx.screen()
         local pass = gfx.begin_pass(screen, { clear = true, color = BACKGROUND })
-        local high = console.button("action")
+        local high = byt.button("action")
         g.bind(
             pass,
             if high then depthHigh else depthLow,
-            if console.button("right") then perspective else ortho
+            if byt.button("right") then perspective else ortho
         )
         g.draw(pass, room)
         g.draw(pass, actors[math.floor(tick / 15) % 2 + 1], g.pose(3, 1, 3, 0, 0.65))
         g.draw(pass, pyramid, g.pose(7, 1, 6, 0, 0.7))
         local angle = tick * 0.015
         g.draw(pass, prop, g.pose(7, 2, 2, angle, 0.65))
-        if console.button("up") then
+        if byt.button("up") then
             g.draw(pass, checker, g.pose(2, 2, 4, angle, 0.35))
         end
-        if console.button("left") then
+        if byt.button("left") then
             for z = 0, 7 do
                 for x = 0, 7 do
                     g.draw(pass, prop, g.pose(1 + x * 1.2, 1, 1 + z * 1.2, angle, 0.2))

@@ -1,13 +1,13 @@
 package main
 
-import g "sdk:console"
+import byt "sdk:bytorio"
 
 text :: proc(value: string, x, y: int, color: u32) {
-    g.text(value, x, y, color)
+    byt.text(value, x, y, color)
 }
 sprite :: proc(id, x, y: int, scale := 1) {
 
-    g.sprite(id, x, y, scale)
+    byt.sprite(id, x, y, scale)
 }
 actor :: proc(id, x, y, cx, cy: int) {
     sx, sy := x * 16 - cx, 24 + y * 16 - cy

@@ -1,7 +1,7 @@
 package main
 
 import "core:math"
-import console "sdk:console"
+import byt "sdk:bytorio"
 import gfx "sdk:gfx"
 import g "sdk:gfx3d"
 
@@ -50,12 +50,12 @@ move_rabbit :: proc(x, z: f64) {
     rabbit_x, rabbit_y, rabbit_z = x, height, z
 }
 
-axis :: proc(positive, negative: console.Button) -> f64 {
-    return f64(int(console.button(positive)) - int(console.button(negative)))
+axis :: proc(positive, negative: byt.Button) -> f64 {
+    return f64(int(byt.button(positive)) - int(byt.button(negative)))
 }
 
 update_controls :: proc(dt: f64) {
-    if console.pressed(.Reset) { reset_motion() }
+    if byt.pressed(.Reset) { reset_motion() }
     yaw += dt * axis(.RotateRight, .RotateLeft) * 0.7
     yaw -= math.floor((yaw + math.PI) / (2 * math.PI)) * 2 * math.PI
     pan_x = clamp(pan_x + dt * axis(.PanRight, .PanLeft) * 7, -12, 12)
@@ -121,7 +121,7 @@ upload :: proc(first, count: int) -> g.Mesh {
 }
 
 update_camera :: proc() {
-    angle := (f64(tick) * 0.004 if console.button(.Right) else 0) if qualification_replay else yaw
+    angle := (f64(tick) * 0.004 if byt.button(.Right) else 0) if qualification_replay else yaw
     s, c := math.sin(angle), math.sin(angle + math.PI / 2)
     fx := -0.09692560046268578 * c - 0.8077133371890481 * s
     fy := -0.5815536027761147
@@ -130,7 +130,7 @@ update_camera :: proc() {
     rx, rz := -fz / length, fx / length
     ux, uy, uz := -rz * fy, rz * fx - rx * fz, rx * fy
     tx :=
-        (f64(tick) * 0.07 if console.button(.Left) else 0) if qualification_replay else pan_x + (rabbit_x + 4) * 0.3
+        (f64(tick) * 0.07 if byt.button(.Left) else 0) if qualification_replay else pan_x + (rabbit_x + 4) * 0.3
     tz := 0.0 if qualification_replay else pan_z + (rabbit_z - 19) * 0.3
     view := g.Matrix {
         f32(rx),
@@ -172,7 +172,7 @@ init :: proc() {
     // Mirror the Luau fixture decoder's loading schedule for exact replays.
     decode_wait = DECODE_UPDATES
     reset_motion()
-    console.debug_position(rabbit_x, rabbit_z)
+    byt.debug_position(rabbit_x, rabbit_z)
     qualification_replay, camera_ready = false, false
     depth_low, depth_high = g.depth(320, 180), g.depth(640, 360)
     update_camera()
@@ -180,10 +180,9 @@ init :: proc() {
 
 update :: proc(dt: f64) {
     // Legacy-only masks preserve the fixed qualification camera replay.
-    qualification_replay =
-        console.all_buttons() == console.buttons() && console.buttons() & 15 != 0
-    high = console.button(.Action)
-    console.display(.High if high else .Low)
+    qualification_replay = byt.all_buttons() == byt.buttons() && byt.buttons() & 15 != 0
+    high = byt.button(.Action)
+    byt.display(.High if high else .Low)
     if decode_wait > 0 {
         decode_wait -= 1
         return
@@ -199,7 +198,7 @@ update :: proc(dt: f64) {
     } else {
         tick += 1
         if !qualification_replay { update_controls(dt) }
-        console.debug_position(rabbit_x, rabbit_z)
+        byt.debug_position(rabbit_x, rabbit_z)
     }
     update_camera()
 }
@@ -213,7 +212,7 @@ draw :: proc() {
             g.draw(pass, mesh)
         }
         if qualification_replay {
-            step := math.sin(f64(tick) * 0.03) * 2 if console.button(.Up) else 0
+            step := math.sin(f64(tick) * 0.03) * 2 if byt.button(.Up) else 0
             g.draw(pass, rabbit, g.pose(-4 + step, 8, 19, 0, 1))
         } else {
             g.draw(pass, rabbit, g.pose(rabbit_x, rabbit_y, rabbit_z, rabbit_angle, 1))

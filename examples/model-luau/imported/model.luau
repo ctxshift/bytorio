@@ -1,15 +1,15 @@
 --!strict
 -- Generated model. Reimport the asset to change geometry; animate local transforms in game code.
-local console = require("@console")
-local g, gfx, data = console.gfx3d, console.gfx, console.data
+local byt = require("@bytorio")
+local g, gfx, data = byt.gfx3d, byt.gfx, byt.data
 type Matrix = { number }
 type Address = "clamp" | "repeat"
 type MaterialOptions = { address_u: Address?, address_v: Address? }
 export type Instance = {
     alive: boolean,
-    meshes: { console.TexturedMesh },
-    materials: { console.Material },
-    textures: { console.Texture },
+    meshes: { byt.TexturedMesh },
+    materials: { byt.Material },
+    textures: { byt.Texture },
 }
 local geometry = {
     {
@@ -160,7 +160,7 @@ function api.local_transforms(): { Matrix }
 end
 
 function api.create(): Instance
-    assert(console.capabilities().sdk >= 1280, "Imported model requires SDK 0.5.0")
+    assert(byt.capabilities().sdk >= 1280, "Imported model requires SDK 0.5.0")
     local instance: Instance = { alive = true, meshes = {}, materials = {}, textures = {} }
     for _, surface in surfaces do
         local pixels = data.pixels("rgba8", surface.width, surface.height)
@@ -188,7 +188,7 @@ function api.create(): Instance
     return instance
 end
 
-function api.draw(pass: console.Pass, instance: Instance, root: Matrix?, locals: { Matrix }?)
+function api.draw(pass: byt.Pass, instance: Instance, root: Matrix?, locals: { Matrix }?)
     assert(instance.alive, "Model instance is destroyed")
     assert(locals == nil or #locals == #nodeLocals, "Invalid local transform count")
     local world: { Matrix } = {}

@@ -1,7 +1,7 @@
 --!strict
-local console = require("@console")
-local audio, data = console.audio, console.data
-local tone: console.Instrument? = nil
+local byt = require("@bytorio")
+local audio, data = byt.audio, byt.data
+local tone: byt.Instrument? = nil
 local tonePitch, toneCutoff, toneWave = 440, 1200, 0.25
 return {
     init = function()
@@ -121,44 +121,44 @@ return {
         buffer.fill(pcm.samples, 0, 0)
     end,
     update = function(_dt: number)
-        if console.pressed("left") then
+        if byt.pressed("left") then
             tonePitch = math.max(110, tonePitch / 2)
         end
-        if console.pressed("right") then
+        if byt.pressed("right") then
             tonePitch = math.min(1760, tonePitch * 2)
         end
-        if console.pressed("up") then
+        if byt.pressed("up") then
             toneCutoff = math.min(12000, toneCutoff + 400)
         end
-        if console.pressed("down") then
+        if byt.pressed("down") then
             toneCutoff = math.max(200, toneCutoff - 400)
         end
-        if console.pressed("action") then
+        if byt.pressed("action") then
             toneWave = 1 - toneWave
         end
         local instrument = tone
         if instrument then
             local v = audio.voice(2)
-            if console.pressed("left") or console.pressed("right") then
+            if byt.pressed("left") or byt.pressed("right") then
                 audio.node_control(v, instrument, 0, "frequency", tonePitch, nil, 64)
                 audio.node_control(v, instrument, 4, "frequency", tonePitch, nil, 64)
             end
-            if console.pressed("up") or console.pressed("down") then
+            if byt.pressed("up") or byt.pressed("down") then
                 audio.node_control(v, instrument, 7, "cutoff", toneCutoff, nil, 64)
             end
-            if console.pressed("action") then
+            if byt.pressed("action") then
                 audio.node_control(v, instrument, 4, "wave", toneWave, nil, 64)
             end
         end
         local status = audio.status()
-        console.debug_position(status.completed, #audio.completions())
+        byt.debug_position(status.completed, #audio.completions())
     end,
     draw = function()
-        console.clear(console.rgb(20, 28, 44))
-        console.text("SYNTH: FM / ENVELOPE / FILTER / DELAY", 12, 20, console.rgb(240, 240, 240))
-        console.rect(24, 48, 272, 40, console.rgb(70, 180, 150))
-        console.rect(24, 92, math.floor(tonePitch / 8), 6, console.rgb(240, 200, 80))
-        console.text("LEFT/RIGHT PITCH  UP/DOWN FILTER", 12, 110, console.rgb(240, 240, 240))
-        console.text("SPACE: MORPH WAVE", 12, 126, console.rgb(240, 240, 240))
+        byt.clear(byt.rgb(20, 28, 44))
+        byt.text("SYNTH: FM / ENVELOPE / FILTER / DELAY", 12, 20, byt.rgb(240, 240, 240))
+        byt.rect(24, 48, 272, 40, byt.rgb(70, 180, 150))
+        byt.rect(24, 92, math.floor(tonePitch / 8), 6, byt.rgb(240, 200, 80))
+        byt.text("LEFT/RIGHT PITCH  UP/DOWN FILTER", 12, 110, byt.rgb(240, 240, 240))
+        byt.text("SPACE: MORPH WAVE", 12, 126, byt.rgb(240, 240, 240))
     end,
 }

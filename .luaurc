@@ -2,6 +2,6 @@
   "languageMode": "nonstrict",
   "lintErrors": true,
   "aliases": {
-    "console": "./sdk/luau/console"
+    "bytorio": "./sdk/luau/bytorio"
   }
 }

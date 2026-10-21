@@ -1,7 +1,7 @@
 // Generated model. Reimport geometry; animate local transforms in game code.
 package model
 
-import console "sdk:console"
+import byt "sdk:bytorio"
 import data "sdk:data"
 import gfx "sdk:gfx"
 import g "sdk:gfx3d"
@@ -47,7 +47,7 @@ index :: proc(name: string) -> int {
 local_transforms :: proc() -> [NODE_COUNT]g.Matrix { return node_locals }
 
 create :: proc() -> Instance {
-    assert(console.VERSION_WORD >= 1280, "Imported model requires SDK 0.5.0")
+    assert(byt.VERSION_WORD >= 1280, "Imported model requires SDK 0.5.0")
     instance: Instance
 
     pixels_0 := data.pixels(.RGBA8, 2, 2)

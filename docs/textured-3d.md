@@ -12,8 +12,8 @@ published profile or a performance guarantee.
 
 ## Typed resources
 
-Luau exposes `console.TexturedMesh` and `console.Material` through
-`console.gfx3d`; Odin exposes `gfx3d.Textured_Mesh` and `gfx3d.Material` through
+Luau exposes `byt.TexturedMesh` and `byt.Material` through
+`byt.gfx3d`; Odin exposes `gfx3d.Textured_Mesh` and `gfx3d.Material` through
 `sdk:gfx3d`. These are distinct from colored meshes, voxel volumes and textures.
 
 `textured_mesh(vertices, indices)` snapshots immutable indexed geometry.

@@ -1,20 +1,20 @@
 --!strict
-local console = require("@console")
+local byt = require("@bytorio")
 local decode = require("./console-decode")
-local gfx, g = console.gfx, console.gfx3d
+local gfx, g = byt.gfx, byt.gfx3d
 
--- Populated by console-build.mjs from the preserved scene's surface field.
+-- Populated by byt-build.mjs from the preserved scene's surface field.
 local SCENE_ENCODED = ""
 local SCENE_BYTES = 0
 
 local FACE_BYTES = 13
 local FACES_PER_CHUNK = 512
 local BACKGROUND = 0xffc5ad94
-local meshes: { console.Mesh } = {}
-local rabbit: console.Mesh
-local depthLow: console.Depth
-local depthHigh: console.Depth
-local camera: console.Camera
+local meshes: { byt.Mesh } = {}
+local rabbit: byt.Mesh
+local depthLow: byt.Depth
+local depthHigh: byt.Depth
+local camera: byt.Camera
 local loaded, tick, faceOffset, worldFaces, rabbitFaces = 0, 0, 0, 0, 0
 local bytes: buffer
 local decodeStep: () -> buffer?
@@ -36,7 +36,7 @@ local function signed16(at: number): number
     return buffer.readi16(bytes, at)
 end
 
-local function upload(first: number, count: number): console.Mesh
+local function upload(first: number, count: number): byt.Mesh
     local vertices: { Vertex } = {}
     local indices: { number } = {}
     for i = first, first + count - 1 do
@@ -100,14 +100,14 @@ local function moveRabbit(x: number, z: number)
     rabbitX, rabbitY, rabbitZ = x, height, z
 end
 
-local function axis(positive: console.Button, negative: console.Button): number
-    return (if console.button(positive) then 1 else 0) - (if console.button(negative) then 1 else 0)
+local function axis(positive: byt.Button, negative: byt.Button): number
+    return (if byt.button(positive) then 1 else 0) - (if byt.button(negative) then 1 else 0)
 end
 
 local function updateControls(dt: number)
-    if console.pressed("reset") then
+    if byt.pressed("reset") then
         resetMotion()
-        console.debug_position(rabbitX, rabbitZ)
+        byt.debug_position(rabbitX, rabbitZ)
     end
     yaw += dt * axis("rotate_right", "rotate_left") * 0.7
     yaw -= math.floor((yaw + math.pi) / (2 * math.pi)) * 2 * math.pi
@@ -137,7 +137,7 @@ end
 
 local function updateCamera()
     local angle = if qualificationReplay
-        then (if console.button("right") then tick * 0.004 else 0)
+        then (if byt.button("right") then tick * 0.004 else 0)
         else yaw
     local s, c = math.sin(angle), math.sin(angle + math.pi / 2)
     local fx = -0.09692560046268578 * c - 0.8077133371890481 * s
@@ -147,7 +147,7 @@ local function updateCamera()
     local rx, rz = -fz / length, fx / length
     local ux, uy, uz = -rz * fy, rz * fx - rx * fz, rx * fy
     local tx = if qualificationReplay
-        then (if console.button("left") then tick * 0.07 else 0)
+        then (if byt.button("left") then tick * 0.07 else 0)
         else panX + (rabbitX + 4) * 0.3
     local tz = if qualificationReplay then 0 else panZ + (rabbitZ - 19) * 0.3
     local view = {
@@ -213,10 +213,10 @@ return {
         updateCamera()
     end,
     update = function(dt: number)
-        qualificationReplay = console.all_buttons() == console.buttons()
-            and bit32.band(console.buttons(), 15) ~= 0
-        high = console.button("action")
-        console.display(if high then 640 else 320, if high then 360 else 180)
+        qualificationReplay = byt.all_buttons() == byt.buttons()
+            and bit32.band(byt.buttons(), 15) ~= 0
+        high = byt.button("action")
+        byt.display(if high then 640 else 320, if high then 360 else 180)
         if decoding then
             local result = decodeStep()
             if result then
@@ -245,7 +245,7 @@ return {
             if not qualificationReplay then
                 updateControls(dt)
             end
-            console.debug_position(rabbitX, rabbitZ)
+            byt.debug_position(rabbitX, rabbitZ)
         end
         updateCamera()
     end,
@@ -258,7 +258,7 @@ return {
                 g.draw(pass, mesh)
             end
             if qualificationReplay then
-                local step = if console.button("up") then math.sin(tick * 0.03) * 2 else 0
+                local step = if byt.button("up") then math.sin(tick * 0.03) * 2 else 0
                 g.draw(pass, rabbit, g.pose(-4 + step, 8, 19, 0, 1))
             else
                 g.draw(pass, rabbit, g.pose(rabbitX, rabbitY, rabbitZ, rabbitAngle, 1))

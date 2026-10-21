@@ -1,7 +1,7 @@
 # Explicit graphics: resource-av-1
 
 The matching native and browser players implement the same Odin software
-reference renderer. Luau uses `console.gfx` and `console.data`; Odin imports
+reference renderer. Luau uses `byt.gfx` and `byt.data`; Odin imports
 `gfx "sdk:gfx"` and `data "sdk:data"`. The published SDK 0.2.0 / ABI 2
 profile uses resource transport version 4, retaining the version-2 graphics layout.
 The [resource ownership rules](resources.md) still apply.
@@ -141,7 +141,7 @@ effects can keep their own buffers instead of reading back rendered surfaces.
 
 ## Compatibility and validation
 
-Inside an explicit pass, `console.rect`, `sprite`, `sprite_size`, `text` and
+Inside an explicit pass, `byt.rect`, `sprite`, `sprite_size`, `text` and
 `clear` emit ordered graphics commands and obey that pass's state. Sprite/font
 assets still come from the current SDK importer. The immutable atlas contains
 RGBA colors, so sprite convenience drawing requires an RGBA target; use indexed

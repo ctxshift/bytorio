@@ -1,6 +1,6 @@
 package main
 
-import console "sdk:console"
+import byt "sdk:bytorio"
 import data "sdk:data"
 import gfx "sdk:gfx"
 import g "sdk:gfx3d"
@@ -28,13 +28,13 @@ create_resources :: proc() {
 }
 
 init :: proc() {
-    capabilities := console.capabilities()
+    capabilities := byt.capabilities()
     assert(capabilities.profile == 4 && capabilities.sdk == 1024 && capabilities.protocol == 6)
     create_resources()
 }
 
 update :: proc(_dt: f64) {
-    switch console.ticks() {
+    switch byt.ticks() {
     case 2:
         pixels := data.pixels(.RGBA8, 2, 2)
         defer data.free_pixels(&pixels)
@@ -50,5 +50,5 @@ update :: proc(_dt: f64) {
 }
 
 draw :: proc() {
-    console.clear(0xff201810)
+    byt.clear(0xff201810)
 }

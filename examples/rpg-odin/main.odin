@@ -1,7 +1,7 @@
 package main
 
 import "assets"
-import g "sdk:console"
+import byt "sdk:bytorio"
 
 Mode :: enum {
     Explore,
@@ -21,7 +21,7 @@ say :: proc(message: string) {
 
     s.mode = .Dialog
     s.message = message
-    g.sound()
+    byt.sound()
 }
 near :: proc(x, y: int) -> bool {
 
@@ -51,7 +51,7 @@ battle :: proc() {
         s.hp = min(20, s.hp + 8)
         s.message = "POTION RESTORES 8. SLIME HITS FOR 3."
     }
-    g.sound()
+    byt.sound()
     if s.enemy <= 0 {
         s.won = true
         say("THE SLIME RETREATS! THE GROVE IS SAFE.\nFIND THE GOLDEN SUNLEAF TO THE EAST.")
@@ -71,10 +71,10 @@ init :: proc() {
         potions = 1,
         enemy   = 10,
     }
-    g.sound()
+    byt.sound()
 }
 update :: proc(dt: f64) {
-    buttons := g.buttons()
+    buttons := byt.buttons()
     s.ticks += 1
     pressed := buttons & ~s.previous
     s.previous = buttons
@@ -166,11 +166,11 @@ update :: proc(dt: f64) {
     if nx == 19 && ny == 6 && !s.won {
         s.mode, s.enemy, s.choice = .Battle, 10, 0
         s.message = "A MOSS SLIME BLOCKS THE GROVE!"
-        g.sound()
+        byt.sound()
     }
 }
 draw :: proc() {
-    g.debug_position(f64(s.x), f64(s.y))
+    byt.debug_position(f64(s.x), f64(s.y))
     cx, cy := clamp(s.x - 11, 0, 8) * 16, clamp(s.y - 4, 0, 10) * 16
     for y in 0 ..< 20 {
         for x in 0 ..< 32 {
@@ -210,16 +210,16 @@ draw :: proc() {
     }
     actor(6 if s.steps % 2 == 0 else 12, s.x, s.y, cx, cy)
     p := assets.palette
-    g.rect(0, 0, 384, 24, p[0])
-    g.rect(0, 22, 384, 2, p[2])
+    byt.rect(0, 0, 384, 24, p[0])
+    byt.rect(0, 22, 384, 2, p[2])
     text("MOSSGLEN", 8, 8, p[14])
     text("HP", 206, 8, p[12])
     text(number(s.hp), 224, 8, p[15])
     text("/20", 236, 8, p[14])
     text("POTION", 276, 8, p[13])
     text(number(s.potions), 324, 8, p[15])
-    g.rect(0, 184, 384, 32, p[0])
-    g.rect(0, 184, 384, 2, p[2])
+    byt.rect(0, 184, 384, 32, p[0])
+    byt.rect(0, 184, 384, 2, p[2])
     objective := "TALK TO THE HEALER BY THE RED HOUSE"
     if s.complete {
         objective = "QUEST COMPLETE - THANK YOU FOR PLAYING"
@@ -232,30 +232,30 @@ draw :: proc() {
     text(objective, 8, 191, p[14])
     text("ARROWS: WALK   SPACE: TALK / CONFIRM", 8, 203, p[9])
     if s.mode == .Dialog {
-        g.rect(8, 135, 368, 46, p[1])
-        g.rect(10, 137, 364, 42, p[0])
+        byt.rect(8, 135, 368, 46, p[1])
+        byt.rect(10, 137, 364, 42, p[0])
         text(s.message, 18, 144, p[15])
         text("SPACE >", 312, 166, p[13])
     } else if s.mode == .Battle {
-        g.rect(0, 24, 384, 160, p[0])
-        g.rect(0, 96, 384, 88, p[2])
-        g.rect(0, 96, 384, 3, p[3])
+        byt.rect(0, 24, 384, 160, p[0])
+        byt.rect(0, 96, 384, 88, p[2])
+        byt.rect(0, 96, 384, 3, p[3])
         sprite(6, 58, 66, 3)
         sprite(9, 261, 55, 4)
         text("TRAVELER", 48, 35, p[14])
         text("MOSS SLIME", 252, 35, p[14])
         text("HP", 264, 124, p[15])
         text(number(max(0, s.enemy)), 284, 124, p[15])
-        g.rect(8, 141, 368, 38, p[1])
+        byt.rect(8, 141, 368, 38, p[1])
         text(s.message, 16, 149, p[15])
         text("CHOOSE WITH ARROWS. SPACE TO CONFIRM.", 16, 164, p[13])
-        g.rect(0, 184, 384, 32, p[0])
+        byt.rect(0, 184, 384, 32, p[0])
         labels := [3]string{"ATTACK", "GUARD", "POTION"}
         for label, i in labels {
             x := 12 + i * 124
             if s.choice == i {
 
-                g.rect(x, 188, 112, 22, p[3])
+                byt.rect(x, 188, 112, 22, p[3])
             }
             text(label, x + 14, 195, p[15])
         }

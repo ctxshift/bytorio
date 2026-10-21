@@ -1,7 +1,7 @@
 package main
 
 import audio "sdk:audio"
-import console "sdk:console"
+import byt "sdk:bytorio"
 import data "sdk:data"
 
 tone: audio.Instrument
@@ -109,32 +109,28 @@ init :: proc() {
     for &value in pcm.samples { value = 0 }
 }
 update :: proc(dt: f64) {
-    if console.pressed(.Left) { tone_pitch = max(110, tone_pitch / 2) }
-    if console.pressed(.Right) { tone_pitch = min(1760, tone_pitch * 2) }
-    if console.pressed(.Up) { tone_cutoff = min(12000, tone_cutoff + 400) }
-    if console.pressed(.Down) { tone_cutoff = max(200, tone_cutoff - 400) }
-    if console.pressed(.Action) { tone_wave = 1 - tone_wave }
+    if byt.pressed(.Left) { tone_pitch = max(110, tone_pitch / 2) }
+    if byt.pressed(.Right) { tone_pitch = min(1760, tone_pitch * 2) }
+    if byt.pressed(.Up) { tone_cutoff = min(12000, tone_cutoff + 400) }
+    if byt.pressed(.Down) { tone_cutoff = max(200, tone_cutoff - 400) }
+    if byt.pressed(.Action) { tone_wave = 1 - tone_wave }
     v := audio.voice(2)
-    if console.pressed(.Left) || console.pressed(.Right) {
+    if byt.pressed(.Left) || byt.pressed(.Right) {
         audio.node_control(v, tone, 0, .Frequency, tone_pitch, audio.ASAP, 64)
         audio.node_control(v, tone, 4, .Frequency, tone_pitch, audio.ASAP, 64)
     }
-    if console.pressed(.Up) ||
-       console.pressed(
-           .Down,
-       ) { audio.node_control(v, tone, 7, .Cutoff, tone_cutoff, audio.ASAP, 64) }
-    if console.pressed(
-        .Action,
-    ) { audio.node_control(v, tone, 4, .Wave, tone_wave, audio.ASAP, 64) }
+    if byt.pressed(.Up) ||
+       byt.pressed(.Down) { audio.node_control(v, tone, 7, .Cutoff, tone_cutoff, audio.ASAP, 64) }
+    if byt.pressed(.Action) { audio.node_control(v, tone, 4, .Wave, tone_wave, audio.ASAP, 64) }
     status := audio.status()
     _, count := audio.completions()
-    console.debug_position(f64(status.completed), f64(count))
+    byt.debug_position(f64(status.completed), f64(count))
 }
 draw :: proc() {
-    console.clear(console.rgb(20, 28, 44))
-    console.text("SYNTH: FM / ENVELOPE / FILTER / DELAY", 12, 20, console.rgb(240, 240, 240))
-    console.rect(24, 48, 272, 40, console.rgb(70, 180, 150))
-    console.rect(24, 92, int(tone_pitch / 8), 6, console.rgb(240, 200, 80))
-    console.text("LEFT/RIGHT PITCH  UP/DOWN FILTER", 12, 110, console.rgb(240, 240, 240))
-    console.text("SPACE: MORPH WAVE", 12, 126, console.rgb(240, 240, 240))
+    byt.clear(byt.rgb(20, 28, 44))
+    byt.text("SYNTH: FM / ENVELOPE / FILTER / DELAY", 12, 20, byt.rgb(240, 240, 240))
+    byt.rect(24, 48, 272, 40, byt.rgb(70, 180, 150))
+    byt.rect(24, 92, int(tone_pitch / 8), 6, byt.rgb(240, 200, 80))
+    byt.text("LEFT/RIGHT PITCH  UP/DOWN FILTER", 12, 110, byt.rgb(240, 240, 240))
+    byt.text("SPACE: MORPH WAVE", 12, 126, byt.rgb(240, 240, 240))
 }

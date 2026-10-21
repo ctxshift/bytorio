@@ -2,12 +2,12 @@
 package main
 import "assets"
 import "base:runtime"
-import console "sdk:console"
+import byt "sdk:bytorio"
 @(export)
 game_init :: proc "c" () {
     context = runtime.default_context()
-    console.start(
-        console.Callbacks{init = init, update = update, draw = draw},
-        console.Config{graphics = assets.raster[:], display = .Low},
+    byt.start(
+        byt.Callbacks{init = init, update = update, draw = draw},
+        byt.Config{graphics = assets.raster[:], display = .Low},
     )
 }

@@ -1,19 +1,19 @@
 --!strict
-local console = require("@console")
+local byt = require("@bytorio")
 local model = require("./imported/model")
 
-local g, gfx = console.gfx3d, console.gfx
+local g, gfx = byt.gfx3d, byt.gfx
 local instance: model.Instance
 local transforms: { { number } }
 local base: { { number } }
-local depthLow: console.Depth
-local depthHigh: console.Depth
-local camera: console.Camera
+local depthLow: byt.Depth
+local depthHigh: byt.Depth
+local camera: byt.Camera
 local tick = 0
 
 local function init()
     tick = 0
-    console.display(320, 180)
+    byt.display(320, 180)
     depthLow = g.depth(320, 180)
     depthHigh = g.depth(640, 360)
     local view = g.look_at({ 5, 3, -8 }, { 1, 0.5, -2 })
@@ -26,18 +26,18 @@ local function init()
 end
 
 local function update(_dt: number)
-    console.display(
-        if console.button("action") then 640 else 320,
-        if console.button("action") then 360 else 180
+    byt.display(
+        if byt.button("action") then 640 else 320,
+        if byt.button("action") then 360 else 180
     )
-    if console.button("down") then
+    if byt.button("down") then
         model.destroy(instance)
     elseif not instance.alive then
         instance = model.create()
     end
-    if console.button("right") then
+    if byt.button("right") then
         tick += 1
-    elseif console.button("left") then
+    elseif byt.button("left") then
         tick -= 1
     end
     local body, wheel = model.index("body"), model.index("wheel")
@@ -47,7 +47,7 @@ end
 
 local function draw()
     local pass = gfx.begin_pass(gfx.screen(), { clear = true, color = 0xff322015 })
-    g.bind(pass, if console.button("action") then depthHigh else depthLow, camera)
+    g.bind(pass, if byt.button("action") then depthHigh else depthLow, camera)
     if instance.alive then
         model.draw(pass, instance, nil, transforms)
     end

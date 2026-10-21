@@ -1,6 +1,6 @@
 package main
 
-import console "sdk:console"
+import byt "sdk:bytorio"
 import data "sdk:data"
 import gfx "sdk:gfx"
 scene, indexed: gfx.Target
@@ -13,13 +13,13 @@ rows: [180]gfx.Row
 frame_pixels: data.Pixel_Buffer
 bench: bool
 init :: proc() {
-    caps := console.capabilities()
+    caps := byt.capabilities()
     assert(caps.profile == 2 && caps.abi == 2 && caps.sdk == 512)
     assert(caps.features == 7 && caps.protocol == 4)
     assert(caps.resource_bytes == 67108864 && caps.slots == 1024)
     assert(caps.payload_bytes == 1048576 && caps.audio_rate == 48000)
     assert(caps.audio_lead_frames == 2400)
-    console.display(.Low)
+    byt.display(.Low)
     stencil := gfx.target({format = .Stencil8, width = 320, height = 180})
     scene = gfx.target({format = .RGBA8, width = 320, height = 180, stencil = stencil})
     indexed = gfx.target({format = .Index8, width = 320, height = 180})
@@ -93,27 +93,27 @@ update :: proc(_dt: f64) {
             ticket = {}
         }
     }
-    bench = console.button(.Down)
+    bench = byt.button(.Down)
     if bench {
-        console.display(.High)
+        byt.display(.High)
         for &byte in frame_pixels.bytes {
 
-            byte = u8(console.ticks() % 256)
+            byte = u8(byt.ticks() % 256)
         }
         gfx.upload(full, {0, 0, 640, 360}, frame_pixels)
         return
     }
-    console.display(.High if console.ticks() >= 10 else .Low)
-    if console.ticks() == 10 {
+    byt.display(.High if byt.ticks() >= 10 else .Low)
+    if byt.ticks() == 10 {
 
-        active, _, _ := console.pointer()
+        active, _, _ := byt.pointer()
         assert(!active, "mode switch changed the sampled pointer")
     }
-    color := gfx.rgba(0, 0, (console.ticks() * 13) % 256, 255)
+    color := gfx.rgba(0, 0, (byt.ticks() * 13) % 256, 255)
     gfx.write(palette, 12, (cast([^]u8)&color)[:4])
     for &row, y in rows {
 
-        row.x = i32((u32(y) + console.ticks()) % 3)
+        row.x = i32((u32(y) + byt.ticks()) % 3)
     }
     gfx.write_rows(bands, 0, rows[:])
 }
@@ -148,9 +148,9 @@ draw :: proc() {
     gfx.bind(p, additive)
     gfx.rect(p, 80, 0, 8, 8, gfx.rgba(0, 0, 255, 64))
     gfx.bind(p, gfx.default_pipeline(.RGBA8))
-    console.sprite(0, 180, 20)
-    console.text("PASS", 180, 45, console.rgb(255, 255, 255))
-    if console.button(.Up) {
+    byt.sprite(0, 180, 20)
+    byt.text("PASS", 180, 45, byt.rgb(255, 255, 255))
+    if byt.button(.Up) {
 
         gfx.draw(p, scene, {0, 0, 1, 1}, {0, 0, 1, 1})
     }
@@ -162,12 +162,12 @@ draw :: proc() {
     p = gfx.begin_pass(scene)
     gfx.rect(p, 10, 10, 2, 2, gfx.rgba(0, 255, 0, 255))
     gfx.end_pass(p)
-    if console.ticks() % 8 >= 4 && console.ticks() < 10 {
+    if byt.ticks() % 8 >= 4 && byt.ticks() < 10 {
 
         gfx.present(indexed, {rows = bands, repeat_image = true})
-    } else if console.ticks() >= 10 {
+    } else if byt.ticks() >= 10 {
         screen := gfx.screen()
-        p = gfx.begin_pass(screen, {clear = true, color = console.rgb(0, 0, 0)})
+        p = gfx.begin_pass(screen, {clear = true, color = byt.rgb(0, 0, 0)})
         gfx.draw(p, scene, {0, 0, 320, 180}, {0, 0, 640, 360})
         gfx.end_pass(p)
         gfx.present(screen)

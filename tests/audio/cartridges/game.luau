@@ -1,6 +1,6 @@
 --!strict
-local console = require("@console")
-local audio, data = console.audio, console.data
+local byt = require("@bytorio")
+local audio, data = byt.audio, byt.data
 return {
     init = function()
         local values = { 0, 8192, 16384, 24576, 32767, 24576, 16384, 8192 }
@@ -41,11 +41,11 @@ return {
     end,
     update = function(_dt: number)
         local status = audio.status()
-        console.debug_position(status.completed, #audio.completions())
+        byt.debug_position(status.completed, #audio.completions())
     end,
     draw = function()
-        console.clear(console.rgb(20, 28, 44))
-        console.rect(24, 40, 272, 48, console.rgb(64, 170, 205))
-        console.text("PCM MIXER: 4 VOICES + STREAM", 24, 20, console.rgb(240, 240, 240))
+        byt.clear(byt.rgb(20, 28, 44))
+        byt.rect(24, 40, 272, 48, byt.rgb(64, 170, 205))
+        byt.text("PCM MIXER: 4 VOICES + STREAM", 24, 20, byt.rgb(240, 240, 240))
     end,
 }

@@ -6,6 +6,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:net";
 import { once } from "node:events";
 import { bundleLuau } from "./sdk/bundle.mjs";
+import { syncEditor } from "./sdk/project.mjs";
 import { branding } from "./branding.mjs";
 const root = resolve("build/sdk-cli-verification", randomUUID());
 await mkdir(root, { recursive: true });
@@ -38,6 +39,27 @@ assert.deepEqual(
 const main = resolve(project, "src/main.luau"),
   original = await readFile(main, "utf8");
 assert(original.includes('"HELLO, BYTORIO!"'), "new games contain the branded starter message");
+assert.match(original, /local byt = require\("@bytorio"\)/);
+const settingsPath = resolve(project, ".luaurc");
+const settings = JSON.parse(await readFile(settingsPath, "utf8"));
+assert.equal(settings.aliases.bytorio, "./.bytorio/bytorio");
+assert.match(await readFile(resolve(project, ".gitignore"), "utf8"), /^\.bytorio\/$/m);
+// Updating a generated editor mirror preserves project settings and user aliases.
+settings.languageMode = "nonstrict";
+settings.aliases = { helper: "./src/message", console: "./.console/console" };
+await writeFile(settingsPath, JSON.stringify(settings));
+await writeFile(resolve(project, ".gitignore"), "build/\n# project patterns\n");
+await syncEditor(project);
+const migrated = JSON.parse(await readFile(settingsPath, "utf8"));
+assert.equal(migrated.languageMode, "nonstrict");
+assert.deepEqual(migrated.aliases, { helper: "./src/message", bytorio: "./.bytorio/bytorio" });
+const ignore = await readFile(resolve(project, ".gitignore"), "utf8");
+assert.equal(ignore, "build/\n# project patterns\n.bytorio/\n");
+migrated.aliases.console = "./src/message";
+await writeFile(settingsPath, JSON.stringify(migrated));
+await syncEditor(project);
+assert.equal(JSON.parse(await readFile(settingsPath, "utf8")).aliases.console, "./src/message");
+assert.equal(await readFile(resolve(project, ".gitignore"), "utf8"), ignore);
 cli(["new", project], 1);
 assert.equal(await readFile(main, "utf8"), original, "new preserves existing projects");
 const manifest = JSON.parse(await readFile(resolve(project, "console.json"), "utf8"));
@@ -111,7 +133,7 @@ try {
   await waitFor("Build ready. Reload", 1);
   const changed = await (await fetch(url)).text();
   assert.notEqual(changed, bundled, "watch rebuilds a required module");
-  await writeFile(main, original.replace("local game:", 'console.button("jump")\nlocal game:'));
+  await writeFile(main, original.replace("local game:", 'byt.button("jump")\nlocal game:'));
   await waitFor("luau-analyze.exe failed");
   assert.equal(
     await (await fetch(url)).text(),

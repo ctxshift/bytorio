@@ -1,52 +1,52 @@
 package main
 import "core:math"
-import console "sdk:console"
+import byt "sdk:bytorio"
 random, edges: u32
 px, py: f64
 init :: proc() {
 
     random, edges = 0, 0
-    console.seed(123)
-    console.sound()
+    byt.seed(123)
+    byt.sound()
 }
 update :: proc(dt: f64) {
     assert(dt == 1.0 / 60.0)
-    if console.pressed(.Action) {
+    if byt.pressed(.Action) {
 
         edges += 1
-        console.sound()
+        byt.sound()
     }
-    if console.released(.Action) {
+    if byt.released(.Action) {
 
         edges += 10
     }
-    active, x, y := console.pointer()
+    active, x, y := byt.pointer()
     px, py = 0, 0
     if active {
 
         px, py = x, y
     }
-    random = console.random_u32() % 1000
-    if console.ticks() == 20 || console.ticks() == 60 {
+    random = byt.random_u32() % 1000
+    if byt.ticks() == 20 || byt.ticks() == 60 {
 
-        console.display(.Low)
+        byt.display(.Low)
     }
-    if console.ticks() == 40 {
+    if byt.ticks() == 40 {
 
-        console.display(.High)
+        byt.display(.High)
     }
-    console.debug_position(f64(random), f64(edges))
+    byt.debug_position(f64(random), f64(edges))
 }
 draw :: proc() {
-    console.clear(console.rgb(23, 32, 46))
-    console.rect(-2, -2, 8, 8, console.rgb(255, 0, 0))
-    console.rect(12, 12, 0, 20, console.rgb(0, 0, 0))
-    console.sprite(0, -4, 8, 2)
-    console.sprite_size(0, 60, 30, 7 + int(console.ticks() % 25), 11)
-    console.text("SDK\nPARITY", 20, 50, console.rgb(255, 255, 255))
-    console.rect(int(math.floor(px)), int(math.floor(py)), 3, 3, console.rgb(0, 255, 0))
-    if console.button(.Right) {
+    byt.clear(byt.rgb(23, 32, 46))
+    byt.rect(-2, -2, 8, 8, byt.rgb(255, 0, 0))
+    byt.rect(12, 12, 0, 20, byt.rgb(0, 0, 0))
+    byt.sprite(0, -4, 8, 2)
+    byt.sprite_size(0, 60, 30, 7 + int(byt.ticks() % 25), 11)
+    byt.text("SDK\nPARITY", 20, 50, byt.rgb(255, 255, 255))
+    byt.rect(int(math.floor(px)), int(math.floor(py)), 3, 3, byt.rgb(0, 255, 0))
+    if byt.button(.Right) {
 
-        console.rect(40, 90, 8, 8, console.rgb(0, 0, 255))
+        byt.rect(40, 90, 8, 8, byt.rgb(0, 0, 255))
     }
 }

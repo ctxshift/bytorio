@@ -56,7 +56,7 @@ The batch renderer now accepts command kind 3 for a nearest-neighbor sprite size
 to any width/height from 1 to 128 pixels. The sprite ID occupies the command's
 `color` field; `x/y/w/h` specify the destination rectangle. Source sprites remain
 16×16 with transparent pixels. Odin calls `g.sprite_size(id,x,y,w,h)`; Luau calls
-`console.draw_sprite_size(id,x,y,w,h)`. This allows distant karts to shrink below
+`byt.draw_sprite_size(id,x,y,w,h)`. This allows distant karts to shrink below
 16 pixels instead of jumping between whole-number enlargement steps.
 
 ## Verification and measurements

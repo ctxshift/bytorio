@@ -31,16 +31,16 @@ function luau(model) {
   return formatModel(
     `--!strict
 -- Generated model. Reimport the asset to change geometry; animate local transforms in game code.
-local console = require("@console")
-local g, gfx, data = console.gfx3d, console.gfx, console.data
+local byt =  require("@bytorio")
+local g, gfx, data = byt.gfx3d, byt.gfx, byt.data
 type Matrix = {number}
 type Address = "clamp" | "repeat"
 type MaterialOptions = {address_u: Address?, address_v: Address?}
 export type Instance = {
     alive: boolean,
-    meshes: {console.TexturedMesh},
-    materials: {console.Material},
-    textures: {console.Texture},
+    meshes: {byt.TexturedMesh},
+    materials: {byt.Material},
+    textures: {byt.Texture},
 }
 local geometry = {${geometry}}
 local surfaces = {${materialDefinitions}}
@@ -64,7 +64,7 @@ function api.local_transforms(): {Matrix}
 end
 
 function api.create(): Instance
-    assert(console.capabilities().sdk >= ${model.sdkVersionWord},"Imported model requires SDK ${model.minimumSdk}")
+    assert(byt.capabilities().sdk >= ${model.sdkVersionWord},"Imported model requires SDK ${model.minimumSdk}")
     local instance: Instance = {alive=true,meshes={},materials={},textures={}}
     for _, surface in surfaces do
         local pixels = data.pixels("rgba8", surface.width, surface.height)
@@ -82,7 +82,7 @@ function api.create(): Instance
     return instance
 end
 
-function api.draw(pass: console.Pass, instance: Instance, root: Matrix?, locals: {Matrix}?)
+function api.draw(pass: byt.Pass, instance: Instance, root: Matrix?, locals: {Matrix}?)
     assert(instance.alive,"Model instance is destroyed")
     assert(locals == nil or #locals == #nodeLocals,"Invalid local transform count")
     local world: {Matrix} = {}
@@ -156,7 +156,7 @@ package model
 import g "sdk:gfx3d"
 import gfx "sdk:gfx"
 import data "sdk:data"
-import console "sdk:console"
+import byt "sdk:bytorio"
 
 NODE_COUNT :: ${model.nodes.length}
 MINIMUM_SDK :: ${literal(model.minimumSdk)}
@@ -179,7 +179,7 @@ index :: proc(name: string) -> int {
 local_transforms :: proc() -> [NODE_COUNT]g.Matrix { return node_locals }
 
 create :: proc() -> Instance {
-    assert(console.VERSION_WORD >= ${model.sdkVersionWord},"Imported model requires SDK ${model.minimumSdk}")
+    assert(byt.VERSION_WORD >= ${model.sdkVersionWord},"Imported model requires SDK ${model.minimumSdk}")
     instance: Instance
     ${surfaces}
     ${meshes}

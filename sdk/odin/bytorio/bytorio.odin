@@ -1,4 +1,4 @@
-package console
+package bytorio
 
 import abi "../../../runtime/odin/abi"
 import g "../../../runtime/odin/graphics"

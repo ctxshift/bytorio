@@ -40,7 +40,7 @@ uses the ABI 1 adapter. Unknown declarations fail loading. The Odin SDK defaults
 to ABI 1 for existing direct builds; SDK 0.2 projects pass
 `-define:CONSOLE_PROFILE=2`. Neither language is automatically upgraded at load.
 
-Both SDKs expose `console.capabilities()`: `profile`, `abi`, `sdk`, `features`,
+Both SDKs expose `byt.capabilities()`: `profile`, `abi`, `sdk`, `features`,
 `protocol`, `resource_bytes`, `slots`, `payload_bytes`, `audio_rate` and
 `audio_lead_frames`. Luau returns a frozen table; Odin returns `Capabilities`.
 These describe the host-validated fixed profile, not a hardware speed estimate.

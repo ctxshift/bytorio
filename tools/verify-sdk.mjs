@@ -290,14 +290,14 @@ command.setUint32(0, 3, true);
 command.setInt32(12, 129, true);
 assert.equal(luau.runtime.runtime_render_batch(1, 0), 0, "host rejects oversized resampling");
 for (const statement of [
-  "console.sprite(0,0,0,0)",
-  'console.text("é",0,0,console.rgb(1,2,3))',
-  "console.rect(0,0,-1,1,console.rgb(1,2,3))",
+  "byt.sprite(0,0,0,0)",
+  'byt.text("é",0,0,byt.rgb(1,2,3))',
+  "byt.rect(0,0,-1,1,byt.rgb(1,2,3))",
 ]) {
   const main = resolve(paths.luau, "src/main.luau");
   await writeFile(
     main,
-    `local console=require("@console")\nreturn {init=function() end,update=function() end,draw=function() ${statement} end}\n`,
+    `local byt=require("@bytorio")\nreturn {init=function() end,update=function() end,draw=function() ${statement} end}\n`,
   );
   const { packet } = graphicsPacket(
     JSON.parse(await readFile(resolve(paths.luau, "assets.json"), "utf8")),
@@ -320,22 +320,22 @@ for (const statement of [
 // Static checking catches language API misuse before creating a cartridge.
 await writeFile(
   resolve(paths.luau, "src/main.luau"),
-  '--!strict\nlocal console=require("@console")\nconsole.button("jump")\nreturn {}\n',
+  '--!strict\nlocal byt=require("@bytorio")\nbyt.button("jump")\nreturn {}\n',
 );
 await assert.rejects(() => checkProject(paths.luau), /failed/);
 await writeFile(
   resolve(paths.odin, "src/main.odin"),
-  'package main\nimport console "sdk:console"\ninit :: proc(){_=console.button(.Jump)}\nupdate :: proc(dt:f64){}\ndraw :: proc(){}\n',
+  'package main\nimport byt "sdk:bytorio"\ninit :: proc(){_=byt.button(.Jump)}\nupdate :: proc(dt:f64){}\ndraw :: proc(){}\n',
 );
 await assert.rejects(() => checkProject(paths.odin), /failed/);
 for (const statement of [
-  "console.sprite(0,0,0,0)",
-  'console.text("é",0,0,console.rgb(1,2,3))',
-  "console.rect(0,0,-1,1,console.rgb(1,2,3))",
+  "byt.sprite(0,0,0,0)",
+  'byt.text("é",0,0,byt.rgb(1,2,3))',
+  "byt.rect(0,0,-1,1,byt.rgb(1,2,3))",
 ]) {
   await writeFile(
     resolve(paths.odin, "src/main.odin"),
-    `package main\nimport console "sdk:console"\ninit :: proc(){}\nupdate :: proc(dt:f64){}\ndraw :: proc(){${statement}}\n`,
+    `package main\nimport byt "sdk:bytorio"\ninit :: proc(){}\nupdate :: proc(dt:f64){}\ndraw :: proc(){${statement}}\n`,
   );
   await assert.rejects(() => checkProject(paths.odin), /invalid sprite|ASCII|rectangle dimensions/);
   const game = (

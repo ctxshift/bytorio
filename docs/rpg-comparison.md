@@ -42,7 +42,7 @@ removed. C++ remains in the Luau executor and development analyzer only.
 | Concern | Luau | Odin |
 | --- | --- | --- |
 | Gameplay and presentation | [main.luau](../examples/rpg-luau/main.luau) | [main.odin](../examples/rpg-odin/main.odin) |
-| Console API | [Luau SDK](../sdk/luau/console.luau) | [Odin SDK](../sdk/odin/console/console.odin) |
+| Bytorio API | [Luau SDK](../sdk/luau/bytorio.luau) | [Odin SDK](../sdk/odin/bytorio/bytorio.odin) |
 | Lifecycle | SDK game callbacks | SDK-generated [entry point](../examples/rpg-odin/cartridge.odin) |
 | Assets | Bundled graphics packet | Compiled graphics packet |
 

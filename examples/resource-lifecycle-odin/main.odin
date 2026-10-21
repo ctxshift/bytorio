@@ -1,7 +1,7 @@
 package main
 
 import audio "sdk:audio"
-import console "sdk:console"
+import byt "sdk:bytorio"
 import data "sdk:data"
 import gfx "sdk:gfx"
 
@@ -56,12 +56,12 @@ provoke_stale_handle_error :: proc() {
 }
 
 update :: proc(_dt: f64) {
-    if console.button(.Up) {
+    if byt.button(.Up) {
         provoke_stale_handle_error()
     }
 
     // Fixed ticks make this example a reproducible lifecycle conformance trace.
-    switch console.ticks() {
+    switch byt.ticks() {
     case 2:
         fill_pixels(128)
         upload_image()
@@ -77,5 +77,5 @@ update :: proc(_dt: f64) {
 }
 
 draw :: proc() {
-    console.clear(console.rgb(16, 24, 32))
+    byt.clear(byt.rgb(16, 24, 32))
 }

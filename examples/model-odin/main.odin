@@ -2,7 +2,7 @@ package main
 
 import model "./imported"
 import "core:math"
-import console "sdk:console"
+import byt "sdk:bytorio"
 import gfx "sdk:gfx"
 import g "sdk:gfx3d"
 
@@ -14,7 +14,7 @@ tick: int
 
 init :: proc() {
     tick = 0
-    console.display(.Low)
+    byt.display(.Low)
     depth_low, depth_high = g.depth(320, 180), g.depth(640, 360)
     view := g.look_at({5, 3, -8}, {1, 0.5, -2})
     camera = g.camera(
@@ -25,15 +25,15 @@ init :: proc() {
 }
 
 update :: proc(_dt: f64) {
-    console.display(.High if console.button(.Action) else .Low)
-    if console.button(.Down) {
+    byt.display(.High if byt.button(.Action) else .Low)
+    if byt.button(.Down) {
         model.destroy(&instance)
     } else if !instance.alive {
         instance = model.create()
     }
-    if console.button(.Right) {
+    if byt.button(.Right) {
         tick += 1
-    } else if console.button(.Left) {
+    } else if byt.button(.Left) {
         tick -= 1
     }
     body, wheel := model.index("body"), model.index("wheel")
@@ -43,7 +43,7 @@ update :: proc(_dt: f64) {
 
 draw :: proc() {
     pass := gfx.begin_pass(gfx.screen(), {clear = true, color = 0xff322015})
-    g.bind(pass, depth_high if console.button(.Action) else depth_low, camera)
+    g.bind(pass, depth_high if byt.button(.Action) else depth_low, camera)
     if instance.alive {
         model.draw(pass, &instance, locals = transforms[:])
     }

@@ -54,7 +54,9 @@ export function sourceFiles(extension) {
   const files = [];
   function visit(directory) {
     for (const entry of readdirSync(directory, { withFileTypes: true })) {
-      if ([".git", ".tools", "build", "node_modules", ".console"].includes(entry.name)) {
+      if (
+        [".git", ".tools", "build", "node_modules", ".bytorio", ".console"].includes(entry.name)
+      ) {
         continue;
       }
       const path = resolve(directory, entry.name);

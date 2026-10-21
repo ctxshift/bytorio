@@ -1,29 +1,29 @@
 --!strict
-local console = require("@console")
-local gfx, data = console.gfx, console.data
-local scene: console.Target
-local indexed: console.Target
-local tex: console.Texture
-local full: console.Texture
-local palette: console.Palette
-local bands: console.RowTable
-local mask: console.Pipeline
-local overlay: console.Pipeline
-local additive: console.Pipeline
-local tablePipe: console.Pipeline
-local ticket: console.Readback? = nil
-local rows: { { palette: console.Palette, x: number, y: number } } = {}
-local framePixels: console.PixelBuffer
+local byt = require("@bytorio")
+local gfx, data = byt.gfx, byt.data
+local scene: byt.Target
+local indexed: byt.Target
+local tex: byt.Texture
+local full: byt.Texture
+local palette: byt.Palette
+local bands: byt.RowTable
+local mask: byt.Pipeline
+local overlay: byt.Pipeline
+local additive: byt.Pipeline
+local tablePipe: byt.Pipeline
+local ticket: byt.Readback? = nil
+local rows: { { palette: byt.Palette, x: number, y: number } } = {}
+local framePixels: byt.PixelBuffer
 local bench = false
 return {
     init = function()
-        local caps = console.capabilities()
+        local caps = byt.capabilities()
         assert(caps.profile == 2 and caps.abi == 2 and caps.sdk == 512)
         assert(caps.features == 7 and caps.protocol == 4)
         assert(caps.resource_bytes == 67108864 and caps.slots == 1024)
         assert(caps.payload_bytes == 1048576 and caps.audio_rate == 48000)
         assert(caps.audio_lead_frames == 2400)
-        console.display(320, 180)
+        byt.display(320, 180)
         local stencil = gfx.target({ format = "stencil8", width = 320, height = 180 })
         scene = gfx.target({ format = "rgba8", width = 320, height = 180, stencil = stencil })
         indexed = gfx.target({ format = "index8", width = 320, height = 180 })
@@ -88,26 +88,23 @@ return {
                 ticket = nil
             end
         end
-        bench = console.button("down")
+        bench = byt.button("down")
         if bench then
-            console.display(640, 360)
-            buffer.fill(framePixels.bytes, 0, console.ticks() % 256)
+            byt.display(640, 360)
+            buffer.fill(framePixels.bytes, 0, byt.ticks() % 256)
             gfx.upload(full, { x = 0, y = 0, width = 640, height = 360 }, framePixels)
             return
         end
-        console.display(
-            if console.ticks() >= 10 then 640 else 320,
-            if console.ticks() >= 10 then 360 else 180
-        )
-        if console.ticks() == 10 then
-            local active = console.pointer()
+        byt.display(if byt.ticks() >= 10 then 640 else 320, if byt.ticks() >= 10 then 360 else 180)
+        if byt.ticks() == 10 then
+            local active = byt.pointer()
             assert(not active, "mode switch changed the sampled pointer")
         end
         local color = buffer.create(4)
-        buffer.writeu32(color, 0, gfx.rgba(0, 0, (console.ticks() * 13) % 256, 255))
+        buffer.writeu32(color, 0, gfx.rgba(0, 0, (byt.ticks() * 13) % 256, 255))
         gfx.write(palette, 12, color)
         for y = 0, 179 do
-            rows[y + 1].x = (y + console.ticks()) % 3
+            rows[y + 1].x = (y + byt.ticks()) % 3
         end
         gfx.write_rows(bands, 0, rows)
     end,
@@ -153,9 +150,9 @@ return {
         gfx.bind(p, additive)
         gfx.rect(p, 80, 0, 8, 8, gfx.rgba(0, 0, 255, 64))
         gfx.bind(p, gfx.default_pipeline("rgba8"))
-        console.sprite(0, 180, 20)
-        console.text("PASS", 180, 45, console.rgb(255, 255, 255))
-        if console.button("up") then
+        byt.sprite(0, 180, 20)
+        byt.text("PASS", 180, 45, byt.rgb(255, 255, 255))
+        if byt.button("up") then
             gfx.draw(
                 p,
                 scene,
@@ -170,11 +167,11 @@ return {
         p = gfx.begin_pass(scene)
         gfx.rect(p, 10, 10, 2, 2, gfx.rgba(0, 255, 0, 255))
         gfx.end_pass(p)
-        if console.ticks() % 8 >= 4 and console.ticks() < 10 then
+        if byt.ticks() % 8 >= 4 and byt.ticks() < 10 then
             gfx.present(indexed, { rows = bands, repeat_image = true })
-        elseif console.ticks() >= 10 then
+        elseif byt.ticks() >= 10 then
             local screen = gfx.screen()
-            p = gfx.begin_pass(screen, { clear = true, color = console.rgb(0, 0, 0) })
+            p = gfx.begin_pass(screen, { clear = true, color = byt.rgb(0, 0, 0) })
             gfx.draw(
                 p,
                 scene,

@@ -1,42 +1,42 @@
 package main
-import console "sdk:console"
+import byt "sdk:bytorio"
 x, y: f64
 init :: proc() {
 
     x, y = 40, 40
-    console.sound()
+    byt.sound()
 }
 update :: proc(dt: f64) {
-    if console.button(.Left) {
+    if byt.button(.Left) {
 
         x -= 90 * dt
     }
-    if console.button(.Right) {
+    if byt.button(.Right) {
 
         x += 90 * dt
     }
-    if console.button(.Up) {
+    if byt.button(.Up) {
 
         y -= 90 * dt
     }
-    if console.button(.Down) {
+    if byt.button(.Down) {
 
         y += 90 * dt
     }
-    active, px, py := console.pointer()
+    active, px, py := byt.pointer()
     if active {
 
         x, y = px - 8, py - 8
     }
-    w, h := console.size()
+    w, h := byt.size()
     x, y = clamp(x, 0, f64(w - 16)), clamp(y, 20, f64(h - 16))
-    if console.pressed(.Action) {
+    if byt.pressed(.Action) {
 
-        console.sound()
+        byt.sound()
     }
 }
 draw :: proc() {
-    console.clear(console.rgb(23, 32, 46))
-    console.sprite(0, int(x), int(y))
-    console.text("__STARTER_MESSAGE__", 8, 7, console.rgb(244, 236, 214))
+    byt.clear(byt.rgb(23, 32, 46))
+    byt.sprite(0, int(x), int(y))
+    byt.text("__STARTER_MESSAGE__", 8, 7, byt.rgb(244, 236, 214))
 }

@@ -1,7 +1,7 @@
 package main
 
 import audio "sdk:audio"
-import console "sdk:console"
+import byt "sdk:bytorio"
 import data "sdk:data"
 
 init :: proc() {
@@ -38,10 +38,10 @@ init :: proc() {
 update :: proc(_dt: f64) {
     status := audio.status()
     _, count := audio.completions()
-    console.debug_position(f64(status.completed), f64(count))
+    byt.debug_position(f64(status.completed), f64(count))
 }
 draw :: proc() {
-    console.clear(console.rgb(20, 28, 44))
-    console.rect(24, 40, 272, 48, console.rgb(64, 170, 205))
-    console.text("PCM MIXER: 4 VOICES + STREAM", 24, 20, console.rgb(240, 240, 240))
+    byt.clear(byt.rgb(20, 28, 44))
+    byt.rect(24, 40, 272, 48, byt.rgb(64, 170, 205))
+    byt.text("PCM MIXER: 4 VOICES + STREAM", 24, 20, byt.rgb(240, 240, 240))
 }

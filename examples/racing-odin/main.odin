@@ -3,7 +3,7 @@ package main
 import "assets"
 import "core:fmt"
 import "core:math"
-import g "sdk:console"
+import byt "sdk:bytorio"
 
 LAP :: 72000
 curves := [12]int{0, 0, 1, 1, 0, -1, -1, 0, 1, 0, -1, 0}
@@ -28,8 +28,8 @@ init :: proc() {
     s = State {
         charge = 100,
     }
-    g.display(.Low)
-    g.sound()
+    byt.display(.Low)
+    byt.sound()
     for i in 0 ..< 6 {
 
         s.rivals[i] = -600 + i * 340
@@ -37,7 +37,7 @@ init :: proc() {
     }
 }
 update :: proc(dt: f64) {
-    buttons := g.buttons()
+    buttons := byt.buttons()
     s.ticks += 1
     action := buttons & 16 != 0 && s.previous & 16 == 0
     s.previous = buttons
@@ -52,7 +52,7 @@ update :: proc(dt: f64) {
 
         if s.ticks % 30 == 0 {
 
-            g.sound()
+            byt.sound()
         }
         return
     }
@@ -101,18 +101,18 @@ update :: proc(dt: f64) {
         if abs(s.rivals[i] - s.distance) < 160 && abs(s.lanes[i] - s.x) < 140 && s.speed > 100 {
             s.speed = 80
             s.hits += 1
-            g.sound()
+            byt.sound()
             s.x += 180 if s.x >= s.lanes[i] else -180
         }
     }
     if s.distance / LAP != previous_distance / LAP {
 
-        g.sound()
+        byt.sound()
     }
     if s.distance >= LAP * 3 {
 
         s.finished = true
-        g.sound()
+        byt.sound()
     }
 }
 ink :: proc(index: int) -> u32 {
@@ -121,11 +121,11 @@ ink :: proc(index: int) -> u32 {
 }
 rect :: proc(x, y, w, h, index: int) {
 
-    g.rect(x, y, w, h, ink(index))
+    byt.rect(x, y, w, h, ink(index))
 }
 text :: proc(value: string, x, y, index: int) {
 
-    g.text(value, x, y, ink(index))
+    byt.text(value, x, y, ink(index))
 }
 label_buffer: [128]u8
 label :: proc(format: string, n: int) -> string {
@@ -145,10 +145,10 @@ billboard :: proc(id, distance, lane: int) {
     y := 48 + p
     size := clamp(p * 3 / 4, 2, 48)
     x := center(distance, p) + floor_div(lane * p, 1000) - size / 2
-    g.sprite_size(id, x, y - size, size, size)
+    byt.sprite_size(id, x, y - size, size, size)
 }
 draw :: proc() {
-    g.debug_position(f64(s.x), f64(s.speed))
+    byt.debug_position(f64(s.x), f64(s.speed))
     rect(0, 0, 320, 180, 0)
     rect(0, 18, 320, 56, 1)
     rect(248, 26, 20, 20, 10)
@@ -157,8 +157,8 @@ draw :: proc() {
 
         rect(i * 22 - 10, 53 - abs(i % 6 - 3) * 3, 24, 24, 2)
     }
-    g.sprite(6, 35, 28, 2)
-    g.sprite(6, 160, 23, 2)
+    byt.sprite(6, 35, 28, 2)
+    byt.sprite(6, 160, 23, 2)
     for y in 49 ..< 165 {
         p := y - 48
         distance := 7000 / p
@@ -224,7 +224,7 @@ draw :: proc() {
         rect(148, 153, 5, 10, 10)
         rect(166, 153, 5, 10, 12)
     }
-    g.sprite(kart, 144, 129, 2)
+    byt.sprite(kart, 144, 129, 2)
     rect(0, 0, 320, 17, 0)
     rect(0, 17, 320, 1, 10)
     rank := 1

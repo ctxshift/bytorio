@@ -254,7 +254,7 @@ PNG cartridges remain capped at 2 MiB. Large asset streaming is still milestone 
 
 ## SDK surface
 
-Luau uses `console.gfx3d`; Odin imports `sdk:gfx3d`. The SDKs expose equivalent
+Luau uses `byt.gfx3d`; Odin imports `sdk:gfx3d`. The SDKs expose equivalent
 resource operations:
 
 | Operation | Inputs / result                                                   |
@@ -282,14 +282,14 @@ incremental asset-loading contract supports it.
 A minimal draw inside a cartridge callback, after creating resources:
 
 ```luau
-local pass = console.gfx.begin_pass(console.gfx.screen(), {
+local pass = byt.gfx.begin_pass(byt.gfx.screen(), {
     clear = true,
-    color = console.rgb(20, 24, 32),
+    color = byt.rgb(20, 24, 32),
 })
-console.gfx3d.bind(pass, depth, camera)
-console.gfx3d.draw(pass, mesh, console.gfx3d.identity())
-console.gfx.end_pass(pass)
-console.gfx.present(console.gfx.screen())
+byt.gfx3d.bind(pass, depth, camera)
+byt.gfx3d.draw(pass, mesh, byt.gfx3d.identity())
+byt.gfx.end_pass(pass)
+byt.gfx.present(byt.gfx.screen())
 ```
 
 ```odin

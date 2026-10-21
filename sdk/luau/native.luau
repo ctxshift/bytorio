@@ -1,7 +1,7 @@
 --!strict
 -- Editor declarations. The bundler replaces this module with the executor bridge.
 local function unavailable(): never
-    error("The console native bridge is provided by the player")
+    error("The Bytorio native bridge is provided by the player")
 end
 return {
     profile = (function(): number

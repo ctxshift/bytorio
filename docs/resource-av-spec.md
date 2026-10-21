@@ -44,7 +44,7 @@ A cartridge explicitly requests `resource-av-1`; there is no automatic upgrade
 of ABI 1 games. The profile identifier is 2, ABI is 2, and SDK version
 word is 512. Existing players must reject these requirements before starting a
 game. The player keeps an ABI 1 adapter for existing cartridges and golden
-replays. Existing `console.sprite`, `text`, input and lifecycle conveniences remain
+replays. Existing `byt.sprite`, `text`, input and lifecycle conveniences remain
 available in the new SDK, implemented over the new resource interface.
 The legacy sound-cue convenience remains in its compatibility adapter;
 new-profile scheduled audio uses explicit voice/source selection, with no
@@ -173,7 +173,7 @@ views after every guest call. No host addresses or language layouts cross here.
 Formats are `index8` (one byte per pixel), `rgba8` (four bytes, R/G/B/A),
 and `stencil8` (one byte, stencil attachments only). `rgba8` stores premultiplied
 alpha in encoded 8-bit color space; `gfx.rgba(r,g,b,a)` accepts ordinary channel
-values and premultiplies them. Opaque `console.rgb` values retain their meaning.
+values and premultiplies them. Opaque `byt.rgb` values retain their meaning.
 Every raw RGB channel must be at most alpha. Helpers/importers perform conversion
 explicitly; no implicit gamma conversion or HDR is part of this profile.
 
@@ -368,8 +368,8 @@ and callback behavior; add synthesis only after the delivery path passes.
 ## 6. Equivalent SDK surfaces
 
 These describe the published resource interface. Exact signatures and optional
-descriptor fields are documented in the SDK references above. Use `console.gfx`,
-`console.audio` and `console.data` in Luau, and the corresponding `sdk:gfx`,
+descriptor fields are documented in the SDK references above. Use `byt.gfx`,
+`byt.audio` and `byt.data` in Luau, and the corresponding `sdk:gfx`,
 `sdk:audio` and `sdk:data` Odin packages. Descriptors use named fields, explicit
 units and tagged enum choices. Odin wraps handle kinds in distinct types; Luau
 exports matching opaque types checked by the runtime as well as its analyzer.
@@ -398,7 +398,7 @@ exports matching opaque types checked by the runtime as well as its analyzer.
 | Scheduled controls | `audio.node_control(voice,inst,node,param,value,at,ramp_frames)`, `audio.effect_control(bus,node,param,value,at,ramp_frames)` | Same operations; typed parameter enum |
 | Mutable audio | `audio.edit_sample(sample,first,pcm,at)`, `audio.edit_wavetable(table,first,pcm,at)` | Same operations; explicit source-frame offset and time |
 | Release/stop | `audio.note_off(voice,at)`, `audio.release(voice,fade_frames,at)`, `audio.stop(voice,at)` | Same operations |
-| Clock/status | `audio.time()`, `audio.status()`, `console.capabilities()` | Same queries; integer clock and read-only snapshots |
+| Clock/status | `audio.time()`, `audio.status()`, `byt.capabilities()` | Same queries; integer clock and read-only snapshots |
 | Free resource | `gfx.destroy(handle)`, `audio.destroy(handle)`, `audio.destroy_instrument(inst)`, `audio.destroy_wavetable(table)` | Same operations with typed handles |
 
 Indexing into game data is zero-based in both SDKs, including Luau typed buffers;

@@ -6,7 +6,7 @@ AudioWorklet. These APIs use resource transport version 4 in the published
 SDK 0.2.0 / ABI 2 / `resource-av-1` profile. See
 [profile negotiation and limits](../docs/resource-profile.md).
 
-Import `console.audio` / `console.data` in Luau or `audio "sdk:audio"` /
+Import `byt.audio` / `byt.data` in Luau or `audio "sdk:audio"` /
 `data "sdk:data"` in Odin. Record commands during init/update. Audio never calls
 game code, and draw cannot schedule audio. Existing preview sound cues still work.
 
@@ -148,12 +148,12 @@ one-shot playback, signed-16 conversion, bounded streams and status queries.
 For a simple sound, create a sample during init and schedule a voice:
 
 ```luau
-local pcm = console.data.pcm(480, 1)
+local pcm = byt.data.pcm(480, 1)
 for i = 0, 479 do
     buffer.writef32(pcm.samples, i * 4, math.sin(i * math.pi * 2 * 440 / 48000) * 0.2)
 end
-local source = console.audio.sample({ frames = 480, channels = 1, rate = 48000 }, pcm)
-console.audio.play_sample(console.audio.voice(0), source)
+local source = byt.audio.sample({ frames = 480, channels = 1, rate = 48000 }, pcm)
+byt.audio.play_sample(byt.audio.voice(0), source)
 ```
 
 ```odin

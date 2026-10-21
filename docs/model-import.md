@@ -72,7 +72,7 @@ Normals and material lighting follow the console's flat-lighting model.
 Luau, with the generated module at `src/imported/model.luau`:
 
 ```luau
-local console = require("@console")
+local byt = require("@bytorio")
 local model = require("./imported/model")
 local instance = model.create() -- in init/update
 local locals = model.local_transforms()
@@ -80,7 +80,7 @@ local base = model.local_transforms()
 local wheel = model.index("wheel_front_left")
 
 -- In update: rotate around the named part's own local pivot.
-locals[wheel] = console.gfx3d.multiply(base[wheel], console.gfx3d.pose(0, 0, 0, steering, 1))
+locals[wheel] = byt.gfx3d.multiply(base[wheel], byt.gfx3d.pose(0, 0, 0, steering, 1))
 -- In draw, after binding camera and depth:
 model.draw(pass, instance, rootTransform, locals)
 -- In update, after its final use:

@@ -1,25 +1,25 @@
 --!strict
-local console = require("@console")
-local gfx, g = console.gfx, console.gfx3d
+local byt = require("@bytorio")
+local gfx, g = byt.gfx, byt.gfx3d
 
 local ORBIT_VIEWS = 32
 local ART_SIZE = 8
 local views: { { number } } = {}
-local cameras: { console.Camera } = {}
-local depthLow: console.Depth
-local depthHigh: console.Depth
-local quad: console.TexturedMesh
-local ground: console.Mesh
-local road: console.Mesh
-local kart: console.Mesh
-local tree: console.Material
-local fence: console.Material
-local shadow: console.Material
-local item: console.Material
+local cameras: { byt.Camera } = {}
+local depthLow: byt.Depth
+local depthHigh: byt.Depth
+local quad: byt.TexturedMesh
+local ground: byt.Mesh
+local road: byt.Mesh
+local kart: byt.Mesh
+local tree: byt.Material
+local fence: byt.Material
+local shadow: byt.Material
+local item: byt.Material
 local viewIndex = 1
 
-local function art(kind: number): console.Material
-    local pixels = console.data.pixels("rgba8", ART_SIZE, ART_SIZE)
+local function art(kind: number): byt.Material
+    local pixels = byt.data.pixels("rgba8", ART_SIZE, ART_SIZE)
     for y = 0, ART_SIZE - 1 do
         for x = 0, ART_SIZE - 1 do
             local color = 0
@@ -59,7 +59,7 @@ local function plane(
     far: number,
     height: number,
     color: number
-): console.Mesh
+): byt.Mesh
     return g.mesh({
         { position = { left, height, near }, color = color },
         { position = { right, height, near }, color = color },
@@ -69,8 +69,8 @@ local function plane(
 end
 
 local function init()
-    assert(console.capabilities().profile == 5)
-    console.display(320, 180)
+    assert(byt.capabilities().profile == 5)
+    byt.display(320, 180)
     viewIndex = 1
     views, cameras = {}, {}
     depthLow, depthHigh = g.depth(320, 180), g.depth(640, 360)
@@ -147,19 +147,19 @@ local function init()
 end
 
 local function update(_dt: number)
-    local high = console.button("action")
-    console.display(if high then 640 else 320, if high then 360 else 180)
-    if console.button("right") then
+    local high = byt.button("action")
+    byt.display(if high then 640 else 320, if high then 360 else 180)
+    if byt.button("right") then
         viewIndex = viewIndex % ORBIT_VIEWS + 1
     end
-    if console.button("left") then
+    if byt.button("left") then
         viewIndex = (viewIndex + ORBIT_VIEWS - 2) % ORBIT_VIEWS + 1
     end
 end
 
 local function draw()
     local pass = gfx.begin_pass(gfx.screen(), { clear = true, color = 0xffb99a79 })
-    g.bind(pass, if console.button("action") then depthHigh else depthLow, cameras[viewIndex])
+    g.bind(pass, if byt.button("action") then depthHigh else depthLow, cameras[viewIndex])
     g.draw(pass, ground)
     g.draw(pass, road)
     local shadowModel = g.identity()
@@ -197,5 +197,5 @@ local function draw()
     gfx.present(gfx.screen())
 end
 
-local game: console.Game = { init = init, update = update, draw = draw }
+local game: byt.Game = { init = init, update = update, draw = draw }
 return game

@@ -123,6 +123,7 @@ try {
           const name = String(file).replaceAll("\\", "/");
           if (
             name.startsWith("build/") ||
+            name.startsWith(".bytorio/") ||
             name.startsWith(".console/") ||
             name.startsWith(".git/")
           ) {

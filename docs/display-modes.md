@@ -16,11 +16,11 @@ Native fullscreen is F11; the browser player has a Fullscreen button.
 
 ## Cartridge interface
 
-Luau SDK games call `console.display(320, 180)` or `console.display(640, 360)`.
+Luau SDK games call `byt.display(320, 180)` or `byt.display(640, 360)`.
 The initial mode is 640×360. A request is applied when the next frame is submitted.
 Call it during initialization or before drawing a frame in the new mode.
 
-Odin SDK games call `console.display(.Low)` or `console.display(.High)`.
+Odin SDK games call `byt.display(.Low)` or `byt.display(.High)`.
 The generated entry point supplies `game_display_mode`; authors do not write
 this export. Both SDKs keep command clipping and host rendering in sync.
 Other Odin/Wasm cartridges may export `game_display_mode() -> u32`, returning

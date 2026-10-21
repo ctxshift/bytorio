@@ -1,4 +1,4 @@
-local console = require("@console")
+local byt = require("@bytorio")
 local assets = require("./assets")
 -- Copper Circuit: fixed-step simulation, integer projection and sprite billboards.
 local LAP = 72000
@@ -12,7 +12,7 @@ local function curve(z)
     return curves[floor((z % LAP) / 6000) + 1]
 end
 local function init()
-    console.display(320, 180)
+    byt.display(320, 180)
     s = {
         ticks = 0,
         distance = 0,
@@ -32,11 +32,11 @@ local function init()
         s.rivals[i + 1] = -600 + i * 340
         s.lanes[i + 1] = (i % 3 - 1) * 420
     end
-    console.sound()
+    byt.sound()
 end
 local function update()
     s.ticks += 1
-    local held = console.button("action")
+    local held = byt.button("action")
     local action = held and not s.previous
     s.previous = held
     if s.finished then
@@ -47,17 +47,17 @@ local function update()
     end
     if s.ticks <= 90 then
         if s.ticks % 30 == 0 then
-            console.sound()
+            byt.sound()
         end
         return
     end
     s.elapsed += 1
-    if console.button("up") then
+    if byt.button("up") then
         s.speed = if s.speed < 180 then min(180, s.speed + 3) else max(180, s.speed - 2)
     else
         s.speed = max(0, s.speed - 1)
     end
-    if console.button("down") then
+    if byt.button("down") then
         s.speed = max(0, s.speed - 6)
     end
     local boost = held and s.charge >= 2 and s.speed > 40
@@ -69,10 +69,10 @@ local function update()
         s.charge = min(100, s.charge + 1)
     end
     local steering = 4 + floor(s.speed / 12)
-    if console.button("left") then
+    if byt.button("left") then
         s.x -= steering
     end
-    if console.button("right") then
+    if byt.button("right") then
         s.x += steering
     end
     s.x -= curve(s.distance) * floor(s.speed / 70)
@@ -94,26 +94,26 @@ local function update()
         then
             s.speed = 80
             s.hits += 1
-            console.sound()
+            byt.sound()
             s.x += if s.x >= s.lanes[n] then 180 else -180
         end
     end
     if floor(s.distance / LAP) ~= floor(previousDistance / LAP) then
-        console.sound()
+        byt.sound()
     end
     if s.distance >= LAP * 3 then
         s.finished = true
-        console.sound()
+        byt.sound()
     end
 end
 local function rect(x, y, w, h, index)
-    console.rect(x, y, w, h, assets.palette[index + 1])
+    byt.rect(x, y, w, h, assets.palette[index + 1])
 end
 local function text(value, x, y, index)
-    console.text(value, x, y, assets.palette[index + 1])
+    byt.text(value, x, y, assets.palette[index + 1])
 end
 local function sprite(id, x, y, scale)
-    console.sprite(id, x, y, scale or 1)
+    byt.sprite(id, x, y, scale or 1)
 end
 local function center(distance, p)
     local bend = floor(curve(s.distance + distance) * distance * distance * p / 2000000)
@@ -125,7 +125,7 @@ local function billboard(id, distance, lane)
     end
     local p = floor(7000 / (distance + 80))
     local size = clamp(floor(p * 3 / 4), 2, 48)
-    console.sprite_size(
+    byt.sprite_size(
         id,
         center(distance, p) + floor(lane * p / 1000) - floor(size / 2),
         48 + p - size,
@@ -191,12 +191,12 @@ local function draw()
         end
     end
     local kart = 0
-    if console.button("left") then
+    if byt.button("left") then
         kart = 7
-    elseif console.button("right") then
+    elseif byt.button("right") then
         kart = 8
     end
-    if console.button("action") and s.speed > 180 then
+    if byt.button("action") and s.speed > 180 then
         rect(148, 153, 5, 10, 10)
         rect(166, 153, 5, 10, 12)
     end

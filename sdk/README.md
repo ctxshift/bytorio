@@ -102,21 +102,32 @@ optional ASCII bitmap font. Sprite pixels are palette digits `0`..`f` or `.` for
 transparency. Font entries have seven five-bit string rows. Extra source metadata,
 such as a tile map, can be stored in this JSON and in normal game modules.
 
+The package is `bytorio`; use `byt` as the local namespace in game code.
 Luau's entry is a `.luau` module returning `init`, `update(dt)` and `draw` functions.
-Use `local console = require("@console")`. Strict types and completions come from
-the real SDK module copied into ignored `.console/`, with a portable `.luaurc`
+Use `local byt = require("@bytorio")`. Strict types and completions come from
+the real SDK module copied into ignored `.bytorio/`, with a portable `.luaurc`
 alias. The CLI analyzes game sources and their dependencies, then bundles literal
-relative `require("./module")` and `require("@console")` calls. Modules execute
+relative `require("./module")` and `require("@bytorio")` calls. Modules execute
 once and cache their returned value. Cycles, dynamic requires, shadowing `require`,
 external packages and paths escaping the project are unsupported. Strings and
 comments are preserved. The player requires no filesystem module loader.
 
+When updating source projects, replace `require("@console")` with
+`require("@bytorio")`, rename the local SDK variable to `byt`, and change Odin
+imports to `byt "sdk:bytorio"`. Generated Odin files now use `bytorio_entry.odin`
+and `bytorio_assets/`. Luau checks refresh `.bytorio/` and the managed `bytorio`
+editor alias, preserving other settings and aliases, and ignore the mirror in
+Git. An old generated editor alias is removed; user-defined aliases are retained.
+The project manifest remains `console.json`; cartridge formats, profile markers
+and exported guest functions are unchanged. Previously built cartridges continue
+to run without recompilation.
+
 Odin's entry is a package directory with `package main`, `init :: proc()`,
-`update :: proc(dt:f64)` and `draw :: proc()`. Import `console "sdk:console"`.
+`update :: proc(dt:f64)` and `draw :: proc()`. Import `byt "sdk:bytorio"`.
 The CLI supplies the collection, generates an atlas package and lifecycle entry
 point under `build/generated/`, and compiles the cartridge. Source names
-`console_entry.odin` and the `console_assets/` package are reserved. The generated
-atlas can be imported as `assets "./console_assets"` from the entry package.
+`bytorio_entry.odin` and the `bytorio_assets/` package are reserved. The generated
+atlas can be imported as `assets "./bytorio_assets"` from the entry package.
 Game authors do not write Wasm exports or buffer-offset code.
 
 Both SDKs initialize input/time/random state, prepare graphics batches and provide

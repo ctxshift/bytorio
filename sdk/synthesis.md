@@ -57,7 +57,7 @@ Existing `stop`, explicit fade `release`, voice gain and pan also work on notes.
 
 ## Node descriptors and ports
 
-Luau exports `console.SynthNode` with a string `kind`. Odin uses `audio.Node`
+Luau exports `byt.SynthNode` with a string `kind`. Odin uses `audio.Node`
 and `audio.Node_Kind`. Omitted input fields mean disconnected; **zero is node
 zero**, not a disconnected input. Odin represents optional indices, sources and
 defaulted scalars with unions, preserving explicit zero. Resource handles remain

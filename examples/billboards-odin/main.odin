@@ -1,7 +1,7 @@
 package main
 
 import "core:math"
-import console "sdk:console"
+import byt "sdk:bytorio"
 import data "sdk:data"
 import gfx "sdk:gfx"
 import g "sdk:gfx3d"
@@ -59,8 +59,8 @@ plane :: proc(left, right, near, far, height: f32, color: u32) -> g.Mesh {
 }
 
 init :: proc() {
-    assert(console.capabilities().profile == 5)
-    console.display(.Low)
+    assert(byt.capabilities().profile == 5)
+    byt.display(.Low)
     view_index = 0
     depth_low, depth_high = g.depth(320, 180), g.depth(640, 360)
     projection := g.perspective(math.PI / 3, 16.0 / 9, 0.1, 40)
@@ -128,14 +128,14 @@ init :: proc() {
 }
 
 update :: proc(_dt: f64) {
-    console.display(.High if console.button(.Action) else .Low)
-    if console.button(.Right) { view_index = (view_index + 1) % ORBIT_VIEWS }
-    if console.button(.Left) { view_index = (view_index + ORBIT_VIEWS - 1) % ORBIT_VIEWS }
+    byt.display(.High if byt.button(.Action) else .Low)
+    if byt.button(.Right) { view_index = (view_index + 1) % ORBIT_VIEWS }
+    if byt.button(.Left) { view_index = (view_index + ORBIT_VIEWS - 1) % ORBIT_VIEWS }
 }
 
 draw :: proc() {
     pass := gfx.begin_pass(gfx.screen(), {clear = true, color = 0xffb99a79})
-    g.bind(pass, depth_high if console.button(.Action) else depth_low, cameras[view_index])
+    g.bind(pass, depth_high if byt.button(.Action) else depth_low, cameras[view_index])
     g.draw(pass, ground)
     g.draw(pass, road)
     shadow_model := g.identity()

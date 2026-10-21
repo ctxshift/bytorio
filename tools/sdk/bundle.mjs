@@ -7,7 +7,7 @@ import { PROFILE_ALPHA_3D } from "../../runtime/odin/web/constants.js";
 // Older profiles keep their source budget and fail explicitly if a new helper is called.
 const SDK_MODULE_PROFILES = new Map([["billboard.luau", PROFILE_ALPHA_3D]]);
 
-// Only literal require("@console") and relative module paths are supported.
+// Only literal require("@bytorio") and relative module paths are supported.
 // Tokenization protects comments and strings from accidental source rewriting.
 function tokens(source) {
   const result = [];
@@ -101,11 +101,11 @@ export async function bundleLuau({
   project = await realpath(project);
   sdkRoot = await realpath(sdkRoot);
   const native = resolve(sdkRoot, "native.luau"),
-    sdkEntry = resolve(sdkRoot, "console.luau");
+    sdkEntry = resolve(sdkRoot, "bytorio.luau");
   const modules = new Map(),
     visiting = new Set();
   async function resolveModule(request, from) {
-    if (request === "@console") {
+    if (request === "@bytorio") {
       return sdkEntry;
     }
     if (!request.startsWith("./") && !request.startsWith("../")) {
@@ -218,7 +218,7 @@ export function odinEntry({ graphicsImport = '"assets"', display = "High" } = {}
     throw new Error("Invalid display mode");
   }
   return formatSource(
-    `// Generated SDK entry point.\npackage main\nimport "base:runtime"\nimport console "sdk:console"\nimport ${graphicsImport}\n@(export) game_init :: proc "c" () {\n context=runtime.default_context()\n console.start(console.Callbacks{init=init,update=update,draw=draw},console.Config{graphics=assets.raster[:],display=.${display}})\n}\n`,
-    "console_entry.odin",
+    `// Generated SDK entry point.\npackage main\nimport "base:runtime"\nimport byt "sdk:bytorio"\nimport ${graphicsImport}\n@(export) game_init :: proc "c" () {\n context=runtime.default_context()\n byt.start(byt.Callbacks{init=init,update=update,draw=draw},byt.Config{graphics=assets.raster[:],display=.${display}})\n}\n`,
+    "bytorio_entry.odin",
   );
 }

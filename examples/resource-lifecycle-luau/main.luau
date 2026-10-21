@@ -1,6 +1,6 @@
 --!strict
-local console = require("@console")
-local gfx, audio, data = console.gfx, console.audio, console.data
+local byt = require("@bytorio")
+local gfx, audio, data = byt.gfx, byt.audio, byt.data
 
 local IMAGE_WIDTH = 2
 local IMAGE_HEIGHT = 2
@@ -8,8 +8,8 @@ local SAMPLE_FRAMES = 4
 local SAMPLE_CHANNELS = 2
 local SAMPLE_RATE = 48000
 
-local image: console.Texture
-local sound: console.Sample
+local image: byt.Texture
+local sound: byt.Sample
 local pixels = data.pixels("rgba8", IMAGE_WIDTH, IMAGE_HEIGHT)
 local pcm = data.pcm(SAMPLE_FRAMES, SAMPLE_CHANNELS)
 
@@ -41,12 +41,12 @@ local function provokeStaleHandleError()
 end
 
 local function update(_dt: number)
-    if console.button("up") then
+    if byt.button("up") then
         provokeStaleHandleError()
     end
 
     -- Fixed ticks make this example a reproducible lifecycle conformance trace.
-    local tick = console.ticks()
+    local tick = byt.ticks()
     if tick == 2 then
         buffer.fill(pixels.bytes, 0, 128)
         uploadImage()
@@ -62,7 +62,7 @@ local function update(_dt: number)
 end
 
 local function draw()
-    console.clear(console.rgb(16, 24, 32))
+    byt.clear(byt.rgb(16, 24, 32))
 end
 
 return {

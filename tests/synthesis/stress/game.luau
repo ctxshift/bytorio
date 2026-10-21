@@ -1,6 +1,6 @@
 --!strict
-local console = require("@console")
-local audio, data = console.audio, console.data
+local byt = require("@bytorio")
+local audio, data = byt.audio, byt.data
 return {
     init = function()
         local pcm = data.pcm(32, 1)
@@ -8,22 +8,22 @@ return {
             buffer.writef32(pcm.samples, i * 4, i / 16 - 1)
         end
         local wave = audio.wavetable({ frames = 32, waves = 1 }, pcm)
-        local nodes: { console.SynthNode } = { { kind = "wavetable", source = wave } }
+        local nodes: { byt.SynthNode } = { { kind = "wavetable", source = wave } }
         for i = 1, 13 do
-            local filter: console.SynthNode =
+            local filter: byt.SynthNode =
                 { kind = "filter", input = i - 1, cutoff_hz = 6000, resonance = 0.4 }
             table.insert(nodes, filter)
         end
-        local finalGain: console.SynthNode = { kind = "gain", input = 13, gain = 0.03 }
+        local finalGain: byt.SynthNode = { kind = "gain", input = 13, gain = 0.03 }
         table.insert(nodes, finalGain)
-        local output: console.SynthNode = { kind = "output", input = 14 }
+        local output: byt.SynthNode = { kind = "output", input = 14 }
         table.insert(nodes, output)
         local instrument = audio.instrument(nodes)
         local buses = { audio.master() }
         for _ = 1, 7 do
             table.insert(buses, audio.bus())
         end
-        local fx: { console.SynthNode } = {
+        local fx: { byt.SynthNode } = {
             { kind = "input" },
             { kind = "filter", input = 0, cutoff_hz = 6000, resonance = 0.4 },
             {
@@ -58,10 +58,10 @@ return {
     end,
     update = function(_dt: number)
         local status = audio.status()
-        console.debug_position(status.completed, #audio.completions())
+        byt.debug_position(status.completed, #audio.completions())
     end,
     draw = function()
-        console.clear(console.rgb(20, 28, 44))
-        console.text("DSP LOAD: 16 VOICES / 8 BUSES / 320 NODES", 8, 20, console.rgb(240, 240, 240))
+        byt.clear(byt.rgb(20, 28, 44))
+        byt.text("DSP LOAD: 16 VOICES / 8 BUSES / 320 NODES", 8, 20, byt.rgb(240, 240, 240))
     end,
 }

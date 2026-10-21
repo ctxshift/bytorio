@@ -17,7 +17,7 @@ scheduled source edits and independent voice/bus DSP state.
 
 ## SDK operations
 
-Luau uses `console.data`, `console.gfx`, and `console.audio`. Odin imports
+Luau uses `byt.data`, `byt.gfx`, and `byt.audio`. Odin imports
 `data "sdk:data"`, `gfx "sdk:gfx"`, and `audio "sdk:audio"`.
 
 | Operation | Luau | Odin |
@@ -45,7 +45,7 @@ storage begins at zero and can be filled with chunked writes.
 
 Luau buffer metadata and handle tokens are frozen; mutate `pixels.bytes` with
 the buffer library and `pcm.samples` with `buffer.writef32` at zero-based byte
-offsets. Exported `console.Texture`, `Sample`, `PixelBuffer`, and `PCMBuffer`
+offsets. Exported `byt.Texture`, `Sample`, `PixelBuffer`, and `PCMBuffer`
 types support editor checks. Token identity, session and generation are checked
 at runtime. Odin exposes `[]u8` pixel bytes and `[]f32` samples; it uses distinct
 `gfx.Texture` / `audio.Sample` types. Release game-owned Odin buffers with

@@ -22,7 +22,7 @@ await mkdir(root, { recursive: true });
 const bundleEntry = resolve(root, "bundle.luau");
 await writeFile(
   bundleEntry,
-  'local c = require("@console")\nreturn {draw=function() c.gfx3d.billboard_model({}) end}\n',
+  'local byt = require("@bytorio")\nreturn {draw=function() byt.gfx3d.billboard_model({}) end}\n',
 );
 for (const profile of [1, 2, 3, 4, 5]) {
   const bundled = (
