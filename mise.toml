@@ -24,6 +24,24 @@ run = "node tools/generate-constants.mjs"
 description = "Run the Bytorio developer CLI"
 run = "node tools/byt.mjs"
 
+[tasks."build:models"]
+description = "Import a rigid model and build both SDK examples"
+run = "node tools/build-models.mjs"
+
+[tasks."generate:models"]
+description = "Regenerate the checked imported-model example modules"
+run = "node tools/build-models.mjs --update-examples"
+
+[tasks."serve:models"]
+run = "node tools/serve.mjs build/models"
+
+[tasks."test:models"]
+description = "Verify glTF import and both SDKs on native/browser"
+run = ["node --test tools/sdk/gltf.test.mjs", "node tools/verify-models.mjs"]
+
+[tasks."test:models:gpu"]
+run = "node tools/verify-models.mjs --gpu"
+
 [tasks."generate:check"]
 description = "Check generated constants against their contracts"
 run = "node tools/generate-constants.mjs --check"
@@ -285,6 +303,7 @@ run = [
   {task = "test:3d"},
   {task = "test:textured3d"},
   {task = "test:billboards"},
+  {task = "test:models"},
   {task = "test:riverside:geometry"},
   {task = "test:audio"},
   {task = "test:synthesis"},

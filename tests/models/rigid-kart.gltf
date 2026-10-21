@@ -1,0 +1,216 @@
+{
+  "asset": {
+    "version": "2.0"
+  },
+  "scene": 0,
+  "scenes": [
+    {
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "body",
+      "mesh": 0,
+      "translation": [
+        1,
+        0,
+        2
+      ],
+      "children": [
+        1
+      ]
+    },
+    {
+      "name": "wheel",
+      "mesh": 1,
+      "translation": [
+        -0.7,
+        0.2,
+        0.9
+      ],
+      "rotation": [
+        0,
+        0.7071067811865476,
+        0,
+        0.7071067811865476
+      ],
+      "scale": [
+        2,
+        1,
+        1
+      ]
+    }
+  ],
+  "meshes": [
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "TEXCOORD_0": 1,
+            "COLOR_0": 2
+          },
+          "indices": 3,
+          "material": 0
+        }
+      ]
+    },
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 4,
+            "TEXCOORD_0": 5
+          },
+          "indices": 6,
+          "material": 1
+        }
+      ]
+    }
+  ],
+  "accessors": [
+    {
+      "bufferView": 0,
+      "byteOffset": 0,
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC3",
+      "min": [
+        -1,
+        0,
+        -0.5
+      ],
+      "max": [
+        1,
+        1,
+        0.5
+      ]
+    },
+    {
+      "bufferView": 0,
+      "byteOffset": 12,
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "byteOffset": 20,
+      "componentType": 5121,
+      "normalized": true,
+      "count": 24,
+      "type": "VEC4"
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5123,
+      "count": 36,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 2,
+      "componentType": 5126,
+      "count": 4,
+      "type": "VEC3",
+      "min": [
+        -0.4,
+        0,
+        0
+      ],
+      "max": [
+        0.4,
+        0.8,
+        0
+      ]
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 12,
+      "componentType": 5126,
+      "count": 4,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 3,
+      "componentType": 5121,
+      "count": 6,
+      "type": "SCALAR"
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteOffset": 0,
+      "byteLength": 576,
+      "byteStride": 24
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 576,
+      "byteLength": 72
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 648,
+      "byteLength": 80,
+      "byteStride": 20
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 728,
+      "byteLength": 6
+    }
+  ],
+  "buffers": [
+    {
+      "uri": "data:application/octet-stream;base64,AACAvwAAAAAAAAC/AAAAAAAAgD//gP//AACAPwAAAAAAAAC/AACAPwAAgD//gP//AACAPwAAgD8AAAC/AACAPwAAAAD/gP//AACAvwAAgD8AAAC/AAAAAAAAAAD/gP//AACAPwAAAAAAAAA/AAAAAAAAgD//gP//AACAvwAAAAAAAAA/AACAPwAAgD//gP//AACAvwAAgD8AAAA/AACAPwAAAAD/gP//AACAPwAAgD8AAAA/AAAAAAAAAAD/gP//AACAvwAAAAAAAAA/AAAAAAAAgD//gP//AACAvwAAAAAAAAC/AACAPwAAgD//gP//AACAvwAAgD8AAAC/AACAPwAAAAD/gP//AACAvwAAgD8AAAA/AAAAAAAAAAD/gP//AACAPwAAAAAAAAC/AAAAAAAAgD//gP//AACAPwAAAAAAAAA/AACAPwAAgD//gP//AACAPwAAgD8AAAA/AACAPwAAAAD/gP//AACAPwAAgD8AAAC/AAAAAAAAAAD/gP//AACAvwAAgD8AAAC/AAAAAAAAgD//gP//AACAPwAAgD8AAAC/AACAPwAAgD//gP//AACAPwAAgD8AAAA/AACAPwAAAAD/gP//AACAvwAAgD8AAAA/AAAAAAAAAAD/gP//AACAvwAAAAAAAAA/AAAAAAAAgD//gP//AACAPwAAAAAAAAA/AACAPwAAgD//gP//AACAPwAAAAAAAAC/AACAPwAAAAD/gP//AACAvwAAAAAAAAC/AAAAAAAAAAD/gP//AAABAAIAAAACAAMABAAFAAYABAAGAAcACAAJAAoACAAKAAsADAANAA4ADAAOAA8AEAARABIAEAASABMAFAAVABYAFAAWABcAzczMvs3MTD8AAAAAAAAAAAAAgD/NzMw+zcxMPwAAAAAAAIA/AACAP83MzD4AAAAAAAAAAAAAgD8AAAAAzczMvgAAAAAAAAAAAAAAAAAAAAAAAQIAAgM=",
+      "byteLength": 734
+    }
+  ],
+  "images": [
+    {
+      "uri": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAF0lEQVR4nGP4z8Dwn+E/QwMDmP7//z8AP9cIeTCJbwMAAAAASUVORK5CYII="
+    }
+  ],
+  "samplers": [
+    {
+      "wrapS": 33071,
+      "wrapT": 10497,
+      "magFilter": 9728,
+      "minFilter": 9728
+    }
+  ],
+  "textures": [
+    {
+      "source": 0,
+      "sampler": 0
+    }
+  ],
+  "materials": [
+    {
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 0
+        },
+        "baseColorFactor": [
+          0.5,
+          1,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "alphaMode": "MASK",
+      "alphaCutoff": 0.5,
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 0
+        }
+      }
+    }
+  ]
+}

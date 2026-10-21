@@ -10,6 +10,10 @@ mesh and material lifecycles under SDK 0.4.0 without changing this profile.
 Textured drawing, optional GPU residency and quality rendering are available
 through that profile.
 
+The [static model importer](model-import.md) prepares bounded glTF/GLB geometry,
+base-color textures and named rigid hierarchies for both SDKs. Imported models
+use these ordinary mesh/material resources and CPU or opt-in GPU execution.
+
 The separate [voxel resolution study](../experiments/voxel-resolution/README.md)
 preserves a procedural winter scene for comparing visual detail at three output
 sizes. It uses an independent renderer and does not extend the console profile.

@@ -258,8 +258,14 @@ cameras, flat lighting/fog and 3D/2D composition. The separate SDK 0.3.0 profile
 also prototypes typed voxel grids with cached visible-face meshes, bulk region
 edits and frame-resource animation. `mise run test:3d` verifies and benchmarks
 both SDKs through the standalone native player and browser Worker at both display
-modes. Chunked/merged voxel resources and textures remain future
+modes. Chunked/merged voxel resources and voxel-texture mapping remain future
 work; [measurements](compact-3d-measurements.md) determine the next optimization.
+
+The separate textured and alpha previews now support a bounded
+[static glTF/GLB import path](model-import.md). It emits both SDK modules with
+named rigid parts, shared mesh instances, validated material conversion and size
+reports. Artists can replace hand-authored vertex tables; large binary model
+streaming, skeletal animation, smooth normals and PBR remain outside this slice.
 
 Add indexed meshes, depth testing, cameras, vertex colors, simple lighting/fog
 and 3D-to-2D composition using these target/resource lifetimes. Keep custom shaders,

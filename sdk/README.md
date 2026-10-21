@@ -34,6 +34,11 @@ SDK 0.5.0 / `alpha-3d-preview-1` adds [depth-tested billboards and alpha cutout]
 It reuses typed UV meshes/materials on CPU and optional GPU paths. Set both manifest
 fields explicitly to use it; `mise run build:billboards` builds matching examples.
 
+The [static glTF/GLB importer](../docs/model-import.md) generates ready-to-use Luau
+and Odin model modules, preserving named rigid parts for game-side animation.
+Use `byt import <asset> --output <project>/src/imported`; the report identifies
+the required preview profile, limits and base-color rendering reductions.
+
 ## Start a game
 
 Run from the SDK repository root:

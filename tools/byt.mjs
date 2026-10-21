@@ -6,6 +6,7 @@ import { createProject, checkProject, buildProject, packProject } from "./sdk/pr
 import { serve } from "./serve.mjs";
 import { parseFrameRate } from "../runtime/odin/web/frame-clock.js";
 import { branding } from "./branding.mjs";
+import { importModel } from "./sdk/import-model.mjs";
 
 const MAX_TCP_PORT = 65535;
 
@@ -15,6 +16,7 @@ const help = [
   "",
   `Usage: ${branding.command} new <directory> [--language luau|odin]`,
   `       ${branding.command} check|build <directory>`,
+  `       ${branding.command} import <model.gltf|model.glb> --output <generated-directory>`,
   `       ${branding.command} pack <directory> [--output game.png] [--cover cover.png]`,
   `       ${branding.command} run|watch <directory> [--web|--native] [--port 8080] [--fps 60|144|native|uncapped]`,
 ].join("\n");
@@ -46,6 +48,9 @@ try {
     }
     if (action === "new") {
       await createProject(path, options.language || "luau");
+    } else if (action === "import") {
+      const model = await importModel(path, options.output);
+      console.log(JSON.stringify({ minimumSdk: model.minimumSdk, ...model.report }, null, 2));
     } else if (action === "check") {
       await checkProject(path);
     } else if (action === "build") {
