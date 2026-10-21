@@ -13,8 +13,23 @@ sequence_color, sequence_depth: [320 * 180 * 4]u8
 sequence_uploads, sequence_readbacks, sequence_draws: int
 sequence_fail: bool
 sequence_fail_sync: bool
+sequence_software: bool
+sequence_private: bool
 
 sequence_device :: proc(job: r.Raster_Job) -> bool {
+    if sequence_software {
+        if !job.continuation { sequence_uploads += 1 }
+        if len(job.vertices) != 0 { sequence_draws += 1 }
+        if !job.defer_readback { sequence_readbacks += 1 }
+        if sequence_fail || (sequence_fail_sync && !job.defer_readback) { return false }
+        center := (job.height / 2 * job.width + job.width / 2) * 4
+        before := r.u32le(job.color, center)
+        accepted := r.software_raster(job)
+        if job.defer_readback {
+            sequence_private = sequence_private && r.u32le(job.color, center) == before
+        }
+        return accepted
+    }
     if !job.continuation {
         copy(sequence_color[:], job.color)
         copy(sequence_depth[:], job.depth)
@@ -23,6 +38,7 @@ sequence_device :: proc(job: r.Raster_Job) -> bool {
     if len(job.vertices) != 0 {
         draw := job
         draw.color, draw.depth = sequence_color[:], sequence_depth[:]
+        draw.continuation, draw.defer_readback = false, false
         if !r.software_raster(draw) { return false }
         sequence_draws += 1
     }
@@ -45,6 +61,25 @@ sequence_device :: proc(job: r.Raster_Job) -> bool {
 }
 
 resident_attachment_sequences :: proc(test: ^testing.T) {
+    sequence_software = false
+    attachment_sequences(test)
+}
+
+software_attachment_sequences :: proc(test: ^testing.T) {
+    sequence_software = true
+    sequence_private = true
+    defer sequence_software = false
+    r.software_configure(2)
+    defer r.software_configure(0)
+    attachment_sequences(test)
+    testing.expect(
+        test,
+        sequence_private,
+        "Deferred CPU batches must keep output private until synchronization",
+    )
+}
+
+attachment_sequences :: proc(test: ^testing.T) {
     registry: r.Registry
     defer r.close(&registry)
     defer r.software_close()
@@ -76,6 +111,13 @@ resident_attachment_sequences :: proc(test: ^testing.T) {
     testing.expect_value(test, sequence_uploads, 1)
     testing.expect_value(test, sequence_readbacks, 1)
     testing.expect_value(test, sequence_draws, 2)
+    if sequence_software {
+        counts := r.software_statistics()
+        testing.expect_value(test, counts[0], u64(320 * 180 * 4 * 8))
+        testing.expect_value(test, counts[1], u64(320 * 180 * 8))
+        testing.expect_value(test, counts[2], u64(2))
+        testing.expect_value(test, counts[3], u64(1))
+    }
     testing.expect_value(test, registry.output[90 * 320 + 160], u32(0xff0000ff))
     testing.expect_value(
         test,
@@ -155,6 +197,9 @@ resident_attachment_sequences :: proc(test: ^testing.T) {
     gfx.present(gfx.screen())
     commit(test, &registry, false)
     testing.expect_value(test, r.hash(&registry), previous)
+    // Rejected packets do not advance the host sequence. Rewind this test's
+    // transport so subsequent failure and recovery probes reach the device.
+    t.sequence = registry.sequence
     // The next fresh sequence overwrites abandoned scratch, including after a
     // late synchronization/device failure rather than an early draw failure.
     sequence_fail_sync = true
@@ -166,6 +211,7 @@ resident_attachment_sequences :: proc(test: ^testing.T) {
     gfx.present(gfx.screen())
     commit(test, &registry, false)
     testing.expect_value(test, r.hash(&registry), previous)
+    t.sequence = registry.sequence
     sequence_fail_sync = false
     sequence_fail = true
     t.begin_draw(0)
@@ -176,6 +222,16 @@ resident_attachment_sequences :: proc(test: ^testing.T) {
     gfx.present(gfx.screen())
     commit(test, &registry, false)
     testing.expect_value(test, r.hash(&registry), previous)
+    t.sequence = registry.sequence
+    sequence_fail = false
+    t.begin_draw(0)
+    pass = gfx.begin_pass(gfx.screen(), {clear = true, color = 0xff222222})
+    g.bind(pass, depth, view)
+    g.draw(pass, far)
+    gfx.end_pass(pass)
+    gfx.present(gfx.screen())
+    commit(test, &registry)
+    testing.expect_value(test, registry.output[90 * 320 + 160], u32(0xffff0000))
     // Reset preserves the host opt-in, but the next transaction starts fresh.
     testing.expect(test, r.reset(&registry, 926))
     testing.expect(test, registry.deferred_raster)

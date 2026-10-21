@@ -113,6 +113,16 @@ by dimensions and released on device close. Default CPU rendering allocates no
 quality device. Full-scene 1080p CPU rendering can be much slower than GPU mode;
 availability of these options is not a CPU frame-rate guarantee.
 
+CPU quality rendering retains private per-sample color and depth across
+compatible mesh/material batches, including transparent effects. It expands
+logical attachments once at sequence start and resolves once at a CPU consumer,
+attachment clear/change, readback or commit. A CPU HUD draw synchronizes first;
+later 3D starts from that updated image. Rejected transactions cannot publish
+private samples, and a fresh sequence overwrites abandoned scratch. Changing
+quality invalidates the sequence. The host retains no cartridge or transaction
+pointers in the quality device. This optimization does not enable GPU support
+or allocate quality buffers for ordinary CPU rendering.
+
 The CPU smooth presenter expands constant rectangles using integer grid
 boundaries and row copies, preserving shifted world pixels and unshifted opaque
 HUD coverage. Interactive hosts perform all pending fixed updates and then draw

@@ -493,7 +493,6 @@ presentation_matches_independent_pixel_reference :: proc(test: ^testing.T) {
     }
 }
 
-@(test)
 software_quality :: proc(test: ^testing.T) {
     defer r.software_close()
     color := make([]u8, 32 * 32 * 4)
@@ -558,6 +557,29 @@ software_quality :: proc(test: ^testing.T) {
     }
     filtered, _ := r.software_resolve(device, 0, 0, device.width, 2)
     testing.expect_value(test, filtered, u32(0xffbcbcbc))
+    job.defer_readback = true
+    testing.expect(test, r.software_raster(job))
+    // A later material must preserve individual samples, not re-expand their
+    // already filtered logical pixel. Check a known linear-light average.
+    for y in 0 ..< 2 {
+        for x in 0 ..< 2 {
+            r.put32(
+                device.color,
+                (y * device.width + x) * 4,
+                0xffffffff if (x + y) % 2 == 0 else 0xff000000,
+            )
+        }
+    }
+    job.vertices = nil
+    job.continuation, job.defer_readback = true, false
+    testing.expect(test, r.software_raster(job))
+    testing.expect_value(test, r.u32le(color, 0), u32(0xffbcbcbc))
+    testing.expect(test, !r.software_raster(job), "A completed sequence cannot continue")
+    job.continuation, job.defer_readback = false, true
+    testing.expect(test, r.software_raster(job))
+    job.continuation = true
+    r.software_configure(6)
+    testing.expect(test, !r.software_raster(job), "Changing quality invalidates private samples")
     testing.expect(test, r.software_storage_bytes() > 0)
     r.software_close()
     testing.expect_value(test, r.software_storage_bytes(), 0)
@@ -565,9 +587,13 @@ software_quality :: proc(test: ^testing.T) {
 
 @(test)
 shared_3d :: proc(test: ^testing.T) {
+    // Quality checks share the process-owned device and must run serially with
+    // the resource lifecycle tests, even when Odin schedules tests in parallel.
+    software_quality(test)
     effect_blending_depth_and_rollback(test)
     committed_frame_transactions(test)
     resident_attachment_sequences(test)
+    software_attachment_sequences(test)
     textured_sampling_and_depth(test)
     billboard_pivots_and_axes(test)
     cutout_color_and_depth_holes(test)

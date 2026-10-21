@@ -29,16 +29,16 @@ examples/kart3d/build/odin/build/native/player.exe --renderer gpu --gpu-meshes
 examples/kart3d/build/luau/build/native/player.exe --renderer gpu --gpu-meshes
 ```
 
-| Control | Action |
-| --- | --- |
-| W / Up | Accelerate; timing the press near the end of the countdown gives a launch boost |
-| S / Down | Brake |
-| A D / Left Right | Steer |
+| Control             | Action                                                                                     |
+| ------------------- | ------------------------------------------------------------------------------------------ |
+| W / Up              | Accelerate; timing the press near the end of the countdown gives a launch boost            |
+| S / Down            | Brake                                                                                      |
+| A D / Left Right    | Steer                                                                                      |
 | Space while turning | Hop into a drift; alternate steering to charge sparks, then release Space for a mini-turbo |
-| E | Spend the collected turbo item |
-| Q | Toggle 320×180 / 640×360 |
-| Hold Space, press Q | Cycle Auto LOD → Low detail → High detail |
-| R | Restart the race |
+| E                   | Spend the collected turbo item                                                             |
+| Q                   | Toggle 320×180 / 640×360                                                                   |
+| Hold Space, press Q | Cycle Auto LOD → Low detail → High detail                                                  |
+| R                   | Restart the race                                                                           |
 
 Simulation runs at 60 Hz independently of presentation frame-rate settings.
 The HUD shows time, lap, position, stored item, speed, drift charge and a minimap
@@ -102,6 +102,7 @@ but matching a commercial racer's feel requires further hands-on tuning.
 mise run validate test:kart3d
 mise run validate test:kart3d:gpu
 mise run //examples/kart3d:benchmark
+mise run //examples/kart3d:benchmark:quality
 ```
 
 Pure simulation tests assert independent expected results for countdown,
@@ -119,10 +120,18 @@ It runs two warm-up and five measured 300-frame race starts, excluding the first
 180 countdown frames from frame summaries: 600 moving samples per case at
 320×180, SSAA off. GPU cases explicitly enable resident meshes. Measurements
 include rendering completion, exclude diagnostic hashing, audio, main-thread
-delivery and display scanout, and retain normal OS/executor caches. Native
-startup ends at initialization; browser startup includes its first frame.
+delivery and display scanout. Native executor caching remains enabled; the
+browser benchmark uses executor bytes without the launcher's module cache.
+OS/browser caches are not cleared. Native startup ends at first draw submission
+(complete on CPU); browser startup includes its first frame.
 This short rollout does not establish worst-case full-course performance or a
 minimum-device 60 FPS guarantee.
+
+The quality task covers both display sizes and all three SSAA settings, using
+a simulation-only prefix to skip the countdown and 300 measured moving frames
+per configuration. See [quality measurements](kart-quality-measurements.md) for
+the CPU attachment optimization, p50/p95/p99 results, memory, traffic, cache
+behavior and remaining performance limits. GPU acceleration stays opt-in.
 
 ### Earlier baseline rollout observation
 
@@ -131,10 +140,10 @@ the polished version. Measured on 2026-10-21, Windows native and Chrome browser,
 locally. Times below are pipeline p95 milliseconds; each case has 600 moving
 samples. This run had no samples over 16.67 ms.
 
-| SDK | PNG bytes | Native CPU | Browser CPU | Native GPU | Browser GPU |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Odin | 215,586 | 4.74 | 5.00 | 2.05 | 1.70 |
-| Luau | 133,604 | 5.38 | 5.30 | 3.46 | 2.50 |
+| SDK  | PNG bytes | Native CPU | Browser CPU | Native GPU | Browser GPU |
+| ---- | --------: | ---------: | ----------: | ---------: | ----------: |
+| Odin |   215,586 |       4.74 |        5.00 |       2.05 |        1.70 |
+| Luau |   133,604 |       5.38 |        5.30 |       3.46 |        2.50 |
 
 Observed startup was 63 / 36 ms on native CPU and 35 / 99 ms in the browser for
 Odin / Luau respectively. GPU initialization raised native startup to about

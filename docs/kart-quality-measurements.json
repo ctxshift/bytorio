@@ -1,0 +1,3428 @@
+{
+  "recordedAt": "2026-10-21T20:12:46.971Z",
+  "hardware": {
+    "cpu": "11th Gen Intel(R) Core(TM) i7-11700K @ 3.60GHz",
+    "logicalProcessors": 16,
+    "memoryBytes": 34145550336,
+    "platform": "win32",
+    "arch": "x64",
+    "browser": "155.0.8059.85",
+    "webglRenderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3090 (0x00002204) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+  },
+  "method": {
+    "frames": 300,
+    "warmupPasses": 2,
+    "measuredPasses": 5,
+    "excludedCountdownFrames": 180,
+    "simulationOnlyPrefix": 240,
+    "scope": "Seven sequential race starts, two warmup passes and five measured passes. The quality matrix advances 240 simulation updates without drawing, then measures 60 moving frames per pass. The baseline measures 120 moving frames after countdown. Timings include GPU completion/bitmap creation when selected, exclude diagnostic hashes, main-thread delivery, audio and scanout. Throughput is computed work rate, not delivered display FPS. Native startup ends after first draw submission (complete on CPU); browser startup includes its first frame and uses the executor byte fallback, without the launcher module cache. Native executor and OS/browser caches are retained. This short rollout does not qualify the complete course or minimum hardware."
+  },
+  "localReports": [
+    "examples/kart3d/build/benchmarks/af666cdf-fd05-495f-9bfc-8c37a4edee72/report.json",
+    "examples/kart3d/build/benchmarks/f94d4b2f-0bf2-4f76-b25b-524ccd05a6d8/report.json"
+  ],
+  "cases": [
+    {
+      "language": "odin",
+      "backend": "cpu",
+      "display": [320, 180],
+      "ssaa": "off",
+      "cartridgeBytes": 250530,
+      "native": {
+        "samples": 300,
+        "p50Ms": 5.070099999999999,
+        "p95Ms": 5.7583,
+        "p99Ms": 6.2237,
+        "meanMs": 5.119163000000001,
+        "workFramesPerSecond": 195.34443423661244,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 6.556900000000001,
+        "over60HzBudget": 0,
+        "stageP95Ms": [0.0344, 5.716, 0.0257],
+        "startup": {
+          "totalMs": 80.6076,
+          "compileMs": 69.5907,
+          "instantiateMs": 0.1559,
+          "gameInitMs": 1.2187
+        },
+        "memory": {
+          "currentLinear": 3342336,
+          "heapBytes": 0,
+          "heapPeak": 0,
+          "baselineWorking": 10817536,
+          "working": 25960448,
+          "peakWorking": 64913408
+        },
+        "resourceStats": {
+          "currentResourceBytes": 1758212,
+          "peakResourceBytes": 2473548,
+          "packetBytes": 1676132,
+          "hostCopyBytes": 15673704,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "cpuStats": {
+          "allocatedBytes": 0,
+          "attachmentImportBytes": 0,
+          "attachmentResolveBytes": 0,
+          "batches": 0,
+          "sequences": 0
+        }
+      },
+      "browser": {
+        "samples": 300,
+        "p50Ms": 5.600000023841858,
+        "p95Ms": 6.300000071525574,
+        "p99Ms": 7,
+        "meanMs": 5.6999999988079075,
+        "workFramesPerSecond": 175.43859652791915,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 7.699999928474426,
+        "over60HzBudget": 0,
+        "stageP95Ms": [
+          0.10000002384185791, 6.200000047683716, 0.10000002384185791, 0.19999992847442627
+        ],
+        "startup": {
+          "fetchMs": 12.299999952316284,
+          "compileMs": 1.4000000953674316,
+          "instantiateMs": 0.09999990463256836,
+          "runtimeInitMs": 0.6000000238418579,
+          "gameInitMs": 10.600000023841858,
+          "firstFrameMs": 17.5,
+          "totalMs": 42.5,
+          "executorCache": {
+            "enabled": false,
+            "hit": false
+          }
+        },
+        "memory": {
+          "initialLinear": 3276800,
+          "currentLinear": 3342336,
+          "runtimeLinear": 18808832,
+          "heapBytes": null,
+          "heapPeak": null,
+          "peakLinear": 3342336,
+          "peakHeap": null
+        },
+        "resourceStats": {
+          "packetBytes": 1524960,
+          "hostCopyBytes": 29201760,
+          "pixelWork": 29395438,
+          "peakResourceBytes": 2473548,
+          "currentResourceBytes": 1758212,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "gpuStats": null,
+        "cpuStats": {
+          "allocatedBytes": 0,
+          "attachmentImportBytes": 0,
+          "attachmentResolveBytes": 0,
+          "batches": 0,
+          "sequences": 0
+        }
+      },
+      "artifacts": {
+        "web/game.png": "ad90b680f0979ff7a5f27f3be70159169b1344b034548840422ce8f835c7418b",
+        "web/runtime.wasm": "6fe0851f4e1212b451336e941f0d1776c6750e55555b54b50eb6f3cdf7cc7eb5",
+        "web/runtime-gpu.wasm": "c1731d33717acdd9eb16dde8b096cc372e2e627118ac3f18a0acd4f39233551c",
+        "web/worker.js": "40d89607105856067f05ea577948832ec3c99c27244f6a26c4f52f3cd1529c2b",
+        "web/policy.js": "b6a0bb4efdc35b08070d2584f0bd9af36ac4c912da1fc5947c3d9b613c9c5a1e",
+        "web/gpu.js": "7d6047ec7f9b9fc6daece954ec70f73811c639d2c4707bc576515f4e0828fbbc",
+        "web/constants.js": "95accb2a8108cda23ae48bbf2696ea76ac6c46b391f3de7810970582f57f634c",
+        "native/player.exe": "c26c5c99f03087af9ec9c3d54f7f5715bbf6c6a1fc7cfeed5ea4867b01ab0702"
+      },
+      "retainedFrom": "examples\\kart3d\\build\\benchmarks\\f94d4b2f-0bf2-4f76-b25b-524ccd05a6d8\\report.json"
+    },
+    {
+      "language": "odin",
+      "backend": "cpu",
+      "display": [320, 180],
+      "ssaa": "2x",
+      "cartridgeBytes": 250530,
+      "native": {
+        "samples": 300,
+        "p50Ms": 15.9783,
+        "p95Ms": 22.1546,
+        "p99Ms": 23.7868,
+        "meanMs": 16.81592833333334,
+        "workFramesPerSecond": 59.467427559009764,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 24.2732,
+        "over60HzBudget": 100,
+        "stageP95Ms": [0.0389, 22.1118, 0.0281],
+        "startup": {
+          "totalMs": 80.4001,
+          "compileMs": 59.4601,
+          "instantiateMs": 0.0913,
+          "gameInitMs": 1.0426
+        },
+        "memory": {
+          "currentLinear": 3342336,
+          "heapBytes": 0,
+          "heapPeak": 0,
+          "baselineWorking": 10817536,
+          "working": 29458432,
+          "peakWorking": 63610880
+        },
+        "resourceStats": {
+          "currentResourceBytes": 1758212,
+          "peakResourceBytes": 9321036,
+          "packetBytes": 1676132,
+          "hostCopyBytes": 15673704,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "cpuStats": {
+          "allocatedBytes": 1933960,
+          "attachmentImportBytes": 775987200,
+          "attachmentResolveBytes": 193996800,
+          "batches": 44630,
+          "sequences": 421
+        }
+      },
+      "browser": {
+        "samples": 300,
+        "p50Ms": 35.799999952316284,
+        "p95Ms": 41.200000047683716,
+        "p99Ms": 45.799999952316284,
+        "meanMs": 36.439999998807906,
+        "workFramesPerSecond": 27.44237102175395,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 48,
+        "over60HzBudget": 300,
+        "stageP95Ms": [
+          0.10000002384185791, 41.10000002384186, 0.10000002384185791, 0.20000004768371582
+        ],
+        "startup": {
+          "fetchMs": 5.5,
+          "compileMs": 1,
+          "instantiateMs": 0,
+          "runtimeInitMs": 0.7999999523162842,
+          "gameInitMs": 1.4000000953674316,
+          "firstFrameMs": 48.199999928474426,
+          "totalMs": 57,
+          "executorCache": {
+            "enabled": false,
+            "hit": false
+          }
+        },
+        "memory": {
+          "initialLinear": 3276800,
+          "currentLinear": 3342336,
+          "runtimeLinear": 32702464,
+          "heapBytes": null,
+          "heapPeak": null,
+          "peakLinear": 3342336,
+          "peakHeap": null
+        },
+        "resourceStats": {
+          "packetBytes": 1524960,
+          "hostCopyBytes": 29201760,
+          "pixelWork": 29395438,
+          "peakResourceBytes": 9321036,
+          "currentResourceBytes": 1758212,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "gpuStats": null,
+        "cpuStats": {
+          "allocatedBytes": 1917416,
+          "attachmentImportBytes": 775987200,
+          "attachmentResolveBytes": 193996800,
+          "batches": 44630,
+          "sequences": 421
+        }
+      },
+      "artifacts": {
+        "web/game.png": "ad90b680f0979ff7a5f27f3be70159169b1344b034548840422ce8f835c7418b",
+        "web/runtime.wasm": "6fe0851f4e1212b451336e941f0d1776c6750e55555b54b50eb6f3cdf7cc7eb5",
+        "web/runtime-gpu.wasm": "c1731d33717acdd9eb16dde8b096cc372e2e627118ac3f18a0acd4f39233551c",
+        "web/worker.js": "40d89607105856067f05ea577948832ec3c99c27244f6a26c4f52f3cd1529c2b",
+        "web/policy.js": "b6a0bb4efdc35b08070d2584f0bd9af36ac4c912da1fc5947c3d9b613c9c5a1e",
+        "web/gpu.js": "7d6047ec7f9b9fc6daece954ec70f73811c639d2c4707bc576515f4e0828fbbc",
+        "web/constants.js": "95accb2a8108cda23ae48bbf2696ea76ac6c46b391f3de7810970582f57f634c",
+        "native/player.exe": "c26c5c99f03087af9ec9c3d54f7f5715bbf6c6a1fc7cfeed5ea4867b01ab0702"
+      },
+      "retainedFrom": "examples\\kart3d\\build\\benchmarks\\f94d4b2f-0bf2-4f76-b25b-524ccd05a6d8\\report.json"
+    },
+    {
+      "language": "odin",
+      "backend": "cpu",
+      "display": [320, 180],
+      "ssaa": "1080p",
+      "cartridgeBytes": 250530,
+      "native": {
+        "samples": 300,
+        "p50Ms": 108.51620000000001,
+        "p95Ms": 118.1853,
+        "p99Ms": 124.627,
+        "meanMs": 108.95509499999999,
+        "workFramesPerSecond": 9.178093048333354,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 136.6018,
+        "over60HzBudget": 300,
+        "stageP95Ms": [0.0341, 118.1468, 0.0224],
+        "startup": {
+          "totalMs": 212.9919,
+          "compileMs": 65.1224,
+          "instantiateMs": 0.1222,
+          "gameInitMs": 1.1681
+        },
+        "memory": {
+          "currentLinear": 3342336,
+          "heapBytes": 0,
+          "heapPeak": 0,
+          "baselineWorking": 10821632,
+          "working": 42864640,
+          "peakWorking": 65347584
+        },
+        "resourceStats": {
+          "currentResourceBytes": 1758212,
+          "peakResourceBytes": 9321036,
+          "packetBytes": 1676132,
+          "hostCopyBytes": 15673704,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "cpuStats": {
+          "allocatedBytes": 16679560,
+          "attachmentImportBytes": 6983884800,
+          "attachmentResolveBytes": 193996800,
+          "batches": 44630,
+          "sequences": 421
+        }
+      },
+      "browser": {
+        "samples": 300,
+        "p50Ms": 154.80000007152557,
+        "p95Ms": 173.80000007152557,
+        "p99Ms": 196.80000007152557,
+        "meanMs": 156.65133333444595,
+        "workFramesPerSecond": 6.383603501573968,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 213.30000007152557,
+        "over60HzBudget": 300,
+        "stageP95Ms": [
+          0.10000002384185791, 173.69999992847443, 0.10000002384185791, 0.19999992847442627
+        ],
+        "startup": {
+          "fetchMs": 14.100000023841858,
+          "compileMs": 1.2000000476837158,
+          "instantiateMs": 0.10000002384185791,
+          "runtimeInitMs": 0.2999999523162842,
+          "gameInitMs": 1.5,
+          "firstFrameMs": 189.20000004768372,
+          "totalMs": 206.40000009536743,
+          "executorCache": {
+            "enabled": false,
+            "hit": false
+          }
+        },
+        "memory": {
+          "initialLinear": 3276800,
+          "currentLinear": 3342336,
+          "runtimeLinear": 47382528,
+          "heapBytes": null,
+          "heapPeak": null,
+          "peakLinear": 3342336,
+          "peakHeap": null
+        },
+        "resourceStats": {
+          "packetBytes": 1524960,
+          "hostCopyBytes": 29201760,
+          "pixelWork": 29395438,
+          "peakResourceBytes": 9321036,
+          "currentResourceBytes": 1758212,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "gpuStats": null,
+        "cpuStats": {
+          "allocatedBytes": 16663016,
+          "attachmentImportBytes": 6983884800,
+          "attachmentResolveBytes": 193996800,
+          "batches": 44630,
+          "sequences": 421
+        }
+      },
+      "artifacts": {
+        "web/game.png": "ad90b680f0979ff7a5f27f3be70159169b1344b034548840422ce8f835c7418b",
+        "web/runtime.wasm": "6fe0851f4e1212b451336e941f0d1776c6750e55555b54b50eb6f3cdf7cc7eb5",
+        "web/runtime-gpu.wasm": "c1731d33717acdd9eb16dde8b096cc372e2e627118ac3f18a0acd4f39233551c",
+        "web/worker.js": "40d89607105856067f05ea577948832ec3c99c27244f6a26c4f52f3cd1529c2b",
+        "web/policy.js": "b6a0bb4efdc35b08070d2584f0bd9af36ac4c912da1fc5947c3d9b613c9c5a1e",
+        "web/gpu.js": "7d6047ec7f9b9fc6daece954ec70f73811c639d2c4707bc576515f4e0828fbbc",
+        "web/constants.js": "95accb2a8108cda23ae48bbf2696ea76ac6c46b391f3de7810970582f57f634c",
+        "native/player.exe": "c26c5c99f03087af9ec9c3d54f7f5715bbf6c6a1fc7cfeed5ea4867b01ab0702"
+      },
+      "retainedFrom": "examples\\kart3d\\build\\benchmarks\\f94d4b2f-0bf2-4f76-b25b-524ccd05a6d8\\report.json"
+    },
+    {
+      "language": "odin",
+      "backend": "cpu",
+      "display": [640, 360],
+      "ssaa": "off",
+      "cartridgeBytes": 250530,
+      "native": {
+        "samples": 300,
+        "p50Ms": 17.1419,
+        "p95Ms": 20.6263,
+        "p99Ms": 23.700899999999997,
+        "meanMs": 17.589864000000002,
+        "workFramesPerSecond": 56.85092278143821,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 25.2118,
+        "over60HzBudget": 239,
+        "stageP95Ms": [0.0445, 20.5043, 0.1247],
+        "startup": {
+          "totalMs": 67.5506,
+          "compileMs": 59.083,
+          "instantiateMs": 0.0922,
+          "gameInitMs": 1.1354
+        },
+        "memory": {
+          "currentLinear": 3342336,
+          "heapBytes": 0,
+          "heapPeak": 0,
+          "baselineWorking": 10825728,
+          "working": 28409856,
+          "peakWorking": 64761856
+        },
+        "resourceStats": {
+          "currentResourceBytes": 3140612,
+          "peakResourceBytes": 5929548,
+          "packetBytes": 1676132,
+          "hostCopyBytes": 57145704,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "cpuStats": {
+          "allocatedBytes": 0,
+          "attachmentImportBytes": 0,
+          "attachmentResolveBytes": 0,
+          "batches": 0,
+          "sequences": 0
+        }
+      },
+      "browser": {
+        "samples": 300,
+        "p50Ms": 19.199999928474426,
+        "p95Ms": 21.399999976158142,
+        "p99Ms": 24.299999952316284,
+        "meanMs": 19.39066666483879,
+        "workFramesPerSecond": 51.571202645306975,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 26.100000023841858,
+        "over60HzBudget": 300,
+        "stageP95Ms": [0.10000002384185791, 21, 0.20000004768371582, 0.2999999523162842],
+        "startup": {
+          "fetchMs": 6.5,
+          "compileMs": 1,
+          "instantiateMs": 0.09999990463256836,
+          "runtimeInitMs": 0.40000009536743164,
+          "gameInitMs": 1.399999976158142,
+          "firstFrameMs": 8.100000023841858,
+          "totalMs": 17.5,
+          "executorCache": {
+            "enabled": false,
+            "hit": false
+          }
+        },
+        "memory": {
+          "initialLinear": 3276800,
+          "currentLinear": 3342336,
+          "runtimeLinear": 23199744,
+          "heapBytes": null,
+          "heapPeak": null,
+          "peakLinear": 3342336,
+          "peakHeap": null
+        },
+        "resourceStats": {
+          "packetBytes": 1524960,
+          "hostCopyBytes": 112145760,
+          "pixelWork": 112707475,
+          "peakResourceBytes": 5929548,
+          "currentResourceBytes": 3140612,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "gpuStats": null,
+        "cpuStats": {
+          "allocatedBytes": 0,
+          "attachmentImportBytes": 0,
+          "attachmentResolveBytes": 0,
+          "batches": 0,
+          "sequences": 0
+        }
+      },
+      "artifacts": {
+        "web/game.png": "ad90b680f0979ff7a5f27f3be70159169b1344b034548840422ce8f835c7418b",
+        "web/runtime.wasm": "6fe0851f4e1212b451336e941f0d1776c6750e55555b54b50eb6f3cdf7cc7eb5",
+        "web/runtime-gpu.wasm": "c1731d33717acdd9eb16dde8b096cc372e2e627118ac3f18a0acd4f39233551c",
+        "web/worker.js": "40d89607105856067f05ea577948832ec3c99c27244f6a26c4f52f3cd1529c2b",
+        "web/policy.js": "b6a0bb4efdc35b08070d2584f0bd9af36ac4c912da1fc5947c3d9b613c9c5a1e",
+        "web/gpu.js": "7d6047ec7f9b9fc6daece954ec70f73811c639d2c4707bc576515f4e0828fbbc",
+        "web/constants.js": "95accb2a8108cda23ae48bbf2696ea76ac6c46b391f3de7810970582f57f634c",
+        "native/player.exe": "c26c5c99f03087af9ec9c3d54f7f5715bbf6c6a1fc7cfeed5ea4867b01ab0702"
+      },
+      "retainedFrom": "examples\\kart3d\\build\\benchmarks\\f94d4b2f-0bf2-4f76-b25b-524ccd05a6d8\\report.json"
+    },
+    {
+      "language": "odin",
+      "backend": "cpu",
+      "display": [640, 360],
+      "ssaa": "2x",
+      "cartridgeBytes": 250530,
+      "native": {
+        "samples": 300,
+        "p50Ms": 52.4898,
+        "p95Ms": 60.694500000000005,
+        "p99Ms": 75.2412,
+        "meanMs": 53.54153500000002,
+        "workFramesPerSecond": 18.677088731206524,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 77.0626,
+        "over60HzBudget": 300,
+        "stageP95Ms": [0.0475, 60.5581, 0.1282],
+        "startup": {
+          "totalMs": 87.7719,
+          "compileMs": 65.5271,
+          "instantiateMs": 0.1135,
+          "gameInitMs": 1.1154
+        },
+        "memory": {
+          "currentLinear": 3342336,
+          "heapBytes": 0,
+          "heapPeak": 0,
+          "baselineWorking": 10821632,
+          "working": 36343808,
+          "peakWorking": 66330624
+        },
+        "resourceStats": {
+          "currentResourceBytes": 3140612,
+          "peakResourceBytes": 12085836,
+          "packetBytes": 1676132,
+          "hostCopyBytes": 57145704,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "cpuStats": {
+          "allocatedBytes": 7463560,
+          "attachmentImportBytes": 3098419200,
+          "attachmentResolveBytes": 774604800,
+          "batches": 44630,
+          "sequences": 421
+        }
+      },
+      "browser": {
+        "samples": 300,
+        "p50Ms": 80.89999997615814,
+        "p95Ms": 88.60000002384186,
+        "p99Ms": 112.89999997615814,
+        "meanMs": 82.12000000039737,
+        "workFramesPerSecond": 12.177301509926464,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 114.90000009536743,
+        "over60HzBudget": 300,
+        "stageP95Ms": [
+          0.10000002384185791, 88.19999992847443, 0.20000004768371582, 0.30000007152557373
+        ],
+        "startup": {
+          "fetchMs": 6,
+          "compileMs": 1.3000000715255737,
+          "instantiateMs": 0.09999990463256836,
+          "runtimeInitMs": 0.5,
+          "gameInitMs": 1.2000000476837158,
+          "firstFrameMs": 44,
+          "totalMs": 53.10000002384186,
+          "executorCache": {
+            "enabled": false,
+            "hit": false
+          }
+        },
+        "memory": {
+          "initialLinear": 3276800,
+          "currentLinear": 3342336,
+          "runtimeLinear": 50724864,
+          "heapBytes": null,
+          "heapPeak": null,
+          "peakLinear": 3342336,
+          "peakHeap": null
+        },
+        "resourceStats": {
+          "packetBytes": 1524960,
+          "hostCopyBytes": 112145760,
+          "pixelWork": 112707475,
+          "peakResourceBytes": 12085836,
+          "currentResourceBytes": 3140612,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "gpuStats": null,
+        "cpuStats": {
+          "allocatedBytes": 7447016,
+          "attachmentImportBytes": 3098419200,
+          "attachmentResolveBytes": 774604800,
+          "batches": 44630,
+          "sequences": 421
+        }
+      },
+      "artifacts": {
+        "web/game.png": "ad90b680f0979ff7a5f27f3be70159169b1344b034548840422ce8f835c7418b",
+        "web/runtime.wasm": "6fe0851f4e1212b451336e941f0d1776c6750e55555b54b50eb6f3cdf7cc7eb5",
+        "web/runtime-gpu.wasm": "c1731d33717acdd9eb16dde8b096cc372e2e627118ac3f18a0acd4f39233551c",
+        "web/worker.js": "40d89607105856067f05ea577948832ec3c99c27244f6a26c4f52f3cd1529c2b",
+        "web/policy.js": "b6a0bb4efdc35b08070d2584f0bd9af36ac4c912da1fc5947c3d9b613c9c5a1e",
+        "web/gpu.js": "7d6047ec7f9b9fc6daece954ec70f73811c639d2c4707bc576515f4e0828fbbc",
+        "web/constants.js": "95accb2a8108cda23ae48bbf2696ea76ac6c46b391f3de7810970582f57f634c",
+        "native/player.exe": "c26c5c99f03087af9ec9c3d54f7f5715bbf6c6a1fc7cfeed5ea4867b01ab0702"
+      },
+      "retainedFrom": "examples\\kart3d\\build\\benchmarks\\f94d4b2f-0bf2-4f76-b25b-524ccd05a6d8\\report.json"
+    },
+    {
+      "language": "odin",
+      "backend": "cpu",
+      "display": [640, 360],
+      "ssaa": "1080p",
+      "cartridgeBytes": 250530,
+      "native": {
+        "samples": 300,
+        "p50Ms": 109.3488,
+        "p95Ms": 122.77489999999999,
+        "p99Ms": 142.69230000000002,
+        "meanMs": 110.37018566666673,
+        "workFramesPerSecond": 9.060417847081808,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 146.95329999999998,
+        "over60HzBudget": 300,
+        "stageP95Ms": [0.0428, 122.6044, 0.1257],
+        "startup": {
+          "totalMs": 196.432,
+          "compileMs": 58.7544,
+          "instantiateMs": 0.0976,
+          "gameInitMs": 0.9884
+        },
+        "memory": {
+          "currentLinear": 3342336,
+          "heapBytes": 0,
+          "heapPeak": 0,
+          "baselineWorking": 10821632,
+          "working": 44724224,
+          "peakWorking": 64884736
+        },
+        "resourceStats": {
+          "currentResourceBytes": 3140612,
+          "peakResourceBytes": 12085836,
+          "packetBytes": 1676132,
+          "hostCopyBytes": 57145704,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "cpuStats": {
+          "allocatedBytes": 16679560,
+          "attachmentImportBytes": 6983884800,
+          "attachmentResolveBytes": 774604800,
+          "batches": 44630,
+          "sequences": 421
+        }
+      },
+      "browser": {
+        "samples": 300,
+        "p50Ms": 153.70000004768372,
+        "p95Ms": 166.5,
+        "p99Ms": 180.5,
+        "meanMs": 154.78499999960263,
+        "workFramesPerSecond": 6.4605743450758615,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 193.5,
+        "over60HzBudget": 300,
+        "stageP95Ms": [
+          0.10000002384185791, 166.20000004768372, 0.20000004768371582, 0.30000007152557373
+        ],
+        "startup": {
+          "fetchMs": 5.899999976158142,
+          "compileMs": 1,
+          "instantiateMs": 0.10000002384185791,
+          "runtimeInitMs": 0.3999999761581421,
+          "gameInitMs": 1.100000023841858,
+          "firstFrameMs": 193.70000004768372,
+          "totalMs": 202.20000004768372,
+          "executorCache": {
+            "enabled": false,
+            "hit": false
+          }
+        },
+        "memory": {
+          "initialLinear": 3276800,
+          "currentLinear": 3342336,
+          "runtimeLinear": 47382528,
+          "heapBytes": null,
+          "heapPeak": null,
+          "peakLinear": 3342336,
+          "peakHeap": null
+        },
+        "resourceStats": {
+          "packetBytes": 1524960,
+          "hostCopyBytes": 112145760,
+          "pixelWork": 112707475,
+          "peakResourceBytes": 12085836,
+          "currentResourceBytes": 3140612,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "gpuStats": null,
+        "cpuStats": {
+          "allocatedBytes": 16663016,
+          "attachmentImportBytes": 6983884800,
+          "attachmentResolveBytes": 774604800,
+          "batches": 44630,
+          "sequences": 421
+        }
+      },
+      "artifacts": {
+        "web/game.png": "ad90b680f0979ff7a5f27f3be70159169b1344b034548840422ce8f835c7418b",
+        "web/runtime.wasm": "6fe0851f4e1212b451336e941f0d1776c6750e55555b54b50eb6f3cdf7cc7eb5",
+        "web/runtime-gpu.wasm": "c1731d33717acdd9eb16dde8b096cc372e2e627118ac3f18a0acd4f39233551c",
+        "web/worker.js": "40d89607105856067f05ea577948832ec3c99c27244f6a26c4f52f3cd1529c2b",
+        "web/policy.js": "b6a0bb4efdc35b08070d2584f0bd9af36ac4c912da1fc5947c3d9b613c9c5a1e",
+        "web/gpu.js": "7d6047ec7f9b9fc6daece954ec70f73811c639d2c4707bc576515f4e0828fbbc",
+        "web/constants.js": "95accb2a8108cda23ae48bbf2696ea76ac6c46b391f3de7810970582f57f634c",
+        "native/player.exe": "c26c5c99f03087af9ec9c3d54f7f5715bbf6c6a1fc7cfeed5ea4867b01ab0702"
+      },
+      "retainedFrom": "examples\\kart3d\\build\\benchmarks\\f94d4b2f-0bf2-4f76-b25b-524ccd05a6d8\\report.json"
+    },
+    {
+      "language": "odin",
+      "backend": "gpu",
+      "display": [320, 180],
+      "ssaa": "off",
+      "cartridgeBytes": 250530,
+      "native": {
+        "samples": 300,
+        "p50Ms": 6.057,
+        "p95Ms": 8.161,
+        "p99Ms": 8.8066,
+        "meanMs": 6.345501666666665,
+        "workFramesPerSecond": 157.59195293463802,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 10.9185,
+        "over60HzBudget": 0,
+        "stageP95Ms": [0.042, 7.7633, 0.5696],
+        "startup": {
+          "totalMs": 363.7275,
+          "compileMs": 63.5593,
+          "instantiateMs": 0.1062,
+          "gameInitMs": 1.0634
+        },
+        "memory": {
+          "currentLinear": 3342336,
+          "heapBytes": 0,
+          "heapPeak": 0,
+          "baselineWorking": 10829824,
+          "working": 106254336,
+          "peakWorking": 106258432
+        },
+        "resourceStats": {
+          "currentResourceBytes": 1758212,
+          "peakResourceBytes": 5551252,
+          "packetBytes": 1676132,
+          "hostCopyBytes": 1849704,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "gpuStats": {
+          "meshUploads": 200,
+          "cacheHits": 48219,
+          "uploadBytes": 2431488,
+          "materialUploads": 96,
+          "materialCacheHits": 43692,
+          "materialUploadBytes": 79872,
+          "materialCacheBytes": 79872,
+          "attachmentUploadBytes": 193996800,
+          "attachmentReadbackBytes": 27648000,
+          "attachmentBatches": 44630,
+          "attachmentSequences": 421,
+          "attachmentBytes": 1612800,
+          "publishedFrames": 421,
+          "directPresents": 420,
+          "snapshotReadbackBytes": 27648000,
+          "presentationUploadBytes": 121248000,
+          "frameBytes": 1497600,
+          "gpuPresentation": true
+        },
+        "cpuStats": {
+          "allocatedBytes": 0,
+          "attachmentImportBytes": 0,
+          "attachmentResolveBytes": 0,
+          "batches": 0,
+          "sequences": 0
+        }
+      },
+      "browser": {
+        "samples": 300,
+        "p50Ms": 22.300000071525574,
+        "p95Ms": 24.899999976158142,
+        "p99Ms": 31.600000023841858,
+        "meanMs": 22.68666666706403,
+        "workFramesPerSecond": 44.0787540397804,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 32.799999952316284,
+        "over60HzBudget": 300,
+        "stageP95Ms": [0.10000002384185791, 24.600000023841858, 0.2999999523162842, 0],
+        "startup": {
+          "fetchMs": 11,
+          "compileMs": 1.399999976158142,
+          "instantiateMs": 0.10000002384185791,
+          "runtimeInitMs": 0.5,
+          "gameInitMs": 3.600000023841858,
+          "firstFrameMs": 94,
+          "totalMs": 110.60000002384186,
+          "executorCache": {
+            "enabled": false,
+            "hit": false
+          }
+        },
+        "memory": {
+          "initialLinear": 3276800,
+          "currentLinear": 3342336,
+          "runtimeLinear": 30343168,
+          "heapBytes": null,
+          "heapPeak": null,
+          "peakLinear": 3342336,
+          "peakHeap": null
+        },
+        "resourceStats": {
+          "packetBytes": 1524960,
+          "hostCopyBytes": 1553760,
+          "pixelWork": 29395438,
+          "peakResourceBytes": 5289108,
+          "currentResourceBytes": 1758212,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "gpuStats": {
+          "publishedFrames": 421,
+          "directPresents": 421,
+          "snapshotReadbackBytes": 27648000,
+          "presentationUploadBytes": 121248000,
+          "frameBytes": 1497600,
+          "attachmentUploadBytes": 193996800,
+          "attachmentReadbackBytes": 27648000,
+          "attachmentBatches": 44630,
+          "attachmentSequences": 421,
+          "attachmentBytes": 1612800,
+          "meshUploads": 200,
+          "cacheHits": 48219,
+          "uploadBytes": 2431488,
+          "textureUploadBytes": 315324672,
+          "cacheBytes": 2431488,
+          "textureBytes": 3190272,
+          "materialUploads": 96,
+          "materialCacheHits": 43692,
+          "materialUploadBytes": 79872,
+          "materialCacheBytes": 79872,
+          "gpuPresentation": true
+        },
+        "cpuStats": {
+          "allocatedBytes": 0,
+          "attachmentImportBytes": 0,
+          "attachmentResolveBytes": 0,
+          "batches": 0,
+          "sequences": 0
+        }
+      },
+      "artifacts": {
+        "web/game.png": "ad90b680f0979ff7a5f27f3be70159169b1344b034548840422ce8f835c7418b",
+        "web/runtime.wasm": "6fe0851f4e1212b451336e941f0d1776c6750e55555b54b50eb6f3cdf7cc7eb5",
+        "web/runtime-gpu.wasm": "c1731d33717acdd9eb16dde8b096cc372e2e627118ac3f18a0acd4f39233551c",
+        "web/worker.js": "40d89607105856067f05ea577948832ec3c99c27244f6a26c4f52f3cd1529c2b",
+        "web/policy.js": "b6a0bb4efdc35b08070d2584f0bd9af36ac4c912da1fc5947c3d9b613c9c5a1e",
+        "web/gpu.js": "7d6047ec7f9b9fc6daece954ec70f73811c639d2c4707bc576515f4e0828fbbc",
+        "web/constants.js": "95accb2a8108cda23ae48bbf2696ea76ac6c46b391f3de7810970582f57f634c",
+        "native/player.exe": "c26c5c99f03087af9ec9c3d54f7f5715bbf6c6a1fc7cfeed5ea4867b01ab0702"
+      },
+      "retainedFrom": "examples\\kart3d\\build\\benchmarks\\f94d4b2f-0bf2-4f76-b25b-524ccd05a6d8\\report.json"
+    },
+    {
+      "language": "odin",
+      "backend": "gpu",
+      "display": [320, 180],
+      "ssaa": "2x",
+      "cartridgeBytes": 250530,
+      "native": {
+        "samples": 300,
+        "p50Ms": 6.061700000000001,
+        "p95Ms": 8.7843,
+        "p99Ms": 9.2833,
+        "meanMs": 6.397226999999998,
+        "workFramesPerSecond": 156.31772954125285,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 9.843800000000002,
+        "over60HzBudget": 0,
+        "stageP95Ms": [0.0475, 8.0632, 0.6854],
+        "startup": {
+          "totalMs": 365.2978,
+          "compileMs": 60.1273,
+          "instantiateMs": 0.1465,
+          "gameInitMs": 1.1238
+        },
+        "memory": {
+          "currentLinear": 3342336,
+          "heapBytes": 0,
+          "heapPeak": 0,
+          "baselineWorking": 10817536,
+          "working": 106991616,
+          "peakWorking": 106995712
+        },
+        "resourceStats": {
+          "currentResourceBytes": 1758212,
+          "peakResourceBytes": 5551252,
+          "packetBytes": 1676132,
+          "hostCopyBytes": 1849704,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "gpuStats": {
+          "meshUploads": 200,
+          "cacheHits": 48219,
+          "uploadBytes": 2431488,
+          "materialUploads": 96,
+          "materialCacheHits": 43692,
+          "materialUploadBytes": 79872,
+          "materialCacheBytes": 79872,
+          "attachmentUploadBytes": 193996800,
+          "attachmentReadbackBytes": 27648000,
+          "attachmentBatches": 44630,
+          "attachmentSequences": 421,
+          "attachmentBytes": 3686400,
+          "publishedFrames": 421,
+          "directPresents": 420,
+          "snapshotReadbackBytes": 27648000,
+          "presentationUploadBytes": 121248000,
+          "frameBytes": 1497600,
+          "gpuPresentation": true
+        },
+        "cpuStats": {
+          "allocatedBytes": 0,
+          "attachmentImportBytes": 0,
+          "attachmentResolveBytes": 0,
+          "batches": 0,
+          "sequences": 0
+        }
+      },
+      "browser": {
+        "samples": 300,
+        "p50Ms": 22.299999952316284,
+        "p95Ms": 24.300000071525574,
+        "p99Ms": 30.199999928474426,
+        "meanMs": 22.495666665236154,
+        "workFramesPerSecond": 44.45300576689987,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 31.199999928474426,
+        "over60HzBudget": 300,
+        "stageP95Ms": [0.10000002384185791, 24, 0.30000007152557373, 0],
+        "startup": {
+          "fetchMs": 6.700000047683716,
+          "compileMs": 1,
+          "instantiateMs": 0.09999990463256836,
+          "runtimeInitMs": 0.5,
+          "gameInitMs": 4.700000047683716,
+          "firstFrameMs": 48.5,
+          "totalMs": 61.5,
+          "executorCache": {
+            "enabled": false,
+            "hit": false
+          }
+        },
+        "memory": {
+          "initialLinear": 3276800,
+          "currentLinear": 3342336,
+          "runtimeLinear": 30343168,
+          "heapBytes": null,
+          "heapPeak": null,
+          "peakLinear": 3342336,
+          "peakHeap": null
+        },
+        "resourceStats": {
+          "packetBytes": 1524960,
+          "hostCopyBytes": 1553760,
+          "pixelWork": 29395438,
+          "peakResourceBytes": 5289108,
+          "currentResourceBytes": 1758212,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "gpuStats": {
+          "publishedFrames": 421,
+          "directPresents": 421,
+          "snapshotReadbackBytes": 27648000,
+          "presentationUploadBytes": 121248000,
+          "frameBytes": 1497600,
+          "attachmentUploadBytes": 193996800,
+          "attachmentReadbackBytes": 27648000,
+          "attachmentBatches": 44630,
+          "attachmentSequences": 421,
+          "attachmentBytes": 3686400,
+          "meshUploads": 200,
+          "cacheHits": 48219,
+          "uploadBytes": 2431488,
+          "textureUploadBytes": 315324672,
+          "cacheBytes": 2431488,
+          "textureBytes": 5263872,
+          "materialUploads": 96,
+          "materialCacheHits": 43692,
+          "materialUploadBytes": 79872,
+          "materialCacheBytes": 79872,
+          "gpuPresentation": true
+        },
+        "cpuStats": {
+          "allocatedBytes": 0,
+          "attachmentImportBytes": 0,
+          "attachmentResolveBytes": 0,
+          "batches": 0,
+          "sequences": 0
+        }
+      },
+      "artifacts": {
+        "web/game.png": "ad90b680f0979ff7a5f27f3be70159169b1344b034548840422ce8f835c7418b",
+        "web/runtime.wasm": "6fe0851f4e1212b451336e941f0d1776c6750e55555b54b50eb6f3cdf7cc7eb5",
+        "web/runtime-gpu.wasm": "c1731d33717acdd9eb16dde8b096cc372e2e627118ac3f18a0acd4f39233551c",
+        "web/worker.js": "40d89607105856067f05ea577948832ec3c99c27244f6a26c4f52f3cd1529c2b",
+        "web/policy.js": "b6a0bb4efdc35b08070d2584f0bd9af36ac4c912da1fc5947c3d9b613c9c5a1e",
+        "web/gpu.js": "7d6047ec7f9b9fc6daece954ec70f73811c639d2c4707bc576515f4e0828fbbc",
+        "web/constants.js": "95accb2a8108cda23ae48bbf2696ea76ac6c46b391f3de7810970582f57f634c",
+        "native/player.exe": "c26c5c99f03087af9ec9c3d54f7f5715bbf6c6a1fc7cfeed5ea4867b01ab0702"
+      },
+      "retainedFrom": "examples\\kart3d\\build\\benchmarks\\f94d4b2f-0bf2-4f76-b25b-524ccd05a6d8\\report.json"
+    },
+    {
+      "language": "odin",
+      "backend": "gpu",
+      "display": [320, 180],
+      "ssaa": "1080p",
+      "cartridgeBytes": 250530,
+      "native": {
+        "samples": 300,
+        "p50Ms": 6.1393,
+        "p95Ms": 8.4486,
+        "p99Ms": 9.3924,
+        "meanMs": 6.463445333333332,
+        "workFramesPerSecond": 154.7162462785586,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 10.0858,
+        "over60HzBudget": 0,
+        "stageP95Ms": [0.0389, 8.0213, 0.5315],
+        "startup": {
+          "totalMs": 369.306,
+          "compileMs": 59.7454,
+          "instantiateMs": 0.1031,
+          "gameInitMs": 1.048
+        },
+        "memory": {
+          "currentLinear": 3342336,
+          "heapBytes": 0,
+          "heapPeak": 0,
+          "baselineWorking": 10813440,
+          "working": 106532864,
+          "peakWorking": 106536960
+        },
+        "resourceStats": {
+          "currentResourceBytes": 1758212,
+          "peakResourceBytes": 5551252,
+          "packetBytes": 1676132,
+          "hostCopyBytes": 1849704,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "gpuStats": {
+          "meshUploads": 200,
+          "cacheHits": 48219,
+          "uploadBytes": 2431488,
+          "materialUploads": 96,
+          "materialCacheHits": 43692,
+          "materialUploadBytes": 79872,
+          "materialCacheBytes": 79872,
+          "attachmentUploadBytes": 193996800,
+          "attachmentReadbackBytes": 27648000,
+          "attachmentBatches": 44630,
+          "attachmentSequences": 421,
+          "attachmentBytes": 25804800,
+          "publishedFrames": 421,
+          "directPresents": 420,
+          "snapshotReadbackBytes": 27648000,
+          "presentationUploadBytes": 121248000,
+          "frameBytes": 1497600,
+          "gpuPresentation": true
+        },
+        "cpuStats": {
+          "allocatedBytes": 0,
+          "attachmentImportBytes": 0,
+          "attachmentResolveBytes": 0,
+          "batches": 0,
+          "sequences": 0
+        }
+      },
+      "browser": {
+        "samples": 300,
+        "p50Ms": 22.200000047683716,
+        "p95Ms": 24.5,
+        "p99Ms": 29.700000047683716,
+        "meanMs": 22.50933333436648,
+        "workFramesPerSecond": 44.42601587285725,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 33.199999928474426,
+        "over60HzBudget": 300,
+        "stageP95Ms": [0.10000002384185791, 24.299999952316284, 0.30000007152557373, 0],
+        "startup": {
+          "fetchMs": 27.699999928474426,
+          "compileMs": 1.2000000476837158,
+          "instantiateMs": 0.20000004768371582,
+          "runtimeInitMs": 0.5,
+          "gameInitMs": 3.299999952316284,
+          "firstFrameMs": 49,
+          "totalMs": 81.89999997615814,
+          "executorCache": {
+            "enabled": false,
+            "hit": false
+          }
+        },
+        "memory": {
+          "initialLinear": 3276800,
+          "currentLinear": 3342336,
+          "runtimeLinear": 30343168,
+          "heapBytes": null,
+          "heapPeak": null,
+          "peakLinear": 3342336,
+          "peakHeap": null
+        },
+        "resourceStats": {
+          "packetBytes": 1524960,
+          "hostCopyBytes": 1553760,
+          "pixelWork": 29395438,
+          "peakResourceBytes": 5289108,
+          "currentResourceBytes": 1758212,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "gpuStats": {
+          "publishedFrames": 421,
+          "directPresents": 421,
+          "snapshotReadbackBytes": 27648000,
+          "presentationUploadBytes": 121248000,
+          "frameBytes": 1497600,
+          "attachmentUploadBytes": 193996800,
+          "attachmentReadbackBytes": 27648000,
+          "attachmentBatches": 44630,
+          "attachmentSequences": 421,
+          "attachmentBytes": 25804800,
+          "meshUploads": 200,
+          "cacheHits": 48219,
+          "uploadBytes": 2431488,
+          "textureUploadBytes": 315324672,
+          "cacheBytes": 2431488,
+          "textureBytes": 27382272,
+          "materialUploads": 96,
+          "materialCacheHits": 43692,
+          "materialUploadBytes": 79872,
+          "materialCacheBytes": 79872,
+          "gpuPresentation": true
+        },
+        "cpuStats": {
+          "allocatedBytes": 0,
+          "attachmentImportBytes": 0,
+          "attachmentResolveBytes": 0,
+          "batches": 0,
+          "sequences": 0
+        }
+      },
+      "artifacts": {
+        "web/game.png": "ad90b680f0979ff7a5f27f3be70159169b1344b034548840422ce8f835c7418b",
+        "web/runtime.wasm": "6fe0851f4e1212b451336e941f0d1776c6750e55555b54b50eb6f3cdf7cc7eb5",
+        "web/runtime-gpu.wasm": "c1731d33717acdd9eb16dde8b096cc372e2e627118ac3f18a0acd4f39233551c",
+        "web/worker.js": "40d89607105856067f05ea577948832ec3c99c27244f6a26c4f52f3cd1529c2b",
+        "web/policy.js": "b6a0bb4efdc35b08070d2584f0bd9af36ac4c912da1fc5947c3d9b613c9c5a1e",
+        "web/gpu.js": "7d6047ec7f9b9fc6daece954ec70f73811c639d2c4707bc576515f4e0828fbbc",
+        "web/constants.js": "95accb2a8108cda23ae48bbf2696ea76ac6c46b391f3de7810970582f57f634c",
+        "native/player.exe": "c26c5c99f03087af9ec9c3d54f7f5715bbf6c6a1fc7cfeed5ea4867b01ab0702"
+      },
+      "retainedFrom": "examples\\kart3d\\build\\benchmarks\\f94d4b2f-0bf2-4f76-b25b-524ccd05a6d8\\report.json"
+    },
+    {
+      "language": "odin",
+      "backend": "gpu",
+      "display": [640, 360],
+      "ssaa": "off",
+      "cartridgeBytes": 250530,
+      "native": {
+        "samples": 300,
+        "p50Ms": 8.3943,
+        "p95Ms": 12.0462,
+        "p99Ms": 12.7523,
+        "meanMs": 9.072756666666663,
+        "workFramesPerSecond": 110.22008378930774,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 12.948999999999998,
+        "over60HzBudget": 0,
+        "stageP95Ms": [0.0506, 10.9892, 1.0048],
+        "startup": {
+          "totalMs": 368.0824,
+          "compileMs": 58.9571,
+          "instantiateMs": 0.0901,
+          "gameInitMs": 1.0105
+        },
+        "memory": {
+          "currentLinear": 3342336,
+          "heapBytes": 0,
+          "heapPeak": 0,
+          "baselineWorking": 10825728,
+          "working": 109821952,
+          "peakWorking": 112664576
+        },
+        "resourceStats": {
+          "currentResourceBytes": 3140612,
+          "peakResourceBytes": 8316052,
+          "packetBytes": 1676132,
+          "hostCopyBytes": 1849704,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "gpuStats": {
+          "meshUploads": 200,
+          "cacheHits": 48219,
+          "uploadBytes": 2431488,
+          "materialUploads": 96,
+          "materialCacheHits": 43692,
+          "materialUploadBytes": 79872,
+          "materialCacheBytes": 79872,
+          "attachmentUploadBytes": 774604800,
+          "attachmentReadbackBytes": 110592000,
+          "attachmentBatches": 44630,
+          "attachmentSequences": 421,
+          "attachmentBytes": 6451200,
+          "publishedFrames": 421,
+          "directPresents": 420,
+          "snapshotReadbackBytes": 110592000,
+          "presentationUploadBytes": 484128000,
+          "frameBytes": 5990400,
+          "gpuPresentation": true
+        },
+        "cpuStats": {
+          "allocatedBytes": 0,
+          "attachmentImportBytes": 0,
+          "attachmentResolveBytes": 0,
+          "batches": 0,
+          "sequences": 0
+        }
+      },
+      "browser": {
+        "samples": 300,
+        "p50Ms": 23.399999976158142,
+        "p95Ms": 26.200000047683716,
+        "p99Ms": 31.700000047683716,
+        "meanMs": 23.712999999523163,
+        "workFramesPerSecond": 42.170961077050926,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 34.10000002384186,
+        "over60HzBudget": 300,
+        "stageP95Ms": [0.10000002384185791, 26, 0.3999999761581421, 0],
+        "startup": {
+          "fetchMs": 9.5,
+          "compileMs": 1.100000023841858,
+          "instantiateMs": 0.09999990463256836,
+          "runtimeInitMs": 0.9000000953674316,
+          "gameInitMs": 3.399999976158142,
+          "firstFrameMs": 45.39999997615814,
+          "totalMs": 60.39999997615814,
+          "executorCache": {
+            "enabled": false,
+            "hit": false
+          }
+        },
+        "memory": {
+          "initialLinear": 3276800,
+          "currentLinear": 3342336,
+          "runtimeLinear": 30343168,
+          "heapBytes": null,
+          "heapPeak": null,
+          "peakLinear": 3342336,
+          "peakHeap": null
+        },
+        "resourceStats": {
+          "packetBytes": 1524960,
+          "hostCopyBytes": 1553760,
+          "pixelWork": 112707475,
+          "peakResourceBytes": 8053908,
+          "currentResourceBytes": 3140612,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "gpuStats": {
+          "publishedFrames": 421,
+          "directPresents": 421,
+          "snapshotReadbackBytes": 110592000,
+          "presentationUploadBytes": 484128000,
+          "frameBytes": 5990400,
+          "attachmentUploadBytes": 774604800,
+          "attachmentReadbackBytes": 110592000,
+          "attachmentBatches": 44630,
+          "attachmentSequences": 421,
+          "attachmentBytes": 6451200,
+          "meshUploads": 200,
+          "cacheHits": 48219,
+          "uploadBytes": 2431488,
+          "textureUploadBytes": 1258812672,
+          "cacheBytes": 2431488,
+          "textureBytes": 12521472,
+          "materialUploads": 96,
+          "materialCacheHits": 43692,
+          "materialUploadBytes": 79872,
+          "materialCacheBytes": 79872,
+          "gpuPresentation": true
+        },
+        "cpuStats": {
+          "allocatedBytes": 0,
+          "attachmentImportBytes": 0,
+          "attachmentResolveBytes": 0,
+          "batches": 0,
+          "sequences": 0
+        }
+      },
+      "artifacts": {
+        "web/game.png": "ad90b680f0979ff7a5f27f3be70159169b1344b034548840422ce8f835c7418b",
+        "web/runtime.wasm": "6fe0851f4e1212b451336e941f0d1776c6750e55555b54b50eb6f3cdf7cc7eb5",
+        "web/runtime-gpu.wasm": "c1731d33717acdd9eb16dde8b096cc372e2e627118ac3f18a0acd4f39233551c",
+        "web/worker.js": "40d89607105856067f05ea577948832ec3c99c27244f6a26c4f52f3cd1529c2b",
+        "web/policy.js": "b6a0bb4efdc35b08070d2584f0bd9af36ac4c912da1fc5947c3d9b613c9c5a1e",
+        "web/gpu.js": "7d6047ec7f9b9fc6daece954ec70f73811c639d2c4707bc576515f4e0828fbbc",
+        "web/constants.js": "95accb2a8108cda23ae48bbf2696ea76ac6c46b391f3de7810970582f57f634c",
+        "native/player.exe": "c26c5c99f03087af9ec9c3d54f7f5715bbf6c6a1fc7cfeed5ea4867b01ab0702"
+      },
+      "retainedFrom": "examples\\kart3d\\build\\benchmarks\\f94d4b2f-0bf2-4f76-b25b-524ccd05a6d8\\report.json"
+    },
+    {
+      "language": "odin",
+      "backend": "gpu",
+      "display": [640, 360],
+      "ssaa": "2x",
+      "cartridgeBytes": 250530,
+      "native": {
+        "samples": 300,
+        "p50Ms": 9.5365,
+        "p95Ms": 11.823,
+        "p99Ms": 12.9192,
+        "meanMs": 9.414494000000005,
+        "workFramesPerSecond": 106.2191977603894,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 13.1731,
+        "over60HzBudget": 0,
+        "stageP95Ms": [0.0524, 10.5813, 1.1468],
+        "startup": {
+          "totalMs": 385.2027,
+          "compileMs": 57.7936,
+          "instantiateMs": 0.0953,
+          "gameInitMs": 0.9804
+        },
+        "memory": {
+          "currentLinear": 3342336,
+          "heapBytes": 0,
+          "heapPeak": 0,
+          "baselineWorking": 10829824,
+          "working": 108527616,
+          "peakWorking": 111423488
+        },
+        "resourceStats": {
+          "currentResourceBytes": 3140612,
+          "peakResourceBytes": 8316052,
+          "packetBytes": 1676132,
+          "hostCopyBytes": 1849704,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "gpuStats": {
+          "meshUploads": 200,
+          "cacheHits": 48219,
+          "uploadBytes": 2431488,
+          "materialUploads": 96,
+          "materialCacheHits": 43692,
+          "materialUploadBytes": 79872,
+          "materialCacheBytes": 79872,
+          "attachmentUploadBytes": 774604800,
+          "attachmentReadbackBytes": 110592000,
+          "attachmentBatches": 44630,
+          "attachmentSequences": 421,
+          "attachmentBytes": 14745600,
+          "publishedFrames": 421,
+          "directPresents": 420,
+          "snapshotReadbackBytes": 110592000,
+          "presentationUploadBytes": 484128000,
+          "frameBytes": 5990400,
+          "gpuPresentation": true
+        },
+        "cpuStats": {
+          "allocatedBytes": 0,
+          "attachmentImportBytes": 0,
+          "attachmentResolveBytes": 0,
+          "batches": 0,
+          "sequences": 0
+        }
+      },
+      "browser": {
+        "samples": 300,
+        "p50Ms": 23.600000023841858,
+        "p95Ms": 26.5,
+        "p99Ms": 31.600000023841858,
+        "meanMs": 23.92366666674614,
+        "workFramesPerSecond": 41.79961265678386,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 32.89999997615814,
+        "over60HzBudget": 300,
+        "stageP95Ms": [0.10000002384185791, 26.199999928474426, 0.3999999761581421, 0],
+        "startup": {
+          "fetchMs": 5.799999952316284,
+          "compileMs": 1,
+          "instantiateMs": 0,
+          "runtimeInitMs": 0.6000000238418579,
+          "gameInitMs": 3.5,
+          "firstFrameMs": 43.89999997615814,
+          "totalMs": 54.799999952316284,
+          "executorCache": {
+            "enabled": false,
+            "hit": false
+          }
+        },
+        "memory": {
+          "initialLinear": 3276800,
+          "currentLinear": 3342336,
+          "runtimeLinear": 30343168,
+          "heapBytes": null,
+          "heapPeak": null,
+          "peakLinear": 3342336,
+          "peakHeap": null
+        },
+        "resourceStats": {
+          "packetBytes": 1524960,
+          "hostCopyBytes": 1553760,
+          "pixelWork": 112707475,
+          "peakResourceBytes": 8053908,
+          "currentResourceBytes": 3140612,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "gpuStats": {
+          "publishedFrames": 421,
+          "directPresents": 421,
+          "snapshotReadbackBytes": 110592000,
+          "presentationUploadBytes": 484128000,
+          "frameBytes": 5990400,
+          "attachmentUploadBytes": 774604800,
+          "attachmentReadbackBytes": 110592000,
+          "attachmentBatches": 44630,
+          "attachmentSequences": 421,
+          "attachmentBytes": 14745600,
+          "meshUploads": 200,
+          "cacheHits": 48219,
+          "uploadBytes": 2431488,
+          "textureUploadBytes": 1258812672,
+          "cacheBytes": 2431488,
+          "textureBytes": 20815872,
+          "materialUploads": 96,
+          "materialCacheHits": 43692,
+          "materialUploadBytes": 79872,
+          "materialCacheBytes": 79872,
+          "gpuPresentation": true
+        },
+        "cpuStats": {
+          "allocatedBytes": 0,
+          "attachmentImportBytes": 0,
+          "attachmentResolveBytes": 0,
+          "batches": 0,
+          "sequences": 0
+        }
+      },
+      "artifacts": {
+        "web/game.png": "ad90b680f0979ff7a5f27f3be70159169b1344b034548840422ce8f835c7418b",
+        "web/runtime.wasm": "6fe0851f4e1212b451336e941f0d1776c6750e55555b54b50eb6f3cdf7cc7eb5",
+        "web/runtime-gpu.wasm": "c1731d33717acdd9eb16dde8b096cc372e2e627118ac3f18a0acd4f39233551c",
+        "web/worker.js": "40d89607105856067f05ea577948832ec3c99c27244f6a26c4f52f3cd1529c2b",
+        "web/policy.js": "b6a0bb4efdc35b08070d2584f0bd9af36ac4c912da1fc5947c3d9b613c9c5a1e",
+        "web/gpu.js": "7d6047ec7f9b9fc6daece954ec70f73811c639d2c4707bc576515f4e0828fbbc",
+        "web/constants.js": "95accb2a8108cda23ae48bbf2696ea76ac6c46b391f3de7810970582f57f634c",
+        "native/player.exe": "c26c5c99f03087af9ec9c3d54f7f5715bbf6c6a1fc7cfeed5ea4867b01ab0702"
+      },
+      "retainedFrom": "examples\\kart3d\\build\\benchmarks\\f94d4b2f-0bf2-4f76-b25b-524ccd05a6d8\\report.json"
+    },
+    {
+      "language": "odin",
+      "backend": "gpu",
+      "display": [640, 360],
+      "ssaa": "1080p",
+      "cartridgeBytes": 250530,
+      "native": {
+        "samples": 300,
+        "p50Ms": 8.518699999999999,
+        "p95Ms": 11.7509,
+        "p99Ms": 12.8713,
+        "meanMs": 9.144778666666669,
+        "workFramesPerSecond": 109.35201785091498,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 13.2093,
+        "over60HzBudget": 0,
+        "stageP95Ms": [0.0499, 10.5332, 1.3202],
+        "startup": {
+          "totalMs": 376.5439,
+          "compileMs": 60.1932,
+          "instantiateMs": 0.1083,
+          "gameInitMs": 0.9926
+        },
+        "memory": {
+          "currentLinear": 3342336,
+          "heapBytes": 0,
+          "heapPeak": 0,
+          "baselineWorking": 10817536,
+          "working": 109350912,
+          "peakWorking": 112193536
+        },
+        "resourceStats": {
+          "currentResourceBytes": 3140612,
+          "peakResourceBytes": 8316052,
+          "packetBytes": 1676132,
+          "hostCopyBytes": 1849704,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "gpuStats": {
+          "meshUploads": 200,
+          "cacheHits": 48219,
+          "uploadBytes": 2431488,
+          "materialUploads": 96,
+          "materialCacheHits": 43692,
+          "materialUploadBytes": 79872,
+          "materialCacheBytes": 79872,
+          "attachmentUploadBytes": 774604800,
+          "attachmentReadbackBytes": 110592000,
+          "attachmentBatches": 44630,
+          "attachmentSequences": 421,
+          "attachmentBytes": 28569600,
+          "publishedFrames": 421,
+          "directPresents": 420,
+          "snapshotReadbackBytes": 110592000,
+          "presentationUploadBytes": 484128000,
+          "frameBytes": 5990400,
+          "gpuPresentation": true
+        },
+        "cpuStats": {
+          "allocatedBytes": 0,
+          "attachmentImportBytes": 0,
+          "attachmentResolveBytes": 0,
+          "batches": 0,
+          "sequences": 0
+        }
+      },
+      "browser": {
+        "samples": 300,
+        "p50Ms": 23.899999976158142,
+        "p95Ms": 29.200000047683716,
+        "p99Ms": 32.89999997615814,
+        "meanMs": 24.630666666030884,
+        "workFramesPerSecond": 40.599794295423564,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 38.299999952316284,
+        "over60HzBudget": 300,
+        "stageP95Ms": [0.10000002384185791, 29, 0.3999999761581421, 0],
+        "startup": {
+          "fetchMs": 20.800000071525574,
+          "compileMs": 1.399999976158142,
+          "instantiateMs": 0.10000002384185791,
+          "runtimeInitMs": 0.5,
+          "gameInitMs": 3.299999952316284,
+          "firstFrameMs": 44.60000002384186,
+          "totalMs": 70.70000004768372,
+          "executorCache": {
+            "enabled": false,
+            "hit": false
+          }
+        },
+        "memory": {
+          "initialLinear": 3276800,
+          "currentLinear": 3342336,
+          "runtimeLinear": 30343168,
+          "heapBytes": null,
+          "heapPeak": null,
+          "peakLinear": 3342336,
+          "peakHeap": null
+        },
+        "resourceStats": {
+          "packetBytes": 1524960,
+          "hostCopyBytes": 1553760,
+          "pixelWork": 112707475,
+          "peakResourceBytes": 8053908,
+          "currentResourceBytes": 3140612,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "gpuStats": {
+          "publishedFrames": 421,
+          "directPresents": 421,
+          "snapshotReadbackBytes": 110592000,
+          "presentationUploadBytes": 484128000,
+          "frameBytes": 5990400,
+          "attachmentUploadBytes": 774604800,
+          "attachmentReadbackBytes": 110592000,
+          "attachmentBatches": 44630,
+          "attachmentSequences": 421,
+          "attachmentBytes": 28569600,
+          "meshUploads": 200,
+          "cacheHits": 48219,
+          "uploadBytes": 2431488,
+          "textureUploadBytes": 1258812672,
+          "cacheBytes": 2431488,
+          "textureBytes": 34639872,
+          "materialUploads": 96,
+          "materialCacheHits": 43692,
+          "materialUploadBytes": 79872,
+          "materialCacheBytes": 79872,
+          "gpuPresentation": true
+        },
+        "cpuStats": {
+          "allocatedBytes": 0,
+          "attachmentImportBytes": 0,
+          "attachmentResolveBytes": 0,
+          "batches": 0,
+          "sequences": 0
+        }
+      },
+      "artifacts": {
+        "web/game.png": "ad90b680f0979ff7a5f27f3be70159169b1344b034548840422ce8f835c7418b",
+        "web/runtime.wasm": "6fe0851f4e1212b451336e941f0d1776c6750e55555b54b50eb6f3cdf7cc7eb5",
+        "web/runtime-gpu.wasm": "c1731d33717acdd9eb16dde8b096cc372e2e627118ac3f18a0acd4f39233551c",
+        "web/worker.js": "40d89607105856067f05ea577948832ec3c99c27244f6a26c4f52f3cd1529c2b",
+        "web/policy.js": "b6a0bb4efdc35b08070d2584f0bd9af36ac4c912da1fc5947c3d9b613c9c5a1e",
+        "web/gpu.js": "7d6047ec7f9b9fc6daece954ec70f73811c639d2c4707bc576515f4e0828fbbc",
+        "web/constants.js": "95accb2a8108cda23ae48bbf2696ea76ac6c46b391f3de7810970582f57f634c",
+        "native/player.exe": "c26c5c99f03087af9ec9c3d54f7f5715bbf6c6a1fc7cfeed5ea4867b01ab0702"
+      },
+      "retainedFrom": "examples\\kart3d\\build\\benchmarks\\f94d4b2f-0bf2-4f76-b25b-524ccd05a6d8\\report.json"
+    },
+    {
+      "language": "luau",
+      "backend": "cpu",
+      "display": [320, 180],
+      "ssaa": "off",
+      "artifacts": {
+        "web/game.png": "030ce46f3f832e19f4142d040ed4297678b194527f456944564da268e13a0f3a",
+        "web/runtime.wasm": "6fe0851f4e1212b451336e941f0d1776c6750e55555b54b50eb6f3cdf7cc7eb5",
+        "web/runtime-gpu.wasm": "c1731d33717acdd9eb16dde8b096cc372e2e627118ac3f18a0acd4f39233551c",
+        "web/worker.js": "40d89607105856067f05ea577948832ec3c99c27244f6a26c4f52f3cd1529c2b",
+        "web/policy.js": "b6a0bb4efdc35b08070d2584f0bd9af36ac4c912da1fc5947c3d9b613c9c5a1e",
+        "web/gpu.js": "7d6047ec7f9b9fc6daece954ec70f73811c639d2c4707bc576515f4e0828fbbc",
+        "web/constants.js": "95accb2a8108cda23ae48bbf2696ea76ac6c46b391f3de7810970582f57f634c",
+        "web/luau-executor.wasm": "5871983ce677ffae0a9bb70e066264372439628f1d1b3e1380daa5b5a51029ac",
+        "native/player.exe": "c26c5c99f03087af9ec9c3d54f7f5715bbf6c6a1fc7cfeed5ea4867b01ab0702"
+      },
+      "cartridgeBytes": 246875,
+      "native": {
+        "samples": 300,
+        "p50Ms": 5.794,
+        "p95Ms": 6.6002,
+        "p99Ms": 8.2748,
+        "meanMs": 5.887134666666668,
+        "workFramesPerSecond": 169.861920377338,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 9.0157,
+        "over60HzBudget": 0,
+        "stageP95Ms": [0.0862, 6.4994, 0.0194],
+        "startup": {
+          "totalMs": 50.8195,
+          "compileMs": 6.5677,
+          "instantiateMs": 0.1438,
+          "gameInitMs": 30.4855
+        },
+        "memory": {
+          "currentLinear": 6815744,
+          "heapBytes": 2854736,
+          "heapPeak": 3394392,
+          "baselineWorking": 10817536,
+          "working": 24571904,
+          "peakWorking": 25296896
+        },
+        "resourceStats": {
+          "currentResourceBytes": 1758212,
+          "peakResourceBytes": 2473548,
+          "packetBytes": 1676132,
+          "hostCopyBytes": 15673704,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "cpuStats": {
+          "allocatedBytes": 0,
+          "attachmentImportBytes": 0,
+          "attachmentResolveBytes": 0,
+          "batches": 0,
+          "sequences": 0
+        }
+      },
+      "browser": {
+        "samples": 300,
+        "p50Ms": 6.299999952316284,
+        "p95Ms": 7.200000047683716,
+        "p99Ms": 7.799999952316284,
+        "meanMs": 6.351666667064031,
+        "workFramesPerSecond": 157.43899238059922,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 9,
+        "over60HzBudget": 0,
+        "stageP95Ms": [0.10000002384185791, 7, 0.10000002384185791, 0.10000002384185791],
+        "startup": {
+          "fetchMs": 50.59999990463257,
+          "compileMs": 1.7000000476837158,
+          "instantiateMs": 0.20000004768371582,
+          "runtimeInitMs": 0.5999999046325684,
+          "gameInitMs": 53.10000002384186,
+          "firstFrameMs": 17.700000047683716,
+          "totalMs": 123.89999997615814,
+          "executorCache": {
+            "enabled": false,
+            "hit": false
+          }
+        },
+        "memory": {
+          "initialLinear": 4194304,
+          "currentLinear": 6815744,
+          "runtimeLinear": 18808832,
+          "heapBytes": 2854736,
+          "heapPeak": 3394392,
+          "peakLinear": 6815744,
+          "peakHeap": 3394392
+        },
+        "resourceStats": {
+          "packetBytes": 1524960,
+          "hostCopyBytes": 29201760,
+          "pixelWork": 29395438,
+          "peakResourceBytes": 2473548,
+          "currentResourceBytes": 1758212,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "gpuStats": null,
+        "cpuStats": {
+          "allocatedBytes": 0,
+          "attachmentImportBytes": 0,
+          "attachmentResolveBytes": 0,
+          "batches": 0,
+          "sequences": 0
+        }
+      }
+    },
+    {
+      "language": "luau",
+      "backend": "cpu",
+      "display": [320, 180],
+      "ssaa": "2x",
+      "artifacts": {
+        "web/game.png": "030ce46f3f832e19f4142d040ed4297678b194527f456944564da268e13a0f3a",
+        "web/runtime.wasm": "6fe0851f4e1212b451336e941f0d1776c6750e55555b54b50eb6f3cdf7cc7eb5",
+        "web/runtime-gpu.wasm": "c1731d33717acdd9eb16dde8b096cc372e2e627118ac3f18a0acd4f39233551c",
+        "web/worker.js": "40d89607105856067f05ea577948832ec3c99c27244f6a26c4f52f3cd1529c2b",
+        "web/policy.js": "b6a0bb4efdc35b08070d2584f0bd9af36ac4c912da1fc5947c3d9b613c9c5a1e",
+        "web/gpu.js": "7d6047ec7f9b9fc6daece954ec70f73811c639d2c4707bc576515f4e0828fbbc",
+        "web/constants.js": "95accb2a8108cda23ae48bbf2696ea76ac6c46b391f3de7810970582f57f634c",
+        "web/luau-executor.wasm": "5871983ce677ffae0a9bb70e066264372439628f1d1b3e1380daa5b5a51029ac",
+        "native/player.exe": "c26c5c99f03087af9ec9c3d54f7f5715bbf6c6a1fc7cfeed5ea4867b01ab0702"
+      },
+      "cartridgeBytes": 246875,
+      "native": {
+        "samples": 300,
+        "p50Ms": 16.17,
+        "p95Ms": 17.3559,
+        "p99Ms": 18.1433,
+        "meanMs": 16.280327333333336,
+        "workFramesPerSecond": 61.4238264087319,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 21.9091,
+        "over60HzBudget": 69,
+        "stageP95Ms": [0.086, 17.2899, 0.0199],
+        "startup": {
+          "totalMs": 59.3863,
+          "compileMs": 6.5979,
+          "instantiateMs": 0.1332,
+          "gameInitMs": 30.0439
+        },
+        "memory": {
+          "currentLinear": 6815744,
+          "heapBytes": 2854736,
+          "heapPeak": 3394392,
+          "baselineWorking": 10805248,
+          "working": 26537984,
+          "peakWorking": 27410432
+        },
+        "resourceStats": {
+          "currentResourceBytes": 1758212,
+          "peakResourceBytes": 9321036,
+          "packetBytes": 1676132,
+          "hostCopyBytes": 15673704,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "cpuStats": {
+          "allocatedBytes": 1933960,
+          "attachmentImportBytes": 775987200,
+          "attachmentResolveBytes": 193996800,
+          "batches": 44630,
+          "sequences": 421
+        }
+      },
+      "browser": {
+        "samples": 300,
+        "p50Ms": 34.699999928474426,
+        "p95Ms": 37.700000047683716,
+        "p99Ms": 38.60000002384186,
+        "meanMs": 34.948666667143506,
+        "workFramesPerSecond": 28.613394883534596,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 40.5,
+        "over60HzBudget": 300,
+        "stageP95Ms": [0.19999992847442627, 37.5, 0.10000002384185791, 0.10000002384185791],
+        "startup": {
+          "fetchMs": 8.800000071525574,
+          "compileMs": 1.6999999284744263,
+          "instantiateMs": 0.10000002384185791,
+          "runtimeInitMs": 0.3999999761581421,
+          "gameInitMs": 20.800000071525574,
+          "firstFrameMs": 43,
+          "totalMs": 74.80000007152557,
+          "executorCache": {
+            "enabled": false,
+            "hit": false
+          }
+        },
+        "memory": {
+          "initialLinear": 4194304,
+          "currentLinear": 6815744,
+          "runtimeLinear": 32702464,
+          "heapBytes": 2854736,
+          "heapPeak": 3394392,
+          "peakLinear": 6815744,
+          "peakHeap": 3394392
+        },
+        "resourceStats": {
+          "packetBytes": 1524960,
+          "hostCopyBytes": 29201760,
+          "pixelWork": 29395438,
+          "peakResourceBytes": 9321036,
+          "currentResourceBytes": 1758212,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "gpuStats": null,
+        "cpuStats": {
+          "allocatedBytes": 1917416,
+          "attachmentImportBytes": 775987200,
+          "attachmentResolveBytes": 193996800,
+          "batches": 44630,
+          "sequences": 421
+        }
+      }
+    },
+    {
+      "language": "luau",
+      "backend": "cpu",
+      "display": [320, 180],
+      "ssaa": "1080p",
+      "artifacts": {
+        "web/game.png": "030ce46f3f832e19f4142d040ed4297678b194527f456944564da268e13a0f3a",
+        "web/runtime.wasm": "6fe0851f4e1212b451336e941f0d1776c6750e55555b54b50eb6f3cdf7cc7eb5",
+        "web/runtime-gpu.wasm": "c1731d33717acdd9eb16dde8b096cc372e2e627118ac3f18a0acd4f39233551c",
+        "web/worker.js": "40d89607105856067f05ea577948832ec3c99c27244f6a26c4f52f3cd1529c2b",
+        "web/policy.js": "b6a0bb4efdc35b08070d2584f0bd9af36ac4c912da1fc5947c3d9b613c9c5a1e",
+        "web/gpu.js": "7d6047ec7f9b9fc6daece954ec70f73811c639d2c4707bc576515f4e0828fbbc",
+        "web/constants.js": "95accb2a8108cda23ae48bbf2696ea76ac6c46b391f3de7810970582f57f634c",
+        "web/luau-executor.wasm": "5871983ce677ffae0a9bb70e066264372439628f1d1b3e1380daa5b5a51029ac",
+        "native/player.exe": "c26c5c99f03087af9ec9c3d54f7f5715bbf6c6a1fc7cfeed5ea4867b01ab0702"
+      },
+      "cartridgeBytes": 246875,
+      "native": {
+        "samples": 300,
+        "p50Ms": 112.4571,
+        "p95Ms": 134.9265,
+        "p99Ms": 147.1351,
+        "meanMs": 113.88136166666666,
+        "workFramesPerSecond": 8.781068169232316,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 152.2724,
+        "over60HzBudget": 300,
+        "stageP95Ms": [0.1411, 134.7762, 0.0316],
+        "startup": {
+          "totalMs": 174.1584,
+          "compileMs": 6.6505,
+          "instantiateMs": 0.1323,
+          "gameInitMs": 28.8209
+        },
+        "memory": {
+          "currentLinear": 6815744,
+          "heapBytes": 2854736,
+          "heapPeak": 3394392,
+          "baselineWorking": 10801152,
+          "working": 41267200,
+          "peakWorking": 42192896
+        },
+        "resourceStats": {
+          "currentResourceBytes": 1758212,
+          "peakResourceBytes": 9321036,
+          "packetBytes": 1676132,
+          "hostCopyBytes": 15673704,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "cpuStats": {
+          "allocatedBytes": 16679560,
+          "attachmentImportBytes": 6983884800,
+          "attachmentResolveBytes": 193996800,
+          "batches": 44630,
+          "sequences": 421
+        }
+      },
+      "browser": {
+        "samples": 300,
+        "p50Ms": 156.29999995231628,
+        "p95Ms": 182.20000004768372,
+        "p99Ms": 216.5,
+        "meanMs": 159.77833333214124,
+        "workFramesPerSecond": 6.258670866976922,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 227.5,
+        "over60HzBudget": 300,
+        "stageP95Ms": [
+          0.19999992847442627, 181.89999997615814, 0.10000002384185791, 0.20000004768371582
+        ],
+        "startup": {
+          "fetchMs": 35.699999928474426,
+          "compileMs": 2.5,
+          "instantiateMs": 0.20000004768371582,
+          "runtimeInitMs": 0.6000000238418579,
+          "gameInitMs": 29.100000023841858,
+          "firstFrameMs": 264.5,
+          "totalMs": 332.60000002384186,
+          "executorCache": {
+            "enabled": false,
+            "hit": false
+          }
+        },
+        "memory": {
+          "initialLinear": 4194304,
+          "currentLinear": 6815744,
+          "runtimeLinear": 47382528,
+          "heapBytes": 2854736,
+          "heapPeak": 3394392,
+          "peakLinear": 6815744,
+          "peakHeap": 3394392
+        },
+        "resourceStats": {
+          "packetBytes": 1524960,
+          "hostCopyBytes": 29201760,
+          "pixelWork": 29395438,
+          "peakResourceBytes": 9321036,
+          "currentResourceBytes": 1758212,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "gpuStats": null,
+        "cpuStats": {
+          "allocatedBytes": 16663016,
+          "attachmentImportBytes": 6983884800,
+          "attachmentResolveBytes": 193996800,
+          "batches": 44630,
+          "sequences": 421
+        }
+      }
+    },
+    {
+      "language": "luau",
+      "backend": "cpu",
+      "display": [640, 360],
+      "ssaa": "off",
+      "artifacts": {
+        "web/game.png": "030ce46f3f832e19f4142d040ed4297678b194527f456944564da268e13a0f3a",
+        "web/runtime.wasm": "6fe0851f4e1212b451336e941f0d1776c6750e55555b54b50eb6f3cdf7cc7eb5",
+        "web/runtime-gpu.wasm": "c1731d33717acdd9eb16dde8b096cc372e2e627118ac3f18a0acd4f39233551c",
+        "web/worker.js": "40d89607105856067f05ea577948832ec3c99c27244f6a26c4f52f3cd1529c2b",
+        "web/policy.js": "b6a0bb4efdc35b08070d2584f0bd9af36ac4c912da1fc5947c3d9b613c9c5a1e",
+        "web/gpu.js": "7d6047ec7f9b9fc6daece954ec70f73811c639d2c4707bc576515f4e0828fbbc",
+        "web/constants.js": "95accb2a8108cda23ae48bbf2696ea76ac6c46b391f3de7810970582f57f634c",
+        "web/luau-executor.wasm": "5871983ce677ffae0a9bb70e066264372439628f1d1b3e1380daa5b5a51029ac",
+        "native/player.exe": "c26c5c99f03087af9ec9c3d54f7f5715bbf6c6a1fc7cfeed5ea4867b01ab0702"
+      },
+      "cartridgeBytes": 246875,
+      "native": {
+        "samples": 300,
+        "p50Ms": 18.046300000000002,
+        "p95Ms": 19.953,
+        "p99Ms": 21.101399999999998,
+        "meanMs": 18.24569866666668,
+        "workFramesPerSecond": 54.80743808549869,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 23.461299999999998,
+        "over60HzBudget": 300,
+        "stageP95Ms": [0.1145, 19.7701, 0.1172],
+        "startup": {
+          "totalMs": 48.6845,
+          "compileMs": 6.5628,
+          "instantiateMs": 0.0987,
+          "gameInitMs": 31.7652
+        },
+        "memory": {
+          "currentLinear": 6815744,
+          "heapBytes": 2854736,
+          "heapPeak": 3394392,
+          "baselineWorking": 10817536,
+          "working": 26701824,
+          "peakWorking": 29466624
+        },
+        "resourceStats": {
+          "currentResourceBytes": 3140612,
+          "peakResourceBytes": 5929548,
+          "packetBytes": 1676132,
+          "hostCopyBytes": 57145704,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "cpuStats": {
+          "allocatedBytes": 0,
+          "attachmentImportBytes": 0,
+          "attachmentResolveBytes": 0,
+          "batches": 0,
+          "sequences": 0
+        }
+      },
+      "browser": {
+        "samples": 300,
+        "p50Ms": 19.800000071525574,
+        "p95Ms": 21.600000023841858,
+        "p99Ms": 24.799999952316284,
+        "meanMs": 19.961000002622605,
+        "workFramesPerSecond": 50.097690489885956,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 25,
+        "over60HzBudget": 300,
+        "stageP95Ms": [
+          0.20000004768371582, 21.299999952316284, 0.20000004768371582, 0.30000007152557373
+        ],
+        "startup": {
+          "fetchMs": 11,
+          "compileMs": 1.600000023841858,
+          "instantiateMs": 0.20000004768371582,
+          "runtimeInitMs": 0.3999999761581421,
+          "gameInitMs": 20.899999976158142,
+          "firstFrameMs": 10.200000047683716,
+          "totalMs": 44.300000071525574,
+          "executorCache": {
+            "enabled": false,
+            "hit": false
+          }
+        },
+        "memory": {
+          "initialLinear": 4194304,
+          "currentLinear": 6815744,
+          "runtimeLinear": 23199744,
+          "heapBytes": 2854736,
+          "heapPeak": 3394392,
+          "peakLinear": 6815744,
+          "peakHeap": 3394392
+        },
+        "resourceStats": {
+          "packetBytes": 1524960,
+          "hostCopyBytes": 112145760,
+          "pixelWork": 112707475,
+          "peakResourceBytes": 5929548,
+          "currentResourceBytes": 3140612,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "gpuStats": null,
+        "cpuStats": {
+          "allocatedBytes": 0,
+          "attachmentImportBytes": 0,
+          "attachmentResolveBytes": 0,
+          "batches": 0,
+          "sequences": 0
+        }
+      }
+    },
+    {
+      "language": "luau",
+      "backend": "cpu",
+      "display": [640, 360],
+      "ssaa": "2x",
+      "artifacts": {
+        "web/game.png": "030ce46f3f832e19f4142d040ed4297678b194527f456944564da268e13a0f3a",
+        "web/runtime.wasm": "6fe0851f4e1212b451336e941f0d1776c6750e55555b54b50eb6f3cdf7cc7eb5",
+        "web/runtime-gpu.wasm": "c1731d33717acdd9eb16dde8b096cc372e2e627118ac3f18a0acd4f39233551c",
+        "web/worker.js": "40d89607105856067f05ea577948832ec3c99c27244f6a26c4f52f3cd1529c2b",
+        "web/policy.js": "b6a0bb4efdc35b08070d2584f0bd9af36ac4c912da1fc5947c3d9b613c9c5a1e",
+        "web/gpu.js": "7d6047ec7f9b9fc6daece954ec70f73811c639d2c4707bc576515f4e0828fbbc",
+        "web/constants.js": "95accb2a8108cda23ae48bbf2696ea76ac6c46b391f3de7810970582f57f634c",
+        "web/luau-executor.wasm": "5871983ce677ffae0a9bb70e066264372439628f1d1b3e1380daa5b5a51029ac",
+        "native/player.exe": "c26c5c99f03087af9ec9c3d54f7f5715bbf6c6a1fc7cfeed5ea4867b01ab0702"
+      },
+      "cartridgeBytes": 246875,
+      "native": {
+        "samples": 300,
+        "p50Ms": 53.8574,
+        "p95Ms": 70.6412,
+        "p99Ms": 81.0461,
+        "meanMs": 56.16209133333337,
+        "workFramesPerSecond": 17.80560474617652,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 89.4385,
+        "over60HzBudget": 300,
+        "stageP95Ms": [0.1519, 70.3561, 0.1456],
+        "startup": {
+          "totalMs": 59.2555,
+          "compileMs": 6.7563,
+          "instantiateMs": 0.1525,
+          "gameInitMs": 29.5827
+        },
+        "memory": {
+          "currentLinear": 6815744,
+          "heapBytes": 2854736,
+          "heapPeak": 3394392,
+          "baselineWorking": 10809344,
+          "working": 34177024,
+          "peakWorking": 36945920
+        },
+        "resourceStats": {
+          "currentResourceBytes": 3140612,
+          "peakResourceBytes": 12085836,
+          "packetBytes": 1676132,
+          "hostCopyBytes": 57145704,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "cpuStats": {
+          "allocatedBytes": 7463560,
+          "attachmentImportBytes": 3098419200,
+          "attachmentResolveBytes": 774604800,
+          "batches": 44630,
+          "sequences": 421
+        }
+      },
+      "browser": {
+        "samples": 300,
+        "p50Ms": 85.70000004768372,
+        "p95Ms": 104.5,
+        "p99Ms": 123.19999992847443,
+        "meanMs": 88.34533333222072,
+        "workFramesPerSecond": 11.319217012171109,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 131.10000002384186,
+        "over60HzBudget": 300,
+        "stageP95Ms": [
+          0.20000004768371582, 103.89999997615814, 0.2999999523162842, 0.30000007152557373
+        ],
+        "startup": {
+          "fetchMs": 20.699999928474426,
+          "compileMs": 1.600000023841858,
+          "instantiateMs": 0.10000002384185791,
+          "runtimeInitMs": 0.5,
+          "gameInitMs": 21.600000023841858,
+          "firstFrameMs": 43.699999928474426,
+          "totalMs": 88.19999992847443,
+          "executorCache": {
+            "enabled": false,
+            "hit": false
+          }
+        },
+        "memory": {
+          "initialLinear": 4194304,
+          "currentLinear": 6815744,
+          "runtimeLinear": 50724864,
+          "heapBytes": 2854736,
+          "heapPeak": 3394392,
+          "peakLinear": 6815744,
+          "peakHeap": 3394392
+        },
+        "resourceStats": {
+          "packetBytes": 1524960,
+          "hostCopyBytes": 112145760,
+          "pixelWork": 112707475,
+          "peakResourceBytes": 12085836,
+          "currentResourceBytes": 3140612,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "gpuStats": null,
+        "cpuStats": {
+          "allocatedBytes": 7447016,
+          "attachmentImportBytes": 3098419200,
+          "attachmentResolveBytes": 774604800,
+          "batches": 44630,
+          "sequences": 421
+        }
+      }
+    },
+    {
+      "language": "luau",
+      "backend": "cpu",
+      "display": [640, 360],
+      "ssaa": "1080p",
+      "artifacts": {
+        "web/game.png": "030ce46f3f832e19f4142d040ed4297678b194527f456944564da268e13a0f3a",
+        "web/runtime.wasm": "6fe0851f4e1212b451336e941f0d1776c6750e55555b54b50eb6f3cdf7cc7eb5",
+        "web/runtime-gpu.wasm": "c1731d33717acdd9eb16dde8b096cc372e2e627118ac3f18a0acd4f39233551c",
+        "web/worker.js": "40d89607105856067f05ea577948832ec3c99c27244f6a26c4f52f3cd1529c2b",
+        "web/policy.js": "b6a0bb4efdc35b08070d2584f0bd9af36ac4c912da1fc5947c3d9b613c9c5a1e",
+        "web/gpu.js": "7d6047ec7f9b9fc6daece954ec70f73811c639d2c4707bc576515f4e0828fbbc",
+        "web/constants.js": "95accb2a8108cda23ae48bbf2696ea76ac6c46b391f3de7810970582f57f634c",
+        "web/luau-executor.wasm": "5871983ce677ffae0a9bb70e066264372439628f1d1b3e1380daa5b5a51029ac",
+        "native/player.exe": "c26c5c99f03087af9ec9c3d54f7f5715bbf6c6a1fc7cfeed5ea4867b01ab0702"
+      },
+      "cartridgeBytes": 246875,
+      "native": {
+        "samples": 300,
+        "p50Ms": 115.83260000000001,
+        "p95Ms": 152.589,
+        "p99Ms": 178.8966,
+        "meanMs": 121.37047300000006,
+        "workFramesPerSecond": 8.239236243233554,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 266.23839999999996,
+        "over60HzBudget": 300,
+        "stageP95Ms": [0.1608, 152.2702, 0.1634],
+        "startup": {
+          "totalMs": 196.9261,
+          "compileMs": 7.1258,
+          "instantiateMs": 0.1262,
+          "gameInitMs": 32.8026
+        },
+        "memory": {
+          "currentLinear": 6815744,
+          "heapBytes": 2854736,
+          "heapPeak": 3394392,
+          "baselineWorking": 10809344,
+          "working": 43356160,
+          "peakWorking": 46182400
+        },
+        "resourceStats": {
+          "currentResourceBytes": 3140612,
+          "peakResourceBytes": 12085836,
+          "packetBytes": 1676132,
+          "hostCopyBytes": 57145704,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "cpuStats": {
+          "allocatedBytes": 16679560,
+          "attachmentImportBytes": 6983884800,
+          "attachmentResolveBytes": 774604800,
+          "batches": 44630,
+          "sequences": 421
+        }
+      },
+      "browser": {
+        "samples": 300,
+        "p50Ms": 157.20000004768372,
+        "p95Ms": 176.89999997615814,
+        "p99Ms": 192.20000004768372,
+        "meanMs": 158.2726666688919,
+        "workFramesPerSecond": 6.318210345770003,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 193,
+        "over60HzBudget": 300,
+        "stageP95Ms": [
+          0.19999992847442627, 176.40000009536743, 0.20000004768371582, 0.30000007152557373
+        ],
+        "startup": {
+          "fetchMs": 9.799999952316284,
+          "compileMs": 1.5,
+          "instantiateMs": 0.10000002384185791,
+          "runtimeInitMs": 0.3999999761581421,
+          "gameInitMs": 21.5,
+          "firstFrameMs": 209.70000004768372,
+          "totalMs": 243,
+          "executorCache": {
+            "enabled": false,
+            "hit": false
+          }
+        },
+        "memory": {
+          "initialLinear": 4194304,
+          "currentLinear": 6815744,
+          "runtimeLinear": 47382528,
+          "heapBytes": 2854736,
+          "heapPeak": 3394392,
+          "peakLinear": 6815744,
+          "peakHeap": 3394392
+        },
+        "resourceStats": {
+          "packetBytes": 1524960,
+          "hostCopyBytes": 112145760,
+          "pixelWork": 112707475,
+          "peakResourceBytes": 12085836,
+          "currentResourceBytes": 3140612,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "gpuStats": null,
+        "cpuStats": {
+          "allocatedBytes": 16663016,
+          "attachmentImportBytes": 6983884800,
+          "attachmentResolveBytes": 774604800,
+          "batches": 44630,
+          "sequences": 421
+        }
+      }
+    },
+    {
+      "language": "luau",
+      "backend": "gpu",
+      "display": [320, 180],
+      "ssaa": "off",
+      "artifacts": {
+        "web/game.png": "030ce46f3f832e19f4142d040ed4297678b194527f456944564da268e13a0f3a",
+        "web/runtime.wasm": "6fe0851f4e1212b451336e941f0d1776c6750e55555b54b50eb6f3cdf7cc7eb5",
+        "web/runtime-gpu.wasm": "c1731d33717acdd9eb16dde8b096cc372e2e627118ac3f18a0acd4f39233551c",
+        "web/worker.js": "40d89607105856067f05ea577948832ec3c99c27244f6a26c4f52f3cd1529c2b",
+        "web/policy.js": "b6a0bb4efdc35b08070d2584f0bd9af36ac4c912da1fc5947c3d9b613c9c5a1e",
+        "web/gpu.js": "7d6047ec7f9b9fc6daece954ec70f73811c639d2c4707bc576515f4e0828fbbc",
+        "web/constants.js": "95accb2a8108cda23ae48bbf2696ea76ac6c46b391f3de7810970582f57f634c",
+        "web/luau-executor.wasm": "5871983ce677ffae0a9bb70e066264372439628f1d1b3e1380daa5b5a51029ac",
+        "native/player.exe": "c26c5c99f03087af9ec9c3d54f7f5715bbf6c6a1fc7cfeed5ea4867b01ab0702"
+      },
+      "cartridgeBytes": 246875,
+      "native": {
+        "samples": 300,
+        "p50Ms": 8.6899,
+        "p95Ms": 11.033499999999998,
+        "p99Ms": 14.4749,
+        "meanMs": 8.82361366666667,
+        "workFramesPerSecond": 113.33225113625967,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 15.5238,
+        "over60HzBudget": 0,
+        "stageP95Ms": [0.1186, 10.3982, 0.755],
+        "startup": {
+          "totalMs": 448.9208,
+          "compileMs": 6.6183,
+          "instantiateMs": 0.1482,
+          "gameInitMs": 30.3057
+        },
+        "memory": {
+          "currentLinear": 6815744,
+          "heapBytes": 2854736,
+          "heapPeak": 3394392,
+          "baselineWorking": 10809344,
+          "working": 103702528,
+          "peakWorking": 103759872
+        },
+        "resourceStats": {
+          "currentResourceBytes": 1758212,
+          "peakResourceBytes": 5551252,
+          "packetBytes": 1676132,
+          "hostCopyBytes": 1849704,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "gpuStats": {
+          "meshUploads": 200,
+          "cacheHits": 48219,
+          "uploadBytes": 2431488,
+          "materialUploads": 96,
+          "materialCacheHits": 43692,
+          "materialUploadBytes": 79872,
+          "materialCacheBytes": 79872,
+          "attachmentUploadBytes": 193996800,
+          "attachmentReadbackBytes": 27648000,
+          "attachmentBatches": 44630,
+          "attachmentSequences": 421,
+          "attachmentBytes": 1612800,
+          "publishedFrames": 421,
+          "directPresents": 420,
+          "snapshotReadbackBytes": 27648000,
+          "presentationUploadBytes": 121248000,
+          "frameBytes": 1497600,
+          "gpuPresentation": true
+        },
+        "cpuStats": {
+          "allocatedBytes": 0,
+          "attachmentImportBytes": 0,
+          "attachmentResolveBytes": 0,
+          "batches": 0,
+          "sequences": 0
+        }
+      },
+      "browser": {
+        "samples": 300,
+        "p50Ms": 22.199999928474426,
+        "p95Ms": 26,
+        "p99Ms": 32.200000047683716,
+        "meanMs": 22.328666669130325,
+        "workFramesPerSecond": 44.785477557534286,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 35.800000071525574,
+        "over60HzBudget": 300,
+        "stageP95Ms": [0.20000004768371582, 25.899999976158142, 0.30000007152557373, 0],
+        "startup": {
+          "fetchMs": 17.200000047683716,
+          "compileMs": 1.5,
+          "instantiateMs": 0.19999992847442627,
+          "runtimeInitMs": 0.8000000715255737,
+          "gameInitMs": 24.199999928474426,
+          "firstFrameMs": 80.89999997615814,
+          "totalMs": 124.79999995231628,
+          "executorCache": {
+            "enabled": false,
+            "hit": false
+          }
+        },
+        "memory": {
+          "initialLinear": 4194304,
+          "currentLinear": 6815744,
+          "runtimeLinear": 30343168,
+          "heapBytes": 2854736,
+          "heapPeak": 3394392,
+          "peakLinear": 6815744,
+          "peakHeap": 3394392
+        },
+        "resourceStats": {
+          "packetBytes": 1524960,
+          "hostCopyBytes": 1553760,
+          "pixelWork": 29395438,
+          "peakResourceBytes": 5289108,
+          "currentResourceBytes": 1758212,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "gpuStats": {
+          "publishedFrames": 421,
+          "directPresents": 421,
+          "snapshotReadbackBytes": 27648000,
+          "presentationUploadBytes": 121248000,
+          "frameBytes": 1497600,
+          "attachmentUploadBytes": 193996800,
+          "attachmentReadbackBytes": 27648000,
+          "attachmentBatches": 44630,
+          "attachmentSequences": 421,
+          "attachmentBytes": 1612800,
+          "meshUploads": 200,
+          "cacheHits": 48219,
+          "uploadBytes": 2431488,
+          "textureUploadBytes": 315324672,
+          "cacheBytes": 2431488,
+          "textureBytes": 3190272,
+          "materialUploads": 96,
+          "materialCacheHits": 43692,
+          "materialUploadBytes": 79872,
+          "materialCacheBytes": 79872,
+          "gpuPresentation": true
+        },
+        "cpuStats": {
+          "allocatedBytes": 0,
+          "attachmentImportBytes": 0,
+          "attachmentResolveBytes": 0,
+          "batches": 0,
+          "sequences": 0
+        }
+      }
+    },
+    {
+      "language": "luau",
+      "backend": "gpu",
+      "display": [320, 180],
+      "ssaa": "2x",
+      "artifacts": {
+        "web/game.png": "030ce46f3f832e19f4142d040ed4297678b194527f456944564da268e13a0f3a",
+        "web/runtime.wasm": "6fe0851f4e1212b451336e941f0d1776c6750e55555b54b50eb6f3cdf7cc7eb5",
+        "web/runtime-gpu.wasm": "c1731d33717acdd9eb16dde8b096cc372e2e627118ac3f18a0acd4f39233551c",
+        "web/worker.js": "40d89607105856067f05ea577948832ec3c99c27244f6a26c4f52f3cd1529c2b",
+        "web/policy.js": "b6a0bb4efdc35b08070d2584f0bd9af36ac4c912da1fc5947c3d9b613c9c5a1e",
+        "web/gpu.js": "7d6047ec7f9b9fc6daece954ec70f73811c639d2c4707bc576515f4e0828fbbc",
+        "web/constants.js": "95accb2a8108cda23ae48bbf2696ea76ac6c46b391f3de7810970582f57f634c",
+        "web/luau-executor.wasm": "5871983ce677ffae0a9bb70e066264372439628f1d1b3e1380daa5b5a51029ac",
+        "native/player.exe": "c26c5c99f03087af9ec9c3d54f7f5715bbf6c6a1fc7cfeed5ea4867b01ab0702"
+      },
+      "cartridgeBytes": 246875,
+      "native": {
+        "samples": 300,
+        "p50Ms": 10.2449,
+        "p95Ms": 13.578199999999999,
+        "p99Ms": 14.694299999999998,
+        "meanMs": 10.462568666666673,
+        "workFramesPerSecond": 95.57882312265822,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 16.9053,
+        "over60HzBudget": 1,
+        "stageP95Ms": [0.159, 12.183, 0.8961],
+        "startup": {
+          "totalMs": 426.8359,
+          "compileMs": 7.6485,
+          "instantiateMs": 0.1501,
+          "gameInitMs": 36.2155
+        },
+        "memory": {
+          "currentLinear": 6815744,
+          "heapBytes": 2854736,
+          "heapPeak": 3394392,
+          "baselineWorking": 10809344,
+          "working": 103849984,
+          "peakWorking": 103882752
+        },
+        "resourceStats": {
+          "currentResourceBytes": 1758212,
+          "peakResourceBytes": 5551252,
+          "packetBytes": 1676132,
+          "hostCopyBytes": 1849704,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "gpuStats": {
+          "meshUploads": 200,
+          "cacheHits": 48219,
+          "uploadBytes": 2431488,
+          "materialUploads": 96,
+          "materialCacheHits": 43692,
+          "materialUploadBytes": 79872,
+          "materialCacheBytes": 79872,
+          "attachmentUploadBytes": 193996800,
+          "attachmentReadbackBytes": 27648000,
+          "attachmentBatches": 44630,
+          "attachmentSequences": 421,
+          "attachmentBytes": 3686400,
+          "publishedFrames": 421,
+          "directPresents": 420,
+          "snapshotReadbackBytes": 27648000,
+          "presentationUploadBytes": 121248000,
+          "frameBytes": 1497600,
+          "gpuPresentation": true
+        },
+        "cpuStats": {
+          "allocatedBytes": 0,
+          "attachmentImportBytes": 0,
+          "attachmentResolveBytes": 0,
+          "batches": 0,
+          "sequences": 0
+        }
+      },
+      "browser": {
+        "samples": 300,
+        "p50Ms": 23.200000047683716,
+        "p95Ms": 26.100000023841858,
+        "p99Ms": 32.5,
+        "meanMs": 23.505999999046324,
+        "workFramesPerSecond": 42.542329619695884,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 35.10000002384186,
+        "over60HzBudget": 300,
+        "stageP95Ms": [0.20000004768371582, 25.899999976158142, 0.30000007152557373, 0],
+        "startup": {
+          "fetchMs": 20.600000023841858,
+          "compileMs": 1.7999999523162842,
+          "instantiateMs": 0.10000002384185791,
+          "runtimeInitMs": 0.8999999761581421,
+          "gameInitMs": 25.200000047683716,
+          "firstFrameMs": 46.700000047683716,
+          "totalMs": 95.30000007152557,
+          "executorCache": {
+            "enabled": false,
+            "hit": false
+          }
+        },
+        "memory": {
+          "initialLinear": 4194304,
+          "currentLinear": 6815744,
+          "runtimeLinear": 30343168,
+          "heapBytes": 2854736,
+          "heapPeak": 3394392,
+          "peakLinear": 6815744,
+          "peakHeap": 3394392
+        },
+        "resourceStats": {
+          "packetBytes": 1524960,
+          "hostCopyBytes": 1553760,
+          "pixelWork": 29395438,
+          "peakResourceBytes": 5289108,
+          "currentResourceBytes": 1758212,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "gpuStats": {
+          "publishedFrames": 421,
+          "directPresents": 421,
+          "snapshotReadbackBytes": 27648000,
+          "presentationUploadBytes": 121248000,
+          "frameBytes": 1497600,
+          "attachmentUploadBytes": 193996800,
+          "attachmentReadbackBytes": 27648000,
+          "attachmentBatches": 44630,
+          "attachmentSequences": 421,
+          "attachmentBytes": 3686400,
+          "meshUploads": 200,
+          "cacheHits": 48219,
+          "uploadBytes": 2431488,
+          "textureUploadBytes": 315324672,
+          "cacheBytes": 2431488,
+          "textureBytes": 5263872,
+          "materialUploads": 96,
+          "materialCacheHits": 43692,
+          "materialUploadBytes": 79872,
+          "materialCacheBytes": 79872,
+          "gpuPresentation": true
+        },
+        "cpuStats": {
+          "allocatedBytes": 0,
+          "attachmentImportBytes": 0,
+          "attachmentResolveBytes": 0,
+          "batches": 0,
+          "sequences": 0
+        }
+      }
+    },
+    {
+      "language": "luau",
+      "backend": "gpu",
+      "display": [320, 180],
+      "ssaa": "1080p",
+      "artifacts": {
+        "web/game.png": "030ce46f3f832e19f4142d040ed4297678b194527f456944564da268e13a0f3a",
+        "web/runtime.wasm": "6fe0851f4e1212b451336e941f0d1776c6750e55555b54b50eb6f3cdf7cc7eb5",
+        "web/runtime-gpu.wasm": "c1731d33717acdd9eb16dde8b096cc372e2e627118ac3f18a0acd4f39233551c",
+        "web/worker.js": "40d89607105856067f05ea577948832ec3c99c27244f6a26c4f52f3cd1529c2b",
+        "web/policy.js": "b6a0bb4efdc35b08070d2584f0bd9af36ac4c912da1fc5947c3d9b613c9c5a1e",
+        "web/gpu.js": "7d6047ec7f9b9fc6daece954ec70f73811c639d2c4707bc576515f4e0828fbbc",
+        "web/constants.js": "95accb2a8108cda23ae48bbf2696ea76ac6c46b391f3de7810970582f57f634c",
+        "web/luau-executor.wasm": "5871983ce677ffae0a9bb70e066264372439628f1d1b3e1380daa5b5a51029ac",
+        "native/player.exe": "c26c5c99f03087af9ec9c3d54f7f5715bbf6c6a1fc7cfeed5ea4867b01ab0702"
+      },
+      "cartridgeBytes": 246875,
+      "native": {
+        "samples": 300,
+        "p50Ms": 9.749500000000001,
+        "p95Ms": 13.5643,
+        "p99Ms": 14.941999999999998,
+        "meanMs": 10.096943333333328,
+        "workFramesPerSecond": 99.03987444384988,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 15.2109,
+        "over60HzBudget": 0,
+        "stageP95Ms": [0.1596, 11.6678, 2.2845],
+        "startup": {
+          "totalMs": 392.3117,
+          "compileMs": 7.1018,
+          "instantiateMs": 0.1449,
+          "gameInitMs": 32.5449
+        },
+        "memory": {
+          "currentLinear": 6815744,
+          "heapBytes": 2854736,
+          "heapPeak": 3394392,
+          "baselineWorking": 10805248,
+          "working": 103694336,
+          "peakWorking": 103800832
+        },
+        "resourceStats": {
+          "currentResourceBytes": 1758212,
+          "peakResourceBytes": 5551252,
+          "packetBytes": 1676132,
+          "hostCopyBytes": 1849704,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "gpuStats": {
+          "meshUploads": 200,
+          "cacheHits": 48219,
+          "uploadBytes": 2431488,
+          "materialUploads": 96,
+          "materialCacheHits": 43692,
+          "materialUploadBytes": 79872,
+          "materialCacheBytes": 79872,
+          "attachmentUploadBytes": 193996800,
+          "attachmentReadbackBytes": 27648000,
+          "attachmentBatches": 44630,
+          "attachmentSequences": 421,
+          "attachmentBytes": 25804800,
+          "publishedFrames": 421,
+          "directPresents": 420,
+          "snapshotReadbackBytes": 27648000,
+          "presentationUploadBytes": 121248000,
+          "frameBytes": 1497600,
+          "gpuPresentation": true
+        },
+        "cpuStats": {
+          "allocatedBytes": 0,
+          "attachmentImportBytes": 0,
+          "attachmentResolveBytes": 0,
+          "batches": 0,
+          "sequences": 0
+        }
+      },
+      "browser": {
+        "samples": 300,
+        "p50Ms": 25.299999952316284,
+        "p95Ms": 40,
+        "p99Ms": 56.89999997615814,
+        "meanMs": 27.261999999284743,
+        "workFramesPerSecond": 36.681094564824164,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 65.89999997615814,
+        "over60HzBudget": 300,
+        "stageP95Ms": [0.20000004768371582, 39.5, 0.30000007152557373, 0],
+        "startup": {
+          "fetchMs": 12.899999976158142,
+          "compileMs": 1.6999999284744263,
+          "instantiateMs": 0.10000002384185791,
+          "runtimeInitMs": 0.8999999761581421,
+          "gameInitMs": 26,
+          "firstFrameMs": 50.60000002384186,
+          "totalMs": 92.19999992847443,
+          "executorCache": {
+            "enabled": false,
+            "hit": false
+          }
+        },
+        "memory": {
+          "initialLinear": 4194304,
+          "currentLinear": 6815744,
+          "runtimeLinear": 30343168,
+          "heapBytes": 2854736,
+          "heapPeak": 3394392,
+          "peakLinear": 6815744,
+          "peakHeap": 3394392
+        },
+        "resourceStats": {
+          "packetBytes": 1524960,
+          "hostCopyBytes": 1553760,
+          "pixelWork": 29395438,
+          "peakResourceBytes": 5289108,
+          "currentResourceBytes": 1758212,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "gpuStats": {
+          "publishedFrames": 421,
+          "directPresents": 421,
+          "snapshotReadbackBytes": 27648000,
+          "presentationUploadBytes": 121248000,
+          "frameBytes": 1497600,
+          "attachmentUploadBytes": 193996800,
+          "attachmentReadbackBytes": 27648000,
+          "attachmentBatches": 44630,
+          "attachmentSequences": 421,
+          "attachmentBytes": 25804800,
+          "meshUploads": 200,
+          "cacheHits": 48219,
+          "uploadBytes": 2431488,
+          "textureUploadBytes": 315324672,
+          "cacheBytes": 2431488,
+          "textureBytes": 27382272,
+          "materialUploads": 96,
+          "materialCacheHits": 43692,
+          "materialUploadBytes": 79872,
+          "materialCacheBytes": 79872,
+          "gpuPresentation": true
+        },
+        "cpuStats": {
+          "allocatedBytes": 0,
+          "attachmentImportBytes": 0,
+          "attachmentResolveBytes": 0,
+          "batches": 0,
+          "sequences": 0
+        }
+      }
+    },
+    {
+      "language": "luau",
+      "backend": "gpu",
+      "display": [640, 360],
+      "ssaa": "off",
+      "artifacts": {
+        "web/game.png": "030ce46f3f832e19f4142d040ed4297678b194527f456944564da268e13a0f3a",
+        "web/runtime.wasm": "6fe0851f4e1212b451336e941f0d1776c6750e55555b54b50eb6f3cdf7cc7eb5",
+        "web/runtime-gpu.wasm": "c1731d33717acdd9eb16dde8b096cc372e2e627118ac3f18a0acd4f39233551c",
+        "web/worker.js": "40d89607105856067f05ea577948832ec3c99c27244f6a26c4f52f3cd1529c2b",
+        "web/policy.js": "b6a0bb4efdc35b08070d2584f0bd9af36ac4c912da1fc5947c3d9b613c9c5a1e",
+        "web/gpu.js": "7d6047ec7f9b9fc6daece954ec70f73811c639d2c4707bc576515f4e0828fbbc",
+        "web/constants.js": "95accb2a8108cda23ae48bbf2696ea76ac6c46b391f3de7810970582f57f634c",
+        "web/luau-executor.wasm": "5871983ce677ffae0a9bb70e066264372439628f1d1b3e1380daa5b5a51029ac",
+        "native/player.exe": "c26c5c99f03087af9ec9c3d54f7f5715bbf6c6a1fc7cfeed5ea4867b01ab0702"
+      },
+      "cartridgeBytes": 246875,
+      "native": {
+        "samples": 300,
+        "p50Ms": 12.2754,
+        "p95Ms": 16.7136,
+        "p99Ms": 22.336800000000004,
+        "meanMs": 12.732132666666667,
+        "workFramesPerSecond": 78.54143733657818,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 39.8459,
+        "over60HzBudget": 16,
+        "stageP95Ms": [0.1697, 14.7436, 2.5794],
+        "startup": {
+          "totalMs": 363.4975,
+          "compileMs": 7.615,
+          "instantiateMs": 0.1259,
+          "gameInitMs": 31.4566
+        },
+        "memory": {
+          "currentLinear": 6815744,
+          "heapBytes": 2854736,
+          "heapPeak": 3394392,
+          "baselineWorking": 10821632,
+          "working": 106754048,
+          "peakWorking": 109572096
+        },
+        "resourceStats": {
+          "currentResourceBytes": 3140612,
+          "peakResourceBytes": 8316052,
+          "packetBytes": 1676132,
+          "hostCopyBytes": 1849704,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "gpuStats": {
+          "meshUploads": 200,
+          "cacheHits": 48219,
+          "uploadBytes": 2431488,
+          "materialUploads": 96,
+          "materialCacheHits": 43692,
+          "materialUploadBytes": 79872,
+          "materialCacheBytes": 79872,
+          "attachmentUploadBytes": 774604800,
+          "attachmentReadbackBytes": 110592000,
+          "attachmentBatches": 44630,
+          "attachmentSequences": 421,
+          "attachmentBytes": 6451200,
+          "publishedFrames": 421,
+          "directPresents": 420,
+          "snapshotReadbackBytes": 110592000,
+          "presentationUploadBytes": 484128000,
+          "frameBytes": 5990400,
+          "gpuPresentation": true
+        },
+        "cpuStats": {
+          "allocatedBytes": 0,
+          "attachmentImportBytes": 0,
+          "attachmentResolveBytes": 0,
+          "batches": 0,
+          "sequences": 0
+        }
+      },
+      "browser": {
+        "samples": 300,
+        "p50Ms": 24,
+        "p95Ms": 30,
+        "p99Ms": 34.89999997615814,
+        "meanMs": 24.410666667222976,
+        "workFramesPerSecond": 40.96569805456127,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 42.60000002384186,
+        "over60HzBudget": 300,
+        "stageP95Ms": [0.20000004768371582, 29.600000023841858, 0.3999999761581421, 0],
+        "startup": {
+          "fetchMs": 12.099999904632568,
+          "compileMs": 1.7000000476837158,
+          "instantiateMs": 0.20000004768371582,
+          "runtimeInitMs": 0.6999999284744263,
+          "gameInitMs": 26.200000047683716,
+          "firstFrameMs": 45.39999997615814,
+          "totalMs": 86.29999995231628,
+          "executorCache": {
+            "enabled": false,
+            "hit": false
+          }
+        },
+        "memory": {
+          "initialLinear": 4194304,
+          "currentLinear": 6815744,
+          "runtimeLinear": 30343168,
+          "heapBytes": 2854736,
+          "heapPeak": 3394392,
+          "peakLinear": 6815744,
+          "peakHeap": 3394392
+        },
+        "resourceStats": {
+          "packetBytes": 1524960,
+          "hostCopyBytes": 1553760,
+          "pixelWork": 112707475,
+          "peakResourceBytes": 8053908,
+          "currentResourceBytes": 3140612,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "gpuStats": {
+          "publishedFrames": 421,
+          "directPresents": 421,
+          "snapshotReadbackBytes": 110592000,
+          "presentationUploadBytes": 484128000,
+          "frameBytes": 5990400,
+          "attachmentUploadBytes": 774604800,
+          "attachmentReadbackBytes": 110592000,
+          "attachmentBatches": 44630,
+          "attachmentSequences": 421,
+          "attachmentBytes": 6451200,
+          "meshUploads": 200,
+          "cacheHits": 48219,
+          "uploadBytes": 2431488,
+          "textureUploadBytes": 1258812672,
+          "cacheBytes": 2431488,
+          "textureBytes": 12521472,
+          "materialUploads": 96,
+          "materialCacheHits": 43692,
+          "materialUploadBytes": 79872,
+          "materialCacheBytes": 79872,
+          "gpuPresentation": true
+        },
+        "cpuStats": {
+          "allocatedBytes": 0,
+          "attachmentImportBytes": 0,
+          "attachmentResolveBytes": 0,
+          "batches": 0,
+          "sequences": 0
+        }
+      }
+    },
+    {
+      "language": "luau",
+      "backend": "gpu",
+      "display": [640, 360],
+      "ssaa": "2x",
+      "artifacts": {
+        "web/game.png": "030ce46f3f832e19f4142d040ed4297678b194527f456944564da268e13a0f3a",
+        "web/runtime.wasm": "6fe0851f4e1212b451336e941f0d1776c6750e55555b54b50eb6f3cdf7cc7eb5",
+        "web/runtime-gpu.wasm": "c1731d33717acdd9eb16dde8b096cc372e2e627118ac3f18a0acd4f39233551c",
+        "web/worker.js": "40d89607105856067f05ea577948832ec3c99c27244f6a26c4f52f3cd1529c2b",
+        "web/policy.js": "b6a0bb4efdc35b08070d2584f0bd9af36ac4c912da1fc5947c3d9b613c9c5a1e",
+        "web/gpu.js": "7d6047ec7f9b9fc6daece954ec70f73811c639d2c4707bc576515f4e0828fbbc",
+        "web/constants.js": "95accb2a8108cda23ae48bbf2696ea76ac6c46b391f3de7810970582f57f634c",
+        "web/luau-executor.wasm": "5871983ce677ffae0a9bb70e066264372439628f1d1b3e1380daa5b5a51029ac",
+        "native/player.exe": "c26c5c99f03087af9ec9c3d54f7f5715bbf6c6a1fc7cfeed5ea4867b01ab0702"
+      },
+      "cartridgeBytes": 246875,
+      "native": {
+        "samples": 300,
+        "p50Ms": 10.5777,
+        "p95Ms": 13.0702,
+        "p99Ms": 14.3825,
+        "meanMs": 10.615569333333335,
+        "workFramesPerSecond": 94.20125935779609,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 17.1665,
+        "over60HzBudget": 1,
+        "stageP95Ms": [0.1314, 11.292, 2.8359],
+        "startup": {
+          "totalMs": 372.712,
+          "compileMs": 7.1173,
+          "instantiateMs": 0.113,
+          "gameInitMs": 31.1578
+        },
+        "memory": {
+          "currentLinear": 6815744,
+          "heapBytes": 2854736,
+          "heapPeak": 3394392,
+          "baselineWorking": 10817536,
+          "working": 106827776,
+          "peakWorking": 109826048
+        },
+        "resourceStats": {
+          "currentResourceBytes": 3140612,
+          "peakResourceBytes": 8316052,
+          "packetBytes": 1676132,
+          "hostCopyBytes": 1849704,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "gpuStats": {
+          "meshUploads": 200,
+          "cacheHits": 48219,
+          "uploadBytes": 2431488,
+          "materialUploads": 96,
+          "materialCacheHits": 43692,
+          "materialUploadBytes": 79872,
+          "materialCacheBytes": 79872,
+          "attachmentUploadBytes": 774604800,
+          "attachmentReadbackBytes": 110592000,
+          "attachmentBatches": 44630,
+          "attachmentSequences": 421,
+          "attachmentBytes": 14745600,
+          "publishedFrames": 421,
+          "directPresents": 420,
+          "snapshotReadbackBytes": 110592000,
+          "presentationUploadBytes": 484128000,
+          "frameBytes": 5990400,
+          "gpuPresentation": true
+        },
+        "cpuStats": {
+          "allocatedBytes": 0,
+          "attachmentImportBytes": 0,
+          "attachmentResolveBytes": 0,
+          "batches": 0,
+          "sequences": 0
+        }
+      },
+      "browser": {
+        "samples": 300,
+        "p50Ms": 22.799999952316284,
+        "p95Ms": 27.600000023841858,
+        "p99Ms": 34.700000047683716,
+        "meanMs": 23.509666666587194,
+        "workFramesPerSecond": 42.53569453714275,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 39.89999997615814,
+        "over60HzBudget": 300,
+        "stageP95Ms": [0.20000004768371582, 27.200000047683716, 0.3999999761581421, 0],
+        "startup": {
+          "fetchMs": 11.100000023841858,
+          "compileMs": 1.7000000476837158,
+          "instantiateMs": 0.09999990463256836,
+          "runtimeInitMs": 0.6000000238418579,
+          "gameInitMs": 22.600000023841858,
+          "firstFrameMs": 41,
+          "totalMs": 77.10000002384186,
+          "executorCache": {
+            "enabled": false,
+            "hit": false
+          }
+        },
+        "memory": {
+          "initialLinear": 4194304,
+          "currentLinear": 6815744,
+          "runtimeLinear": 30343168,
+          "heapBytes": 2854736,
+          "heapPeak": 3394392,
+          "peakLinear": 6815744,
+          "peakHeap": 3394392
+        },
+        "resourceStats": {
+          "packetBytes": 1524960,
+          "hostCopyBytes": 1553760,
+          "pixelWork": 112707475,
+          "peakResourceBytes": 8053908,
+          "currentResourceBytes": 3140612,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "gpuStats": {
+          "publishedFrames": 421,
+          "directPresents": 421,
+          "snapshotReadbackBytes": 110592000,
+          "presentationUploadBytes": 484128000,
+          "frameBytes": 5990400,
+          "attachmentUploadBytes": 774604800,
+          "attachmentReadbackBytes": 110592000,
+          "attachmentBatches": 44630,
+          "attachmentSequences": 421,
+          "attachmentBytes": 14745600,
+          "meshUploads": 200,
+          "cacheHits": 48219,
+          "uploadBytes": 2431488,
+          "textureUploadBytes": 1258812672,
+          "cacheBytes": 2431488,
+          "textureBytes": 20815872,
+          "materialUploads": 96,
+          "materialCacheHits": 43692,
+          "materialUploadBytes": 79872,
+          "materialCacheBytes": 79872,
+          "gpuPresentation": true
+        },
+        "cpuStats": {
+          "allocatedBytes": 0,
+          "attachmentImportBytes": 0,
+          "attachmentResolveBytes": 0,
+          "batches": 0,
+          "sequences": 0
+        }
+      }
+    },
+    {
+      "language": "luau",
+      "backend": "gpu",
+      "display": [640, 360],
+      "ssaa": "1080p",
+      "artifacts": {
+        "web/game.png": "030ce46f3f832e19f4142d040ed4297678b194527f456944564da268e13a0f3a",
+        "web/runtime.wasm": "6fe0851f4e1212b451336e941f0d1776c6750e55555b54b50eb6f3cdf7cc7eb5",
+        "web/runtime-gpu.wasm": "c1731d33717acdd9eb16dde8b096cc372e2e627118ac3f18a0acd4f39233551c",
+        "web/worker.js": "40d89607105856067f05ea577948832ec3c99c27244f6a26c4f52f3cd1529c2b",
+        "web/policy.js": "b6a0bb4efdc35b08070d2584f0bd9af36ac4c912da1fc5947c3d9b613c9c5a1e",
+        "web/gpu.js": "7d6047ec7f9b9fc6daece954ec70f73811c639d2c4707bc576515f4e0828fbbc",
+        "web/constants.js": "95accb2a8108cda23ae48bbf2696ea76ac6c46b391f3de7810970582f57f634c",
+        "web/luau-executor.wasm": "5871983ce677ffae0a9bb70e066264372439628f1d1b3e1380daa5b5a51029ac",
+        "native/player.exe": "c26c5c99f03087af9ec9c3d54f7f5715bbf6c6a1fc7cfeed5ea4867b01ab0702"
+      },
+      "cartridgeBytes": 246875,
+      "native": {
+        "samples": 300,
+        "p50Ms": 13.6296,
+        "p95Ms": 16.4614,
+        "p99Ms": 17.677100000000003,
+        "meanMs": 13.172254666666674,
+        "workFramesPerSecond": 75.917147466832,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 22.1702,
+        "over60HzBudget": 9,
+        "stageP95Ms": [0.1672, 14.8077, 2.401],
+        "startup": {
+          "totalMs": 377.0769,
+          "compileMs": 7.0427,
+          "instantiateMs": 0.1169,
+          "gameInitMs": 32.1867
+        },
+        "memory": {
+          "currentLinear": 6815744,
+          "heapBytes": 2854736,
+          "heapPeak": 3394392,
+          "baselineWorking": 10809344,
+          "working": 106762240,
+          "peakWorking": 109572096
+        },
+        "resourceStats": {
+          "currentResourceBytes": 3140612,
+          "peakResourceBytes": 8316052,
+          "packetBytes": 1676132,
+          "hostCopyBytes": 1849704,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "gpuStats": {
+          "meshUploads": 200,
+          "cacheHits": 48219,
+          "uploadBytes": 2431488,
+          "materialUploads": 96,
+          "materialCacheHits": 43692,
+          "materialUploadBytes": 79872,
+          "materialCacheBytes": 79872,
+          "attachmentUploadBytes": 774604800,
+          "attachmentReadbackBytes": 110592000,
+          "attachmentBatches": 44630,
+          "attachmentSequences": 421,
+          "attachmentBytes": 28569600,
+          "publishedFrames": 421,
+          "directPresents": 420,
+          "snapshotReadbackBytes": 110592000,
+          "presentationUploadBytes": 484128000,
+          "frameBytes": 5990400,
+          "gpuPresentation": true
+        },
+        "cpuStats": {
+          "allocatedBytes": 0,
+          "attachmentImportBytes": 0,
+          "attachmentResolveBytes": 0,
+          "batches": 0,
+          "sequences": 0
+        }
+      },
+      "browser": {
+        "samples": 300,
+        "p50Ms": 27.899999976158142,
+        "p95Ms": 34.299999952316284,
+        "p99Ms": 37.700000047683716,
+        "meanMs": 28.50799999992053,
+        "workFramesPerSecond": 35.07787287788648,
+        "deliveredFramesPerSecond": null,
+        "maxMs": 46.799999952316284,
+        "over60HzBudget": 300,
+        "stageP95Ms": [0.20000004768371582, 33.800000071525574, 0.40000009536743164, 0],
+        "startup": {
+          "fetchMs": 11.5,
+          "compileMs": 1.7000000476837158,
+          "instantiateMs": 0.10000002384185791,
+          "runtimeInitMs": 0.6999999284744263,
+          "gameInitMs": 23,
+          "firstFrameMs": 46.89999997615814,
+          "totalMs": 83.89999997615814,
+          "executorCache": {
+            "enabled": false,
+            "hit": false
+          }
+        },
+        "memory": {
+          "initialLinear": 4194304,
+          "currentLinear": 6815744,
+          "runtimeLinear": 30343168,
+          "heapBytes": 2854736,
+          "heapPeak": 3394392,
+          "peakLinear": 6815744,
+          "peakHeap": 3394392
+        },
+        "resourceStats": {
+          "packetBytes": 1524960,
+          "hostCopyBytes": 1553760,
+          "pixelWork": 112707475,
+          "peakResourceBytes": 8053908,
+          "currentResourceBytes": 3140612,
+          "triangles": 330300,
+          "voxelCells": 0,
+          "voxelFaces": 0,
+          "voxelRebuilds": 0,
+          "sourceBytes": 0,
+          "geometryBytes": 132644,
+          "depthBytes": 1152000
+        },
+        "gpuStats": {
+          "publishedFrames": 421,
+          "directPresents": 421,
+          "snapshotReadbackBytes": 110592000,
+          "presentationUploadBytes": 484128000,
+          "frameBytes": 5990400,
+          "attachmentUploadBytes": 774604800,
+          "attachmentReadbackBytes": 110592000,
+          "attachmentBatches": 44630,
+          "attachmentSequences": 421,
+          "attachmentBytes": 28569600,
+          "meshUploads": 200,
+          "cacheHits": 48219,
+          "uploadBytes": 2431488,
+          "textureUploadBytes": 1258812672,
+          "cacheBytes": 2431488,
+          "textureBytes": 34639872,
+          "materialUploads": 96,
+          "materialCacheHits": 43692,
+          "materialUploadBytes": 79872,
+          "materialCacheBytes": 79872,
+          "gpuPresentation": true
+        },
+        "cpuStats": {
+          "allocatedBytes": 0,
+          "attachmentImportBytes": 0,
+          "attachmentResolveBytes": 0,
+          "batches": 0,
+          "sequences": 0
+        }
+      }
+    }
+  ]
+}

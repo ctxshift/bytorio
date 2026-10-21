@@ -89,6 +89,9 @@ export function encodeScene(world, rabbit) {
 // Small bounded LZ stream for an embedded fixture, not a cartridge format.
 // Literal token: length-1 (0..127), bytes. Match: length-3+128, u16 distance.
 export function compressScene(bytes) {
+  // A bounded deeper search keeps the embedded fixture below the Luau source
+  // budget without changing decoded geometry or the runtime format.
+  const searchCandidates = 64;
   const output = [];
   const recent = new Map();
   let literals = [];
@@ -143,7 +146,7 @@ export function compressScene(bytes) {
     const key = bytes.subarray(at, at + 3).toString("hex");
     const candidates = recent.get(key) || [];
     candidates.unshift(at);
-    if (candidates.length > 12) {
+    if (candidates.length > searchCandidates) {
       candidates.pop();
     }
     recent.set(key, candidates);

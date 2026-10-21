@@ -29,16 +29,29 @@ try {
       (tick) => window.playerStatus.ticks >= tick || window.playerStatus.error,
       geometry.loadingUpdates + 4,
     );
-    const status = () => page.evaluate(() => window.playerStatus);
+    const status = () =>
+      page.evaluate(() => {
+        // Normal resident GPU frames intentionally omit logical readback hashes.
+        // Inspect the presented canvas here, without changing player diagnostics.
+        const canvas = document.getElementById("canvas");
+        const pixels = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height).data;
+        const hashOffsetBasis = 2166136261;
+        const hashPrime = 16777619;
+        let presentedHash = hashOffsetBasis;
+        for (const value of pixels) {
+          presentedHash = Math.imul(presentedHash ^ value, hashPrime) >>> 0;
+        }
+        return { ...window.playerStatus, presentedHash };
+      });
     const key = async (name, frames = 8) => {
-      const before = (await status()).ticks;
       await page.keyboard.down(name);
+      const pressed = await page.evaluate(() => window.playerStatus.ticks);
       await page.waitForFunction(
         (tick) => window.playerStatus.ticks >= tick || window.playerStatus.error,
-        before + frames,
+        pressed + frames,
       );
       await page.keyboard.up(name);
-      const released = (await status()).ticks;
+      const released = await page.evaluate(() => window.playerStatus.ticks);
       await page.waitForFunction(
         (tick) => window.playerStatus.ticks >= tick || window.playerStatus.error,
         released + 2,
@@ -52,10 +65,14 @@ try {
     const panned = await key("ArrowRight");
     assert.equal(panned.x, moved.x);
     assert.equal(panned.y, moved.y);
-    assert.notEqual(panned.hash, moved.hash, `${language}: arrow pans without moving rabbit`);
+    assert.notEqual(
+      panned.presentedHash,
+      moved.presentedHash,
+      `${language}: arrow pans without moving rabbit`,
+    );
     const rotated = await key("q");
     assert.equal(rotated.x, moved.x);
-    assert.notEqual(rotated.hash, panned.hash, `${language}: Q rotates camera`);
+    assert.notEqual(rotated.presentedHash, panned.presentedHash, `${language}: Q rotates camera`);
     const reset = await key("r", 2);
     assert.equal(reset.x, -4);
     assert.equal(reset.y, 19);

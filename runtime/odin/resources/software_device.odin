@@ -6,9 +6,11 @@ import "core:mem"
 // Optional host quality device. The ordinary CPU reference allocates none of
 // this storage. One player owns a device per native process or Wasm instance.
 Software_Device :: struct {
-    registry:               Registry,
-    color, depth:           []u8,
-    width, height, quality: int,
+    registry:                                        Registry,
+    color, depth:                                    []u8,
+    width, height, quality:                          int,
+    pending:                                         bool,
+    import_bytes, resolve_bytes, batches, sequences: u64,
 }
 
 software_device: ^Software_Device
@@ -16,6 +18,18 @@ software_quality: int
 
 software_configure :: proc(quality: int) {
     software_quality = quality
+    if software_device != nil {
+        software_device.pending = false
+        software_device.import_bytes, software_device.resolve_bytes = 0, 0
+        software_device.batches, software_device.sequences = 0, 0
+    }
+}
+
+// CPU attachment traffic, separate from guest/resource and GPU allocations.
+software_statistics :: proc "contextless" () -> [4]u64 {
+    if software_device == nil { return {} }
+    d := software_device
+    return {d.import_bytes, d.resolve_bytes, d.batches, d.sequences}
 }
 
 software_close :: proc() {
@@ -161,6 +175,17 @@ software_raster :: proc(job: Raster_Job) -> bool {
         software_device = cast(^Software_Device)pointer
     }
     device := software_device
+    if job.continuation &&
+       (!device.pending ||
+               device.width != width ||
+               device.height != height ||
+               device.quality != factor) {
+        return false
+    }
+    // Private samples belong to one attachment sequence. A fresh transaction,
+    // target change or CPU barrier starts from its owned logical attachments.
+    device.pending = false
+    device.quality = factor
     if device.width != width || device.height != height {
         size := width * height * 4
         color, color_error := mem.alloc(size, 4)
@@ -173,18 +198,22 @@ software_raster :: proc(job: Raster_Job) -> bool {
         device.depth = (cast([^]u8)depth)[:size]
         device.width, device.height = width, height
     }
-    for y in 0 ..< height {
-        sy := y / factor - border
-        for x in 0 ..< width {
-            sx := x / factor - border
-            color, depth := u32(0), transmute(u32)f32(1)
-            if sx >= 0 && sx < job.width && sy >= 0 && sy < job.height {
-                at := (sy * job.width + sx) * 4
-                color, depth = u32le(job.color, at), u32le(job.depth, at)
+    if !job.continuation {
+        device.import_bytes += u64(width * height * 8)
+        device.sequences += 1
+        for y in 0 ..< height {
+            sy := y / factor - border
+            for x in 0 ..< width {
+                sx := x / factor - border
+                color, depth := u32(0), transmute(u32)f32(1)
+                if sx >= 0 && sx < job.width && sy >= 0 && sy < job.height {
+                    at := (sy * job.width + sx) * 4
+                    color, depth = u32le(job.color, at), u32le(job.depth, at)
+                }
+                at := (y * width + x) * 4
+                put32(device.color, at, color)
+                put32(device.depth, at, depth)
             }
-            at := (y * width + x) * 4
-            put32(device.color, at, color)
-            put32(device.depth, at, depth)
         }
     }
     device.registry.screen = Slot {
@@ -249,6 +278,7 @@ software_raster :: proc(job: Raster_Job) -> bool {
     putf(camera[:], w.cameraFogStartOffset, f64(job.fog_start))
     putf(camera[:], w.cameraFogEndOffset, f64(job.fog_end))
     stride := raster_stride(job.texture)
+    if len(job.vertices) != 0 { device.batches += 1 }
     for at := 0; at < len(job.vertices); at += 3 * stride {
         input: [3]Clip_Vertex
         for &vertex, i in input {
@@ -261,6 +291,25 @@ software_raster :: proc(job: Raster_Job) -> bool {
             }
         }
         if !software_triangle(&t, input, camera[:], material) { return false }
+    }
+    if job.defer_readback {
+        device.pending = true
+        return true
+    }
+    device.resolve_bytes += u64(job.width * job.height * 8 + len(job.border))
+    if factor == 1 {
+        copy_raster_output(
+            job.color,
+            job.depth,
+            job.border,
+            job.mask,
+            device.color,
+            device.depth,
+            job.width,
+            job.height,
+            border,
+        )
+        return true
     }
     for y in 0 ..< rh {
         for x in 0 ..< rw {

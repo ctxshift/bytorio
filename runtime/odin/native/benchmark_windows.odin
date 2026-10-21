@@ -31,7 +31,13 @@ process_memory :: proc() -> (working, peak: uint) {
 }
 
 // PROTOTYPE: CPU work only, with display/audio presentation excluded.
-benchmark :: proc(app: ^App, path: string, startup_ms: f64, baseline_working: uint) -> int {
+benchmark :: proc(
+    app: ^App,
+    path: string,
+    startup_ms: f64,
+    baseline_working: uint,
+    warmup_frames := 0,
+) -> int {
     bytes, read_error := os.read_entire_file(path, context.allocator)
     if read_error != nil {
 
@@ -48,7 +54,7 @@ benchmark :: proc(app: ^App, path: string, startup_ms: f64, baseline_working: ui
         }
         append(&masks, u32(mask))
     }
-    if len(masks) == 0 || len(masks) > 10000 {
+    if len(masks) == 0 || len(masks) > 10000 || warmup_frames < 0 || warmup_frames >= len(masks) {
 
         return error("invalid benchmark length")
     }
@@ -64,13 +70,16 @@ benchmark :: proc(app: ^App, path: string, startup_ms: f64, baseline_working: ui
 
             return error(app.game.error)
         }
-        for mask in masks {
+        for mask, frame in masks {
             t0 := clock_ms()
             if !guest.update(&app.game, abi.Input{buttons = mask}) {
 
                 return error(app.game.error)
             }
             t1 := clock_ms()
+            // Simulation-only prefix reaches a moving workload without timing
+            // hundreds of redundant countdown frames at every quality setting.
+            if frame < warmup_frames { continue }
             if !guest.draw(&app.game, &app.frame) {
 
                 return error(app.game.error)
@@ -129,6 +138,15 @@ benchmark :: proc(app: ^App, path: string, startup_ms: f64, baseline_working: ui
         peak_working,
     )
     stats := app.game.resources.stats
+    cpu := resources.software_statistics()
+    fmt.printf(
+        "\"cpuStats\":{{\"allocatedBytes\":%d,\"attachmentImportBytes\":%d,\"attachmentResolveBytes\":%d,\"batches\":%d,\"sequences\":%d}},",
+        resources.software_storage_bytes(),
+        cpu[0],
+        cpu[1],
+        cpu[2],
+        cpu[3],
+    )
     if app.gpu_enabled {
         counts := gpu.statistics()
         textures := gpu.texture_statistics()

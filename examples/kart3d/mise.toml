@@ -28,3 +28,9 @@ dir = "../.."
 depends = ["//examples/kart3d:build"]
 description = "Measure the eight-kart rollout in both SDKs on native/browser CPU and opt-in GPU"
 run = "node examples/kart3d/tools/benchmark.mjs"
+
+[tasks."benchmark:quality"]
+dir = "../.."
+depends = ["//examples/kart3d:build"]
+description = "Measure moving karts at both display sizes and all CPU/opt-in GPU SSAA settings"
+run = "node examples/kart3d/tools/benchmark.mjs --quality-matrix"

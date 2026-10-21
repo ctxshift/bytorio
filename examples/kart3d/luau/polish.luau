@@ -11,6 +11,9 @@ local g, gfx, data = byt.gfx3d, byt.gfx, byt.data
 local PARTICLE_CAPACITY = 48
 local PARTICLE_LIFETIME = 30
 local DETAIL_NEAR, DETAIL_FAR = 22, 26
+-- Match an Odin Matrix literal's f32 storage before composing its transforms.
+local SHADOW_MODEL =
+    g.multiply(g.identity(), { 2.4, 0, 0, 0, 0, 0, 2.8, 0, 0, -1, 0, 0, -1.2, 0.028, -1.4, 1 })
 type Particle = { position: { number }, age: number, glow: boolean }
 local asset: kart.Instance
 local treeAsset: tree.Instance
@@ -254,13 +257,12 @@ local function effects(
         local distance = if index == 1 then s.distance else s.rivals[index - 1]
         local lane = if index == 1 then s.lateral else ((index - 2) % 3 - 1) * 370
         local p, yaw = scene.sample(distance, lane)
-        local shadowModel = { 2.4, 0, 0, 0, 0, 0, 2.8, 0, 0, -1, 0, 0, -1.2, 0.028, -1.4, 1 }
         local pitch = rotationX(course[math.floor((distance % 98304) / 1024) + 1][8])
         g.draw_textured(
             pass,
             quad,
             shadow,
-            g.multiply(g.pose(p[1], p[2], p[3], yaw, 1), g.multiply(pitch, shadowModel))
+            g.multiply(g.pose(p[1], p[2], p[3], yaw, 1), g.multiply(pitch, SHADOW_MODEL))
         )
     end
     local order, depths = {}, {}

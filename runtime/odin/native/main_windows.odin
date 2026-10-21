@@ -303,6 +303,7 @@ run :: proc() -> int {
     replay_path := ""
     source_path := ""
     benchmark_path := ""
+    benchmark_warmup := 0
     unmetered := false
     no_executor_cache := false
     cache_config := ""
@@ -341,6 +342,7 @@ run :: proc() -> int {
              "--replay",
              "--source",
              "--benchmark",
+             "--benchmark-warmup",
              "--executor-cache",
              "--executor":
             option := os.args[i]
@@ -382,6 +384,10 @@ run :: proc() -> int {
             } else if option == "--benchmark" {
                 benchmark_path = os.args[i]
                 check_only = true
+            } else if option == "--benchmark-warmup" {
+                frames, ok := strconv.parse_u64(os.args[i])
+                if !ok || frames > 10000 { return error("invalid benchmark warmup") }
+                benchmark_warmup = int(frames)
             } else if option == "--capture-rgba" {
                 raw_capture = os.args[i]
             } else if option == "--replay" {
@@ -515,6 +521,7 @@ run :: proc() -> int {
     if !app.gpu_enabled && (ssaa != "off" || pixel_snap || smooth_pan) {
         resources.software_configure(6 if ssaa == "1080p" else 2 if ssaa == "2x" else 1)
         app.game.resources.rasterizer = resources.software_raster
+        app.game.resources.deferred_raster = true
         app.game.resources.pixel_snap = pixel_snap
         app.game.resources.smooth_pan = smooth_pan
         app.game.resources.resident_meshes = false
@@ -538,7 +545,13 @@ run :: proc() -> int {
     }
     if benchmark_path != "" {
 
-        return benchmark(app, benchmark_path, clock_ms() - startup_start, baseline_working)
+        return benchmark(
+            app,
+            benchmark_path,
+            clock_ms() - startup_start,
+            baseline_working,
+            benchmark_warmup,
+        )
     }
     if replay_path != "" {
         data, replay_error := os.read_entire_file(replay_path, context.allocator)

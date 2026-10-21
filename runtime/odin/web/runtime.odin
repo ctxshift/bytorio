@@ -124,6 +124,11 @@ when #config(GPU_RASTER, false) {
 @(export)
 runtime_cpu_bytes :: proc "c" () -> u32 { return u32(resources.software_storage_bytes()) }
 @(export)
+runtime_cpu_stat :: proc "c" (index: u32) -> u64 {
+    if index >= 4 { return 0 }
+    return resources.software_statistics()[index]
+}
+@(export)
 runtime_cpu_configure :: proc "c" (quality, pixel_snap, smooth_pan: u32) -> u32 {
     context = runtime.default_context()
     if quality != 1 && quality != 2 && quality != 6 { return 0 }
@@ -139,7 +144,7 @@ runtime_cpu_configure :: proc "c" (quality, pixel_snap, smooth_pan: u32) -> u32 
     resource_registry.pixel_snap = pixel_snap != 0 || smooth_pan != 0
     resource_registry.smooth_pan = smooth_pan != 0
     resource_registry.resident_meshes = false
-    resource_registry.deferred_raster = false
+    resource_registry.deferred_raster = resource_registry.rasterizer != nil
     resource_registry.frame_device = nil
     return 1
 }

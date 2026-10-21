@@ -18,6 +18,7 @@ effect_blending_depth_and_rollback :: proc(test: ^testing.T) {
         if quality != 0 {
             r.software_configure(quality)
             registry.rasterizer = r.software_raster
+            registry.deferred_raster = true
         }
         t.begin(0)
         depth := g.depth(320, 180)

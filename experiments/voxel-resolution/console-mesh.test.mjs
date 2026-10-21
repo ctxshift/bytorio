@@ -82,3 +82,13 @@ test("fixture compression round-trips literals, overlapping matches and window b
     assert.deepEqual(decode(compressScene(bytes)), bytes);
   }
 });
+
+test("fixture compression retains useful matches behind common three-byte prefixes", () => {
+  const records = Array.from({ length: 48 }, (_, index) =>
+    Buffer.concat([Buffer.from([1, 2, 3, index]), Buffer.alloc(64, index + 32)]),
+  );
+  const bytes = Buffer.concat([...records, records[0]]);
+  const compressed = compressScene(bytes);
+  assert.deepEqual(decode(compressed), bytes);
+  assert(compressed.length <= 435, "older matches must remain available within the bounded search");
+});

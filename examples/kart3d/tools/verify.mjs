@@ -225,6 +225,21 @@ for (let i = 0; i < masks.length; i++) {
   }
 }
 assert.equal(sampleIndex, samples.length);
+// Exercise the three-sample resolve where a custom shadow matrix previously
+// reached multiplication as doubles in Luau but f32 values in Odin.
+const qualityHashes = [];
+for (const language of ["odin", "luau"]) {
+  const instance = await pair(language);
+  assert.equal(instance.runtime.runtime_cpu_configure(6, 0, 0), 1);
+  for (const [index, mask] of masks.slice(0, 245).entries()) {
+    step(instance, mask | (index === 0 ? 8192 : 0));
+  }
+  const image = draw(instance);
+  assert.deepEqual([image.width, image.height], [640, 360]);
+  qualityHashes.push(image.hash);
+  instance.runtime.runtime_resource_close();
+}
+assert.equal(qualityHashes[0], qualityHashes[1], "640x360 / 1080p shadow composition SDK pixels");
 const pixels = new Uint32Array(
   reference.runtime.memory.buffer,
   reference.runtime.runtime_pixels(),

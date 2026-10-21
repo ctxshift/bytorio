@@ -437,11 +437,15 @@ self.onmessage = async ({ data }) => {
         pixels,
       ]);
     } else if (data.type === "benchmark") {
+      const warmupFrames = data.warmupFrames ?? 0;
       if (
         !game ||
         !Array.isArray(data.masks) ||
         !data.masks.length ||
         data.masks.length > 10000 ||
+        !Number.isInteger(warmupFrames) ||
+        warmupFrames < 0 ||
+        warmupFrames >= data.masks.length ||
         data.masks.some((mask) => !Number.isInteger(mask) || mask < 0 || mask > INPUT_BUTTON_MASK)
       ) {
         throw new Error("Invalid benchmark replay.");
@@ -459,13 +463,16 @@ self.onmessage = async ({ data }) => {
         resourceBaseline = [0, 1, 2].map((index) =>
           Number(runtime.runtime_resource_stat?.(index) || 0),
         );
-        for (const mask of data.masks) {
+        for (const [frameIndex, mask] of data.masks.entries()) {
           const t0 = performance.now();
           deliverResources(game, runtime);
           game.game_update(mask, 0, 0, 0);
           checkExecutor(game);
           submitResources(game, runtime);
           const t1 = performance.now();
+          if (frameIndex < warmupFrames) {
+            continue;
+          }
           const drawing = submit();
           const { record } = drawing;
           const t2 = performance.now();
@@ -499,6 +506,13 @@ self.onmessage = async ({ data }) => {
         type: "benchmark",
         startup,
         memory: { ...memoryReport(), peakLinear, peakHeap: game.game_heap_peak ? peakHeap : null },
+        cpuStats: {
+          allocatedBytes: runtime.runtime_cpu_bytes?.() || 0,
+          attachmentImportBytes: Number(runtime.runtime_cpu_stat?.(0) || 0),
+          attachmentResolveBytes: Number(runtime.runtime_cpu_stat?.(1) || 0),
+          batches: Number(runtime.runtime_cpu_stat?.(2) || 0),
+          sequences: Number(runtime.runtime_cpu_stat?.(3) || 0),
+        },
         timings,
         traces,
         gpuStats: gpu ? { ...gpu.metrics, gpuPresentation: true } : null,
