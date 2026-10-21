@@ -131,6 +131,7 @@ let worker,
   started = false,
   autoStart = false;
 let selectedCartridge = null;
+let startRequest = 0;
 let mixerNode = null;
 let mixerLoading = null;
 let mixerGeneration = 0;
@@ -263,6 +264,7 @@ globalThis.playerAudio = {
 };
 
 function stopOutput() {
+  startRequest++;
   keys.clear();
   pointer.pointer = false;
   pointer.right = false;
@@ -302,6 +304,7 @@ function maybePlay() {
 }
 
 async function start() {
+  const request = ++startRequest;
   const audio = globalThis.playerAudio;
   if (!audio.context) {
     audio.context = new AudioContext();
@@ -321,8 +324,13 @@ async function start() {
     audio.buffer = audio.context.createBuffer(1, audio.samples.length, PREVIEW_SAMPLE_RATE);
     audio.buffer.copyToChannel(audio.samples, 0);
   }
-  started = true;
   await ensureMixer();
+  // No simulation may produce audio commands until its consumer exists. A
+  // blur, reload or failure while loading also cancels this start request.
+  if (request !== startRequest || !globalThis.playerStatus.ready) {
+    return;
+  }
+  started = true;
   mixerNode?.port.postMessage({ type: "pause", paused: false });
   previous = performance.now();
   clock = new FrameClock();
@@ -713,6 +721,7 @@ function animate(now) {
 }
 
 function resetInput() {
+  startRequest++;
   clearTimeout(frameTimer);
   frameTimer = undefined;
   keys.clear();

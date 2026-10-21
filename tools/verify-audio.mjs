@@ -711,6 +711,64 @@ try {
   }
   report.player = {};
   for (const language of ["odin", "luau"]) {
+    const startupProject = resolve(root, `startup-${language}`);
+    await createProject(startupProject, language);
+    await copyFile(
+      `tests/audio/startup/game.${language}`,
+      resolve(startupProject, `src/main.${language}`),
+    );
+    await buildProject(startupProject);
+    let releaseMixer;
+    let mixerRequested = false;
+    const mixerGate = new Promise((resolve) => {
+      releaseMixer = resolve;
+    });
+    const delayMixer = async (route) => {
+      mixerRequested = true;
+      await mixerGate;
+      await route.continue();
+    };
+    await page.route("**/audio.wasm", delayMixer);
+    await page.goto(
+      `http://127.0.0.1:${server.address().port}/startup-${language}/build/web/player.html`,
+    );
+    await page.waitForFunction(() => playerStatus.ready || playerStatus.error);
+    assert.equal(await page.evaluate(() => playerStatus.error), "");
+    const beforeStart = await page.evaluate(() => playerStatus.ticks);
+    let delayedStartup;
+    try {
+      await page.click("#start");
+      await page.waitForTimeout(1000);
+      assert.ok(mixerRequested, "startup waits on the actual mixer download");
+      delayedStartup = await page.evaluate(() => ({
+        ticks: playerStatus.ticks,
+        error: playerStatus.error,
+      }));
+      assert.equal(delayedStartup.error, "", "delayed mixer does not exhaust audio queue credits");
+      assert.equal(delayedStartup.ticks, beforeStart, "simulation waits for mixer readiness");
+      if (language === "luau") {
+        await page.evaluate(() => window.dispatchEvent(new Event("blur")));
+      }
+    } finally {
+      releaseMixer();
+    }
+    await page.waitForFunction(() => playerAudio.mixerStatus?.frame > 5000);
+    await page.unroute("**/audio.wasm", delayMixer);
+    if (language === "luau") {
+      assert.equal(
+        await page.evaluate(() => playerStatus.ticks),
+        beforeStart,
+        "blur cancels a pending start instead of resuming after mixer loading",
+      );
+      await page.click("#start");
+    }
+    assert.equal(await page.evaluate(() => playerStatus.error), "");
+    await page.waitForFunction(() => playerStatus.ticks >= 60 || playerStatus.error);
+    assert.equal(
+      await page.evaluate(() => playerStatus.error),
+      "",
+      "audio scheduling continues after startup",
+    );
     await page.goto(`http://127.0.0.1:${server.address().port}/${language}/build/web/player.html`);
     await page.waitForFunction(() => playerStatus.ready || playerStatus.error);
     assert.equal(await page.evaluate(() => playerStatus.error), "");
@@ -747,7 +805,7 @@ try {
     }));
     assert.equal(reloaded.error, "");
     assert.equal(reloaded.epoch, initial.epoch, "reload creates a fresh audio epoch");
-    report.player[language] = { initial, pausedFrame: paused, resumed, reloaded };
+    report.player[language] = { delayedStartup, initial, pausedFrame: paused, resumed, reloaded };
   }
 } finally {
   await browser.close();
