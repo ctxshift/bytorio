@@ -1,4 +1,4 @@
-import { copyFile, cp, mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { copyFile, cp, mkdir, readFile, stat, utimes, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { dirname, resolve } from "node:path";
 import { emscriptenRoot, repo } from "./toolchain.mjs";
@@ -85,6 +85,11 @@ export async function stagePlayerSupport({ platform, target, compilerRoot, depen
   ]);
   await checkFiles(entries);
   await copyFiles(target, entries);
+  // Windows copies retain source mtimes, including old dependency licenses.
+  // These are generated task outputs: date them when staging completes so
+  // mise can recognize that they incorporate the current build recipe.
+  const stagedAt = new Date();
+  await Promise.all(entries.map(([name]) => utimes(resolve(target, name), stagedAt, stagedAt)));
 }
 
 // Export a built player. Game files, profiles and launcher customization belong

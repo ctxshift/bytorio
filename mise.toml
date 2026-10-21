@@ -317,6 +317,10 @@ run = "node experiments/luau-executor/verify-cache.mjs"
 description = "Check build input coverage and artifact invalidation"
 run = "node --test tools/build-tasks.test.mjs"
 
+[tasks."test:player-staging"]
+description = "Check real copied support outputs become current without losing invalidation"
+run = 'node --test --test-name-pattern="copied support" tools/build-tasks.test.mjs'
+
 [tasks."bench:build-tasks"]
 description = "Measure cold, warm and edited builds in an isolated checkout"
 run = "node tools/measure-build-tasks.mjs"

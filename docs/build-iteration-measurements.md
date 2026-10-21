@@ -107,3 +107,26 @@ screenshots from compiler timings. Full-run comparisons should use the
 runner's wall time and source-stable report; do not sum nested commands or
 overlapping browser phases. The follow-up uses focused checks and one final
 full run rather than repeating a cold-build benchmark matrix.
+
+## Support staging cache repair
+
+The instrumented follow-up revealed that unchanged `build:odin` calls repeatedly
+staged native and web support files. Two direct baseline calls took **2.474** and
+**2.397 seconds**, each running both staging tasks with no compiler work. A
+minimal regression using the real copy helper and mise failed on its second
+unchanged invocation: copied dependency files retained old timestamps and stayed
+older than the build recipe.
+
+Dating completed staging outputs fixes that mismatch. The first repair call
+took **2.258 seconds** and staged both hosts once. The next two complete
+`build:odin` calls took **0.340** and **0.338 seconds**, with no staging or compiler
+commands. All 27 copied outputs had identical content hashes before and after.
+Real source edits, recipe edits and missing outputs still invalidate staging;
+the focused regression passes and remains part of full conformance.
+
+These are single-host samples. For the end-to-end comparison, the immediately
+preceding source-stable full report is the baseline: **500.561 seconds wall
+time**, including **91.783 seconds** in 38 `build:odin` invocations. The repair's
+single final full report and its command journals provide the comparison, without
+repeating the baseline or dropping any suite. The new copy regression adds its
+own scheduler checks to the full run, so its cost is included in that result.

@@ -156,6 +156,14 @@ Odin imports and embedded shaders, then exercises mise invalidation in a tempora
 fixture with inexpensive substitute commands. Existing conformance suites still
 compile and execute the real players.
 
+Support staging dates its copied outputs when staging completes. Windows copies
+otherwise preserve old source timestamps, making fresh copies appear older than
+their build recipe and causing repeated staging. Contents and source modification
+times are unchanged. `mise run validate test:player-staging` exercises this behavior
+with real copies and the mise scheduler, including source/recipe edits, missing
+outputs and repeated aggregate invocations after a task-configuration edit. The
+same regression is included in `test:build-tasks` during full validation.
+
 Run `mise run bench:build-tasks -- --label comparison` in an idle isolated
 checkout to retain cold, warm and representative edit timings. It temporarily
 adds comments to source files and restores their original bytes and timestamps.

@@ -8,11 +8,13 @@ import {
   readFileSync,
   readdirSync,
   unlinkSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, matchesGlob, relative, resolve } from "node:path";
 import { test } from "node:test";
+import { pathToFileURL } from "node:url";
 import { stagePlayerSupport } from "./player-export.mjs";
 import { repo } from "./toolchain.mjs";
 
@@ -274,4 +276,83 @@ test("support task outputs cover every staged file", async () => {
       .sort();
     assert.deepEqual(files(target).sort(), declared, platform);
   }
+});
+
+test("copied support with old source timestamps becomes current in mise", async () => {
+  const root = mkdtempSync(join(tmpdir(), "copied-support-cache-"));
+  const sources = {
+    "compiler/LICENSE": "compiler license",
+    "compiler/vendor/sdl3/SDL3.dll": "SDL binary",
+    "compiler/vendor/sdl3/LICENSE.txt": "SDL license",
+    "compiler/vendor/OpenGL/LICENSE": "GL license",
+    "compiler/vendor/OpenGL/LICENSE_glad": "glad license",
+    "dependency/lib/wasmtime.dll": "runtime binary",
+    "dependency/LICENSE": "runtime license",
+  };
+  const old = new Date("2000-01-01T00:00:00Z");
+  for (const [file, content] of Object.entries(sources)) {
+    put(root, `inputs/${file}`, content);
+    utimesSync(resolve(root, `inputs/${file}`), old, old);
+  }
+  const outputs = byName.get("deps:player:native-support").outputs;
+  const helper = pathToFileURL(resolve(repo, "tools/player-export.mjs")).href;
+  put(
+    root,
+    "stage.mjs",
+    `
+import { appendFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { stagePlayerSupport } from ${JSON.stringify(helper)};
+await stagePlayerSupport({
+  platform: "native",
+  target: resolve("build/odin-player/native"),
+  compilerRoot: resolve("inputs/compiler"),
+  dependency: resolve("inputs/dependency/lib"),
+});
+appendFileSync("executions.txt", "staged\\n");
+`,
+  );
+  const inventory = `sources = ["inputs/**/*", "stage.mjs"]\noutputs = ${JSON.stringify(outputs)}\n`;
+  put(
+    root,
+    "mise.toml",
+    `[tasks.stage]\n${inventory}run = ${JSON.stringify(`"${process.execPath}" stage.mjs`)}
+[tasks.all]
+${inventory}run = [{ task = "stage" }]
+`,
+  );
+  const env = {
+    ...process.env,
+    MISE_TRUSTED_CONFIG_PATHS: root,
+    MISE_TASK_RUN_AUTO_INSTALL: "false",
+  };
+  function run() {
+    execute(["run", "all"], root, env);
+    return readFileSync(resolve(root, "executions.txt"), "utf8").trim().split("\n").length;
+  }
+  assert.equal(run(), 1);
+  assert.equal(
+    readFileSync(resolve(root, "build/odin-player/native/wasmtime.dll"), "utf8"),
+    "runtime binary",
+  );
+  assert.equal(run(), 1, "unchanged copied outputs must not be staged again");
+
+  await new Promise((done) => setTimeout(done, 20));
+  put(root, "inputs/dependency/lib/wasmtime.dll", "updated binary");
+  assert.equal(run(), 2, "real source edits still invalidate staging");
+  assert.equal(
+    readFileSync(resolve(root, "build/odin-player/native/wasmtime.dll"), "utf8"),
+    "updated binary",
+  );
+  unlinkSync(resolve(root, outputs.at(-1)));
+  assert.equal(run(), 3, "missing declared outputs still invalidate staging");
+  assert.ok(outputs.every((file) => existsSync(resolve(root, file))));
+
+  await new Promise((done) => setTimeout(done, 20));
+  appendFileSync(resolve(root, "stage.mjs"), "\n// changed build recipe\n");
+  assert.equal(run(), 4, "build recipe edits still invalidate staging");
+  appendFileSync(resolve(root, "mise.toml"), '\n[tasks.unrelated]\nrun = "echo unrelated"\n');
+  const afterConfigEdit = run();
+  assert.equal(run(), afterConfigEdit, "first unchanged aggregate invocation reuses staging");
+  assert.equal(run(), afterConfigEdit, "second unchanged aggregate invocation reuses staging");
 });
