@@ -1,0 +1,184 @@
+# Cache compiled artifacts independently from copied support files. Tests always run.
+
+["deps:player:web"]
+depends = ["deps:player:web-cpu","deps:player:web-gpu","deps:player:web-audio","deps:player:hello","deps:player:web-support"]
+
+["deps:player:native"]
+depends = ["deps:player:native-binary","deps:player:hello","deps:player:native-support"]
+
+["deps:player:web-cpu"]
+sources = [
+  "runtime/odin/abi/**/*.odin",
+  "runtime/odin/audio/**/*.odin",
+  "runtime/odin/core/**/*.odin",
+  "runtime/odin/resource_protocol/**/*.odin",
+  "runtime/odin/resources/**/*.odin",
+  "runtime/odin/cartridge/**/*.odin",
+  "runtime/odin/presentation/**/*.odin",
+  "runtime/odin/web/**/*.odin",
+  "tools/player-build.mjs",
+  "tools/toolchain.mjs",
+  "tools/command-timing.mjs",
+  ".mise/toolchain.toml",
+  "runtime/odin/web/constants.js",
+]
+outputs = [
+  "build/odin-player/web/runtime.wasm",
+]
+run = "node tools/player-build.mjs web-cpu"
+
+["deps:player:web-gpu"]
+sources = [
+  "runtime/odin/abi/**/*.odin",
+  "runtime/odin/audio/**/*.odin",
+  "runtime/odin/core/**/*.odin",
+  "runtime/odin/resource_protocol/**/*.odin",
+  "runtime/odin/resources/**/*.odin",
+  "runtime/odin/cartridge/**/*.odin",
+  "runtime/odin/presentation/**/*.odin",
+  "runtime/odin/web/**/*.odin",
+  "tools/player-build.mjs",
+  "tools/toolchain.mjs",
+  "tools/command-timing.mjs",
+  ".mise/toolchain.toml",
+  "runtime/odin/web/constants.js",
+]
+outputs = [
+  "build/odin-player/web/runtime-gpu.wasm",
+]
+run = "node tools/player-build.mjs web-gpu"
+
+["deps:player:web-audio"]
+sources = [
+  "runtime/odin/audio/**/*.odin",
+  "runtime/odin/audio_web/**/*.odin",
+  "runtime/odin/resource_protocol/**/*.odin",
+  "tools/player-build.mjs",
+  "tools/toolchain.mjs",
+  "tools/command-timing.mjs",
+  ".mise/toolchain.toml",
+  "runtime/odin/web/constants.js",
+]
+outputs = [
+  "build/odin-player/web/audio.wasm",
+]
+run = "node tools/player-build.mjs web-audio"
+
+["deps:player:native-binary"]
+sources = [
+  "runtime/odin/abi/**/*.odin",
+  "runtime/odin/audio/**/*.odin",
+  "runtime/odin/core/**/*.odin",
+  "runtime/odin/resource_protocol/**/*.odin",
+  "runtime/odin/resources/**/*.odin",
+  "runtime/odin/branding/**/*.odin",
+  "runtime/odin/cartridge/**/*.odin",
+  "runtime/odin/gpu/native/**/*.odin",
+  "runtime/odin/gpu/surface/**/*.odin",
+  "runtime/odin/guest/**/*.odin",
+  "runtime/odin/native/**/*.odin",
+  "runtime/odin/presentation/**/*.odin",
+  "runtime/odin/timing/**/*.odin",
+  "runtime/odin/gpu/*.vert",
+  "runtime/odin/gpu/*.frag",
+  "tools/player-build.mjs",
+  "tools/toolchain.mjs",
+  "tools/command-timing.mjs",
+  ".mise/toolchain.toml",
+  "runtime/odin/web/constants.js",
+]
+outputs = [
+  "build/odin-player/native/player.exe",
+]
+run = "node tools/player-build.mjs native"
+
+["deps:player:hello"]
+sources = [
+  "examples/hello-odin/**/*.odin",
+  "runtime/odin/abi/**/*.odin",
+  "tools/player-build.mjs",
+  "tools/toolchain.mjs",
+  "tools/command-timing.mjs",
+  ".mise/toolchain.toml",
+]
+outputs = [
+  "build/odin-player/web/game.wasm",
+  "build/odin-player/native/game.wasm",
+]
+run = "node tools/player-build.mjs hello"
+
+["deps:player:fixtures"]
+sources = [
+  "tests/odin/fixtures/**/*.odin",
+  "runtime/odin/abi/**/*.odin",
+  "tools/player-build.mjs",
+  "tools/toolchain.mjs",
+  "tools/command-timing.mjs",
+  ".mise/toolchain.toml",
+]
+outputs = [
+  "build/odin-player/web/fixtures/loop.wasm",
+  "build/odin-player/web/fixtures/abi.wasm",
+  "build/odin-player/web/fixtures/offset.wasm",
+  "build/odin-player/web/fixtures/command.wasm",
+  "build/odin-player/web/fixtures/trap.wasm",
+  "build/odin-player/web/fixtures/list-count.wasm",
+  "build/odin-player/web/fixtures/list-offset.wasm",
+  "build/odin-player/web/fixtures/list-command.wasm",
+]
+run = "node tools/player-build.mjs fixtures"
+
+["deps:player:web-support"]
+sources = [
+  "runtime/odin/web/*.js",
+  "runtime/odin/web/*.html",
+  "runtime/odin/gpu/*.vert",
+  "runtime/odin/gpu/*.frag",
+  "tools/stage-player.mjs",
+  "tools/player-export.mjs",
+  "tools/toolchain.mjs",
+  "tools/command-timing.mjs",
+  ".mise/toolchain.toml",
+]
+outputs = [
+  "build/odin-player/web/player.html",
+  "build/odin-player/web/player.js",
+  "build/odin-player/web/worker.js",
+  "build/odin-player/web/policy.js",
+  "build/odin-player/web/audio-worklet.js",
+  "build/odin-player/web/constants.js",
+  "build/odin-player/web/cartridge.js",
+  "build/odin-player/web/executor-cache.js",
+  "build/odin-player/web/executor-cache-core.js",
+  "build/odin-player/web/frame-clock.js",
+  "build/odin-player/web/gpu.js",
+  "build/odin-player/web/gpu-surface.js",
+  "build/odin-player/web/licenses/odin.txt",
+  "build/odin-player/web/gpu-shaders/fullscreen.vert",
+  "build/odin-player/web/gpu-shaders/initialize.frag",
+  "build/odin-player/web/gpu-shaders/mesh.vert",
+  "build/odin-player/web/gpu-shaders/mesh.frag",
+  "build/odin-player/web/gpu-shaders/resolve.frag",
+  "build/odin-player/web/gpu-shaders/resident.vert",
+  "build/odin-player/web/gpu-shaders/present.frag",
+]
+run = "node tools/stage-player.mjs web"
+
+["deps:player:native-support"]
+sources = [
+  "tools/stage-player.mjs",
+  "tools/player-export.mjs",
+  "tools/toolchain.mjs",
+  "tools/command-timing.mjs",
+  ".mise/toolchain.toml",
+]
+outputs = [
+  "build/odin-player/native/SDL3.dll",
+  "build/odin-player/native/wasmtime.dll",
+  "build/odin-player/native/licenses/wasmtime.txt",
+  "build/odin-player/native/licenses/sdl3.txt",
+  "build/odin-player/native/licenses/odin.txt",
+  "build/odin-player/native/licenses/opengl.txt",
+  "build/odin-player/native/licenses/glad.txt",
+]
+run = "node tools/stage-player.mjs native"

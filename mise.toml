@@ -1,28 +1,9 @@
-min_version = "2026.10.8"
+min_version = "2026.10.15"
+include = [".mise/toolchain.toml"]
 
 [env]
 MISE_BIN = "{{ mise_bin }}"
 _.path = ["{{ mise_bin | dirname }}"]
-
-[tool_alias]
-clang-format = "github:cpp-linter/clang-tools-static-binaries"
-clang-tidy = "github:cpp-linter/clang-tools-static-binaries"
-
-[tools]
-"github:DanielGavin/ols" = {version = "dev-2026-10", rename_exe = {"ols-*" = "ols", "odinfmt-*" = "odinfmt"}}
-luau = "0.743"
-node = "24.19.0"
-odin = {version = "dev-2026-10", strip_components = 1, bin_path = "."}
-stylua = "2.6.0"
-# Used only by the upstream Emscripten SDK, not by project scripts.
-clang-format = {version = "llvm-23.1.3", matching = "clang-format-23_", bin = "clang-format", format = "raw"}
-clang-tidy = {version = "llvm-23.1.3", matching = "clang-tidy-23_", bin = "clang-tidy", format = "raw"}
-cmake = "4.3.3"
-"github:bytecodealliance/wasmtime" = {version = "49.0.3", asset_pattern = "wasmtime-v49.0.3-x86_64-windows-c-api.zip", os = ["windows"]}
-"github:ctxshift/bees" = "0.4.0"
-ninja = "1.13.1"
-python = "3.13.3"
-"vfox:jdx/vfox-emsdk" = {version = "6.0.12", depends = ["python"]}
 
 [task_config]
 includes = [".mise/tasks/*.toml"]
@@ -62,59 +43,7 @@ run = "node tools/format-code.mjs cpp"
 
 [tasks."build:odin"]
 description = "Build standalone native/browser players and fixtures"
-outputs = [
-  "build/odin-player/native/player.exe",
-  "build/odin-player/native/wasmtime.dll",
-  "build/odin-player/native/SDL3.dll",
-  "build/odin-player/web/runtime.wasm",
-  "build/odin-player/web/runtime-gpu.wasm",
-  "build/odin-player/web/gpu.js",
-  "build/odin-player/web/gpu-surface.js",
-  "build/odin-player/web/gpu-shaders/fullscreen.vert",
-  "build/odin-player/web/gpu-shaders/initialize.frag",
-  "build/odin-player/web/gpu-shaders/mesh.vert",
-  "build/odin-player/web/gpu-shaders/mesh.frag",
-  "build/odin-player/web/gpu-shaders/resolve.frag",
-  "build/odin-player/web/gpu-shaders/resident.vert",
-  "build/odin-player/web/gpu-shaders/present.frag",
-  "build/odin-player/web/audio.wasm",
-  "build/odin-player/web/player.html",
-  "build/odin-player/web/player.js",
-  "build/odin-player/web/worker.js",
-  "build/odin-player/web/policy.js",
-  "build/odin-player/web/audio-worklet.js",
-  "build/odin-player/web/constants.js",
-  "build/odin-player/web/cartridge.js",
-  "build/odin-player/web/executor-cache.js",
-  "build/odin-player/web/executor-cache-core.js",
-  "build/odin-player/web/frame-clock.js",
-  "build/odin-player/web/licenses/odin.txt",
-  "build/odin-player/native/licenses/odin.txt",
-  "build/odin-player/native/licenses/sdl3.txt",
-  "build/odin-player/native/licenses/wasmtime.txt",
-  "build/odin-player/native/game.wasm",
-  "build/odin-player/web/game.wasm",
-  "build/odin-player/web/fixtures/loop.wasm",
-  "build/odin-player/web/fixtures/abi.wasm",
-  "build/odin-player/web/fixtures/offset.wasm",
-  "build/odin-player/web/fixtures/command.wasm",
-  "build/odin-player/web/fixtures/trap.wasm",
-  "build/odin-player/web/fixtures/list-count.wasm",
-  "build/odin-player/web/fixtures/list-offset.wasm",
-  "build/odin-player/web/fixtures/list-command.wasm",
-]
-run = "node tools/build-odin.mjs --fixtures"
-sources = [
-  "runtime/odin/**/*",
-  "sdk/odin/**/*.odin",
-  "examples/hello-odin/**/*.odin",
-  "tests/odin/fixtures/**/*.odin",
-  "tools/build-odin.mjs",
-  "tools/player-export.mjs",
-  "tools/toolchain.mjs",
-  "tools/command-timing.mjs",
-  "mise.toml",
-]
+depends = ["deps:player:web", "deps:player:native", "deps:player:fixtures"]
 
 [tasks."build:rpg"]
 depends = ["deps:luau"]
@@ -256,6 +185,7 @@ run = "node tools/verify-racing.mjs"
 description = "Run the conformance suites sequentially"
 run = [
   {task = "test:validation"},
+  {task = "test:build-tasks"},
   {task = "test:player-export"},
   {task = "test:sdk"},
   {task = "test:cartridge"},
@@ -290,3 +220,7 @@ run = "node experiments/luau-executor/verify-drawing.mjs"
 
 [tasks."test:cache"]
 run = "node experiments/luau-executor/verify-cache.mjs"
+
+[tasks."test:build-tasks"]
+description = "Check build input coverage and artifact invalidation"
+run = "node --test tools/build-tasks.test.mjs"

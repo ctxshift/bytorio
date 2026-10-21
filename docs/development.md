@@ -7,7 +7,8 @@ root CMake build have been removed; historical implementations remain in Git.
 ## Prerequisites
 
 Use [mise](https://mise.jdx.dev/) 2026.10.15 or newer and the pinned toolchain in
-`mise.toml`, also described in [Odin development](odin-development.md). The SDK CLI currently targets Windows
+`.mise/toolchain.toml`, included by `mise.toml` and also described in
+[Odin development](odin-development.md). The SDK CLI currently targets Windows
 x64 development. Players need neither a compiler nor Node.js to run.
 
 Mise installs Node.js, Odin (including SDL), the Wasmtime C API, odinfmt from OLS,
@@ -119,9 +120,19 @@ installed tool outside mise. Test results themselves are never cached.
 
 All-target RPG/racing builds reuse `build:odin`'s optimized native player and
 browser runtime/audio modules. They still build their own cartridges and fault
-fixtures and stage fresh exports. Host sources and the pinned configuration
-invalidate `build:odin`; its outputs include the required binaries, scripts,
-licenses and fault fixtures, so a missing export triggers regeneration.
+fixtures and stage fresh exports. `build:odin` assembles independently cached
+tasks from `.mise/tasks/player.toml`: native, CPU Wasm, GPU Wasm, audio Wasm,
+hello cartridge, fault fixtures, and native/browser support files. A missing
+output rebuilds its owning task. Browser script edits restage browser support;
+shader edits also rebuild the native player, which embeds the shaders.
+
+Tool pins live in `.mise/toolchain.toml` so ordinary command changes in
+`mise.toml` do not invalidate compiled players. Update pins in that file. After
+an external tool override or an in-place tool installation change, use
+`mise run --force build:odin`. `test:build-tasks` checks declared inputs against
+Odin imports and embedded shaders, then exercises mise invalidation in a temporary
+fixture with inexpensive substitute commands. Existing conformance suites still
+compile and execute the real players.
 
 ```text
 npm run lint
