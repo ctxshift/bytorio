@@ -25,6 +25,8 @@ bind_material :: proc(program: u32, view: resources.Texture_View) -> bool {
     textured := len(view.pixels) != 0
     gl.Uniform1i(gl.GetUniformLocation(program, "useTexture"), 1 if textured else 0)
     gl.Uniform1i(gl.GetUniformLocation(program, "materialTexture"), 2)
+    gl.Uniform1i(gl.GetUniformLocation(program, "alphaCutout"), 1 if view.cutout else 0)
+    gl.Uniform1i(gl.GetUniformLocation(program, "alphaCutoff"), i32(view.alpha_cutoff))
     gl.ActiveTexture(gl.TEXTURE2)
     if !textured {
         gl.BindTexture(gl.TEXTURE_2D, device.input[0])

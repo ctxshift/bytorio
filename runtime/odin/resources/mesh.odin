@@ -258,17 +258,20 @@ mesh_command :: proc(
 
         candidate.kind = .Textured_Mesh if textured else .Mesh
         candidate.vertex_count, candidate.index_count = a[0], a[1]
-    case w.op_create_material:
+    case w.op_create_material, w.op_create_cutout_material:
         texture := lookup(t, a[0], .Texture)
+        cutout := op == w.op_create_cutout_material
         if texture == nil ||
            texture.format != w.format_rgba8 ||
            a[1] > w.addressRepeat ||
            a[2] > w.addressRepeat ||
-           !padding_zero(a[3:]) ||
+           (cutout && a[3] > w.maxAlphaCutoff) ||
+           !padding_zero(a[4:] if cutout else a[3:]) ||
            len(data) != 0 {
             return fail(r, "invalid material texture or sampler")
         }
         candidate.kind, candidate.link = .Material, a[0]
+        candidate.format = w.materialCutout if cutout else 0
         size = w.descriptorBytes
     case w.op_create_depth:
         if a[0] == 0 ||
@@ -402,6 +405,8 @@ raster_mesh :: proc(t: ^Transaction, mesh: ^Slot, model: Matrix, material: ^Slot
             texture.height,
             u32le(material.data, 4),
             u32le(material.data, 8),
+            material.format == w.materialCutout,
+            u32le(material.data, 12),
         }
     }
     accelerated := prepare_raster(t, texture_view)
@@ -715,6 +720,9 @@ raster_triangle :: proc(
                 tx := texture_coordinate(uv[0], texture.width, address_u)
                 ty := texture_coordinate(uv[1], texture.height, address_v)
                 texel = u32le(texture.data, (ty * int(texture.width) + tx) * 4)
+                if material.format == w.materialCutout && texel >> 24 < u32le(material.data, 12) {
+                    continue
+                }
             }
             fog := clamp((dz - fog_start) / (fog_end - fog_start), 0, 1)
             color := u32(0xff000000)
@@ -726,6 +734,9 @@ raster_triangle :: proc(
 
                 value /= reciprocal
                 if material != nil { value *= f64((texel >> u32(channel * 8)) & 255) / 255 }
+                if material != nil && material.format == w.materialCutout {
+                    value *= 255 / f64(max(texel >> 24, 1))
+                }
                 value = value * (1 - fog) + f64((fog_color >> u32(channel * 8)) & 255) * fog
                 color |= u32(clamp(math.round(value), 0, 255)) << u32(channel * 8)
             }

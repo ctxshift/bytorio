@@ -297,6 +297,9 @@ submit :: proc(
             args[i] = u32le(payload, int(args_offset) + i * 4)
         }
         if op >= w.op_create_mesh {
+            if op >= w.op_create_cutout_material && r.protocol < w.alphaProtocol {
+                return fail(r, "cutout materials require resource protocol 7")
+            }
             if op >= w.op_create_textured_mesh && r.protocol < w.texturedProtocol {
                 return fail(r, "textured resources require resource protocol 6")
             }

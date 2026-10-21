@@ -1,9 +1,13 @@
 {
   "status": "published-resource-av-1",
-  "version": 6,
+  "version": 7,
   "stableVersion": 4,
   "meshProtocol": 5,
   "texturedProtocol": 6,
+  "alphaProtocol": 7,
+  "materialCutout": 1,
+  "defaultAlphaCutoff": 128,
+  "maxAlphaCutoff": 255,
   "texturedVertexBytes": 24,
   "texturedUvOffset": 16,
   "maxTextureCoordinate": 1024,
@@ -114,7 +118,8 @@
     "draw_mesh": 70,
     "create_textured_mesh": 71,
     "create_material": 72,
-    "draw_textured_mesh": 73
+    "draw_textured_mesh": 73,
+    "create_cutout_material": 74
   },
   "formats": {
     "index8": 1,
@@ -525,6 +530,7 @@
     ],
     "create_textured_mesh": ["vertices", "indices", "reserved", "reserved", "reserved", "reserved", "reserved", "reserved"],
     "create_material": ["texture", "addressU", "addressV", "reserved", "reserved", "reserved", "reserved", "reserved"],
+    "create_cutout_material": ["texture", "addressU", "addressV", "alphaCutoff", "reserved", "reserved", "reserved", "reserved"],
     "draw_textured_mesh": ["material", "reserved", "reserved", "reserved", "reserved", "reserved", "reserved", "reserved"],
     "draw_mesh": [
       "reserved",

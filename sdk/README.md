@@ -30,6 +30,10 @@ and `profile` to `"textured-3d-preview-1"` in `console.json`. Both SDKs expose
 the default; optional CPU supersampling and GPU rendering/residency use the same
 API. Existing profiles keep their original contracts and defaults.
 
+SDK 0.5.0 / `alpha-3d-preview-1` adds [depth-tested billboards and alpha cutout](../docs/billboards.md).
+It reuses typed UV meshes/materials on CPU and optional GPU paths. Set both manifest
+fields explicitly to use it; `mise run build:billboards` builds matching examples.
+
 ## Start a game
 
 Run from the SDK repository root:

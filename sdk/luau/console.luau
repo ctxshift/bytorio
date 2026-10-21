@@ -28,6 +28,7 @@ export type Voice = resources.Voice
 export type AudioStatus = resources.AudioStatus
 export type AudioCompletion = resources.Completion
 export type PixelBuffer = resources.PixelBuffer
+export type BillboardDesc = resources.BillboardDesc
 export type PCMBuffer = resources.PCMBuffer
 export type Button =
     "left"
@@ -49,34 +50,16 @@ export type Button =
 export type Game = { init: () -> (), update: (number) -> (), draw: () -> () }
 local profileQuery = host.profile
 local profile = if profileQuery then profileQuery() else 1
-local preview = profile == c.PROFILE_3D
-local textured = profile == c.PROFILE_TEXTURED_3D
-local api = {
-    version = if textured
-        then "0.4.0"
-        elseif preview then "0.3.0"
-        elseif profile == c.PROFILE_RESOURCE then "0.2.0"
-        else "0.1.0",
-}
+local selected = c.PROFILES[profile]
+assert(selected, "Unsupported cartridge profile")
+local api = { version = selected.version }
 function api.capabilities()
     return table.freeze({
         profile = profile,
         abi = if profile ~= 1 then c.RESOURCE_ABI_VERSION else 1,
-        sdk = if textured
-            then c.TEXTURED_3D_SDK
-            elseif preview then c.PREVIEW_3D_SDK
-            elseif profile == c.PROFILE_RESOURCE then c.RESOURCE_SDK_VERSION
-            else 256,
-        features = if textured
-            then c.TEXTURED_3D_FEATURES
-            elseif preview then c.PREVIEW_3D_FEATURES
-            elseif profile == c.PROFILE_RESOURCE then c.RESOURCE_FEATURES
-            else 0,
-        protocol = if textured
-            then c.TEXTURED_3D_PROTOCOL
-            elseif preview then c.PREVIEW_3D_PROTOCOL
-            elseif profile == c.PROFILE_RESOURCE then c.RESOURCE_PROTOCOL
-            else 0,
+        sdk = selected.sdk,
+        features = selected.features,
+        protocol = selected.protocol,
         resource_bytes = schema.maxResourceBytes,
         slots = schema.maxSlots,
         payload_bytes = schema.maxPayload,

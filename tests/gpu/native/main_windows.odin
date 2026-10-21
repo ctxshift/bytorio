@@ -123,6 +123,121 @@ main :: proc() {
     gpu.close()
     verify_surface_samples()
     verify_textured_meshes()
+    verify_cutout_depth()
+}
+
+verify_cutout_depth :: proc() {
+    for quality in ([3]int{1, 2, 6}) {
+        for resident in ([2]bool{false, true}) {
+            if !gpu.open(quality) { os.exit(1) }
+            color := make([]u8, 32 * 32 * 4)
+            depth := make([]u8, len(color))
+            stream: [6 * r.TEXTURED_RASTER_VERTEX_BYTES]u8
+            far_stream: [6 * r.RASTER_VERTEX_BYTES]u8
+            mesh: [4 * w.texturedVertexBytes + 6 * w.meshIndexBytes]u8
+            pixels: [16]u8
+            points := [4][2]f64{{-1, -1}, {1, -1}, {1, 1}, {-1, 1}}
+            indices := [6]u32{0, 2, 1, 0, 3, 2}
+            for point, i in points {
+                for value, axis in point { r.putf(mesh[:], i * w.texturedVertexBytes + axis * 4, value) }
+                r.putf(mesh[:], i * w.texturedVertexBytes + 8, 0.25)
+                r.put32(mesh[:], i * w.texturedVertexBytes + w.meshColorOffset, 0xffffffff)
+                r.putf(mesh[:], i * w.texturedVertexBytes + w.texturedUvOffset, (point[0] + 1) / 2)
+                r.putf(
+                    mesh[:],
+                    i * w.texturedVertexBytes + w.texturedUvOffset + 4,
+                    (1 - point[1]) / 2,
+                )
+            }
+            for index, i in indices {
+                r.put32(mesh[:], 4 * w.texturedVertexBytes + i * 4, index)
+                for value, axis in points[index] {
+                    r.putf(stream[:], i * r.TEXTURED_RASTER_VERTEX_BYTES + axis * 4, value)
+                    r.putf(far_stream[:], i * r.RASTER_VERTEX_BYTES + axis * 4, value)
+                }
+                r.putf(stream[:], i * r.TEXTURED_RASTER_VERTEX_BYTES + 8, 0.25)
+                r.putf(far_stream[:], i * r.RASTER_VERTEX_BYTES + 8, 0.75)
+                r.putf(stream[:], i * r.TEXTURED_RASTER_VERTEX_BYTES + 12, 1)
+                r.putf(far_stream[:], i * r.RASTER_VERTEX_BYTES + 12, 1)
+                for channel in 0 ..< 3 { r.putf(stream[:], i * r.TEXTURED_RASTER_VERTEX_BYTES + 16 + channel * 4, 255) }
+                r.putf(far_stream[:], i * r.RASTER_VERTEX_BYTES + 24, 255)
+                for axis in 0 ..< 2 { r.putf(stream[:], i * r.TEXTURED_RASTER_VERTEX_BYTES + r.RASTER_VERTEX_BYTES + axis * 4, r.f32le(mesh[:], int(index) * w.texturedVertexBytes + w.texturedUvOffset + axis * 4)) }
+            }
+            for alpha, i in ([4]u8{0, 127, 128, 255}) { pixels[i * 4 + 1], pixels[i * 4 + 3] = alpha, alpha }
+            identity := [16]f32{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}
+            draws := [1]r.Resident_Draw {
+                {
+                    textured     = true,
+                    version      = 201,
+                    data         = mesh[:],
+                    vertex_count = 4,
+                    index_count  = 6,
+                    model        = identity,
+                    view         = identity,
+                    ambient      = 1,
+                },
+            }
+            job := r.Raster_Job {
+                texture = {
+                    pixels  = pixels[:],
+                    version = 101,
+                    width   = 2,
+                    height  = 2,
+                    cutout  = true,
+                },
+                vertices = stream[:],
+                color = color,
+                depth = depth,
+                width = 32,
+                height = 32,
+                clip = {0, 0, 32, 32},
+                fog_start = 1,
+                fog_end = 2,
+            }
+            if resident {
+                job.vertices = nil
+                job.draws = draws[:]
+            }
+            far_job := r.Raster_Job {
+                vertices  = far_stream[:],
+                color     = color,
+                depth     = depth,
+                width     = 32,
+                height    = 32,
+                clip      = {0, 0, 32, 32},
+                fog_start = 1,
+                fog_end   = 2,
+            }
+            expected := [5][4]u32 {
+                {0xffff0000, 0xffff0000, 0xff00ff00, 0xff00ff00},
+                {0xffff0000, 0xff00ff00, 0xff00ff00, 0xff00ff00},
+                {0xff000000, 0xff00ff00, 0xff00ff00, 0xff00ff00},
+                {0xffff0000, 0xffff0000, 0xffff0000, 0xff00ff00},
+                {0xff000000, 0xff007f00, 0xff008000, 0xff00ff00},
+            }
+            for cutoff, scenario in ([5]u32{128, 127, 0, 255, 128}) {
+                job.texture.alpha_cutoff = cutoff
+                job.texture.cutout = scenario != 4
+                for &value in color { value = 0 }
+                for at := 0; at < len(depth); at += 4 { r.putf(depth, at, 1) }
+                if !gpu.raster(job) || !gpu.raster(far_job) { os.exit(1) }
+                for point, i in ([4][2]int{{8, 8}, {24, 8}, {8, 24}, {24, 24}}) {
+                    at := (point[1] * 32 + point[0]) * 4
+                    expected_depth :=
+                        f64(0.75) if expected[scenario][i] == 0xffff0000 else f64(0.25)
+                    if r.u32le(color, at) != expected[scenario][i] ||
+                       r.f32le(depth, at) != expected_depth {
+                        fmt.eprintln("Cutout GPU fixture failed", quality, resident, scenario, i)
+                        os.exit(1)
+                    }
+                }
+            }
+            if gpu.texture_statistics() != ([3]u64{1, 4, 16}) { os.exit(1) }
+            delete(color)
+            delete(depth)
+            gpu.close()
+        }
+    }
 }
 
 verify_textured_meshes :: proc() {
@@ -165,15 +280,21 @@ verify_textured_meshes :: proc() {
                 },
             }
             job := r.Raster_Job {
-                texture   = {texture[:], 101, 1, 4, 0, 1},
-                vertices  = stream[:],
-                color     = color,
-                depth     = depth,
-                width     = 32,
-                height    = 32,
-                clip      = {0, 0, 32, 32},
+                texture = {
+                    pixels    = texture[:],
+                    version   = 101,
+                    width     = 1,
+                    height    = 4,
+                    address_v = 1,
+                },
+                vertices = stream[:],
+                color = color,
+                depth = depth,
+                width = 32,
+                height = 32,
+                clip = {0, 0, 32, 32},
                 fog_start = 1,
-                fog_end   = 2,
+                fog_end = 2,
             }
             if resident {
                 job.vertices = nil
