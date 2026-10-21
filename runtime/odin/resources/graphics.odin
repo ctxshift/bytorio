@@ -8,6 +8,8 @@ import "core:math"
 import "core:mem"
 
 Transaction :: struct {
+    gpu_pending:                                          bool,
+    gpu_job:                                              Raster_Job,
     gpu_texture:                                          Texture_View,
     resident_count:                                       int,
     gpu_vertices:                                         []u8,
@@ -509,6 +511,10 @@ graphics_command :: proc(
            args[7] != 0 {
 
             return fail(r, "invalid pass options")
+        }
+        // Clears and attachment switches consume the preceding private result.
+        if (args[1] != 0 || args[3] != 0 || id != state.target) && !sync_raster(t) {
+            return false
         }
         target = owned(t, id, preserve = args[1] == 0); if target == nil {
 

@@ -33,7 +33,7 @@ when #config(GPU_RASTER, false) {
     foreign gpu {
         texture_gpu :: proc "c" (pixels, width, height, low, high, address_u, address_v, cutout, alpha_cutoff: u32) ---
         mesh_gpu :: proc "c" (low, high, data, vertices, indices, palette, model, view, light: u32, ambient: f32, textured: u32) ---
-        raster_gpu :: proc "c" (vertices, count, color, depth, width, height: u32, x, y, w, h: i32, fog: u32, fog_start, fog_end: f32, border: u32) -> u32 ---
+        raster_gpu :: proc "c" (vertices, count, color, depth, width, height: u32, x, y, w, h: i32, fog: u32, fog_start, fog_end: f32, border, continuation, defer_readback: u32) -> u32 ---
     }
     gpu_raster :: proc(job: resources.Raster_Job) -> bool {
         texture_gpu(
@@ -79,6 +79,8 @@ when #config(GPU_RASTER, false) {
                 job.fog_start,
                 job.fog_end,
                 u32(uintptr(raw_data(job.border))),
+                u32(job.continuation),
+                u32(job.defer_readback),
             ) ==
             1 \
         )
@@ -96,6 +98,7 @@ runtime_cpu_configure :: proc "c" (quality, pixel_snap, smooth_pan: u32) -> u32 
     resource_registry.pixel_snap = pixel_snap != 0 || smooth_pan != 0
     resource_registry.smooth_pan = smooth_pan != 0
     resource_registry.resident_meshes = false
+    resource_registry.deferred_raster = false
     return 1
 }
 @(export)
@@ -103,6 +106,7 @@ runtime_gpu_configure :: proc "c" (pixel_snap, smooth_pan: u32, resident_meshes:
     context = runtime.default_context()
     when #config(GPU_RASTER, false) {
         resource_registry.rasterizer = gpu_raster
+        resource_registry.deferred_raster = true
         resource_registry.pixel_snap = pixel_snap != 0
         resource_registry.smooth_pan = smooth_pan != 0
         resource_registry.resident_meshes = resident_meshes != 0

@@ -5,6 +5,9 @@ import gl "vendor:OpenGL"
 import sdl "vendor:sdl3"
 
 Device :: struct {
+    pending:                                                    bool,
+    attachment_upload_bytes, attachment_readback_bytes:         u64,
+    attachment_batches, attachment_sequences:                   u64,
     material_cache:                                             map[u64]Cached_Texture,
     material_cache_bytes:                                       int,
     texture_uploads, texture_cache_hits, texture_upload_bytes:  u64,
@@ -208,6 +211,8 @@ quad :: proc(program, color, depth: u32, factor, width, height: int, border := 0
 }
 
 raster :: proc(job: resources.Raster_Job) -> bool {
+    succeeded := false
+    defer { if !succeeded { device.pending = false } }
     if !sdl.GL_MakeCurrent(device.window, device.gl_context) { return false }
     w, h := job.width, job.height
     border := 1 if len(job.border) != 0 else 0
@@ -217,6 +222,12 @@ raster :: proc(job: resources.Raster_Job) -> bool {
     if device.quality == 6 { factor = max(1, min(6, 1920 / w, 1080 / h)) }
     factor = max(1, min(factor, 1920 / w, 1080 / h))
     if rw * rh * factor * factor > 1932 * 1092 { return false }
+    if job.continuation &&
+       (!device.pending ||
+               device.width != rw ||
+               device.height != rh ||
+               device.factor != factor) { return false }
+    device.pending = false
     if device.width != rw || device.height != rh || device.factor != factor {
         if !target(device.high, device.high_textures[:], rw * factor, rh * factor) ||
            !target(device.low, device.low_textures[:], rw, rh) { return false }
@@ -230,20 +241,25 @@ raster :: proc(job: resources.Raster_Job) -> bool {
     gl.Disable(gl.SCISSOR_TEST)
     gl.BindFramebuffer(gl.FRAMEBUFFER, device.high)
     gl.Enable(gl.DEPTH_TEST)
-    gl.DepthFunc(gl.ALWAYS)
-    gl.ActiveTexture(gl.TEXTURE0)
-    allocate(device.input[0], w, h, data = raw_data(job.color))
-    allocate(device.input[1], w, h, data = raw_data(job.depth))
-    quad(
-        device.initialize,
-        device.input[0],
-        device.input[1],
-        factor,
-        rw * factor,
-        rh * factor,
-        border,
-    )
+    if !job.continuation {
+        gl.DepthFunc(gl.ALWAYS)
+        gl.ActiveTexture(gl.TEXTURE0)
+        allocate(device.input[0], w, h, data = raw_data(job.color))
+        allocate(device.input[1], w, h, data = raw_data(job.depth))
+        device.attachment_upload_bytes += u64(w * h * 8)
+        device.attachment_sequences += 1
+        quad(
+            device.initialize,
+            device.input[0],
+            device.input[1],
+            factor,
+            rw * factor,
+            rh * factor,
+            border,
+        )
+    }
     gl.DepthFunc(gl.LESS)
+    gl.Viewport(0, 0, i32(rw * factor), i32(rh * factor))
     gl.Enable(gl.SCISSOR_TEST)
     x0, y0 := max(0, int(job.clip[0])), max(0, int(job.clip[1]))
     x1, y1 := min(w, int(job.clip[0] + job.clip[2])), min(h, int(job.clip[1] + job.clip[3]))
@@ -262,6 +278,7 @@ raster :: proc(job: resources.Raster_Job) -> bool {
     )
     gl.Uniform2f(gl.GetUniformLocation(program, "fogRange"), job.fog_start, job.fog_end)
     if !bind_material(program, job.texture) { return false }
+    if len(job.vertices) != 0 || len(job.draws) != 0 { device.attachment_batches += 1 }
     if len(job.draws) != 0 {
         for draw in job.draws { if !resident_draw(draw, w, h, border) { return false } }
     } else {
@@ -285,12 +302,19 @@ raster :: proc(job: resources.Raster_Job) -> bool {
     }
     gl.Disable(gl.SCISSOR_TEST)
     gl.Disable(gl.DEPTH_TEST)
+    if job.defer_readback {
+        if gl.GetError() != gl.NO_ERROR { return false }
+        device.pending = true
+        succeeded = true
+        return true
+    }
     gl.BindFramebuffer(gl.FRAMEBUFFER, device.low)
     quad(device.resolve, device.high_textures[0], device.high_textures[1], factor, rw, rh)
     gl.ReadBuffer(gl.COLOR_ATTACHMENT0)
     gl.ReadPixels(0, 0, i32(rw), i32(rh), gl.RGBA, gl.UNSIGNED_BYTE, raw_data(device.color))
     gl.ReadBuffer(gl.COLOR_ATTACHMENT1)
     gl.ReadPixels(0, 0, i32(rw), i32(rh), gl.RGBA, gl.UNSIGNED_BYTE, raw_data(device.depth))
+    device.attachment_readback_bytes += u64(rw * rh * 8)
     if gl.GetError() != gl.NO_ERROR { return false }
     for y in 0 ..< h {
         source := ((y + border) * rw + border) * 4
@@ -298,5 +322,28 @@ raster :: proc(job: resources.Raster_Job) -> bool {
         copy(job.depth[y * w * 4:][:w * 4], device.depth[source:][:w * 4])
     }
     copy(job.border, device.color)
+    succeeded = true
     return true
+}
+
+// Transfer counters are cumulative; allocated texture bytes are storage, not
+// transfers. Material and geometry caches have their own independent counters.
+attachment_statistics :: proc() -> [4]u64 {
+    return {
+        device.attachment_upload_bytes,
+        device.attachment_readback_bytes,
+        device.attachment_batches,
+        device.attachment_sequences,
+    }
+}
+
+attachment_storage_bytes :: proc() -> u64 {
+    bytes: u64
+    for textures in ([3][]u32{device.input[:], device.high_textures[:], device.low_textures[:]}) {
+        for texture in textures {
+            shape := device.texture_storage[texture]
+            bytes += u64(shape[0] * shape[1] * 4)
+        }
+    }
+    return bytes
 }

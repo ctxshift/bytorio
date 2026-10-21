@@ -291,7 +291,7 @@ Keep CPU as the deterministic reference and GPU hardware checks opt-in.
 The streamed mode transforms/lights triangles on CPU. The separately opt-in
 resident mode caches versioned geometry and moves render transforms/lighting
 onto the GPU, retaining exact CPU work accounting. Both GPU modes present on the
-GPU and read each 3D batch back for CPU composition. Qualify actual costs separately from the
+GPU and synchronize attachments at CPU consumers and publication. Qualify actual costs separately from the
 independent riverside renderer; do not extrapolate that renderer's timings.
 
 Next slices:
@@ -302,9 +302,13 @@ Next slices:
 - Implemented: optional CPU supersampling, orthographic snapping and smooth pan;
   default CPU rendering allocates no supersample buffers. Riverside uses
   independent walking/pan/orbit controls in both SDKs, verified across hosts.
-- Keep color/depth targets resident across compatible passes; synchronize only
-  when a CPU operation actually consumes them. Preserve rollback, stale handles,
-  target feedback checks and deterministic CPU readbacks for the reference mode.
+- Implemented: retain private color/depth samples across compatible batches and
+  load passes, including material/camera/clip changes. CPU consumers, clears,
+  attachment switches, software fallback and publication synchronize them.
+  Retain rollback, stale handles, target feedback checks and CPU reference mode.
+- Publish committed GPU attachments directly to final presentation, avoiding the
+  remaining publication readback and presentation upload when CPU snapshots are
+  not consumed. Preserve HUD ordering, rollback and device-failure recovery.
 - Experimental riverside comparison: opt-in whole-scene object-local surface
   samples on native/browser GPU hosts. Flat rectangular patches reuse resident
   geometry, expand fixed sample identities in the shared vertex shader, and retain

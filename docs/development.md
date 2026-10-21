@@ -90,6 +90,10 @@ The billboard/cutout preview uses `test:billboards` and the optional hardware ga
 `test:models` validates static glTF/GLB import, generated examples and both SDKs
 on native/browser CPU; `test:models:gpu` additionally checks optional streamed and
 resident GPU execution. See [the import subset and authoring workflow](model-import.md).
+`bench:attachments` measures a rotating imported-model proxy through both SDKs
+on native/browser GPU, optionally comparing preserved exports. It records raw
+phase timings and separate attachment transfer/allocation counters; see
+[attachment measurements](gpu-attachment-measurements.md).
 `mise run validate bench:riverside:startup` measures PNG sizes, player readiness
 and the first complete scene through native/browser CPU/GPU paths, including
 fresh, reload and same-page executor cache behavior. It retains its observer

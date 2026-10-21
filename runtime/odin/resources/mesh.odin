@@ -145,6 +145,11 @@ mesh_command :: proc(
                 return fail(r, "invalid 3D depth/camera binding")
             }
 
+            if (a[1] != 0 ||
+                   (t.gpu_pending && raw_data(depth.data) != raw_data(t.gpu_job.depth))) &&
+               !sync_raster(t) {
+                return false
+            }
             depth = mesh_owned(t, id, .Depth, preserve = a[1] == 0)
             if depth == nil {
                 return false
@@ -410,6 +415,7 @@ raster_mesh :: proc(t: ^Transaction, mesh: ^Slot, model: Matrix, material: ^Slot
         }
     }
     accelerated := prepare_raster(t, texture_view)
+    if !accelerated && !sync_raster(t) { return false }
     // Reference fallback must not publish a preview omitting its CPU fragments.
     if !accelerated && material != nil && t.render.target == 0 { t.preview_disabled = true }
     t.gpu_ortho = view[3] == 0 && view[7] == 0 && view[11] == 0 && view[15] == 1
@@ -448,6 +454,7 @@ raster_mesh :: proc(t: ^Transaction, mesh: ^Slot, model: Matrix, material: ^Slot
         accelerated = false
         t.preview_disabled = true
     }
+    if !accelerated && !sync_raster(t) { return false }
     for at := 0; at < int(mesh.index_count) * w.meshIndexBytes; at += 3 * w.meshIndexBytes {
         input: [3]Clip_Vertex
         world: [3][4]f64

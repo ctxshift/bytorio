@@ -124,6 +124,76 @@ main :: proc() {
     verify_surface_samples()
     verify_textured_meshes()
     verify_cutout_depth()
+    verify_attachment_sequences()
+}
+
+verify_attachment_sequences :: proc() {
+    for quality in ([3]int{1, 2, 6}) {
+        if !gpu.open(quality) { os.exit(1) }
+        color, depth: [32 * 32 * 4]u8
+        for at := 0; at < len(depth); at += 4 { r.putf(depth[:], at, 1) }
+        vertices := [21]f32 {
+            -0.8,
+            -0.8,
+            0.25,
+            1,
+            255,
+            0,
+            0,
+            0,
+            0.8,
+            0.25,
+            1,
+            255,
+            0,
+            0,
+            0.8,
+            -0.8,
+            0.25,
+            1,
+            255,
+            0,
+            0,
+        }
+        job := r.Raster_Job {
+            vertices       = (cast([^]u8)&vertices[0])[:size_of(vertices)],
+            color          = color[:],
+            depth          = depth[:],
+            width          = 32,
+            height         = 32,
+            clip           = {0, 0, 32, 32},
+            fog_start      = 1,
+            fog_end        = 2,
+            defer_readback = true,
+        }
+        if !gpu.raster(job) || r.u32le(color[:], (16 * 32 + 16) * 4) != 0 { os.exit(1) }
+        // A farther blue triangle must load private depth, not CPU depth (1).
+        for i in 0 ..< 3 {
+            vertices[i * 7 + 2] = 0.75
+            vertices[i * 7 + 4], vertices[i * 7 + 6] = 0, 255
+        }
+        job.continuation = true
+        if !gpu.raster(job) { os.exit(1) }
+        job.vertices = nil
+        job.defer_readback = false
+        if !gpu.raster(job) ||
+           r.u32le(color[:], (16 * 32 + 16) * 4) != 0xff0000ff ||
+           r.f32le(depth[:], (16 * 32 + 16) * 4) != 0.25 ||
+           gpu.attachment_statistics() != ([4]u64{8192, 8192, 2, 1}) { os.exit(1) }
+        // A consumed or mismatched continuation is rejected; a fresh job can
+        // recover without accidentally reusing the previous transaction.
+        if gpu.raster(job) { os.exit(1) }
+        job.continuation, job.defer_readback = false, true
+        if !gpu.raster(job) { os.exit(1) }
+        job.continuation, job.width = true, 16
+        if gpu.raster(job) { os.exit(1) }
+        job.width = 32
+        if gpu.raster(job) { os.exit(1) }
+        job.continuation, job.defer_readback = false, false
+        if !gpu.raster(job) { os.exit(1) }
+        if gpu.attachment_storage_bytes() == 0 { os.exit(1) }
+        gpu.close()
+    }
 }
 
 verify_cutout_depth :: proc() {

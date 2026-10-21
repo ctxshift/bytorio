@@ -42,6 +42,11 @@ run = ["node --test tools/sdk/gltf.test.mjs", "node tools/verify-models.mjs"]
 [tasks."test:models:gpu"]
 run = "node tools/verify-models.mjs --gpu"
 
+[tasks."bench:attachments"]
+depends = ["build:models"]
+description = "Measure compatible GPU batches using both SDK model cartridges"
+run = "node tools/bench-attachments.mjs"
+
 [tasks."generate:check"]
 description = "Check generated constants against their contracts"
 run = "node tools/generate-constants.mjs --check"

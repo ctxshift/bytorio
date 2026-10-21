@@ -125,6 +125,11 @@ export async function createGpu(settings) {
   let queuedTexture = null;
   let cacheBytes = 0;
   const metrics = {
+    attachmentUploadBytes: 0,
+    attachmentReadbackBytes: 0,
+    attachmentBatches: 0,
+    attachmentSequences: 0,
+    attachmentBytes: 0,
     meshUploads: 0,
     cacheHits: 0,
     uploadBytes: 0,
@@ -138,6 +143,7 @@ export async function createGpu(settings) {
   };
   const textureStorage = new Map();
   let draws = [];
+  let pendingAttachments = false;
   const clearMeshes = () => {
     for (const entry of cache.values()) {
       gl.deleteBuffer(entry.buffer);
@@ -263,6 +269,12 @@ export async function createGpu(settings) {
       const size = w * h * (mask ? 1 : 4);
       metrics.textureBytes += size - (previous?.size || 0);
       textureStorage.set(t, { key, size });
+      if (
+        input.includes(t) ||
+        [high.color, high.depthBits, high.depth, low.color, low.depthBits].includes(t)
+      ) {
+        metrics.attachmentBytes += size - (previous?.size || 0);
+      }
     }
     if (bytes) {
       metrics.textureUploadBytes += bytes.byteLength;
@@ -552,7 +564,11 @@ export async function createGpu(settings) {
       fogStart,
       fogEnd,
       borderOutput = 0,
+      continuation = 0,
+      deferReadback = 0,
     ) {
+      const wasPending = pendingAttachments;
+      pendingAttachments = false;
       const batch = draws;
       draws = [];
       const material = queuedTexture;
@@ -578,6 +594,9 @@ export async function createGpu(settings) {
         return 0;
       }
       const key = `${rw}/${rh}/${factor}`;
+      if (continuation && (!wasPending || dimensions !== key)) {
+        return 0;
+      }
       if (dimensions !== key) {
         target(high, rw * factor, rh * factor);
         target(low, rw, rh);
@@ -589,23 +608,28 @@ export async function createGpu(settings) {
       gl.disable(gl.SCISSOR_TEST);
       gl.bindFramebuffer(gl.FRAMEBUFFER, high.fbo);
       gl.enable(gl.DEPTH_TEST);
-      gl.depthFunc(gl.ALWAYS);
-      gl.activeTexture(gl.TEXTURE0);
-      allocate(
-        input[0],
-        width,
-        height,
-        false,
-        new Uint8Array(memory.buffer, color, width * height * 4),
-      );
-      allocate(
-        input[1],
-        width,
-        height,
-        false,
-        new Uint8Array(memory.buffer, depth, width * height * 4),
-      );
-      quad(init, input[0], input[1], factor, rw * factor, rh * factor, border);
+      if (!continuation) {
+        gl.depthFunc(gl.ALWAYS);
+        gl.activeTexture(gl.TEXTURE0);
+        allocate(
+          input[0],
+          width,
+          height,
+          false,
+          new Uint8Array(memory.buffer, color, width * height * 4),
+        );
+        allocate(
+          input[1],
+          width,
+          height,
+          false,
+          new Uint8Array(memory.buffer, depth, width * height * 4),
+        );
+        quad(init, input[0], input[1], factor, rw * factor, rh * factor, border);
+        metrics.attachmentUploadBytes += width * height * 8;
+        metrics.attachmentSequences++;
+      }
+      gl.viewport(0, 0, rw * factor, rh * factor);
       gl.depthFunc(gl.LESS);
       gl.enable(gl.SCISSOR_TEST);
       const x0 = Math.max(0, cx),
@@ -633,6 +657,9 @@ export async function createGpu(settings) {
       );
       gl.uniform2f(gl.getUniformLocation(program, "fogRange"), fogStart, fogEnd);
       bindMaterial(memory, program, material);
+      if (batch.length || count) {
+        metrics.attachmentBatches++;
+      }
       if (batch.length) {
         gl.uniform1i(
           gl.getUniformLocation(program, "surfaceSamples"),
@@ -703,12 +730,20 @@ export async function createGpu(settings) {
       gl.bindVertexArray(vao);
       gl.disable(gl.SCISSOR_TEST);
       gl.disable(gl.DEPTH_TEST);
+      if (deferReadback) {
+        if (gl.getError() !== gl.NO_ERROR || gl.isContextLost()) {
+          return 0;
+        }
+        pendingAttachments = true;
+        return 1;
+      }
       gl.bindFramebuffer(gl.FRAMEBUFFER, low.fbo);
       quad(resolve, high.color, high.depthBits, factor, rw, rh);
       gl.readBuffer(gl.COLOR_ATTACHMENT0);
       gl.readPixels(0, 0, rw, rh, gl.RGBA, gl.UNSIGNED_BYTE, resultColor);
       gl.readBuffer(gl.COLOR_ATTACHMENT1);
       gl.readPixels(0, 0, rw, rh, gl.RGBA, gl.UNSIGNED_BYTE, resultDepth);
+      metrics.attachmentReadbackBytes += rw * rh * 8;
       if (gl.getError() !== gl.NO_ERROR || gl.isContextLost()) {
         return 0;
       }

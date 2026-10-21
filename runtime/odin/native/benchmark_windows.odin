@@ -131,8 +131,9 @@ benchmark :: proc(app: ^App, path: string, startup_ms: f64, baseline_working: ui
     if app.gpu_enabled {
         counts := gpu.statistics()
         textures := gpu.texture_statistics()
+        attachments := gpu.attachment_statistics()
         fmt.printf(
-            "\"gpuStats\":{{\"meshUploads\":%d,\"cacheHits\":%d,\"uploadBytes\":%d,\"materialUploads\":%d,\"materialCacheHits\":%d,\"materialUploadBytes\":%d,\"materialCacheBytes\":%d,\"gpuPresentation\":true}},",
+            "\"gpuStats\":{{\"meshUploads\":%d,\"cacheHits\":%d,\"uploadBytes\":%d,\"materialUploads\":%d,\"materialCacheHits\":%d,\"materialUploadBytes\":%d,\"materialCacheBytes\":%d,\"attachmentUploadBytes\":%d,\"attachmentReadbackBytes\":%d,\"attachmentBatches\":%d,\"attachmentSequences\":%d,\"attachmentBytes\":%d,\"gpuPresentation\":true}},",
             counts[0],
             counts[1],
             counts[2],
@@ -140,6 +141,11 @@ benchmark :: proc(app: ^App, path: string, startup_ms: f64, baseline_working: ui
             textures[1],
             textures[2],
             gpu.texture_cached_bytes(),
+            attachments[0],
+            attachments[1],
+            attachments[2],
+            attachments[3],
+            gpu.attachment_storage_bytes(),
         )
     }
     storage := resources.mesh_storage(&app.game.resources)

@@ -5,17 +5,19 @@ import "core:mem"
 
 // Host-only execution seam. Vertices are owned, lit clip-space triangles;
 // callbacks may write only the transaction's copy-on-write attachments.
-// The callback is synchronous and must not retain any supplied pointer.
+// Calls are synchronous and retain no supplied pointer. A deferred call keeps
+// only device-private samples; a continuation consumes that same scratch.
 Raster_Job :: struct {
-    texture:            Texture_View,
-    draws:              []Resident_Draw,
-    vertices:           []u8,
-    color, depth:       []u8,
-    border:             []u8,
-    width, height:      int,
-    clip:               [4]i32,
-    fog_color:          u32,
-    fog_start, fog_end: f32,
+    continuation, defer_readback: bool,
+    texture:                      Texture_View,
+    draws:                        []Resident_Draw,
+    vertices:                     []u8,
+    color, depth:                 []u8,
+    border:                       []u8,
+    width, height:                int,
+    clip:                         [4]i32,
+    fog_color:                    u32,
+    fog_start, fog_end:           f32,
 }
 Resident_Draw :: struct {
     textured:                  bool,
@@ -52,8 +54,34 @@ RASTER_VERTEX_BYTES :: 7 * 4
 TEXTURED_RASTER_VERTEX_BYTES :: 9 * 4
 RASTER_STAGING_BYTES :: w.maxTrianglesPerCommit * 3 * RASTER_VERTEX_BYTES
 
-flush_raster :: proc(t: ^Transaction) -> bool {
-    if len(t.gpu_vertices) == 0 { return true }
+// A CPU consumer ends the resident sequence. Its descriptors refer only to
+// transaction-owned storage, which remains alive until commit or rollback.
+sync_raster :: proc(t: ^Transaction) -> bool {
+    if !t.gpu_pending { return true }
+    job := t.gpu_job
+    t.gpu_pending = false
+    job.continuation = true
+    if !t.registry.rasterizer(job) {
+        return fail(t.registry, "GPU synchronization failed; transaction discarded")
+    }
+    return true
+}
+
+raster_state_command :: proc(op: u32) -> bool {
+    return(
+        op == w.op_draw_mesh ||
+        op == w.op_draw_textured_mesh ||
+        op == w.op_begin_pass ||
+        op == w.op_end_pass ||
+        op == w.op_begin_3d ||
+        op == w.op_clip ||
+        op == w.op_transform ||
+        op == w.op_bind \
+    )
+}
+
+flush_raster :: proc(t: ^Transaction, synchronize := true) -> bool {
+    if len(t.gpu_vertices) == 0 { return !synchronize || sync_raster(t) }
     defer {
         t.retained -= len(t.gpu_vertices)
         delete(t.gpu_vertices)
@@ -108,12 +136,29 @@ flush_raster :: proc(t: ^Transaction) -> bool {
         fog_start = f32(f32le(camera.data, w.cameraFogStartOffset)),
         fog_end   = f32(f32le(camera.data, w.cameraFogEndOffset)),
     }
+    compatible :=
+        t.gpu_pending &&
+        raw_data(t.gpu_job.color) == raw_data(job.color) &&
+        raw_data(t.gpu_job.depth) == raw_data(job.depth) &&
+        len(t.gpu_job.border) == len(job.border) &&
+        t.gpu_job.width == job.width &&
+        t.gpu_job.height == job.height
+    if t.gpu_pending && !compatible && !sync_raster(t) { return false }
+    job.continuation = compatible
+    job.defer_readback = t.registry.deferred_raster && !synchronize
     if t.resident_count != 0 {
         job.vertices = nil
         job.draws = (cast([^]Resident_Draw)raw_data(t.gpu_vertices))[:t.resident_count]
     }
     if !t.registry.rasterizer(job) {
         return fail(t.registry, "GPU raster execution failed; transaction discarded")
+    }
+    t.gpu_pending = job.defer_readback
+    if t.gpu_pending {
+        // Release staging immediately; the device has already consumed it.
+        job.vertices, job.draws, job.texture = nil, nil, {}
+        job.defer_readback = false
+        t.gpu_job = job
     }
     return true
 }

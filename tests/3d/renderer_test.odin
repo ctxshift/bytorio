@@ -565,6 +565,7 @@ software_quality :: proc(test: ^testing.T) {
 
 @(test)
 shared_3d :: proc(test: ^testing.T) {
+    resident_attachment_sequences(test)
     textured_sampling_and_depth(test)
     billboard_pivots_and_axes(test)
     cutout_color_and_depth_holes(test)

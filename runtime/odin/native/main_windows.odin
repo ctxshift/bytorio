@@ -496,6 +496,7 @@ run :: proc() -> int {
         if gpu.open(quality, surface_samples) {
             app.gpu_enabled = true
             app.game.resources.rasterizer = gpu.raster
+            app.game.resources.deferred_raster = true
             app.game.resources.pixel_snap = pixel_snap
             app.game.resources.smooth_pan = smooth_pan
             app.game.resources.resident_meshes = resident_meshes

@@ -351,6 +351,62 @@ try {
         throw new Error("Resident upload lifecycle failed");
       }
       rows[rows.length - 1].resident = { ...device.metrics };
+      // Deferred batches keep both attachments private, including depth at
+      // sample resolution. CPU memory changes only at the explicit barrier.
+      new Uint8Array(memory.buffer, color, 32 * 32 * 4).fill(0);
+      new Float32Array(memory.buffer, depth, 32 * 32).fill(1);
+      const before = { ...device.metrics };
+      const draw = (count, continuation, deferReadback, w = 32) =>
+        device.raster(
+          memory,
+          0,
+          count,
+          color,
+          depth,
+          w,
+          32,
+          0,
+          0,
+          w,
+          32,
+          0xff000000,
+          1,
+          2,
+          0,
+          continuation,
+          deferReadback,
+        );
+      if (draw(3, 0, 1) !== 1 || packed.getUint32(color + center, true) !== 0) {
+        throw new Error("Deferred attachment leaked into CPU storage");
+      }
+      for (let i = 0; i < 3; i++) {
+        vertices[i * 7 + 2] = 0.75;
+        vertices[i * 7 + 4] = 0;
+        vertices[i * 7 + 6] = 255;
+      }
+      if (
+        draw(3, 1, 1) !== 1 ||
+        draw(0, 1, 0) !== 1 ||
+        packed.getUint32(color + center, true) !== 0xff0000ff ||
+        packed.getFloat32(depth + center, true) !== 0.25 ||
+        device.metrics.attachmentUploadBytes - before.attachmentUploadBytes !== 8192 ||
+        device.metrics.attachmentReadbackBytes - before.attachmentReadbackBytes !== 8192 ||
+        device.metrics.attachmentBatches - before.attachmentBatches !== 2 ||
+        device.metrics.attachmentSequences - before.attachmentSequences !== 1
+      ) {
+        throw new Error("Resident attachment color/depth or transfer count failed");
+      }
+      if (
+        draw(0, 1, 0) !== 0 ||
+        draw(0, 0, 1) !== 1 ||
+        draw(0, 1, 0, 16) !== 0 ||
+        draw(0, 1, 0) !== 0 ||
+        draw(0, 0, 0) !== 1 ||
+        !device.metrics.attachmentBytes
+      ) {
+        throw new Error("Attachment continuation failure/recovery failed");
+      }
+      rows[rows.length - 1].attachments = { ...device.metrics };
       device.gl.getExtension("WEBGL_lose_context")?.loseContext();
     }
     const device = await createGpu(normalizeGraphics({ backend: "gpu" }));

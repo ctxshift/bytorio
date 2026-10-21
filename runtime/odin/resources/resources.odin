@@ -39,6 +39,7 @@ Slot :: struct {
     volume_depth, vertex_count, index_count, mesh_offset: u32,
 }
 Registry :: struct {
+    deferred_raster:             bool,
     resident_meshes:             bool,
     gpu_serial:                  u64,
     rasterizer:                  Raster_Proc,
@@ -104,10 +105,12 @@ close :: proc(r: ^Registry) {
 reset :: proc(r: ^Registry, session: u32, protocol: u32 = w.version) -> bool {
     rasterizer, pixel_snap, smooth_pan := r.rasterizer, r.pixel_snap, r.smooth_pan
     resident_meshes, gpu_serial := r.resident_meshes, r.gpu_serial
+    deferred_raster := r.deferred_raster
     close(r)
     r.rasterizer, r.pixel_snap = rasterizer, pixel_snap
     r.smooth_pan = smooth_pan
     r.resident_meshes, r.gpu_serial = resident_meshes, gpu_serial
+    r.deferred_raster = deferred_raster
     if session == 0 {
 
         r.error = "zero resource session"
@@ -262,7 +265,9 @@ submit :: proc(
         cmd := packet[w.headerBytes + index * w.commandBytes:][:w.commandBytes]
         op, id := u16le(cmd, 0), u32le(cmd, 8)
         if (op != w.op_draw_mesh || len(txn.gpu_texture.pixels) != 0) &&
-           !flush_raster(&txn) { return false }
+           !flush_raster(&txn, synchronize = !r.deferred_raster || !raster_state_command(op)) {
+            return false
+        }
         if r.protocol == 1 && op > w.op_destroy_sample {
 
             return fail(r, "graphics resources require resource protocol 2")
@@ -548,6 +553,7 @@ submit :: proc(
         }
         txn.peak = max(txn.peak, txn.retained)
     }
+    if !flush_raster(&txn) { return false }
     if phase == 2 && (txn.render.active || (count > 0 && txn.present_count != 1)) {
 
         return fail(r, "draw requires closed passes and exactly one presentation")

@@ -134,11 +134,15 @@ The common Odin resource implementation validates handles, phases,
 matrices, palettes, clipping and logical work limits. The streamed path transforms
 and lights triangles into bounded host-owned staging. The resident path keeps
 immutable mesh geometry in a device cache and applies model/view transforms and
-flat lighting in its vertex shader. Consecutive 3D draws are batched;
-before a pass/state change or 2D operation, the GPU rasterizes the batch into
-private scratch color/depth targets. Color and packed f32 depth are read back
-into transaction-owned attachments. CPU 2D composition and resource readbacks
-then observe that completed batch. Only the existing successful commit publishes
+flat lighting in its vertex shader. Consecutive 3D draws are batched into private
+scratch color/depth targets. GPU execution retains these attachments across
+material, camera, clip and pipeline state changes and across load passes using
+the same color/depth pair. These boundaries execute pending geometry without
+resolving or transferring its samples. One active attachment pair is retained;
+switching targets, clearing color/depth, CPU composition, explicit readbacks,
+CPU fallback under memory pressure and transaction publication synchronize it.
+Synchronization resolves color and packed f32 depth into transaction-owned
+attachments, so CPU consumers observe completed drawing. Only successful commit publishes
 attachments and presentation data. Rollback frees temporary staging and keeps
 the previous output and presentation snapshot. Session reset preserves the
 host's selected device. Host-only monotonic geometry versions survive registry
@@ -166,10 +170,13 @@ replace transaction-owned attachments without copying discarded old pixels;
 failed packets preserve the original attachments. Checked packed word decoding
 replaces repeated per-byte decoding, and fully overwritten scratch skips zeroing.
 
-CPU 2D composition and logical color/depth readback barriers remain. Final GPU
+CPU 2D composition and logical color/depth readback barriers remain. Residency
+ends at transaction publication; committed resource snapshots remain CPU-owned.
+No supplied pointer survives a synchronous device call, and the next transaction
+initializes fresh scratch even after a rejected packet or device failure. Final GPU
 presentation currently uploads these logical snapshots; it avoids constructing
-or transferring an enlarged CPU image. Persistent attachments across compatible
-passes and synchronization only at actual CPU consumers remain a later slice.
+or transferring an enlarged CPU image. Publishing committed GPU attachments for
+direct final presentation remains a later slice.
 Use [riverside measurements](riverside-console-measurements.md) for qualified
 costs; this experimental integration does not guarantee 60 fps on every device.
 
@@ -177,8 +184,9 @@ costs; this experimental integration does not guarantee 60 fps on every device.
 
 GPU SSAA rasterizes 3D at the selected integer sample factor and resolves color
 in linear light, including premultiplied alpha/coverage. Depth resolves to the
-nearest covered sample. A later batch uses logical depth again, so partially
-covered edge pixels can conservatively occlude later batches. Offscreen
+nearest covered sample. Compatible batches retain per-sample depth and coverage.
+After a CPU barrier, later GPU work initializes from logical depth again, so
+partially covered edge pixels can conservatively occlude later batches. Offscreen
 composition, clipping and CPU readbacks remain supported, with GPU device/quality
 dependent pixels. CPU conformance remains the exact coverage/color reference;
 the experimental 3D profile does not promise identical GPU pixels across every
@@ -207,6 +215,23 @@ independent color/depth/coverage fixtures, rollback, 2D ordering, HUD stability,
 display switches, settings restarts and unavailable-device fallback. Reports
 are retained under `build/gpu-validation/`. CPU profile gates remain independent
 of hardware GPU availability.
+
+Attachment diagnostics report cumulative `attachmentUploadBytes`,
+`attachmentReadbackBytes`, `attachmentBatches` and `attachmentSequences` in native
+and browser benchmark `gpuStats`. A sequence uploads one logical color/depth pair,
+executes compatible batches, then reads one resolved pair at its barrier.
+`attachmentBytes` estimates currently allocated input and scratch texture storage;
+it is not transferred bytes or a driver memory measurement. In browser metrics it
+is already included in `textureBytes`, so do not add it twice. Geometry/material
+cache counters remain separate. Live browser frame metrics expose the cumulative
+attachment byte counters with a `gpuAttachment` prefix.
+
+Use `mise run bench:attachments` for the rotating imported-model proxy. An optional
+`-- --baseline <old-export-root>` compares preserved exports containing the same
+`odin/build/` and `luau/build/` layout against current builds. The verifier checks
+identical PNG bytes, direct-render output, native/browser output and geometry reuse;
+it retains raw phase timings and transfer/allocation counters under
+`build/attachment-benchmarks/`. See [the measured comparison](gpu-attachment-measurements.md).
 
 ## Profile and compatibility
 
