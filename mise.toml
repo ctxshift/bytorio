@@ -79,6 +79,7 @@ outputs = [
   "build/odin-player/web/runtime.wasm",
     "build/odin-player/web/runtime-gpu.wasm",
     "build/odin-player/web/gpu.js",
+    "build/odin-player/web/gpu-surface.js",
     "build/odin-player/web/gpu-shaders/fullscreen.vert",
     "build/odin-player/web/gpu-shaders/initialize.frag",
     "build/odin-player/web/gpu-shaders/mesh.vert",
@@ -190,7 +191,12 @@ run = "node experiments/voxel-resolution/console-benchmark.mjs"
 
 [tasks."test:riverside:geometry"]
 description = "Check riverside face coverage, encoding and bounded compression"
-run = "node --test experiments/voxel-resolution/console-mesh.test.mjs"
+run = "node --test experiments/voxel-resolution/console-mesh.test.mjs tools/gpu-surface.test.mjs"
+
+[tasks."test:riverside:surface"]
+description = "Verify whole-scene surface samples on native and browser GPU hosts"
+depends = ["build:riverside"]
+run = "node experiments/voxel-resolution/verify-console-surface.mjs"
 
 [tasks."bench:riverside:cpu"]
 description = "Measure interactive CPU quality modes and final canvas delivery"

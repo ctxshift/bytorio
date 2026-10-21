@@ -38,8 +38,27 @@ The source templates are `experiments/voxel-resolution/console-game.odin` and
 `console-game.luau`; use the task to embed their generated scene data. These are
 renderer qualification cartridges with basic walking and collision.
 
+For the experimental **Whole-scene surface samples** comparison, use
+`/riverside/odin/build/web/player.html?renderer=gpu&surface-samples&ssaa=1080p&smooth-pan`
+or select the checkbox in graphics settings and apply. Native:
+
+```text
+build/compact-3d/riverside/odin/build/native/player.exe --renderer gpu --surface-samples --ssaa 1080p --smooth-pan
+mise run validate test:riverside:surface
+```
+
+The same option also works with the Luau cartridge. Existing triangle, CPU and
+GPU quality modes remain available. The full scene has 687,432 fixed sample
+identities at 0.5-unit spacing, represented by 171,858 resident patches using
+8,249,184 bytes (7.87 MiB). These figures exclude textures, source meshes, temporary
+generation storage and driver overhead. See the [mode's limits](compact-3d.md#experimental-whole-scene-surface-samples).
+The GPU verification covers both display sizes, SSAA off/2×/1080p, walking,
+rotation, pan and cache reuse; its local report is `surface-report.json` beside
+the generated cartridges. Existing timing results below describe triangle modes,
+not this experiment.
+
 CPU is still the default. Supersampling, orthographic snapping and smooth pan
-work on CPU and GPU; only resident meshes require GPU selection. In the browser,
+work on CPU and GPU; resident meshes and surface samples require GPU selection. In the browser,
 use the graphics settings and apply them to restart. A direct CPU comparison is
 `player.html?renderer=cpu&ssaa=1080p&smooth-pan`. Full-scene CPU supersampling is
 functional, but is not qualified for 60 fps. The live overlays report delivered

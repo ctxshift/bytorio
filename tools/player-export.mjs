@@ -15,6 +15,7 @@ const webScripts = [
   "executor-cache-core.js",
   "frame-clock.js",
   "gpu.js",
+  "gpu-surface.js",
 ];
 const shaders = [
   "fullscreen.vert",

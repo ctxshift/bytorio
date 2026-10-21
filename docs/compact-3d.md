@@ -40,7 +40,7 @@ Native equivalents, from an exported game's native directory:
 ```
 
 Smooth panning implies camera snapping. Supersampling, snapping and smooth
-presentation work on CPU and GPU. Only resident meshes require the GPU path.
+presentation work on CPU and GPU. Resident meshes and experimental surface samples require the GPU path.
 Auto chooses at startup and
 falls back to CPU if device initialization is unavailable. Explicit GPU mode
 reports failure instead. Device failure during a draw rejects the transaction;
@@ -53,6 +53,43 @@ the streamed GPU path. CPU mode initializes no GPU device and the default browse
 Wasm module has no GPU imports. Simple games retain the same CPU requirements.
 Both GPU modes use GPU final presentation; native presents directly through its
 OpenGL window and the browser transfers an ImageBitmap to the display canvas.
+
+### Experimental whole-scene surface samples
+
+The riverside scene can replace every world and rabbit triangle with persistent
+object-local surface samples. Check **Whole-scene surface samples (experimental,
+GPU)**, add `surface-samples` to a GPU URL, or use native
+`--renderer gpu --surface-samples`. This implies resident meshes and orthographic
+camera snapping. SSAA and smooth pan remain independently configurable. Unchecking
+the option and applying settings restores the ordinary triangle renderer.
+
+This host quality experiment supports flat, constant-color, axis-aligned rectangle
+pairs with integer side lengths and orthographic cameras, including all riverside
+meshes. Unsupported geometry rejects the GPU transaction; it does not silently
+substitute triangles. The option does not introduce a cartridge resource, alter
+the SDK/PNG formats or change the default CPU requirements. Explicit sampling
+also requires an available GPU when the renderer selection is Auto.
+
+One immutable 48-byte resident patch describes each square world unit. The shared
+vertex shader expands four fixed sample identities at 0.5-unit spacing, including
+the rabbit. This is coarser than the independent viewer's 0.25-unit rabbit samples.
+Records upload only on a cache miss or palette change; camera movement and actor
+poses change uniforms. The existing 64 MiB / 1,024-entry geometry cache bounds,
+eviction and device-close cleanup also apply. Storage is included in resident
+geometry counters and allocated only when this option is selected.
+
+Projected sample centers snap to the logical display grid. Instanced screen-aligned
+square billboards avoid driver-specific point-sprite size rounding. These splats
+use center depth, baked face colors, back-face rejection and the existing
+linear-light SSAA resolve and smooth presenter. They can leave gaps, overlap,
+inflate silhouettes and change visibility abruptly at grazing angles; persistent
+sample identity does not guarantee unchanged pixels through camera rotation.
+The current sample footprint is an approximation, and this mode is experimental,
+not a published rendering profile or a frame-rate guarantee.
+
+Run `mise run validate test:riverside:surface test:gpu` for GPU checks on native
+and browser. Sampler coordinate/bounds tests also run in ordinary geometry and
+3D conformance checks.
 
 The optional CPU quality device uses the shared software triangle rasterizer at
 the bounded sample resolution, resolves color in linear light and depth to the

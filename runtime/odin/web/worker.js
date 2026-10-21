@@ -245,7 +245,7 @@ self.onmessage = async ({ data }) => {
         try {
           gpu = await createGpu(graphics);
         } catch (error) {
-          if (graphics.backend === "gpu") {
+          if (graphics.backend === "gpu" || graphics.surfaceSamples) {
             throw error;
           }
           graphicsFallback = error.message;

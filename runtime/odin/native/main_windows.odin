@@ -312,9 +312,12 @@ run :: proc() -> int {
     pixel_snap := false
     smooth_pan := false
     resident_meshes := false
+    surface_samples := false
     render_fps := timing.SIMULATION_HZ
     for i := 1; i < len(os.args); i += 1 {
         switch os.args[i] {
+        case "--surface-samples":
+            surface_samples, resident_meshes, pixel_snap = true, true, true
         case "--gpu-meshes":
             resident_meshes = true
         case "--smooth-pan":
@@ -490,7 +493,7 @@ run :: proc() -> int {
     core.init()
     if renderer_choice != "cpu" {
         quality := 6 if ssaa == "1080p" else 2 if ssaa == "2x" else 1
-        if gpu.open(quality) {
+        if gpu.open(quality, surface_samples) {
             app.gpu_enabled = true
             app.game.resources.rasterizer = gpu.raster
             app.game.resources.pixel_snap = pixel_snap
@@ -503,6 +506,9 @@ run :: proc() -> int {
             gpu.close()
             fmt.eprintln("graphics: GPU unavailable; using CPU renderer")
         }
+    }
+    if surface_samples && !app.gpu_enabled {
+        return error("Whole-scene surface samples require an available GPU renderer")
     }
     if !app.gpu_enabled && (ssaa != "off" || pixel_snap || smooth_pan) {
         resources.software_configure(6 if ssaa == "1080p" else 2 if ssaa == "2x" else 1)

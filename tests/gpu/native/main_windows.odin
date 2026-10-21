@@ -119,4 +119,61 @@ main :: proc() {
     defer delete(capture)
     if r.u32le(capture, (100 * 1920 + 101) * 4) != 0xff001112 ||
        r.u32le(capture, (540 * 1920 + 960) * 4) != 0xffff00ff { os.exit(1) }
+    gpu.close()
+    verify_surface_samples()
+}
+
+verify_surface_samples :: proc() {
+    if !gpu.open(1, true) { os.exit(1) }
+    defer gpu.close()
+    data := make([]u8, 4 * 16 + 6 * 4)
+    defer delete(data)
+    for point, i in ([4][3]f64{{-1, -1, 0.25}, {1, -1, 0.25}, {1, 1, 0.25}, {-1, 1, 0.25}}) {
+        for value, axis in point { r.putf(data, i * 16 + axis * 4, value) }
+        r.put32(data, i * 16 + 12, 0xff0000ff)
+    }
+    for index, i in ([6]u32{0, 2, 1, 0, 3, 2}) { r.put32(data, 64 + i * 4, index) }
+    identity := [16]f32{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}
+    draw := r.Resident_Draw {
+        version      = 1,
+        data         = data,
+        vertex_count = 4,
+        index_count  = 6,
+        model        = identity,
+        view         = identity,
+        ambient      = 1,
+    }
+    color := make([]u8, 32 * 32 * 4)
+    depth := make([]u8, len(color))
+    defer delete(color)
+    defer delete(depth)
+    job := r.Raster_Job {
+        draws     = []r.Resident_Draw{draw},
+        color     = color,
+        depth     = depth,
+        width     = 32,
+        height    = 32,
+        clip      = {0, 0, 32, 32},
+        fog_start = 1,
+        fog_end   = 2,
+    }
+    for _ in 0 ..< 2 {
+        for &value in color { value = 0 }
+        for at := 0; at < len(depth); at += 4 { r.putf(depth, at, 1) }
+        if !gpu.raster(job) ||
+           r.u32le(color, (16 * 32 + 16) * 4) != 0xff0000ff ||
+           r.f32le(depth, (16 * 32 + 16) * 4) != 0.25 { os.exit(1) }
+    }
+    if gpu.statistics() != ([3]u64{1, 1, 192}) || gpu.cached_bytes() != 192 { os.exit(1) }
+    // Center depth must reject samples behind an existing nearer attachment.
+    for &value in color { value = 0 }
+    for at := 0; at < len(depth); at += 4 { r.putf(depth, at, 0.125) }
+    if !gpu.raster(job) ||
+       r.u32le(color, (16 * 32 + 16) * 4) != 0 ||
+       r.f32le(depth, (16 * 32 + 16) * 4) != 0.125 { os.exit(1) }
+    // Reverse winding: the sampled face points away and must disappear.
+    for index, i in ([6]u32{0, 1, 2, 0, 2, 3}) { r.put32(data, 64 + i * 4, index) }
+    job.draws[0].version = 2
+    for at := 0; at < len(depth); at += 4 { r.putf(depth, at, 1) }
+    if !gpu.raster(job) || r.u32le(color, (16 * 32 + 16) * 4) != 0 { os.exit(1) }
 }

@@ -1,6 +1,7 @@
 package gpu
 
 import resources "../../resources"
+import surface "../surface"
 import gl "vendor:OpenGL"
 
 GPU_CACHE_BYTES :: 64 * 1024 * 1024
@@ -10,6 +11,7 @@ Cached_Mesh :: struct {
     buffer:  u32,
     bytes:   int,
     palette: []u8,
+    count:   int,
 }
 
 clear_meshes :: proc() {
@@ -23,7 +25,7 @@ clear_meshes :: proc() {
     device.cache_bytes = 0
 }
 
-cached_mesh :: proc(draw: resources.Resident_Draw) -> (u32, bool) {
+cached_mesh :: proc(draw: resources.Resident_Draw) -> (Cached_Mesh, bool) {
     entry, exists := device.cache[draw.version]
     same := exists && len(entry.palette) == len(draw.palette)
     if same {
@@ -31,17 +33,29 @@ cached_mesh :: proc(draw: resources.Resident_Draw) -> (u32, bool) {
             if entry.palette[i] != value { same = false; break }
         }
     }
-    if same { device.cache_hits += 1; return entry.buffer, true }
-    size := int(draw.index_count) * RESIDENT_VERTEX_FLOATS * size_of(f32)
-    if size > GPU_CACHE_BYTES { return 0, false }
+    if same { device.cache_hits += 1; return entry, true }
+    vertices: []f32
+    if device.surface_samples {
+        ok: bool
+        vertices, ok = surface.patches(
+            draw.data,
+            draw.vertex_count,
+            draw.index_count,
+            draw.palette,
+        )
+        if !ok { return {}, false }
+    } else {
+        vertices = make([]f32, int(draw.index_count) * RESIDENT_VERTEX_FLOATS)
+    }
+    defer delete(vertices)
+    size := len(vertices) * size_of(f32)
+    if size > GPU_CACHE_BYTES { return {}, false }
     if device.cache_bytes + size > GPU_CACHE_BYTES || len(device.cache) >= GPU_CACHE_ENTRIES {
         clear_meshes()
         exists = false
     }
-    vertices := make([]f32, int(draw.index_count) * RESIDENT_VERTEX_FLOATS)
-    defer delete(vertices)
     indices := draw.data[int(draw.vertex_count) * 16:]
-    for triangle := 0; triangle < int(draw.index_count); triangle += 3 {
+    for triangle := 0; !device.surface_samples && triangle < int(draw.index_count); triangle += 3 {
         points: [3][3]f32
         colors: [3]u32
         for i in 0 ..< 3 {
@@ -65,7 +79,7 @@ cached_mesh :: proc(draw: resources.Resident_Draw) -> (u32, bool) {
     gl.GenBuffers(1, &buffer)
     gl.BindBuffer(gl.ARRAY_BUFFER, buffer)
     gl.BufferData(gl.ARRAY_BUFFER, size, raw_data(vertices), gl.STATIC_DRAW)
-    if gl.GetError() != gl.NO_ERROR { gl.DeleteBuffers(1, &buffer); return 0, false }
+    if gl.GetError() != gl.NO_ERROR { gl.DeleteBuffers(1, &buffer); return {}, false }
     if exists {
         gl.DeleteBuffers(1, &entry.buffer)
         device.cache_bytes -= entry.bytes
@@ -74,19 +88,25 @@ cached_mesh :: proc(draw: resources.Resident_Draw) -> (u32, bool) {
     if device.cache == nil { device.cache = make(map[u64]Cached_Mesh) }
     palette := make([]u8, len(draw.palette))
     copy(palette, draw.palette)
-    device.cache[draw.version] = {buffer, size, palette}
+    result := Cached_Mesh{buffer, size, palette, len(vertices) / RESIDENT_VERTEX_FLOATS}
+    device.cache[draw.version] = result
     device.cache_bytes += size
     device.upload_bytes += u64(size)
     device.mesh_uploads += 1
-    return buffer, true
+    return result, true
 }
 
 resident_draw :: proc(value: resources.Resident_Draw, width, height, border: int) -> bool {
     draw := value
-    buffer, ok := cached_mesh(draw)
+    if device.surface_samples &&
+       (draw.view[3] != 0 ||
+               draw.view[7] != 0 ||
+               draw.view[11] != 0 ||
+               draw.view[15] != 1) { return false }
+    entry, ok := cached_mesh(draw)
     if !ok { return false }
     gl.BindVertexArray(device.resident_vao)
-    gl.BindBuffer(gl.ARRAY_BUFFER, buffer)
+    gl.BindBuffer(gl.ARRAY_BUFFER, entry.buffer)
     for i in 0 ..< 4 {
         gl.EnableVertexAttribArray(u32(i))
         gl.VertexAttribPointer(
@@ -97,6 +117,7 @@ resident_draw :: proc(value: resources.Resident_Draw, width, height, border: int
             RESIDENT_VERTEX_FLOATS * 4,
             uintptr(i * 12),
         )
+        gl.VertexAttribDivisor(u32(i), surface.POINTS_PER_PATCH if device.surface_samples else 0)
     }
     gl.UseProgram(device.resident)
     gl.UniformMatrix4fv(
@@ -110,6 +131,19 @@ resident_draw :: proc(value: resources.Resident_Draw, width, height, border: int
     gl.Uniform1f(gl.GetUniformLocation(device.resident, "ambient"), draw.ambient)
     gl.Uniform2f(gl.GetUniformLocation(device.resident, "logicalSize"), f32(width), f32(height))
     gl.Uniform1i(gl.GetUniformLocation(device.resident, "border"), i32(border))
-    gl.DrawArrays(gl.TRIANGLES, 0, i32(draw.index_count))
+    gl.Uniform1i(
+        gl.GetUniformLocation(device.resident, "surfaceSamples"),
+        1 if device.surface_samples else 0,
+    )
+    if device.surface_samples {
+        gl.DrawArraysInstanced(
+            gl.TRIANGLE_STRIP,
+            0,
+            4,
+            i32(entry.count * surface.POINTS_PER_PATCH),
+        )
+    } else {
+        gl.DrawArrays(gl.TRIANGLES, 0, i32(draw.index_count))
+    }
     return true
 }

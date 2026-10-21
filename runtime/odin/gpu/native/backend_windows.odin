@@ -5,6 +5,7 @@ import gl "vendor:OpenGL"
 import sdl "vendor:sdl3"
 
 Device :: struct {
+    surface_samples:                                            bool,
     present_program, present_fbo, present_texture, hud_texture: u32,
     present_width, present_height:                              int,
     resident, resident_vao:                                     u32,
@@ -26,8 +27,9 @@ Device :: struct {
 }
 device: Device
 
-open :: proc(quality: int) -> bool {
+open :: proc(quality: int, surface_samples := false) -> bool {
     device.quality = quality
+    device.surface_samples = surface_samples
     if !sdl.InitSubSystem({.VIDEO}) { return false }
     _ = sdl.GL_SetAttribute(.CONTEXT_MAJOR_VERSION, 3)
     _ = sdl.GL_SetAttribute(.CONTEXT_MINOR_VERSION, 3)

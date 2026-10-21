@@ -86,6 +86,11 @@ and the first complete scene through native/browser CPU/GPU paths, including
 fresh, reload and same-page executor cache behavior. It retains its observer
 build and results under `build/riverside-startup/`.
 
+`mise run validate test:riverside:surface` verifies experimental whole-scene
+surface samples through both SDKs and GPU hosts, including independent pixel/depth
+expectations, both display sizes, all SSAA settings, camera/actor movement and
+reuse of resident geometry. It requires the same hardware support as `test:gpu`.
+
 Each task also retains a `*.commands.jsonl` timing journal for instrumented
 synchronous compiler, build and verifier commands. Entries include PID, start
 time, arguments, duration and exit status. A parent build command can contain

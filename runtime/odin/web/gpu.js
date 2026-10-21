@@ -1,3 +1,5 @@
+import { surfacePatches, SURFACE_POINTS_PER_PATCH } from "./gpu-surface.js";
+
 const RASTER_VERTEX_BYTES = 7 * Float32Array.BYTES_PER_ELEMENT;
 const RESIDENT_VERTEX_FLOATS = 12;
 const GPU_CACHE_BYTES = 64 * 1024 * 1024;
@@ -9,15 +11,19 @@ export function normalizeGraphics(value = {}) {
   if (!["cpu", "gpu", "auto"].includes(backend) || !["off", "2x", "1080p"].includes(ssaa)) {
     throw new Error("Invalid graphics settings.");
   }
+  if (backend === "cpu" && value.surfaceSamples) {
+    throw new Error("Whole-scene surface samples require the GPU renderer.");
+  }
   if (backend === "cpu" && value.residentMeshes) {
     throw new Error("Resident meshes require the GPU renderer.");
   }
   return {
     backend,
     ssaa,
-    pixelSnap: Boolean(value.pixelSnap || value.smoothPan),
+    pixelSnap: Boolean(value.pixelSnap || value.smoothPan || value.surfaceSamples),
     smoothPan: Boolean(value.smoothPan),
-    residentMeshes: Boolean(value.residentMeshes),
+    residentMeshes: Boolean(value.residentMeshes || value.surfaceSamples),
+    surfaceSamples: Boolean(value.surfaceSamples),
   };
 }
 
@@ -139,9 +145,13 @@ export async function createGpu(settings) {
       (!palette || palette.every((value, i) => value === entry.palette[i]));
     if (same) {
       metrics.cacheHits++;
-      return entry.buffer;
+      return entry;
     }
-    const bytes = draw.indexCount * RESIDENT_VERTEX_FLOATS * 4;
+    const data = new DataView(memory.buffer, draw.data);
+    const samples = settings.surfaceSamples
+      ? surfacePatches(data, draw.vertexCount, draw.indexCount, palette)
+      : null;
+    const bytes = samples ? samples.byteLength : draw.indexCount * RESIDENT_VERTEX_FLOATS * 4;
     if (bytes > GPU_CACHE_BYTES) {
       throw new Error("GPU mesh cache entry exceeds its bound.");
     }
@@ -149,9 +159,8 @@ export async function createGpu(settings) {
       clearMeshes();
       entry = null;
     }
-    const data = new DataView(memory.buffer, draw.data);
-    const vertices = new Float32Array(draw.indexCount * RESIDENT_VERTEX_FLOATS);
-    for (let triangle = 0; triangle < draw.indexCount; triangle += 3) {
+    const vertices = samples || new Float32Array(draw.indexCount * RESIDENT_VERTEX_FLOATS);
+    for (let triangle = 0; !samples && triangle < draw.indexCount; triangle += 3) {
       const points = [],
         colors = [];
       for (let i = 0; i < 3; i++) {
@@ -188,12 +197,18 @@ export async function createGpu(settings) {
       gl.deleteBuffer(entry.buffer);
       cacheBytes -= entry.bytes;
     }
-    cache.set(key, { buffer, bytes, palette: palette?.slice() });
+    const result = {
+      buffer,
+      bytes,
+      count: vertices.length / RESIDENT_VERTEX_FLOATS,
+      palette: palette?.slice(),
+    };
+    cache.set(key, result);
     cacheBytes += bytes;
     metrics.cacheBytes = cacheBytes;
     metrics.meshUploads++;
     metrics.uploadBytes += bytes;
-    return buffer;
+    return result;
   };
   const allocate = (t, w, h, depth = false, bytes = null, mask = false) => {
     gl.bindTexture(gl.TEXTURE_2D, t);
@@ -495,18 +510,34 @@ export async function createGpu(settings) {
       );
       gl.uniform2f(gl.getUniformLocation(program, "fogRange"), fogStart, fogEnd);
       if (batch.length) {
+        gl.uniform1i(
+          gl.getUniformLocation(program, "surfaceSamples"),
+          Number(settings.surfaceSamples),
+        );
         gl.bindVertexArray(residentVao);
         for (const draw of batch) {
-          gl.bindBuffer(gl.ARRAY_BUFFER, cachedMesh(memory, draw));
+          if (
+            settings.surfaceSamples &&
+            (draw.view[3] !== 0 || draw.view[7] !== 0 || draw.view[11] !== 0 || draw.view[15] !== 1)
+          ) {
+            throw new Error("Surface samples require an orthographic camera.");
+          }
+          const entry = cachedMesh(memory, draw);
+          gl.bindBuffer(gl.ARRAY_BUFFER, entry.buffer);
           for (let i = 0; i < 4; i++) {
             gl.enableVertexAttribArray(i);
             gl.vertexAttribPointer(i, 3, gl.FLOAT, false, RESIDENT_VERTEX_FLOATS * 4, i * 12);
+            gl.vertexAttribDivisor(i, settings.surfaceSamples ? SURFACE_POINTS_PER_PATCH : 0);
           }
           gl.uniformMatrix4fv(gl.getUniformLocation(program, "model"), false, draw.model);
           gl.uniformMatrix4fv(gl.getUniformLocation(program, "view"), false, draw.view);
           gl.uniform3fv(gl.getUniformLocation(program, "light"), draw.light);
           gl.uniform1f(gl.getUniformLocation(program, "ambient"), draw.ambient);
-          gl.drawArrays(gl.TRIANGLES, 0, draw.indexCount);
+          if (settings.surfaceSamples) {
+            gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, entry.count * SURFACE_POINTS_PER_PATCH);
+          } else {
+            gl.drawArrays(gl.TRIANGLES, 0, draw.indexCount);
+          }
         }
       } else {
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);

@@ -299,6 +299,11 @@ Next slices:
 - Keep color/depth targets resident across compatible passes; synchronize only
   when a CPU operation actually consumes them. Preserve rollback, stale handles,
   target feedback checks and deterministic CPU readbacks for the reference mode.
+- Experimental riverside comparison: opt-in whole-scene object-local surface
+  samples on native/browser GPU hosts. Flat rectangular patches reuse resident
+  geometry, expand fixed sample identities in the shared vertex shader, and retain
+  SSAA, snapped projection and smooth pan. Keep triangle modes and CPU defaults;
+  qualify silhouettes, coverage and cost before considering a general SDK API.
 - Expand layered presentation beyond the initial single orthographic screen
   batch, including translucent HUD composition and explicit pass/camera hints.
 - The representative riverside field is now packaged through both SDKs;

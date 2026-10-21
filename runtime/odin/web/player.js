@@ -61,7 +61,9 @@ try {
 let graphicsError = "";
 try {
   const selected =
-    parameters.get("renderer") === "cpu" ? { ...graphics, residentMeshes: false } : graphics;
+    parameters.get("renderer") === "cpu"
+      ? { ...graphics, residentMeshes: false, surfaceSamples: false }
+      : graphics;
   graphics = normalizeGraphics({
     ...selected,
     backend: parameters.get("renderer") || selected.backend,
@@ -69,6 +71,7 @@ try {
     pixelSnap: parameters.has("pixel-snap") || selected.pixelSnap,
     smoothPan: parameters.has("smooth-pan") || selected.smoothPan,
     residentMeshes: parameters.has("gpu-meshes") || selected.residentMeshes,
+    surfaceSamples: parameters.has("surface-samples") || selected.surfaceSamples,
   });
 } catch (error) {
   graphicsError = error.message;
@@ -78,19 +81,30 @@ const graphicsSsaa = document.getElementById("graphics-ssaa");
 const graphicsSnap = document.getElementById("graphics-snap");
 const graphicsSmooth = document.getElementById("graphics-smooth");
 const graphicsResident = document.getElementById("graphics-resident");
+const graphicsSurface = document.getElementById("graphics-surface");
 graphicsBackend.value = graphics.backend;
 graphicsSsaa.value = graphics.ssaa;
 graphicsSnap.checked = graphics.pixelSnap;
 graphicsSmooth.checked = graphics.smoothPan;
 graphicsResident.checked = graphics.residentMeshes;
+graphicsSurface.checked = graphics.surfaceSamples;
 const syncGraphicsControls = () => {
   const cpu = graphicsBackend.value === "cpu";
   graphicsResident.disabled = cpu;
+  graphicsSurface.disabled = cpu;
+  graphicsSnap.disabled = !cpu && graphicsSurface.checked;
   if (cpu) {
     graphicsResident.checked = false;
+    graphicsSurface.checked = false;
+  }
+  if (graphicsSurface.checked) {
+    graphicsResident.checked = true;
+    graphicsSnap.checked = true;
+    graphicsResident.disabled = true;
   }
 };
 graphicsBackend.addEventListener("change", syncGraphicsControls);
+graphicsSurface.addEventListener("change", syncGraphicsControls);
 syncGraphicsControls();
 document.getElementById("graphics-apply").addEventListener("click", () => {
   graphics = normalizeGraphics({
@@ -99,6 +113,7 @@ document.getElementById("graphics-apply").addEventListener("click", () => {
     pixelSnap: graphicsSnap.checked,
     smoothPan: graphicsSmooth.checked,
     residentMeshes: graphicsResident.checked,
+    surfaceSamples: graphicsSurface.checked,
   });
   try {
     localStorage.setItem("graphics-v1", JSON.stringify(graphics));
