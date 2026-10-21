@@ -1,4 +1,4 @@
-min_version = "2026.10.15"
+min_version = "2026.10.8"
 
 [env]
 MISE_BIN = "{{ mise_bin }}"
@@ -9,19 +9,20 @@ clang-format = "github:cpp-linter/clang-tools-static-binaries"
 clang-tidy = "github:cpp-linter/clang-tools-static-binaries"
 
 [tools]
-node = "24.19.0"
+"github:DanielGavin/ols" = {version = "dev-2026-10", rename_exe = {"ols-*" = "ols", "odinfmt-*" = "odinfmt"}}
 luau = "0.743"
+node = "24.19.0"
+odin = {version = "dev-2026-10", strip_components = 1, bin_path = "."}
 stylua = "2.6.0"
-odin = { version = "dev-2026-10", strip_components = 1, bin_path = "." }
-"github:DanielGavin/ols" = { version = "dev-2026-10", rename_exe = { "ols-*" = "ols", "odinfmt-*" = "odinfmt" } }
 # Used only by the upstream Emscripten SDK, not by project scripts.
-python = "3.13.3"
+clang-format = {version = "llvm-23.1.3", matching = "clang-format-23_", bin = "clang-format", format = "raw"}
+clang-tidy = {version = "llvm-23.1.3", matching = "clang-tidy-23_", bin = "clang-tidy", format = "raw"}
 cmake = "4.3.3"
+"github:bytecodealliance/wasmtime" = {version = "49.0.3", asset_pattern = "wasmtime-v49.0.3-x86_64-windows-c-api.zip", os = ["windows"]}
+"github:ctxshift/bees" = "0.4.0"
 ninja = "1.13.1"
-clang-format = { version = "llvm-23.1.3", matching = "clang-format-23_", bin = "clang-format", format = "raw" }
-clang-tidy = { version = "llvm-23.1.3", matching = "clang-tidy-23_", bin = "clang-tidy", format = "raw" }
-"vfox:jdx/vfox-emsdk" = { version = "6.0.12", depends = ["python"] }
-"github:bytecodealliance/wasmtime" = { version = "49.0.3", asset_pattern = "wasmtime-v49.0.3-x86_64-windows-c-api.zip", os = ["windows"] }
+python = "3.13.3"
+"vfox:jdx/vfox-emsdk" = {version = "6.0.12", depends = ["python"]}
 
 [task_config]
 includes = [".mise/tasks/*.toml"]
@@ -61,32 +62,21 @@ run = "node tools/format-code.mjs cpp"
 
 [tasks."build:odin"]
 description = "Build standalone native/browser players and fixtures"
-sources = [
-  "runtime/odin/**/*",
-  "sdk/odin/**/*.odin",
-  "examples/hello-odin/**/*.odin",
-  "tests/odin/fixtures/**/*.odin",
-  "tools/build-odin.mjs",
-  "tools/player-export.mjs",
-  "tools/toolchain.mjs",
-  "tools/command-timing.mjs",
-  "mise.toml",
-]
 outputs = [
   "build/odin-player/native/player.exe",
   "build/odin-player/native/wasmtime.dll",
   "build/odin-player/native/SDL3.dll",
   "build/odin-player/web/runtime.wasm",
-    "build/odin-player/web/runtime-gpu.wasm",
-    "build/odin-player/web/gpu.js",
-    "build/odin-player/web/gpu-surface.js",
-    "build/odin-player/web/gpu-shaders/fullscreen.vert",
-    "build/odin-player/web/gpu-shaders/initialize.frag",
-    "build/odin-player/web/gpu-shaders/mesh.vert",
-    "build/odin-player/web/gpu-shaders/mesh.frag",
-    "build/odin-player/web/gpu-shaders/resolve.frag",
-    "build/odin-player/web/gpu-shaders/resident.vert",
-    "build/odin-player/web/gpu-shaders/present.frag",
+  "build/odin-player/web/runtime-gpu.wasm",
+  "build/odin-player/web/gpu.js",
+  "build/odin-player/web/gpu-surface.js",
+  "build/odin-player/web/gpu-shaders/fullscreen.vert",
+  "build/odin-player/web/gpu-shaders/initialize.frag",
+  "build/odin-player/web/gpu-shaders/mesh.vert",
+  "build/odin-player/web/gpu-shaders/mesh.frag",
+  "build/odin-player/web/gpu-shaders/resolve.frag",
+  "build/odin-player/web/gpu-shaders/resident.vert",
+  "build/odin-player/web/gpu-shaders/present.frag",
   "build/odin-player/web/audio.wasm",
   "build/odin-player/web/player.html",
   "build/odin-player/web/player.js",
@@ -114,15 +104,26 @@ outputs = [
   "build/odin-player/web/fixtures/list-command.wasm",
 ]
 run = "node tools/build-odin.mjs --fixtures"
+sources = [
+  "runtime/odin/**/*",
+  "sdk/odin/**/*.odin",
+  "examples/hello-odin/**/*.odin",
+  "tests/odin/fixtures/**/*.odin",
+  "tools/build-odin.mjs",
+  "tools/player-export.mjs",
+  "tools/toolchain.mjs",
+  "tools/command-timing.mjs",
+  "mise.toml",
+]
 
 [tasks."build:rpg"]
-description = "Build and package both RPG cartridges"
 depends = ["deps:luau"]
+description = "Build and package both RPG cartridges"
 run = ["node tools/build-odin.mjs --game rpg --fixtures", "node experiments/luau-executor/stage.mjs"]
 
 [tasks."build:racing"]
-description = "Build and package both racing cartridges"
 depends = ["deps:luau"]
+description = "Build and package both racing cartridges"
 run = [
   "node tools/build-odin.mjs --game racing",
   "node experiments/luau-executor/stage.mjs build/racing-player racing",
@@ -165,28 +166,32 @@ description = "Render both voxel scenes at three output resolutions"
 run = ["node experiments/voxel-resolution/render.mjs", "node experiments/voxel-resolution/river.mjs"]
 
 [tasks."serve:voxel-resolution"]
-description = "Serve the generated voxel resolution comparison"
 depends = ["build:voxel-resolution"]
+description = "Serve the generated voxel resolution comparison"
 run = "node tools/serve.mjs build/compact-3d/resolution"
 
 [tasks."test:voxel-resolution"]
-description = "Verify live supersampling, native dimensions and rabbit/camera controls"
 depends = ["build:voxel-resolution"]
-run = ["node experiments/voxel-resolution/verify-river.mjs", "node experiments/voxel-resolution/verify-stability.mjs", "node experiments/voxel-resolution/verify-presentation.mjs"]
+description = "Verify live supersampling, native dimensions and rabbit/camera controls"
+run = [
+  "node experiments/voxel-resolution/verify-river.mjs",
+  "node experiments/voxel-resolution/verify-stability.mjs",
+  "node experiments/voxel-resolution/verify-presentation.mjs",
+]
 
 [tasks."bench:voxel-resolution"]
-description = "Measure riverside CPU, GPU and frame pacing on installed Chrome"
 depends = ["build:voxel-resolution"]
+description = "Measure riverside CPU, GPU and frame pacing on installed Chrome"
 run = "node experiments/voxel-resolution/benchmark.mjs"
 
 [tasks."build:riverside"]
-description = "Package the full riverside surface field through both SDKs"
 depends = ["build:odin", "build:voxel-resolution"]
+description = "Package the full riverside surface field through both SDKs"
 run = "node experiments/voxel-resolution/console-build.mjs"
 
 [tasks."bench:riverside"]
-description = "Verify and measure the full riverside cartridges on native and browser GPU hosts"
 depends = ["build:riverside"]
+description = "Verify and measure the full riverside cartridges on native and browser GPU hosts"
 run = "node experiments/voxel-resolution/console-benchmark.mjs"
 
 [tasks."test:riverside:geometry"]
@@ -194,28 +199,28 @@ description = "Check riverside face coverage, encoding and bounded compression"
 run = "node --test experiments/voxel-resolution/console-mesh.test.mjs tools/gpu-surface.test.mjs"
 
 [tasks."test:riverside:surface"]
-description = "Verify whole-scene surface samples on native and browser GPU hosts"
 depends = ["build:riverside"]
+description = "Verify whole-scene surface samples on native and browser GPU hosts"
 run = "node experiments/voxel-resolution/verify-console-surface.mjs"
 
 [tasks."bench:riverside:cpu"]
-description = "Measure interactive CPU quality modes and final canvas delivery"
 depends = ["build:riverside"]
+description = "Measure interactive CPU quality modes and final canvas delivery"
 run = "node experiments/voxel-resolution/console-cpu-benchmark.mjs"
 
 [tasks."bench:riverside:startup"]
-description = "Measure cartridge sizes and first complete scene on native and browser"
 depends = ["build:riverside"]
+description = "Measure cartridge sizes and first complete scene on native and browser"
 run = "node experiments/voxel-resolution/console-startup-benchmark.mjs"
 
 [tasks."test:riverside:controls"]
-description = "Verify riverside controls and counters in both SDKs and exact CPU host replays"
 depends = ["build:riverside"]
+description = "Verify riverside controls and counters in both SDKs and exact CPU host replays"
 run = "node experiments/voxel-resolution/verify-console-controls.mjs"
 
 [tasks."test:gpu"]
-description = "Verify transactional GPU rasterization, both SDKs and native/browser quality settings"
 depends = ["build:3d"]
+description = "Verify transactional GPU rasterization, both SDKs and native/browser quality settings"
 run = "node tools/verify-gpu.mjs"
 
 [tasks."test:3d"]
@@ -224,7 +229,7 @@ run = "node tools/verify-3d.mjs"
 
 [tasks."test:odin"]
 depends = ["build:odin"]
-env = { SDL_VIDEODRIVER = "dummy", SDL_AUDIODRIVER = "dummy", SDL_RENDER_DRIVER = "software" }
+env = {SDL_VIDEODRIVER = "dummy", SDL_AUDIODRIVER = "dummy", SDL_RENDER_DRIVER = "software"}
 run = "node tools/verify-odin.mjs"
 
 [tasks."test:display"]
@@ -242,21 +247,21 @@ run = "node tools/verify-racing.mjs"
 [tasks.test]
 description = "Run the conformance suites sequentially"
 run = [
-  { task = "test:validation" },
-  { task = "test:player-export" },
-  { task = "test:sdk" },
-  { task = "test:cartridge" },
-  { task = "test:resources" },
-  { task = "test:graphics" },
-  { task = "test:3d" },
-    { task = "test:riverside:geometry" },
-  { task = "test:audio" },
-  { task = "test:synthesis" },
-  { task = "test:profile" },
-  { task = "test:odin" },
-  { task = "test:display" },
-  { task = "test:rpg" },
-  { task = "test:racing" },
+  {task = "test:validation"},
+  {task = "test:player-export"},
+  {task = "test:sdk"},
+  {task = "test:cartridge"},
+  {task = "test:resources"},
+  {task = "test:graphics"},
+  {task = "test:3d"},
+  {task = "test:riverside:geometry"},
+  {task = "test:audio"},
+  {task = "test:synthesis"},
+  {task = "test:profile"},
+  {task = "test:odin"},
+  {task = "test:display"},
+  {task = "test:rpg"},
+  {task = "test:racing"},
 ]
 
 [tasks.validate]
