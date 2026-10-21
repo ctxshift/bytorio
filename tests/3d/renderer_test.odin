@@ -564,6 +564,7 @@ software_quality :: proc(test: ^testing.T) {
 
 @(test)
 shared_3d :: proc(test: ^testing.T) {
+    textured_sampling_and_depth(test)
     textured_resource_ownership(test)
     textured_creation_rejects_old_protocols_and_invalid_data(test)
     material_texture_edits_and_budget_rollback(test)

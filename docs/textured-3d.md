@@ -5,8 +5,8 @@ ABI 2, resource protocol 6 and feature mask 31. Loaders negotiate the complete
 tuple for loose games and PNG cartridges. Existing profiles retain their exact
 tuples; protocol 5 does not accept the new resource creation commands.
 
-This initial contract establishes resource ownership and transport. Textured
-draw execution is not exposed yet. Existing colored meshes, cameras, depth,
+This contract establishes resource ownership, transport and CPU textured drawing.
+Existing colored meshes, cameras, depth,
 audio and 2D rendering remain available through this profile. It is not a stable
 published profile or a performance guarantee.
 
@@ -34,8 +34,27 @@ The immutable options select independent U/V address modes: `clamp` or `repeat`
 in Luau, `.Clamp` or `.Repeat` in Odin. Both default to clamp. Sampling is nearest
 only. Image rows run from top to bottom; UV (0, 0) denotes the top-left texel.
 Clamp maps coordinates outside [0, 1] to the edge; repeat uses the fractional
-coordinate, including negative inputs. Exact filtering, tint and depth tests
-belong to the subsequent draw contract. Material alpha is not a blending control.
+coordinate, including negative inputs. Material alpha is not a blending control.
+
+## Drawing
+
+Both SDKs expose `gfx3d.draw_textured(pass, mesh, material, model)`. The model
+defaults to identity. Bind a camera and depth attachment with `gfx3d.bind` first.
+This command requires the existing opaque RGBA pass and affine model rules.
+UVs and lit vertex tints interpolate with reciprocal clip W after homogeneous
+clipping. Nearest sampling selects `floor(coordinate * size)`, bounded to the last
+texel; repeat takes the fractional coordinate before selecting a texel. Multiply
+sampled RGB by interpolated tint divided by 255, then apply camera fog and round
+channels to RGBA8. Textures store premultiplied RGB: this opaque material writes
+that RGB with output alpha 255, without unpremultiplication, discard or blending.
+Use opaque source textures for ordinary surfaces. Strict less-than depth testing
+and depth writes match colored geometry, including equal-depth rejection.
+
+Textured drawing currently uses the CPU reference path, including when GPU
+acceleration is selected. It flushes preceding accelerated draws before accessing
+their attachments. GPU residency, supersampling and camera presentation for
+textured geometry will be qualified in the acceleration step. Colored GPU paths
+remain available and GPU acceleration stays opt-in.
 
 Resource construction and destruction occur in init/update callbacks. Use
 `gfx3d.destroy` for a material or textured mesh, then the existing texture
@@ -52,6 +71,10 @@ eight-word mesh descriptor. Opcode 72 creates a material with descriptor words
 `texture`, `addressU`, `addressV`, followed by five zero words and no data payload.
 Address encodings are clamp 0 and repeat 1. Material and textured-mesh kinds are
 17 and 18. Both use the existing resource destruction opcode.
+Opcode 73 draws a textured mesh; its handle is the mesh, descriptor word zero is
+the material handle and all remaining words are zero. The data payload is the
+existing 64-byte column-major affine model matrix. Wrong kinds, missing bindings,
+stale resources or invalid matrices reject the entire commit.
 
 The host stores one 32-byte immutable material descriptor and pins its texture
 through the ordinary registry reference graph. Upload staging and the copied

@@ -11,6 +11,9 @@ import {
   loadSource,
   checkExecutor,
   negotiateProfile,
+  submitDrawing,
+  rasterizeDrawing,
+  uploadGraphics,
 } from "../runtime/odin/web/policy.js";
 import {
   FNV1A_OFFSET_BASIS,
@@ -280,6 +283,74 @@ try {
         `${language}/${png ? "PNG" : "loose"}: browser registry trace`,
       );
     }
+  }
+  for (const language of ["odin", "luau"]) {
+    const project = resolve(root, `drawing-${language}`);
+    await createProject(project, language);
+    const manifest = JSON.parse(await readFile(resolve(project, "console.json")));
+    Object.assign(manifest, {
+      sdk: "0.4.0",
+      profile: "textured-3d-preview-1",
+      display: [320, 180],
+    });
+    await writeFile(resolve(project, "console.json"), JSON.stringify(manifest, null, 2));
+    await copyFile(
+      `tests/textured3d/drawing/main.${language}`,
+      resolve(project, `src/main.${language}`),
+    );
+    await buildProject(project);
+    const web = resolve(project, "build/web");
+    const instantiate = async (file) =>
+      (await WebAssembly.instantiate(await readFile(file), { env: { sin: Math.sin } })).instance
+        .exports;
+    const game = await instantiate(
+      resolve(web, language === "luau" ? "luau-executor.wasm" : "game.wasm"),
+    );
+    const runtime = await instantiate(resolve(web, "runtime.wasm"));
+    game._initialize?.();
+    if (language === "luau") {
+      loadSource(game, await readFile(resolve(web, "game.luau")));
+    }
+    configureResources(game, runtime);
+    game.game_init();
+    checkExecutor(game);
+    submitResources(game, runtime);
+    uploadGraphics(game, runtime);
+    const drawing = submitDrawing(game, runtime);
+    rasterizeDrawing(runtime, drawing);
+    const pixels = new DataView(
+      runtime.memory.buffer,
+      runtime.runtime_logical_pixels(),
+      320 * 180 * 4,
+    );
+    assert.equal(
+      pixels.getUint32((90 * 320 + 160) * 4, true),
+      0xff00ff00,
+      `${language}: perspective UV sample`,
+    );
+    assert.equal(pixels.getUint32(0, true), 0xff222222, `${language}: background`);
+    const expected = runtime.runtime_hash() >>> 0;
+    const native = JSON.parse(run(resolve(project, "build/native/player.exe"), ["--check"]));
+    assert.equal(native.hash, expected, `${language}: standalone textured pixels`);
+    const base = "/" + relative(process.cwd(), web).replaceAll("\\", "/");
+    for (const gameFile of ["game.png", language === "luau" ? "game.luau" : "game.wasm"]) {
+      await page.goto(
+        `http://127.0.0.1:${server.address().port}${base}/player.html?game=./${gameFile}&smoke`,
+      );
+      await page.waitForFunction(() => window.playerStatus?.ready || window.playerStatus?.error);
+      assert.equal(await page.evaluate(() => window.playerStatus.error), "");
+      await page.locator("#start").click();
+      await page.waitForFunction(
+        () => window.playerStatus.ticks >= 120 || window.playerStatus.error,
+      );
+      assert.equal(await page.evaluate(() => window.playerStatus.error), "");
+      assert.equal(
+        await page.evaluate(() => window.playerStatus.hash),
+        expected,
+        `${language}/${gameFile}: browser textured pixels`,
+      );
+    }
+    runtime.runtime_resource_close();
   }
 } finally {
   await browser.close();

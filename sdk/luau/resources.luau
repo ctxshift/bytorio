@@ -138,6 +138,7 @@ local function emit(op: number, id: number, values: { number }?, bytes: buffer?)
                     op >= 16 and op <= schema.op_sprite
                     or op == schema.op_begin_3d
                     or op == schema.op_draw_mesh
+                    or op == schema.op_draw_textured_mesh
                 ) and phase == "draw"
             ),
         "resource command in wrong callback phase"
@@ -1402,6 +1403,20 @@ function gfx3d.draw(pass: Pass, geometry: Mesh | Voxel, model: math3d.Matrix?)
     local record = check(geometry, "any")
     assert(record.kind == "mesh" or record.kind == "voxel", "expected mesh or voxel")
     emit(schema.op_draw_mesh, record.id, {}, matrixBytes(model or math3d.identity()))
+end
+function gfx3d.draw_textured(
+    pass: Pass,
+    geometry: TexturedMesh,
+    surface: Material,
+    model: math3d.Matrix?
+)
+    checkPass(pass)
+    emit(
+        schema.op_draw_textured_mesh,
+        id(geometry, "textured_mesh"),
+        { id(surface, "material") },
+        matrixBytes(model or math3d.identity())
+    )
 end
 function gfx3d.destroy(value: Mesh | TexturedMesh | Material | Depth | Camera | Voxel)
     destroy(value, "any")

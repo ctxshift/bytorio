@@ -304,6 +304,21 @@ draw :: proc(pass: gfx.Pass, geometry: $Geometry, model := IDENTITY) {
     t.emit(w.op_draw_mesh, t.Handle(geometry), args[:], bytes[:])
 }
 
+draw_textured :: proc(
+    pass: gfx.Pass,
+    geometry: Textured_Mesh,
+    surface: Material,
+    model := IDENTITY,
+) {
+    if !gfx.check_pass(pass) ||
+       !t.check(t.Handle(geometry), w.kindTexturedMesh) ||
+       !t.check(t.Handle(surface), w.kindMaterial) { return }
+    bytes: [w.modelBytes]u8
+    matrix_bytes(model, bytes[:])
+    args := [8]u32{surface.id, 0, 0, 0, 0, 0, 0, 0}
+    t.emit(w.op_draw_textured_mesh, t.Handle(geometry), args[:], bytes[:])
+}
+
 destroy :: proc(value: $Resource) {
     #assert(
         Resource == Mesh ||

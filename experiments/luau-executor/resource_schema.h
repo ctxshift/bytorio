@@ -161,6 +161,7 @@ constexpr unsigned op_begin_3d = 69;
 constexpr unsigned op_draw_mesh = 70;
 constexpr unsigned op_create_textured_mesh = 71;
 constexpr unsigned op_create_material = 72;
+constexpr unsigned op_draw_textured_mesh = 73;
 constexpr unsigned format_index8 = 1;
 constexpr unsigned format_rgba8 = 2;
 constexpr unsigned format_f32 = 3;

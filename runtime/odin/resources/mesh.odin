@@ -34,6 +34,7 @@ work :: proc(t: ^Transaction, amount: int) -> bool {
 Clip_Vertex :: struct {
     p:     [4]f64,
     color: [3]f64,
+    uv:    [2]f64,
 }
 
 f32le :: #force_inline proc(b: []u8, at: int) -> f64 {
@@ -117,7 +118,7 @@ mesh_command :: proc(
 ) -> bool {
     a := descriptor
     r := t.registry
-    if op == w.op_begin_3d || op == w.op_draw_mesh {
+    if op == w.op_begin_3d || op == w.op_draw_mesh || op == w.op_draw_textured_mesh {
         if phase != 2 || !t.render.active {
             return fail(r, "3D drawing requires an active pass")
         }
@@ -163,7 +164,10 @@ mesh_command :: proc(
             return true
         }
 
-        if t.render.depth == 0 || t.render.camera == 0 || !padding_zero(a[:]) {
+        textured := op == w.op_draw_textured_mesh
+        if t.render.depth == 0 ||
+           t.render.camera == 0 ||
+           !padding_zero(a[1:] if textured else a[:]) {
             return fail(r, "mesh drawing requires a 3D binding")
         }
 
@@ -173,11 +177,18 @@ mesh_command :: proc(
         }
 
         slot := lookup(t, id)
-        if slot == nil || (slot.kind != .Mesh && slot.kind != .Voxel) {
+        if slot == nil ||
+           (textured && slot.kind != .Textured_Mesh) ||
+           (!textured && slot.kind != .Mesh && slot.kind != .Voxel) {
             return fail(r, "invalid mesh handle")
         }
 
-        return raster_mesh(t, slot, model)
+        material: ^Slot
+        if textured {
+            material = lookup(t, a[0], .Material)
+            if material == nil { return fail(r, "invalid material handle") }
+        }
+        return raster_mesh(t, slot, model, material)
     }
 
     if phase == 2 {
@@ -367,6 +378,9 @@ clip_lerp :: proc(a, b: Clip_Vertex, t: f64) -> (v: Clip_Vertex) {
     for &x, i in v.color {
         x = a.color[i] + (b.color[i] - a.color[i]) * t
     }
+    for &x, i in v.uv {
+        x = a.uv[i] + (b.uv[i] - a.uv[i]) * t
+    }
 
     return
 }
@@ -375,10 +389,13 @@ cross3 :: proc(a, b: [3]f64) -> [3]f64 {
     return {a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]}
 }
 
-raster_mesh :: proc(t: ^Transaction, mesh: ^Slot, model: Matrix) -> bool {
+raster_mesh :: proc(t: ^Transaction, mesh: ^Slot, model: Matrix, material: ^Slot = nil) -> bool {
     camera := lookup(t, t.render.camera, .Camera)
     view, _ := matrix_read(camera.data[:w.modelBytes])
-    accelerated := prepare_raster(t)
+    // CPU fragments invalidate high-resolution presentation of earlier or later
+    // batches; publishing only their GPU preview would omit this geometry.
+    if material != nil && t.render.target == 0 { t.preview_disabled = true }
+    accelerated := material == nil && prepare_raster(t)
     t.gpu_ortho = view[3] == 0 && view[7] == 0 && view[11] == 0 && view[15] == 1
     if accelerated && t.registry.pixel_snap && t.gpu_ortho {
         target := image(t, t.render.target)
@@ -396,7 +413,8 @@ raster_mesh :: proc(t: ^Transaction, mesh: ^Slot, model: Matrix) -> bool {
     }
 
     t.triangles += triangles
-    vertices := mesh.data[int(mesh.mesh_offset):][:int(mesh.vertex_count) * w.meshVertexBytes]
+    stride := w.texturedVertexBytes if material != nil else w.meshVertexBytes
+    vertices := mesh.data[int(mesh.mesh_offset):][:int(mesh.vertex_count) * stride]
     indices := mesh.data[int(mesh.mesh_offset) + len(vertices):]
     if accelerated && t.registry.resident_meshes {
         scratch_size := int(mesh.vertex_count) * size_of(Account_Vertex)
@@ -418,7 +436,10 @@ raster_mesh :: proc(t: ^Transaction, mesh: ^Slot, model: Matrix) -> bool {
         input: [3]Clip_Vertex
         world: [3][4]f64
         for &v, i in input {
-            pos := int(u32le(indices, at + i * 4)) * w.meshVertexBytes
+            pos := int(u32le(indices, at + i * 4)) * stride
+            if material != nil {
+                for &uv, axis in v.uv { uv = f32le(vertices, pos + w.texturedUvOffset + axis * 4) }
+            }
             world[i] = matrix_point(
                 model,
                 {f32le(vertices, pos), f32le(vertices, pos + 4), f32le(vertices, pos + 8), 1},
@@ -479,7 +500,7 @@ raster_mesh :: proc(t: ^Transaction, mesh: ^Slot, model: Matrix) -> bool {
         }
         if outside_all != 0 { continue }
         if outside_any == 0 {
-            if !raster_triangle(t, input, camera.data) { return false }
+            if !raster_triangle(t, input, camera.data, material = material) { return false }
             continue
         }
 
@@ -518,7 +539,12 @@ raster_mesh :: proc(t: ^Transaction, mesh: ^Slot, model: Matrix) -> bool {
         }
 
         for i := 1; i + 1 < count; i += 1 {
-            if !raster_triangle(t, {poly[0], poly[i], poly[i + 1]}, camera.data) {
+            if !raster_triangle(
+                t,
+                {poly[0], poly[i], poly[i + 1]},
+                camera.data,
+                material = material,
+            ) {
                 return false
             }
         }
@@ -571,6 +597,7 @@ raster_triangle :: proc(
     triangle: [3]Clip_Vertex,
     camera: []u8,
     account := true,
+    material: ^Slot = nil,
 ) -> bool {
     target := image(t, t.render.target)
     depth := lookup(t, t.render.depth, .Depth)
@@ -616,7 +643,13 @@ raster_triangle :: proc(
     fog_start := f32le(camera, w.cameraFogStartOffset)
     fog_end := f32le(camera, w.cameraFogEndOffset)
     fog_color := u32le(camera, w.cameraFogColorOffset)
-    uniform := !account && v[0].color == v[1].color && v[0].color == v[2].color
+    texture: ^Slot
+    address_u, address_v: u32
+    if material != nil {
+        texture = lookup(t, material.link, .Texture)
+        address_u, address_v = u32le(material.data, 4), u32le(material.data, 8)
+    }
+    uniform := material == nil && !account && v[0].color == v[1].color && v[0].color == v[2].color
     solid := u32(0xff000000)
     for c, channel in v[0].color {
         uniform = uniform && c == pixel_round(c)
@@ -661,6 +694,17 @@ raster_triangle :: proc(
             }
 
             reciprocal := weights[0] * iw[0] + weights[1] * iw[1] + weights[2] * iw[2]
+            texel := u32(0xffffffff)
+            if material != nil {
+                uv: [2]f64
+                for &component, axis in uv {
+                    for b, i in weights { component += b * iw[i] * v[i].uv[axis] }
+                    component /= reciprocal
+                }
+                tx := texture_coordinate(uv[0], texture.width, address_u)
+                ty := texture_coordinate(uv[1], texture.height, address_v)
+                texel = u32le(texture.data, (ty * int(texture.width) + tx) * 4)
+            }
             fog := clamp((dz - fog_start) / (fog_end - fog_start), 0, 1)
             color := u32(0xff000000)
             for channel in 0 ..< 3 {
@@ -669,9 +713,9 @@ raster_triangle :: proc(
                     value += b * iw[i] * v[i].color[channel]
                 }
 
-                value =
-                    value / reciprocal * (1 - fog) +
-                    f64((fog_color >> u32(channel * 8)) & 255) * fog
+                value /= reciprocal
+                if material != nil { value *= f64((texel >> u32(channel * 8)) & 255) / 255 }
+                value = value * (1 - fog) + f64((fog_color >> u32(channel * 8)) & 255) * fog
                 color |= u32(clamp(math.round(value), 0, 255)) << u32(channel * 8)
             }
 
@@ -681,4 +725,9 @@ raster_triangle :: proc(
     }
 
     return true
+}
+
+texture_coordinate :: proc(value: f64, size, address: u32) -> int {
+    coordinate := value - math.floor(value) if address == w.addressRepeat else clamp(value, 0, 1)
+    return min(int(math.floor(coordinate * f64(size))), int(size) - 1)
 }

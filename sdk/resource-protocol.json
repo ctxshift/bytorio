@@ -113,7 +113,8 @@
     "begin_3d": 69,
     "draw_mesh": 70,
     "create_textured_mesh": 71,
-    "create_material": 72
+    "create_material": 72,
+    "draw_textured_mesh": 73
   },
   "formats": {
     "index8": 1,
@@ -524,6 +525,7 @@
     ],
     "create_textured_mesh": ["vertices", "indices", "reserved", "reserved", "reserved", "reserved", "reserved", "reserved"],
     "create_material": ["texture", "addressU", "addressV", "reserved", "reserved", "reserved", "reserved", "reserved"],
+    "draw_textured_mesh": ["material", "reserved", "reserved", "reserved", "reserved", "reserved", "reserved", "reserved"],
     "draw_mesh": [
       "reserved",
       "reserved",

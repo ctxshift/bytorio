@@ -160,6 +160,7 @@ return table.freeze({
     op_draw_mesh = 70,
     op_create_textured_mesh = 71,
     op_create_material = 72,
+    op_draw_textured_mesh = 73,
     format_index8 = 1,
     format_rgba8 = 2,
     format_f32 = 3,
