@@ -2,6 +2,7 @@
 -- Generated model. Reimport the asset to change geometry; animate local transforms in game code.
 local byt = require("@bytorio")
 local g, gfx, data = byt.gfx3d, byt.gfx, byt.data
+local WHITE = 0xffffffff
 type Matrix = { number }
 type Address = "clamp" | "repeat"
 type MaterialOptions = { address_u: Address?, address_v: Address? }
@@ -14,30 +15,30 @@ export type Instance = {
 local geometry = {
     {
         vertices = {
-            { position = { -1, 0, 0.5 }, uv = { 0, 1 }, color = 4294934783 },
-            { position = { 1, 0, 0.5 }, uv = { 1, 1 }, color = 4294934783 },
-            { position = { 1, 1, 0.5 }, uv = { 1, 0 }, color = 4294934783 },
-            { position = { -1, 1, 0.5 }, uv = { 0, 0 }, color = 4294934783 },
-            { position = { 1, 0, -0.5 }, uv = { 0, 1 }, color = 4294934783 },
-            { position = { -1, 0, -0.5 }, uv = { 1, 1 }, color = 4294934783 },
-            { position = { -1, 1, -0.5 }, uv = { 1, 0 }, color = 4294934783 },
-            { position = { 1, 1, -0.5 }, uv = { 0, 0 }, color = 4294934783 },
-            { position = { -1, 0, -0.5 }, uv = { 0, 1 }, color = 4294934783 },
-            { position = { -1, 0, 0.5 }, uv = { 1, 1 }, color = 4294934783 },
-            { position = { -1, 1, 0.5 }, uv = { 1, 0 }, color = 4294934783 },
-            { position = { -1, 1, -0.5 }, uv = { 0, 0 }, color = 4294934783 },
-            { position = { 1, 0, 0.5 }, uv = { 0, 1 }, color = 4294934783 },
-            { position = { 1, 0, -0.5 }, uv = { 1, 1 }, color = 4294934783 },
-            { position = { 1, 1, -0.5 }, uv = { 1, 0 }, color = 4294934783 },
-            { position = { 1, 1, 0.5 }, uv = { 0, 0 }, color = 4294934783 },
-            { position = { -1, 1, 0.5 }, uv = { 0, 1 }, color = 4294934783 },
-            { position = { 1, 1, 0.5 }, uv = { 1, 1 }, color = 4294934783 },
-            { position = { 1, 1, -0.5 }, uv = { 1, 0 }, color = 4294934783 },
-            { position = { -1, 1, -0.5 }, uv = { 0, 0 }, color = 4294934783 },
-            { position = { -1, 0, -0.5 }, uv = { 0, 1 }, color = 4294934783 },
-            { position = { 1, 0, -0.5 }, uv = { 1, 1 }, color = 4294934783 },
-            { position = { 1, 0, 0.5 }, uv = { 1, 0 }, color = 4294934783 },
-            { position = { -1, 0, 0.5 }, uv = { 0, 0 }, color = 4294934783 },
+            { -1, 0, 0.5, 4294934783, 0, 1 },
+            { 1, 0, 0.5, 4294934783, 1, 1 },
+            { 1, 1, 0.5, 4294934783, 1, 0 },
+            { -1, 1, 0.5, 4294934783, 0, 0 },
+            { 1, 0, -0.5, 4294934783, 0, 1 },
+            { -1, 0, -0.5, 4294934783, 1, 1 },
+            { -1, 1, -0.5, 4294934783, 1, 0 },
+            { 1, 1, -0.5, 4294934783, 0, 0 },
+            { -1, 0, -0.5, 4294934783, 0, 1 },
+            { -1, 0, 0.5, 4294934783, 1, 1 },
+            { -1, 1, 0.5, 4294934783, 1, 0 },
+            { -1, 1, -0.5, 4294934783, 0, 0 },
+            { 1, 0, 0.5, 4294934783, 0, 1 },
+            { 1, 0, -0.5, 4294934783, 1, 1 },
+            { 1, 1, -0.5, 4294934783, 1, 0 },
+            { 1, 1, 0.5, 4294934783, 0, 0 },
+            { -1, 1, 0.5, 4294934783, 0, 1 },
+            { 1, 1, 0.5, 4294934783, 1, 1 },
+            { 1, 1, -0.5, 4294934783, 1, 0 },
+            { -1, 1, -0.5, 4294934783, 0, 0 },
+            { -1, 0, -0.5, 4294934783, 0, 1 },
+            { 1, 0, -0.5, 4294934783, 1, 1 },
+            { 1, 0, 0.5, 4294934783, 1, 0 },
+            { -1, 0, 0.5, 4294934783, 0, 0 },
         },
         indices = {
             0,
@@ -81,18 +82,10 @@ local geometry = {
     },
     {
         vertices = {
-            {
-                position = { -0.4000000059604645, 0.800000011920929, 0 },
-                uv = { 0, 1 },
-                color = 4294967295,
-            },
-            {
-                position = { 0.4000000059604645, 0.800000011920929, 0 },
-                uv = { 1, 1 },
-                color = 4294967295,
-            },
-            { position = { 0.4000000059604645, 0, 0 }, uv = { 1, 0 }, color = 4294967295 },
-            { position = { -0.4000000059604645, 0, 0 }, uv = { 0, 0 }, color = 4294967295 },
+            { -0.4000000059604645, 0.800000011920929, 0, WHITE, 0, 1 },
+            { 0.4000000059604645, 0.800000011920929, 0, WHITE, 1, 1 },
+            { 0.4000000059604645, 0, 0, WHITE, 1, 0 },
+            { -0.4000000059604645, 0, 0, WHITE, 0, 0 },
         },
         indices = { 0, 2, 1, 0, 3, 2 },
         material = 2,
@@ -102,7 +95,7 @@ local surfaces = {
     {
         width = 2,
         height = 2,
-        pixels = { 188, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 188, 255, 255, 255 },
+        pixels = { 0xff0000bc, 0xff00ff00, 0xffff0000, 0xffffffbc },
         address_u = "clamp",
         address_v = "repeat",
         cutoff = -1,
@@ -110,7 +103,7 @@ local surfaces = {
     {
         width = 2,
         height = 2,
-        pixels = { 255, 0, 0, 255, 0, 128, 0, 128, 0, 0, 0, 0, 255, 255, 255, 255 },
+        pixels = { 0xff0000ff, 0x80008000, 0x00000000, 0xffffffff },
         address_u = "clamp",
         address_v = "repeat",
         cutoff = 128,
@@ -165,7 +158,7 @@ function api.create(): Instance
     for _, surface in surfaces do
         local pixels = data.pixels("rgba8", surface.width, surface.height)
         for index, value in surface.pixels do
-            buffer.writeu8(pixels.bytes, index - 1, value)
+            buffer.writeu32(pixels.bytes, (index - 1) * 4, value)
         end
         local texture =
             gfx.texture({ format = "rgba8", width = surface.width, height = surface.height })
@@ -183,7 +176,17 @@ function api.create(): Instance
         table.insert(instance.materials, material)
     end
     for _, primitive in geometry do
-        table.insert(instance.meshes, g.textured_mesh(primitive.vertices, primitive.indices))
+        -- Flat generated data avoids repeating record keys in the cartridge's
+        -- source budget. Expand once at creation; drawing keeps immutable meshes.
+        local vertices: { { position: { number }, color: number, uv: { number } } } = {}
+        for _, packed in primitive.vertices do
+            table.insert(vertices, {
+                position = { packed[1], packed[2], packed[3] },
+                color = packed[4],
+                uv = { packed[5], packed[6] },
+            })
+        end
+        table.insert(instance.meshes, g.textured_mesh(vertices, primitive.indices))
     end
     return instance
 end

@@ -5,11 +5,24 @@ import { dirname, resolve } from "node:path";
 import { deflateSync } from "node:zlib";
 import { readGltf, decodeTexture, IMPORT_LIMITS } from "./gltf.mjs";
 import { importModel } from "./import-model.mjs";
+import { modelSources } from "./model-source.mjs";
 import { signature, chunk } from "./cartridge.mjs";
 
 await mkdir("build", { recursive: true });
 const root = await mkdtemp(resolve("build/model-unit-"));
 const original = JSON.parse(await readFile("examples/models/assets/rigid-kart.gltf"));
+
+test("generated asset namespaces depend on content rather than report metadata", async () => {
+  const model = await readGltf("examples/models/assets/rigid-kart.gltf");
+  const sources = modelSources(model);
+  const reported = structuredClone(model);
+  reported.report.sourceBytes = { "model.odin": 1234 };
+  assert.deepEqual(modelSources(reported), sources);
+  const changed = structuredClone(model);
+  changed.primitives[0].vertices[0].position[0] += 1 / 64;
+  const namespace = (source) => source.match(/^package (\w+)/m)[1];
+  assert.notEqual(namespace(modelSources(changed)["model.odin"]), namespace(sources["model.odin"]));
+});
 after(async () => {
   assert.equal(dirname(root), resolve("build"));
   await rm(root, { recursive: true, force: true });

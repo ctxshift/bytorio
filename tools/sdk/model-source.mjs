@@ -1,7 +1,20 @@
 import { formatSource } from "../code-tools.mjs";
 import { IMPORT_LIMITS } from "./gltf.mjs";
+import { createHash } from "node:crypto";
 
 const literal = JSON.stringify;
+
+function colorWords(pixels) {
+  const bytes = Buffer.from(pixels);
+  return Array.from(
+    { length: bytes.length / 4 },
+    (_, index) =>
+      `0x${bytes
+        .readUInt32LE(index * 4)
+        .toString(16)
+        .padStart(8, "0")}`,
+  );
+}
 
 function formatModel(source, file) {
   if (Buffer.byteLength(source) > IMPORT_LIMITS.sourceBytes) {
@@ -11,10 +24,15 @@ function formatModel(source, file) {
 }
 
 function luau(model) {
+  const whiteConstant = model.primitives.some((primitive) =>
+    primitive.vertices.some(({ color }) => color === 0xffffffff),
+  )
+    ? "local WHITE = 0xffffffff"
+    : "";
   const geometry = model.primitives
     .map(
       (p) =>
-        `{vertices={${p.vertices.map((v) => `{position={${v.position}},uv={${v.uv}},color=${v.color}}`)}},indices={${p.indices}},material=${p.material + 1}}`,
+        `{vertices={${p.vertices.map((v) => `{${[...v.position, v.color === 0xffffffff ? "WHITE" : v.color, ...v.uv]}}`)}},indices={${p.indices}},material=${p.material + 1}}`,
     )
     .join(",\n");
   const locals = model.nodes.map((n) => `{${n.local}}`).join(",\n");
@@ -23,7 +41,7 @@ function luau(model) {
   const materialDefinitions = model.materials
     .map(
       (m) => `{
-    width=${m.width},height=${m.height},pixels={${m.pixels}},
+    width=${m.width},height=${m.height},pixels={${colorWords(m.pixels)}},
     address_u=${literal(m.addressU)},address_v=${literal(m.addressV)},cutoff=${m.cutoff ?? -1}
   }`,
     )
@@ -33,6 +51,7 @@ function luau(model) {
 -- Generated model. Reimport the asset to change geometry; animate local transforms in game code.
 local byt =  require("@bytorio")
 local g, gfx, data = byt.gfx3d, byt.gfx, byt.data
+${whiteConstant}
 type Matrix = {number}
 type Address = "clamp" | "repeat"
 type MaterialOptions = {address_u: Address?, address_v: Address?}
@@ -68,7 +87,7 @@ function api.create(): Instance
     local instance: Instance = {alive=true,meshes={},materials={},textures={}}
     for _, surface in surfaces do
         local pixels = data.pixels("rgba8", surface.width, surface.height)
-        for index, value in surface.pixels do buffer.writeu8(pixels.bytes, index-1, value) end
+        for index, value in surface.pixels do buffer.writeu32(pixels.bytes, (index-1)*4, value) end
         local texture = gfx.texture({format="rgba8",width=surface.width,height=surface.height})
         gfx.upload(texture,{x=0,y=0,width=surface.width,height=surface.height},pixels)
         local options: MaterialOptions = {address_u=surface.address_u :: Address,address_v=surface.address_v :: Address}
@@ -77,7 +96,14 @@ function api.create(): Instance
         table.insert(instance.materials,material)
     end
     for _, primitive in geometry do
-        table.insert(instance.meshes,g.textured_mesh(primitive.vertices,primitive.indices))
+        -- Flat generated data avoids repeating record keys in the cartridge's
+        -- source budget. Expand once at creation; drawing keeps immutable meshes.
+        local vertices: {{position:{number},color:number,uv:{number}}} = {}
+        for _, packed in primitive.vertices do
+            table.insert(vertices, {position={packed[1],packed[2],packed[3]},
+                color=packed[4],uv={packed[5],packed[6]}})
+        end
+        table.insert(instance.meshes,g.textured_mesh(vertices,primitive.indices))
     end
     return instance
 end
@@ -111,6 +137,20 @@ return table.freeze(api)
 }
 
 function odin(model) {
+  // Odin package names must be unique across a program. Content-derived names
+  // let several imported assets coexist without machine paths or CLI aliases.
+  const packageName =
+    "model_" +
+    createHash("sha256")
+      .update(
+        JSON.stringify({
+          nodes: model.nodes,
+          primitives: model.primitives,
+          materials: model.materials,
+        }),
+      )
+      .digest("hex")
+      .slice(0, 12);
   const meshes = model.primitives
     .map(
       (p, i) => `
@@ -151,7 +191,7 @@ function odin(model) {
     .join("\n");
   return formatModel(
     `// Generated model. Reimport geometry; animate local transforms in game code.
-package model
+package ${packageName}
 
 import g "sdk:gfx3d"
 import gfx "sdk:gfx"

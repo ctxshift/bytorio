@@ -2,12 +2,15 @@ import { access, copyFile, cp, mkdir, readFile, writeFile } from "node:fs/promis
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { generateCourse } from "./course.mjs";
+import { importKart } from "./import-assets.mjs";
+import { generateAssets } from "./assets.mjs";
 import { createProject, buildProject } from "../../../tools/sdk/project.mjs";
 
 export const root = "examples/kart3d/build";
 export async function buildKart3d() {
   await mkdir(root, { recursive: true });
   await generateCourse(process.argv.includes("--generate"));
+  await importKart();
   const projects = [];
   for (const language of ["odin", "luau"]) {
     const project = resolve(root, language);
@@ -18,8 +21,8 @@ export async function buildKart3d() {
     }
     const manifest = JSON.parse(await readFile(resolve(project, "console.json")));
     Object.assign(manifest, {
-      sdk: "0.3.0",
-      profile: "compact-3d-preview-1",
+      sdk: "0.6.0",
+      profile: "effects-3d-preview-1",
       display: [320, 180],
       title: `Sunline Sprint / ${language}`,
     });
@@ -40,7 +43,7 @@ export async function buildKart3d() {
       );
       html = html.replace(
         '<script type="module" src="./player.js"></script>',
-        '<script>globalThis.playerInstructions="WASD/arrows: drive · Space: hop/drift (alternate steering, release to boost) · E: turbo item · Q: resolution · R: restart";</script>\n<script type="module" src="./player.js"></script>',
+        '<script>globalThis.playerInstructions="WASD/arrows: drive · Space: hop/drift · E: turbo · Q: resolution · Space+Q: auto/low/high detail · R: restart";</script>\n<script type="module" src="./player.js"></script>',
       );
       await writeFile(file, html);
     }
@@ -54,6 +57,8 @@ export async function buildKart3d() {
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   if (process.argv.includes("--generate")) {
     await generateCourse(true);
+    await generateAssets();
+    await importKart(true);
   } else {
     await buildKart3d();
   }

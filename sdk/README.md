@@ -42,7 +42,7 @@ the required preview profile, limits and base-color rendering reductions.
 SDK 0.6.0 / `effects-3d-preview-1` adds
 [premultiplied and additive scene-space effects](../docs/3d-effects.md), with
 independent depth-test/write controls. Both SDKs use `gfx3d.effect_material`;
-CPU rendering remains the default. See `examples/effects`.
+CPU rendering remains the default. See `examples/effects` and `examples/kart3d`.
 
 ## Start a game
 

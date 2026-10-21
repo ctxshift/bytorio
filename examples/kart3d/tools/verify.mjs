@@ -60,7 +60,7 @@ function draw({ game, runtime }) {
 }
 const reference = await pair("odin");
 const state = () =>
-  Array.from(new Int32Array(reference.game.memory.buffer, reference.game.game_inspect(), 27));
+  Array.from(new Int32Array(reference.game.memory.buffer, reference.game.game_inspect(), 30));
 const masks = [],
   samples = [],
   states = [];
@@ -83,6 +83,8 @@ function record(mask, force = false) {
   const height =
     course[segment][1] + (course[(segment + 1) % course.length][1] - course[segment][1]) * fraction;
   assert.equal(s[26], Math.floor(height * 256), "kart follows interpolated course elevation");
+  assert(s[28] >= 0 && s[28] <= 48, "fixed particle pool stays bounded");
+  assert(s[29] >= 1 && s[29] <= 8, "LOD decisions include the player and at most eight karts");
   if (masks.length % 30 === 0 || force) {
     samples.push({ index: masks.length - 1, ...draw(reference) });
     states.push([masks.length, ...s]);
@@ -111,6 +113,7 @@ const charged = state();
 assert.equal(charged[7], 2, "deliberate countersteering charges drift");
 record(4, true);
 assert(state()[11] > 0, "charged release awards mini-turbo");
+assert(state()[28] > 0, "drift/boost emits scene-space effects");
 for (let i = 0; i < 160; i++) {
   record(4 | 2);
 }
@@ -121,6 +124,12 @@ for (let i = 0; i < 60; i++) {
 }
 assert.equal(state()[5], 0, "braking stops the kart");
 record(32768, true);
+assert.equal(state()[28], 0, "restart clears live particles");
+for (const expected of [1, 2, 0]) {
+  record(0);
+  record(8192 | 16, true);
+  assert.equal(state()[27], expected, "Space+Q cycles low/high/automatic detail");
+}
 const input = resolve(output, "race.inputs");
 await writeFile(input, masks.join("\n") + "\n");
 await writeFile(
@@ -156,13 +165,51 @@ const fields = [
 const stateExpressions = [
   ...fields.map((field) => `s.${field}`),
   "math.floor(scene.sample(s.distance,s.lateral)[2]*256)",
+  "polish.inspect()[1]",
+  "polish.inspect()[2]",
+  "polish.inspect()[3]",
 ];
 const original = await readFile(resolve(root, "luau/build/web/game.luau"), "utf8");
 // Bundle source contains the authored game module; instrument its unique return.
 const needle = "return { init = init, update = update, draw = draw }";
 assert.equal(original.split(needle).length, 2, "one game lifecycle return");
-const checks = states.map((row) => `{${row.join(",")}}`).join(",\n");
-const wrapper = `local checks = {${checks}}\nlocal checkIndex, verificationTick = 1, 0\nlocal function verifiedUpdate(dt: number)\n update(dt)\n verificationTick += 1\n local expected = checks[checkIndex]\n if expected and expected[1] == verificationTick then\n local actual = {${stateExpressions.join(",")}}\n for i,value in actual do assert(value == expected[i+1], "racing state mismatch " .. verificationTick .. "/" .. i) end\n checkIndex += 1\n end\nend\nreturn {init=init,update=verifiedUpdate,draw=draw}`;
+// Base-36 text preserves every integer exactly while keeping development-only
+// expectations within the same source ceiling as the shipping cartridge.
+const checks = states
+  .map((row) => JSON.stringify(row.map((value) => value.toString(36)).join(",")))
+  .join(",\n");
+const wrapper = `local checks = {${checks}}
+local checkIndex, verificationTick = 1, 0
+local function expectedAt(index: number)
+    local encoded = checks[index]
+    if not encoded then return nil end
+    local result = {}
+    for word in string.gmatch(encoded, "[^,]+") do
+        local sign = 1
+        if string.sub(word, 1, 1) == "-" then
+            sign = -1
+            word = string.sub(word, 2)
+        end
+        local value = tonumber(word, 36)
+        assert(value ~= nil, "invalid replay expectation")
+        table.insert(result, value * sign)
+    end
+    return result
+end
+local expected = expectedAt(checkIndex)
+local function verifiedUpdate(dt: number)
+    update(dt)
+    verificationTick += 1
+    if expected and expected[1] == verificationTick then
+        local actual = {${stateExpressions.join(",")}}
+        for i, value in actual do
+            assert(value == expected[i+1], "racing state mismatch " .. verificationTick .. "/" .. i)
+        end
+        checkIndex += 1
+        expected = expectedAt(checkIndex)
+    end
+end
+return {init=init,update=verifiedUpdate,draw=draw}`;
 const verifiedSource = Buffer.from(original.replace(needle, wrapper));
 const luau = await pair("luau", verifiedSource);
 let sampleIndex = 0;
@@ -337,6 +384,7 @@ try {
           prefix + ".rgba",
         ]);
         const bytes = await readFile(prefix + ".rgba");
+        await writeFile(prefix + "-web.rgba", new Uint8Array(image.bytes));
         assert.equal(bytes.length, image.bytes.length);
         let changed = 0,
           significant = 0,

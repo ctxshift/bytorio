@@ -4,11 +4,14 @@ import "base:runtime"
 import "core:math"
 
 // Optional development state, outside the cartridge ABI.
-inspection: [27]i32
+inspection: [30]i32
 @(export)
 game_inspect :: proc "c" () -> u32 {
     context = runtime.default_context()
     position, _ := sample(s.distance, s.lateral)
+    active, close := i32(0), i32(0)
+    for particle in particles { if particle.age < PARTICLE_LIFETIME { active += 1 } }
+    for value in detail_near { if value { close += 1 } }
     inspection = {
         i32(s.tick),
         i32(s.elapsed),
@@ -37,6 +40,9 @@ game_inspect :: proc "c" () -> u32 {
         i32(s.rivals[5]),
         i32(s.rivals[6]),
         i32(math.floor(position[1] * 256)),
+        i32(detail),
+        active,
+        close,
     }
     return u32(uintptr(&inspection))
 }

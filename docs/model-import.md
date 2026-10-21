@@ -13,6 +13,15 @@ mise run byt -- build my-game
 ```
 
 The generated directory contains `model.json`, `model.luau` and `model.odin`.
+Odin package names derive from model content so different imported assets can
+coexist. Luau uses compact numeric vertex rows and RGBA words, expanding typed
+vertices once during creation; this avoids repeated record keys and byte entries
+in the source budget. Draws continue to reuse immutable host resources.
+
+For a solid atlas color, author UVs at the center of a texel. A constant UV on
+a texel boundary can round toward either neighboring texel during GPU
+perspective interpolation, producing driver-dependent speckling. The racing
+asset generator uses explicit texel centers and checks that property on import.
 Keep it dedicated to generated files. Both language files may remain there:
 each compiler consumes its own language. Reimport after changing the artist asset;
 edit the game source to animate or position instances. No external model or image

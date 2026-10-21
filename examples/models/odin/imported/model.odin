@@ -1,5 +1,5 @@
 // Generated model. Reimport geometry; animate local transforms in game code.
-package model
+package model_079abd8e9645
 
 import byt "sdk:bytorio"
 import data "sdk:data"

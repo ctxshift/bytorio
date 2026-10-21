@@ -16,8 +16,7 @@ KART_COLORS := [8]u32 {
     0xff62c8f5,
 }
 chunks: [12]g.Mesh
-bodies: [8]g.Mesh
-wheel, ground, pickup_mesh, spark, shadow: g.Mesh
+ground, pickup_mesh, spark: g.Mesh
 vertices: [dynamic]g.Vertex
 indices: [dynamic]u32
 
@@ -195,113 +194,12 @@ build_scene :: proc() {
     quad({-1.1, 1, 3.51}, {1.1, 1, 3.51}, {1.1, 4.4, 3.51}, {-1.1, 4.4, 3.51}, 0xff405c78)
     triangle({0, 16.1, 0}, {0, 17.8, 0}, {2.5, 17.1, 0}, 0xff3a4de0)
     ground = finish_mesh()
-    for color, i in KART_COLORS {
-        box(0, 0.26, 0, 1.6, 0.36, 2.25, color)
-        box(0, 0.58, 0.63, 1.35, 0.3, 0.75, color)
-        box(0, 0.29, -1.12, 1.85, 0.26, 0.22, 0xff363a43)
-        box(0, 0.58, -0.44, 0.95, 0.48, 0.3, 0xff34313b)
-        box(0, 0.79, -0.12, 0.65, 0.58, 0.55, shade(color, 62))
-        box(0, 1.3, -0.12, 0.68, 0.48, 0.63, 0xff92bce9)
-        quad(
-            {-0.33, 1.25, 0.05},
-            {-0.58, 0.96, 0.48},
-            {-0.43, 0.88, 0.48},
-            {-0.18, 1.14, 0.05},
-            0xff92bce9,
-        )
-        quad(
-            {0.18, 1.14, 0.05},
-            {0.43, 0.88, 0.48},
-            {0.58, 0.96, 0.48},
-            {0.33, 1.25, 0.05},
-            0xff92bce9,
-        )
-        if i % 4 == 0 {
-            crown(0, 1.44, -0.2, 1.15, 0.65, 1.05, 0xffad3b65)
-            for spike in 0 ..< 4 {
-                angle := f64(spike) * math.PI / 2
-                pyramid(
-                    math.sin(angle) * 0.38,
-                    1.85,
-                    -0.2 + math.sin(angle + math.PI / 2) * 0.35,
-                    0.46,
-                    0.43,
-                    0.46,
-                    0xffbd4c78,
-                )
-            }
-            quad(
-                {-0.38, 1.37, -0.43},
-                {-0.79, 0.83, -1.28},
-                {0, 0.69, -1.08},
-                {0.15, 1.29, -0.44},
-                0xff2635d8,
-            )
-            quad(
-                {0.15, 1.29, -0.44},
-                {0, 0.69, -1.08},
-                {0.72, 0.77, -1.18},
-                {0.38, 1.37, -0.43},
-                0xff394df8,
-            )
-        } else if i % 4 == 1 {
-            crown(0, 1.42, -0.17, 1.03, 0.62, 0.9, 0xff2989de)
-            pyramid(-0.32, 1.86, -0.1, 0.36, 0.48, 0.42, 0xff2473bf)
-            pyramid(0.32, 1.86, -0.1, 0.36, 0.48, 0.42, 0xff2473bf)
-            pyramid(0.35, 0.72, -0.93, 0.48, 0.65, 0.6, 0xffdde8ef)
-        } else if i % 4 == 2 {
-            box(0, 1.49, -0.17, 0.96, 0.5, 0.83, 0xff46b358)
-            pyramid(0, 1.99, -0.17, 0.18, 0.36, 0.18, 0xff55dfb5)
-            quad(
-                {-0.3, 1.6, 0.251},
-                {0.3, 1.6, 0.251},
-                {0.3, 1.8, 0.251},
-                {-0.3, 1.8, 0.251},
-                0xffd9f249,
-            )
-        } else {
-            crown(0, 1.4, -0.17, 1.08, 0.75, 0.98, 0xffe67835)
-            pyramid(0, 2.01, -0.17, 0.18, 0.32, 0.65, 0xff384ddf)
-            quad(
-                {-0.34, 1.53, 0.31},
-                {0.34, 1.53, 0.31},
-                {0.34, 1.76, 0.31},
-                {-0.34, 1.76, 0.31},
-                0xff493d2a,
-            )
-        }
-        bodies[i] = finish_mesh()
-    }
-    for side in 0 ..< 6 {
-        angle := f64(side) * math.PI / 3
-        next := f64(side + 1) * math.PI / 3
-        y, z := math.sin(angle) * 0.39, math.sin(angle + math.PI / 2) * 0.39
-        ny, nz := math.sin(next) * 0.39, math.sin(next + math.PI / 2) * 0.39
-        quad(
-            {-0.24, y, z},
-            {0.24, y, z},
-            {0.24, ny, nz},
-            {-0.24, ny, nz},
-            0xff29272b if side % 2 == 0 else 0xff38363a,
-        )
-        spoke := u32(0xffaebec9) if side % 2 == 0 else u32(0xff444750)
-        triangle({-0.241, 0, 0}, {-0.241, y, z}, {-0.241, ny, nz}, spoke)
-        triangle({0.241, 0, 0}, {0.241, ny, nz}, {0.241, y, z}, spoke)
-    }
-    wheel = finish_mesh()
     box(0, 0, 0, 0.65, 0.65, 0.65, 0xff52dcf5)
     box(0, 0.12, 0.34, 0.2, 0.4, 0.02, 0xffeeeeee)
     pickup_mesh = finish_mesh()
     box(0, 0, 0, 0.13, 0.15, 0.4, 0xff42cfff)
     spark = finish_mesh()
-    quad(
-        {-1.1, 0.025, -1.3},
-        {-1.1, 0.025, 1.3},
-        {1.1, 0.025, 1.3},
-        {1.1, 0.025, -1.3},
-        0xff4c4a46,
-    )
-    shadow = finish_mesh()
+
 }
 
 sample :: proc(distance: int, lane := 0) -> (p: [3]f64, yaw: f64) {

@@ -1,6 +1,6 @@
 [tasks."generate"]
 dir = "../.."
-description = "Generate the original racing course data for both SDKs"
+description = "Generate original course, assets and checked imports for both SDKs"
 run = "node examples/kart3d/tools/build.mjs --generate"
 
 [tasks."build"]

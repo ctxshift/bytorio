@@ -54,8 +54,9 @@ ownership, transaction memory, rollback and committed presentation rules apply.
 `examples/effects` contains matching gardens with cutout trees, depth-tested
 smoke and additive particles. Six shared textures/materials and a 16-slot age
 ring bound work; a fixed-size insertion sort orders particles in camera space.
-Geometry, texture and material storage is created once, independent of particle
-count or lifetime.
+The kart racer demonstrates a separate 48-slot pool, expiring particles after
+30 updates, shared fade-stage materials, and restart cleanup. Geometry, texture
+and material storage is created once, independent of particle count or lifetime.
 
 ```text
 mise run //examples/effects:build

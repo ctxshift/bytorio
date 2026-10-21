@@ -1,0 +1,119 @@
+{
+  "asset": {
+    "version": "2.0",
+    "generator": "Sunline Sprint original asset workshop"
+  },
+  "scene": 0,
+  "scenes": [
+    {
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "roadside",
+      "mesh": 0
+    }
+  ],
+  "meshes": [
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "TEXCOORD_0": 1
+          },
+          "indices": 2,
+          "material": 0
+        }
+      ]
+    }
+  ],
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5126,
+      "count": 42,
+      "type": "VEC3",
+      "min": [
+        -0.953125,
+        0,
+        -0.875
+      ],
+      "max": [
+        0.84375,
+        0.953125,
+        0.59375
+      ]
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 42,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 2,
+      "componentType": 5123,
+      "count": 66,
+      "type": "SCALAR"
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteOffset": 0,
+      "byteLength": 504
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 504,
+      "byteLength": 336
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 840,
+      "byteLength": 132
+    }
+  ],
+  "buffers": [
+    {
+      "byteLength": 972,
+      "uri": "data:application/octet-stream;base64,AAA4PwAAwD4AAACAAAAAAAAAdD8AAACAAABgPgAAwD4AABi/AABgPgAAwD4AABi/AAAAAAAAAAAAAACAAAA4PwAAwD4AAACAAAAYvwAAwD4AAMC+AAAYvwAAwD4AAMC+AAAYvwAAwD4AAMA+AAAYvwAAwD4AAMA+AABgPgAAwD4AABg/AABgPgAAwD4AABg/AAB0vwAAAAAAAJi+AABMvwAAND8AAJi+AAA0vwAAAAAAAJi+AABMvwAAAAAAACC+AABMvwAADD8AAJi+AABMvwAAAAAAAPi+AAB0vwAAAD8AAJi+AABMvwAAND8AAJi+AAAovwAAAD8AAJi+AABMvwAAsD4AAJi+AAAMPwAAAAAAAFA+AAA0PwAAND8AAFA+AABMPwAAAAAAAFA+AAA0PwAAAAAAALA+AAA0PwAADD8AAFA+AAA0PwAAAAAAAIA8AAAMPwAAAD8AAFA+AAA0PwAAND8AAFA+AABYPwAAAD8AAFA+AAA0PwAAsD4AAFA+AAAgPgAAAAAAADS/AACYPgAAND8AADS/AADQPgAAAAAAADS/AACYPgAAAAAAAAy/AACYPgAADD8AADS/AACYPgAAAAAAAGC/AAAgPgAAAD8AADS/AACYPgAAND8AADS/AADoPgAAAD8AADS/AACYPgAAsD4AADS/AACQPgAAeD8AAPA+AAB4PwAA8D4AAEg/AACQPgAAeD8AAPA+AAB4PwAA8D4AAEg/AADwPgAASD8AAJA+AAB4PwAA8D4AAEg/AACQPgAAeD8AAPA+AABIPwAAkD4AAHg/AABoPwAAKD8AAGg/AAAoPwAAaD8AACg/AAAoPwAAKD8AACg/AAAoPwAAKD8AACg/AADQPgAAKD8AANA+AAAoPwAA0D4AACg/AADQPgAAKD8AAGg/AAAoPwAAaD8AACg/AABoPwAAKD8AACg/AAAoPwAAKD8AACg/AAAoPwAAKD8AANA+AAAoPwAA0D4AACg/AADQPgAAKD8AANA+AAAoPwAAaD8AACg/AABoPwAAKD8AAGg/AAAoPwAAKD8AACg/AAAoPwAAKD8AACg/AAAoPwAA0D4AACg/AADQPgAAKD8AANA+AAAoPwAA0D4AACg/AAACAAEAAwAFAAQAAwAGAAEABwACAAQABwAIAAEACQAGAAQACQAKAAEACwAIAAQACwAFAAEAAAAKAAQADAAOAA0ADwARABAAEgAUABMAEgAVABQAFgAYABcAGQAbABoAHAAeAB0AHAAfAB4AIAAiACEAIwAlACQAJgAoACcAJgApACgA"
+    }
+  ],
+  "images": [
+    {
+      "uri": "atlas.png"
+    }
+  ],
+  "samplers": [
+    {
+      "magFilter": 9728,
+      "minFilter": 9728,
+      "wrapS": 33071,
+      "wrapT": 33071
+    }
+  ],
+  "textures": [
+    {
+      "sampler": 0,
+      "source": 0
+    }
+  ],
+  "materials": [
+    {
+      "name": "sunline_painted_atlas",
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 0
+        },
+        "metallicFactor": 0,
+        "roughnessFactor": 1
+      },
+      "alphaMode": "OPAQUE"
+    }
+  ]
+}

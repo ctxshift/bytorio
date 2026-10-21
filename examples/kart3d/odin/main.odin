@@ -27,10 +27,11 @@ camera_update :: proc(first := false) {
     target, _ := sample(s.distance + 1300, s.lateral)
     target[1] += 0.9
     if !first { g.destroy(camera) }
+    view_matrix = g.look_at(eye, target)
     camera = g.camera({
         view_projection = g.multiply(
             g.perspective(55 * math.PI / 180, 16.0 / 9, 0.2, 95),
-            g.look_at(eye, target),
+            view_matrix,
         ),
         ambient         = 1,
         fog_color       = SKY,
@@ -45,16 +46,21 @@ init :: proc() {
     byt.display(.Low)
     depths = {g.depth(320, 180), g.depth(640, 360)}
     build_scene()
+    polish_init()
+    polish_update()
     camera_update(true)
 }
 
 update :: proc(_dt: f64) {
     events := s.events
     race.step(&s, int(byt.all_buttons()))
-    if byt.pressed(.RotateLeft) { high = !high }
+    if byt.pressed(.RotateLeft) {
+        if byt.button(.Action) { detail = Detail((int(detail) + 1) % 3) } else { high = !high }
+    }
     byt.display(.High if high else .Low)
     if s.events > events { byt.sound() }
     camera_update()
+    polish_update()
     byt.debug_position(f64(s.distance % race.LAP) / 1024, f64(s.lateral) / 128)
 }
 
@@ -73,16 +79,8 @@ draw_kart :: proc(pass: gfx.Pass, index, distance, lane: int, heading := 0, hop 
     pitch := rotation_x(
         course.POINTS[((distance % race.LAP) + race.LAP) % race.LAP / race.SEGMENT][7],
     )
-    g.draw(pass, shadow, g.multiply(g.pose(p[0], p[1], p[2], yaw, 1), pitch))
     model := g.multiply(g.pose(p[0], p[1] + 0.04 + lift, p[2], yaw + f64(heading) / 512, 1), pitch)
-    g.draw(pass, bodies[index], model)
-    spin := f64(distance % 4096) / 256
-    rotation := rotation_x(spin)
-    for x in ([2]f64{-0.95, 0.95}) {
-        for z in ([2]f64{-0.72, 0.72}) {
-            g.draw(pass, wheel, g.multiply(model, g.multiply(g.pose(x, 0.35, z, 0, 1), rotation)))
-        }
-    }
+    draw_imported_kart(pass, index, model, distance, heading)
     if index == 0 && (s.charge > 0 || s.boost > 0) {
         for x in ([2]f64{-0.85, 0.85}) { g.draw(pass, spark, g.multiply(model, g.pose(x, 0.3, -1.3, 0, 1 + f64(s.charge)))) }
     }
@@ -99,6 +97,7 @@ draw :: proc() {
     g.draw(pass, ground)
     chunk := (s.distance / race.SEGMENT) % 96 / 8
     for offset in -3 ..= 3 { g.draw(pass, chunks[(chunk + offset + 12) % 12]) }
+    draw_polished_world(pass, chunk)
     for i in 1 ..< 8 { draw_kart(pass, i, s.rivals[i - 1], ((i - 1) % 3 - 1) * 370) }
     draw_kart(pass, 0, s.distance, s.lateral, s.heading + (s.drift * 45), s.hop)
     next_pickup := (s.distance / (race.SEGMENT * 12) + 1) * (race.SEGMENT * 12)
@@ -106,7 +105,10 @@ draw :: proc() {
         p, _ := sample(next_pickup, lane)
         g.draw(pass, pickup_mesh, g.pose(p[0], p[1] + 1, p[2], f64(s.tick) / 50, 1))
     }
+    draw_effects(pass)
     draw_hud(pass)
+    names := [3]string{"AUTO LOD", "LOW DETAIL", "HIGH DETAIL"}
+    gfx.text(pass, names[int(detail)], 8, 27, HUD_WHITE)
     gfx.end_pass(pass)
     gfx.present(gfx.screen())
 }
