@@ -2,6 +2,7 @@ package main
 
 import abi "../abi"
 import mixer "../audio"
+import branding "../branding"
 import cartridge "../cartridge"
 import core "../core"
 import gpu "../gpu/native"
@@ -563,7 +564,7 @@ run :: proc() -> int {
 
             return error(string(sdl.GetError()))
         }
-        title := "Console player — Odin"
+        title := branding.PLAYER_TITLE
         if packaged {
 
             title = cart.title

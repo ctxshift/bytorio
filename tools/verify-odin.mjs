@@ -65,6 +65,7 @@ try {
     () => globalThis.playerStatus?.ready || globalThis.playerStatus?.error,
   );
   assert.equal(await page.evaluate(() => globalThis.playerStatus.error), "");
+  assert.equal(await page.title(), "Bytorio player");
   assert.equal(await page.evaluate(() => globalThis.crossOriginIsolated), false);
   await page.getByRole("button", { name: "Start game" }).click();
   await page.waitForFunction(

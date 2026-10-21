@@ -10,8 +10,8 @@ Luau executor, renderer and audio; these are runtime components, not game data.
 From the repository root:
 
 ```text
-npm run console -- pack my-game
-npm run console -- pack my-game --output dist/my-game.png --cover art/cover.png
+npm run byt -- pack my-game
+npm run byt -- pack my-game --output dist/my-game.png --cover art/cover.png
 ```
 
 `build`, `run` and `watch` also produce `build/game.png`, with identical copies

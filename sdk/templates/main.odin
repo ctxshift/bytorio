@@ -38,5 +38,5 @@ update :: proc(dt: f64) {
 draw :: proc() {
     console.clear(console.rgb(23, 32, 46))
     console.sprite(0, int(x), int(y))
-    console.text("HELLO, CONSOLE!", 8, 7, console.rgb(244, 236, 214))
+    console.text("__STARTER_MESSAGE__", 8, 7, console.rgb(244, 236, 214))
 }

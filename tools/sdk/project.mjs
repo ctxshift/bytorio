@@ -11,6 +11,7 @@ import { decodeCartridge } from "../../runtime/odin/web/cartridge.js";
 import { formatSource } from "../code-tools.mjs";
 import { exportPlayer } from "../player-export.mjs";
 import { tool, task } from "../toolchain.mjs";
+import { branding } from "../branding.mjs";
 
 export const repo = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const contract = JSON.parse(await readFile(resolve(repo, "sdk/contract.json"), "utf8"));
@@ -119,7 +120,7 @@ export async function createProject(path, language = "luau") {
       {
         sdk: contract.sdkVersion,
         profile: contract.profile,
-        title: "Hello, Console!",
+        title: branding.starterTitle,
         language,
         entry: language === "luau" ? "src/main.luau" : "src",
         assets: "assets.json",
@@ -145,9 +146,11 @@ export async function createProject(path, language = "luau") {
       resolve(project, ".vscode/settings.json"),
     );
   }
-  await copyFile(
-    resolve(repo, `sdk/templates/main.${language === "luau" ? "luau" : "odin"}`),
-    resolve(project, `src/main.${language === "luau" ? "luau" : "odin"}`),
+  const extension = language === "luau" ? "luau" : "odin";
+  const template = await readFile(resolve(repo, `sdk/templates/main.${extension}`), "utf8");
+  await writeFile(
+    resolve(project, `src/main.${extension}`),
+    template.replaceAll("__STARTER_MESSAGE__", branding.starterMessage),
   );
   const shared = JSON.parse(
     await readFile(resolve(repo, "examples/rpg-shared/assets.json"), "utf8"),
@@ -329,7 +332,7 @@ export async function buildProject(path, options = {}) {
     luau = spec.language === "luau";
   const coverPath = options.cover ? resolve(options.cover) : spec.cover;
   const png = encodeCartridge({
-    title: spec.title || "Console game",
+    title: spec.title || branding.gameTitle,
     profile: spec.profile,
     language: spec.language,
     display: spec.display,
@@ -394,7 +397,7 @@ export async function buildProject(path, options = {}) {
         {
           sdk: spec.sdk,
           language: spec.language,
-          title: spec.title || "Console game",
+          title: spec.title || branding.gameTitle,
           display: spec.display,
         },
         null,
@@ -403,7 +406,7 @@ export async function buildProject(path, options = {}) {
     );
     if (platform === "web") {
       const html = await readFile(resolve(target, "player.html"), "utf8");
-      const title = String(spec.title || "Console game")
+      const title = String(spec.title || branding.gameTitle)
         .replaceAll("&", "&amp;")
         .replaceAll("<", "&lt;")
         .replaceAll(">", "&gt;");

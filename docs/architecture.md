@@ -1,4 +1,4 @@
-# Architecture
+# Bytorio architecture
 
 Status: target design, updated 2026-10-19. The runtime is Odin, with Luau as the default cartridge language and Odin also supported. The [SDK specification](cartridge-spec.md) supersedes the earlier Odin-only authoring direction in [the language decision](adr/0001-use-odin-for-games-and-runtime.md). The native/browser RPG and racing examples use the shared SDKs. The original C++ player has been removed. C++ remains only for the Luau compiler/VM executor and analyzer. Broader profile features below are still proposed.
 
@@ -6,7 +6,10 @@ Status: target design, updated 2026-10-19. The runtime is Odin, with Luau as the
 
 The project is an independent fantasy console for making and sharing small games. Its development workflow should offer a short creative loop using ordinary source files, modern editors, command-line tools, and AI agents.
 
-The repository codename is temporary; the final product name is undecided. Use neutral terms such as console, runtime, SDK, and cartridge in prose and code comments. Avoid deriving API namespaces, file extensions, package identifiers, or format magic from the codename. Command names below are placeholders, not branding decisions. Keep future user-facing branding in one metadata location rather than scattering name literals through the implementation.
+The product is **Bytorio**, its website is **https://bytor.io**, and its developer
+CLI is `byt`. Product identity is defined in `package.json`; the shared
+generator supplies native/browser branding. Keep API namespaces, file extensions
+and cartridge magic independent of branding so existing games remain compatible.
 
 Accepted decisions:
 
@@ -160,7 +163,7 @@ implements sharing for current games, while the indexed large-ROM design below
 remains proposed:
 
 - Use normal PNG image data for modest-sized cover art and private ancillary chunks for the indexed ROM payload. PNG defines private and ancillary chunk conventions: [PNG specification](https://www.w3.org/TR/png-3/#5ChunkNamingConventions).
-- Include an early versioned cartridge directory and a bounded sequence of payload chunks before IEND, respecting PNG ordering rules. Define exact chunk names, copy-safety flags, sizes, and ordering during the format milestone; do not bake the temporary codename into them.
+- Include an early versioned cartridge directory and a bounded sequence of payload chunks before IEND, respecting PNG ordering rules. Define exact chunk names, copy-safety flags, sizes, and ordering during the format milestone; keep their encoding independent of product branding.
 - Keep payload entries independently compressed, with logical offsets mapped to physical file ranges. Preserve efficient reads without decoding cover pixels or inflating the entire ROM. Do not encode a large ROM as a gigantic pixel array or base64 text by default.
 - Keep payload, PNG container overhead, cover-decoding memory, and decoded asset budgets separate. The approximate 128/512 MB intent applies to ROM payload; specify an additional bounded wrapper allowance before freezing exact distribution byte limits. A PNG wrapper does not make the ROM materially smaller.
 - Read original bytes with the cartridge parser, not a canvas pixel round-trip or a generic image-decoder metadata API. Validate signature, chunk order, lengths, CRCs, directory mappings, payload hashes, image dimensions, and both encoded/decoded size limits before expensive work.
@@ -181,21 +184,21 @@ Default game capabilities are graphics, audio, input, cartridge reads, and saves
 
 ## SDK and automation
 
-Proposed commands, not currently implemented:
+The implemented `byt` CLI supports:
 
-| Command | Intended behavior |
+| Command | Behavior |
 | --- | --- |
-| `sdk new` | Create a small ordinary-files project |
-| `sdk dev` | Watch, import, check, restart, and serve browser preview |
-| `sdk run` | Launch the standalone native host from a source project, packed ROM, or PNG cartridge |
-| `sdk check` | Validate manifest, types, source, and assets without running |
-| `sdk test` | Execute headless scripted scenarios with bounded ticks |
-| `sdk pack` | Create a validated packed ROM and size report |
-| `sdk pack --format png` | Encode the complete ROM and cover art as one PNG cartridge |
-| `sdk export web` | Emit a static browser player and asset chunks |
-| `sdk export native` | Bundle the standalone player, cartridge, and required runtime libraries |
+| `byt new` | Create a small ordinary-files project |
+| `byt check` | Validate manifest, types, assets, ABI and first frames |
+| `byt build` | Export standalone native and browser player folders |
+| `byt pack` | Encode the game and cover art as one validated PNG cartridge |
+| `byt run` | Build and launch a native or browser game project |
+| `byt watch` | Rebuild after edits; restart native games or serve browser exports |
 
-`sdk` is a neutral executable placeholder. The player must support opening/dropping a PNG cartridge directly; using the SDK is not a requirement for players.
+Run the CLI from this checkout with `mise run byt` or `npm run byt --`.
+The player supports opening/dropping a PNG cartridge directly; using the SDK is
+not a requirement for players. Indexed asset exports and game-authored headless
+test scenarios remain future work.
 
 Provide readable errors plus structured diagnostics with source paths, lines, severity, and stable codes. Return meaningful exit codes. Support deterministic test inputs, tick limits, state assertions, screenshots through a graphics-capable test host, and offline audio captures. Headless state tests alone do not validate rendering or browser audio.
 

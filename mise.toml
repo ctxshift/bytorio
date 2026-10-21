@@ -38,6 +38,10 @@ run = ["npm run format:js:check", "node tools/format-code.mjs --check"]
 description = "Generate shared console and resource constants"
 run = "node tools/generate-constants.mjs"
 
+[tasks.byt]
+description = "Run the Bytorio developer CLI"
+run = "node tools/byt.mjs"
+
 [tasks."generate:check"]
 description = "Check generated constants against their contracts"
 run = "node tools/generate-constants.mjs --check"

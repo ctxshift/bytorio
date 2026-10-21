@@ -17,8 +17,8 @@ The standalone player accepts the corresponding `--fps 60`, `--fps 144`,
 `--fps uncapped`, and `--fps native` arguments. The SDK launcher supports them:
 
 ```sh
-mise exec -- npm run console -- run my-game --native --fps uncapped
-mise exec -- npm run console -- run my-game --web --fps native
+mise exec -- npm run byt -- run my-game --native --fps uncapped
+mise exec -- npm run byt -- run my-game --web --fps native
 ```
 
 For web launches, the CLI prints a URL containing the selected policy. These are

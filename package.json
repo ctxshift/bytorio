@@ -1,5 +1,11 @@
 {
-  "name": "console-dev-tools",
+  "name": "bytorio",
+  "displayName": "Bytorio",
+  "description": "A portable fantasy game console with Luau and Odin SDKs",
+  "homepage": "https://bytor.io",
+  "bin": {
+    "byt": "tools/byt.mjs"
+  },
   "private": true,
   "type": "module",
   "scripts": {
@@ -21,7 +27,7 @@
     "test:racing": "mise run test:racing",
     "bench:racing": "node experiments/racing/benchmark.mjs",
     "serve:racing": "node tools/serve.mjs build/racing-player/web",
-    "console": "node tools/console.mjs",
+    "byt": "node tools/byt.mjs",
     "test:sdk": "mise run test:sdk",
     "test:cartridge": "mise run test:cartridge",
     "generate:resources": "mise run generate",

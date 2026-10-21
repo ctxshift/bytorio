@@ -31,7 +31,7 @@ end
 local function draw()
     console.clear(console.rgb(23, 32, 46))
     console.sprite(0, x, y)
-    console.text("HELLO, CONSOLE!", 8, 7, console.rgb(244, 236, 214))
+    console.text("__STARTER_MESSAGE__", 8, 7, console.rgb(244, 236, 214))
 end
 local game: console.Game = { init = init, update = update, draw = draw }
 return game

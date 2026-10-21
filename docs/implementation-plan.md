@@ -1,8 +1,8 @@
-# Implementation plan
+# Bytorio implementation plan
 
 Status: updated 2026-10-19. **Luau is the default cartridge language; Odin cartridges are also supported.** The runtime remains Odin. [SDK 0.2.0](../sdk/README.md) publishes the shared [resource profile](resource-profile.md), retaining the [ABI 1 adapter](cartridge-spec.md). The C++ reference player is retired; C++ remains only for Luau support. Larger indexed ROMs and 3D remain later work.
 
-Keep the standalone native requirement, browser target, single display with 640×360 and 320×180 modes, mostly 2D scope, approximate 128/512 MB package goals, and complete PNG cartridges. The [DS/3DS comparison](target-comparison.md) is advisory; the language change does not expand fidelity scope. The product name remains undecided; use neutral terminology and treat `sdk` command names as placeholders.
+Keep the standalone native requirement, browser target, single display with 640×360 and 320×180 modes, mostly 2D scope, approximate 128/512 MB package goals, and complete PNG cartridges. The [DS/3DS comparison](target-comparison.md) is advisory; the language change does not expand fidelity scope. The product is Bytorio, its website is https://bytor.io, and its developer CLI is `byt`. Product metadata lives in `package.json`; protocol and SDK names remain compatible.
 
 ## Current evidence
 
@@ -322,7 +322,7 @@ future work.
 - Implement valid PNG covers plus private ancillary directory/payload chunks carrying the complete ROM. Preserve exact game-module bytes and save identity across wrapper conversions.
 - Support native open/drop and browser file-picker/drop without requiring the SDK. Read local payload ranges without full cover decode or ROM extraction.
 - Add isolated, failure-aware native/browser saves and explicit byte/memory ceilings.
-- Provide provisional `sdk pack`, PNG packing, and native/web exports.
+- Provide `byt pack`, PNG packing, and native/web exports.
 
 Exit: small and near-512 MB synthetic payloads round-trip with bounded memory. Test malformed PNG/index data, oversized decoded resources, stripped payloads, storage failures, unsupported profiles, and slow/offline delivery. The original-file sharing workflow is documented; image re-encoding is not guaranteed to preserve ROM data.
 

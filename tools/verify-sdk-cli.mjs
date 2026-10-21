@@ -6,17 +6,25 @@ import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:net";
 import { once } from "node:events";
 import { bundleLuau } from "./sdk/bundle.mjs";
+import { branding } from "./branding.mjs";
 const root = resolve("build/sdk-cli-verification", randomUUID());
 await mkdir(root, { recursive: true });
 const project = resolve(root, "game");
+const packageMetadata = JSON.parse(await readFile("package.json", "utf8"));
+assert.equal(packageMetadata.name, "bytorio");
+assert.deepEqual(packageMetadata.bin, { byt: "tools/byt.mjs" });
 function cli(args, status = 0) {
-  const result = spawnSync(process.execPath, ["tools/console.mjs", ...args], {
+  const result = spawnSync(process.execPath, ["tools/byt.mjs", ...args], {
     encoding: "utf8",
     timeout: 30000,
   });
   assert.equal(result.status, status, result.stdout + "\n" + result.stderr);
   return result;
 }
+const help = cli(["--help"]).stdout;
+assert.match(help, /Bytorio SDK/);
+assert.match(help, /https:\/\/bytor\.io/);
+assert.match(help, /Usage: byt new/);
 cli(["new", project]);
 assert.match(cli(["run", project, "--fps", "241"], 1).stderr, /Frame rate/);
 const editorSettings = JSON.parse(await readFile(".vscode/settings.json", "utf8"));
@@ -29,6 +37,7 @@ assert.deepEqual(
 );
 const main = resolve(project, "src/main.luau"),
   original = await readFile(main, "utf8");
+assert(original.includes('"HELLO, BYTORIO!"'), "new games contain the branded starter message");
 cli(["new", project], 1);
 assert.equal(await readFile(main, "utf8"), original, "new preserves existing projects");
 const manifest = JSON.parse(await readFile(resolve(project, "console.json"), "utf8"));
@@ -40,7 +49,7 @@ await writeFile(
 );
 const withModule = original
   .replace("--!strict", '--!strict\nlocal message = require("./message")')
-  .replace('"HELLO, CONSOLE!"', "message");
+  .replace(JSON.stringify(branding.starterMessage), "message");
 await writeFile(main, withModule);
 cli(["build", project]);
 const bundled = await readFile(resolve(project, "build/web/game.luau"), "utf8");
@@ -71,7 +80,7 @@ const port = reservation.address().port;
 await new Promise((r) => reservation.close(r));
 const watcher = spawn(
   process.execPath,
-  ["tools/console.mjs", "watch", project, "--web", "--port", String(port), "--fps", "144"],
+  ["tools/byt.mjs", "watch", project, "--web", "--port", String(port), "--fps", "144"],
   { stdio: ["ignore", "pipe", "pipe"] },
 );
 let output = "";

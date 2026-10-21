@@ -1,4 +1,4 @@
-# Console SDK 0.2.0
+# Bytorio SDK 0.2.0
 
 Both players support three [frame-rate policies](../docs/frame-pacing.md):
 a custom render cap (60 FPS by default), uncapped rendering, and native display
@@ -30,10 +30,15 @@ Run from the SDK repository root:
 ```text
 mise install
 mise exec -- npm ci
-mise exec -- npm run console -- new my-game
-mise exec -- npm run console -- check my-game
-mise exec -- npm run console -- run my-game --web
+mise exec -- npm run byt -- new my-game
+mise exec -- npm run byt -- check my-game
+mise exec -- npm run byt -- run my-game --web
 ```
+
+The command is `byt`; the npm package is named `bytorio`. From this checkout,
+`mise run byt -- <command>` and `mise exec -- npm run byt -- <command>` run the
+local CLI with the pinned tools. Product name, website and command metadata are
+in the root `package.json`.
 
 For Odin, create with `new my-game --language odin`. Projects are ordinary folders;
 they may live outside this repository. The `new` command refuses existing folders.

@@ -1,18 +1,22 @@
+#!/usr/bin/env node
 import { resolve } from "node:path";
 import { spawn } from "node:child_process";
 import { watch } from "node:fs";
 import { createProject, checkProject, buildProject, packProject } from "./sdk/project.mjs";
 import { serve } from "./serve.mjs";
 import { parseFrameRate } from "../runtime/odin/web/frame-clock.js";
+import { branding } from "./branding.mjs";
 
 const MAX_TCP_PORT = 65535;
 
 const [action, path, ...args] = process.argv.slice(2);
 const help = [
-  "Usage: node tools/console.mjs new <directory> [--language luau|odin]",
-  "       node tools/console.mjs check|build <directory>",
-  "       node tools/console.mjs pack <directory> [--output game.png] [--cover cover.png]",
-  "       node tools/console.mjs run|watch <directory> [--web|--native] [--port 8080] [--fps 60|144|native|uncapped]",
+  `${branding.name} SDK · ${branding.website}`,
+  "",
+  `Usage: ${branding.command} new <directory> [--language luau|odin]`,
+  `       ${branding.command} check|build <directory>`,
+  `       ${branding.command} pack <directory> [--output game.png] [--cover cover.png]`,
+  `       ${branding.command} run|watch <directory> [--web|--native] [--port 8080] [--fps 60|144|native|uncapped]`,
 ].join("\n");
 try {
   if (action === "--help" || action === "help" || !action) {

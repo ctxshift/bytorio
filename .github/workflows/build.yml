@@ -1,4 +1,4 @@
-name: Build and verify players
+name: Build and verify Bytorio
 
 on:
   push:

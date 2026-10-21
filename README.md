@@ -1,17 +1,21 @@
-# Fantasy console
+# Bytorio
 
-A fantasy game console focused on small, mostly 2D games with occasional low-poly 3D, a fast development loop, and modern editors and AI tooling.
+[Bytorio](https://bytor.io) is a fantasy game console focused on small, mostly 2D games with occasional low-poly 3D, a fast development loop, and modern editors and AI tooling.
 
 **[SDK 0.2.0](sdk/README.md)** provides typed Luau and Odin authoring APIs,
 generated cartridge entry points, validated sprite/font assets, and a common
 `new` / `check` / `build` / `run` / `watch` CLI. Start with
-`npm run console -- new my-game`, then `npm run console -- run my-game --web`.
+`npm run byt -- new my-game`, then `npm run byt -- run my-game --web`.
 The [resource profile](docs/resource-profile.md) publishes typed resources,
 explicit graphics passes and scheduled audio/synthesis on both hosts.
 The [API reference](sdk/api.md) and `mise run test` cover both SDKs, with ABI 1
 compatibility retained for existing games.
 
-`free-machine` is a temporary repository codename. The product name is undecided; use neutral terminology in documentation, code comments, APIs, and identifiers so renaming does not become a project-wide migration.
+The developer CLI is `byt`, available from this checkout with `mise run byt`
+or `npm run byt --`. Product branding is defined in `package.json` and shared
+with the native/browser players through generated metadata. Existing SDK imports,
+`console.json` project manifests and PNG cartridge formats remain compatible.
+Run `mise run generate` after editing the branding metadata.
 
 **Luau is the default cartridge language; Odin is also supported.** The runtime is Odin. The standalone native player has no webview; the browser player uses **WebAssembly**. Odin games compile into portable Wasm cartridge modules; Luau games run in the player-supplied Wasm executor. The display supports **640×360** (default) and **320×180**, with runtime switching and crisp scaling. See [display modes](docs/display-modes.md) for the cartridge interface. Games should generally fit around **128 MB**, with a maximum around **512 MB**; the implemented preview profile has smaller limits documented in the specification.
 
@@ -19,7 +23,7 @@ Distribution includes **self-contained PNG cartridges**: a viewable cartridge im
 
 The native Odin player and browser Odin/Wasm runtime load the identical game module with a movable sprite and sound. Use arrows/WASD to move and Space or click/tap for sound. The browser requires **Start game** to unlock audio. Both cartridge languages use this player; C++ is limited to the Luau compiler/VM executor and development analyzer. The original C++ reference player has been removed.
 
-See [building and running Odin](docs/odin-development.md) for prerequisites, build commands, and verification. **[PNG cartridges](docs/png-cartridges.md) are implemented** for both languages: `npm run console -- pack my-game`. Native and browser players load the same viewable PNG; both published profiles have a 2 MiB container limit. Larger indexed ROMs remain planned.
+See [building and running Odin](docs/odin-development.md) for prerequisites, build commands, and verification. **[PNG cartridges](docs/png-cartridges.md) are implemented** for both languages: `npm run byt -- pack my-game`. Native and browser players load the same viewable PNG; both published profiles have a 2 MiB container limit. Larger indexed ROMs remain planned.
 
 **The sprite RPG comparison is playable in both Luau and Odin.** Explore a village, accept a quest, fight a slime, and return a sunleaf. See [the RPG guide](docs/rpg-comparison.md) for builds, the comparison launcher, both game sources, and replay verification. Build both with `mise run build:rpg`.
 

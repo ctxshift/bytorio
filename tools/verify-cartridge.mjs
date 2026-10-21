@@ -102,7 +102,7 @@ const output = resolve(root, "shared.png");
 const cli = spawnSync(
   process.execPath,
   [
-    "tools/console.mjs",
+    "tools/byt.mjs",
     "pack",
     projects.odin,
     "--cover",

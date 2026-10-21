@@ -1,4 +1,5 @@
 import { PREVIEW_SAMPLE_RATE, resourceSchema as audioLimits } from "./constants.js";
+import { PLAYER_TITLE } from "./constants.js";
 import { prepareExecutor } from "./executor-cache.js";
 import { normalizeGraphics } from "./gpu.js";
 import * as controls from "./constants.js";
@@ -8,6 +9,9 @@ const display = canvas.getContext("2d", { alpha: false });
 const button = document.getElementById("start");
 const status = document.getElementById("status");
 const parameters = new URLSearchParams(location.search);
+if (document.title === "Game player") {
+  document.title = PLAYER_TITLE;
+}
 const smoke = parameters.has("smoke");
 let clock = new FrameClock();
 let renderFps = 60;
@@ -322,7 +326,7 @@ async function load(restart = false) {
   soundsPlayed = 0;
   globalThis.playerAudio.buffer = null;
   globalThis.playerStatus = { ready: false, error: "", ticks: 0 };
-  status.textContent = "Loading Odin player…";
+  status.textContent = `Loading ${PLAYER_TITLE}…`;
   button.disabled = true;
   worker = new Worker("./worker.js", { type: "module" });
   armWatchdog(10000);
