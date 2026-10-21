@@ -3,6 +3,10 @@
 #include <cstdint>
 
 namespace console_constants {
+constexpr auto PROFILE_EFFECTS_3D = 6u;
+constexpr auto EFFECTS_3D_SDK = 1536u;
+constexpr auto EFFECTS_3D_FEATURES = 127u;
+constexpr auto EFFECTS_3D_PROTOCOL = 8u;
 constexpr auto PROFILE_ALPHA_3D = 5u;
 constexpr auto ALPHA_3D_SDK = 1280u;
 constexpr auto ALPHA_3D_FEATURES = 63u;

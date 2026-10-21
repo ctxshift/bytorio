@@ -29,6 +29,7 @@ mise run validate //examples/kart3d:test
 | [billboards](billboards/README.md) | Billboard and alpha-cutout garden | 8086 |
 | [hello](hello/README.md) | Minimal native/browser sprite and sound | 8087 |
 | [resources](resources/README.md) | Explicit graphics and audio resources | 8088 |
+| [effects](effects/README.md) | Depth-tested smoke and additive particles | 8089 |
 
 The projects inherit pinned tools and shared dependency tasks from the root.
 Build/check tasks use the repository as their explicit working directory when

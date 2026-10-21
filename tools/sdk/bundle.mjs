@@ -3,6 +3,8 @@ import { resolve, dirname, relative, sep } from "node:path";
 import { formatSource } from "../code-tools.mjs";
 import { PROFILE_ALPHA_3D } from "../../runtime/odin/web/constants.js";
 
+const contract = JSON.parse(await readFile(new URL("../../sdk/contract.json", import.meta.url)));
+
 // Optional SDK modules are loaded inside helpers, never during SDK initialization.
 // Older profiles keep their source budget and fail explicitly if a new helper is called.
 const SDK_MODULE_PROFILES = new Map([["billboard.luau", PROFILE_ALPHA_3D]]);
@@ -95,7 +97,7 @@ export async function bundleLuau({
   display = [640, 360],
   profile = 1,
 }) {
-  if (![1, 2, 3, 4, 5].includes(profile)) {
+  if (!contract.profiles.some(({ id }) => id === profile)) {
     throw new Error("Unsupported Luau cartridge profile");
   }
   project = await realpath(project);

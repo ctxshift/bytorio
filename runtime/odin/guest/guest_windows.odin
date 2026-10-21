@@ -467,7 +467,8 @@ negotiate_profile :: proc(game: ^Game, expected: u32) -> bool {
            profile != abi.PROFILE_RESOURCE &&
            profile != abi.PROFILE_3D &&
            profile != abi.PROFILE_TEXTURED_3D &&
-           profile != abi.PROFILE_ALPHA_3D) ||
+           profile != abi.PROFILE_ALPHA_3D &&
+           profile != abi.PROFILE_EFFECTS_3D) ||
        (expected != 0 && expected != profile) {
         return fail(game, "unsupported or mismatched cartridge profile")
     }
@@ -516,6 +517,10 @@ negotiate_profile :: proc(game: ^Game, expected: u32) -> bool {
     if profile == abi.PROFILE_TEXTURED_3D {
         values[1], values[2], values[3] =
             abi.TEXTURED_3D_SDK, abi.TEXTURED_3D_PROTOCOL, abi.TEXTURED_3D_FEATURES
+    }
+    if profile == abi.PROFILE_EFFECTS_3D {
+        values[1], values[2], values[3] =
+            abi.EFFECTS_3D_SDK, abi.EFFECTS_3D_PROTOCOL, abi.EFFECTS_3D_FEATURES
     }
     if profile == abi.PROFILE_ALPHA_3D {
         values[1], values[2], values[3] =
@@ -635,6 +640,7 @@ initialize :: proc(game: ^Game) -> bool {
         if game.profile != abi.PROFILE_3D &&
            game.profile != abi.PROFILE_TEXTURED_3D &&
            game.profile != abi.PROFILE_ALPHA_3D &&
+           game.profile != abi.PROFILE_EFFECTS_3D &&
            game.resource_protocol > abi.RESOURCE_PROTOCOL {
             return fail(game, "experimental 3D requires its explicit cartridge profile")
         }

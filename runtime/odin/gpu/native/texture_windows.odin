@@ -5,6 +5,32 @@ import gl "vendor:OpenGL"
 
 GPU_TEXTURE_CACHE_BYTES :: 32 * 1024 * 1024
 
+effect_draw :: proc(view: resources.Texture_View, first, count: i32) {
+    if !view.effect {
+        gl.DrawArrays(gl.TRIANGLES, first, count)
+        return
+    }
+    // Per-primitive depth publication preserves submission order, including
+    // overlapping triangles inside one mesh. Packed depth is never blended.
+    step := count if view.skip_depth_write else 3
+    for at := first; at < first + count; at += step {
+        buffers := [2]u32{gl.COLOR_ATTACHMENT0, gl.NONE}
+        gl.DrawBuffers(2, &buffers[0])
+        gl.Enable(gl.BLEND)
+        gl.BlendFunc(gl.ONE, gl.ONE if view.additive else gl.ONE_MINUS_SRC_ALPHA)
+        gl.DepthMask(gl.FALSE)
+        gl.DepthFunc(gl.ALWAYS if view.skip_depth_test else gl.LESS)
+        gl.DrawArrays(gl.TRIANGLES, at, step)
+        if !view.skip_depth_write {
+            buffers = {gl.NONE, gl.COLOR_ATTACHMENT1}
+            gl.DrawBuffers(2, &buffers[0])
+            gl.Disable(gl.BLEND)
+            gl.DepthMask(gl.TRUE)
+            gl.DrawArrays(gl.TRIANGLES, at, step)
+        }
+    }
+}
+
 Cached_Texture :: struct {
     texture: u32,
     bytes:   int,
@@ -27,6 +53,8 @@ bind_material :: proc(program: u32, view: resources.Texture_View) -> bool {
     gl.Uniform1i(gl.GetUniformLocation(program, "materialTexture"), 2)
     gl.Uniform1i(gl.GetUniformLocation(program, "alphaCutout"), 1 if view.cutout else 0)
     gl.Uniform1i(gl.GetUniformLocation(program, "alphaCutoff"), i32(view.alpha_cutoff))
+    gl.Uniform1i(gl.GetUniformLocation(program, "effectMaterial"), i32(view.effect))
+    gl.Uniform1i(gl.GetUniformLocation(program, "additiveMaterial"), i32(view.additive))
     gl.ActiveTexture(gl.TEXTURE2)
     if !textured {
         gl.BindTexture(gl.TEXTURE_2D, device.input[0])

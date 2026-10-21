@@ -124,6 +124,7 @@ main :: proc() {
     verify_surface_samples()
     verify_textured_meshes()
     verify_cutout_depth()
+    verify_effect_blending()
     verify_attachment_sequences()
     verify_committed_frames()
 }

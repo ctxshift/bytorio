@@ -39,6 +39,11 @@ and Odin model modules, preserving named rigid parts for game-side animation.
 Use `byt import <asset> --output <project>/src/imported`; the report identifies
 the required preview profile, limits and base-color rendering reductions.
 
+SDK 0.6.0 / `effects-3d-preview-1` adds
+[premultiplied and additive scene-space effects](../docs/3d-effects.md), with
+independent depth-test/write controls. Both SDKs use `gfx3d.effect_material`;
+CPU rendering remains the default. See `examples/effects`.
+
 ## Start a game
 
 Run from the SDK repository root:

@@ -135,6 +135,8 @@ int emit(lua_State* L) {
 
 extern "C" {
 EMSCRIPTEN_KEEPALIVE unsigned game_resource_protocol() {
+    if (game_profile() == console_constants::PROFILE_EFFECTS_3D)
+        return console_constants::EFFECTS_3D_PROTOCOL;
     if (game_profile() == console_constants::PROFILE_ALPHA_3D)
         return console_constants::ALPHA_3D_PROTOCOL;
     if (game_profile() == console_constants::PROFILE_TEXTURED_3D)

@@ -5,26 +5,32 @@ import { randomUUID } from "node:crypto";
 import { relative, resolve } from "node:path";
 import { chromium } from "./browser-timing.mjs";
 import { buildBillboards } from "../examples/billboards/tools/build.mjs";
+import { buildEffects } from "../examples/effects/tools/build.mjs";
 import { bundleLuau } from "./sdk/bundle.mjs";
 import { run, tool } from "./toolchain.mjs";
 import { odinUnitTests } from "./odin-unit-tests.mjs";
 import { serve } from "./serve.mjs";
 import { negotiateProfile } from "../runtime/odin/web/policy.js";
 import { RESOURCE_EXPORTS } from "../runtime/odin/web/constants.js";
+import { browserEffectProbes } from "./effect-probes.mjs";
 
 const gpu = process.argv.includes("--gpu");
+const effects = process.argv.includes("--effects");
 // Bound sparse perspective-raster differences between native GL and WebGL drivers.
 // Independent cutoff/depth probes and CPU/SDK comparisons remain exact.
 const GPU_DIFFERENT_PIXELS_PER_LOW_FRAME = 16;
 const GPU_MAX_CHANNEL_DELTA = 32;
-const root = resolve("build/billboard-verification", randomUUID());
+const root = resolve(
+  effects ? "examples/effects/build/validation" : "build/billboard-verification",
+  randomUUID(),
+);
 await mkdir(root, { recursive: true });
 const bundleEntry = resolve(root, "bundle.luau");
 await writeFile(
   bundleEntry,
   'local byt = require("@bytorio")\nreturn {draw=function() byt.gfx3d.billboard_model({}) end}\n',
 );
-for (const profile of [1, 2, 3, 4, 5]) {
+for (const profile of [1, 2, 3, 4, 5, 6]) {
   const bundled = (
     await bundleLuau({
       entry: bundleEntry,
@@ -34,7 +40,7 @@ for (const profile of [1, 2, 3, 4, 5]) {
       profile,
     })
   ).toString();
-  assert.equal(bundled.includes('__modules["$sdk/billboard.luau"]'), profile === 5);
+  assert.equal(bundled.includes('__modules["$sdk/billboard.luau"]'), profile >= 5);
   assert.equal(bundled.includes("This SDK helper requires cartridge profile 5"), profile < 5);
 }
 const contract = JSON.parse(await readFile("sdk/contract.json"));
@@ -71,7 +77,19 @@ for (const [name, wrong] of [
   assert.throws(() => negotiateProfile({ ...advertised, [name]: () => wrong }), /Unsupported/);
 }
 odinUnitTests("tests/3d", resolve(root, "unit.exe"));
-const projects = await buildBillboards();
+if (effects) {
+  assert.equal(
+    negotiateProfile({
+      ...advertised,
+      game_profile: () => 6,
+      game_sdk_version: () => 1536,
+      game_resource_protocol: () => 8,
+      game_required_features: () => 127,
+    }),
+    6,
+  );
+}
+const projects = await (effects ? buildEffects() : buildBillboards());
 if (gpu) {
   run(tool("odin"), ["build", "tests/gpu/native", "-o:none", `-out:${root}/device.exe`]);
   await copyFile(resolve(projects[0].project, "build/native/SDL3.dll"), resolve(root, "SDL3.dll"));
@@ -96,6 +114,9 @@ try {
   for (const { language, project } of projects) {
     const base = "/" + relative(process.cwd(), resolve(project, "build/web")).replaceAll("\\", "/");
     await page.goto(`http://127.0.0.1:${server.address().port}${base}/player.html`);
+    if (effects && gpu) {
+      await page.evaluate(browserEffectProbes);
+    }
     for (const graphics of settings) {
       for (const [name, mask] of [
         ["still", 0],
@@ -245,7 +266,12 @@ try {
           }
           if (gpu) {
             for (const stats of [native.gpuStats, web.gpuStats]) {
-              assert(stats.materialUploads > 0 && stats.materialUploads <= 32);
+              // Native benchmark warmups reset the cartridge eight times.
+              const maximumUploads = (effects ? 6 : 4) * 8;
+              assert(
+                stats.materialUploads > 0 && stats.materialUploads <= maximumUploads,
+                JSON.stringify({ language, graphics, name, stats }),
+              );
               assert(stats.materialCacheHits > stats.materialUploads);
               if (graphics.residentMeshes) {
                 assert(stats.meshUploads > 0 && stats.meshUploads <= 32);
@@ -279,5 +305,5 @@ await writeFile(
   JSON.stringify({ status: "passed", gpu, cases: results }, null, 2),
 );
 console.log(
-  `Billboards passed ${results.length} SDK/host/display/orbit/quality/packaging cases (${gpu ? "GPU" : "CPU"}).`,
+  `${effects ? "Effects" : "Billboards"} passed ${results.length} SDK/host/display/orbit/quality/packaging cases (${gpu ? "GPU" : "CPU"}).`,
 );

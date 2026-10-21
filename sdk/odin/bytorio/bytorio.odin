@@ -13,9 +13,13 @@ PROFILE :: #config(CONSOLE_PROFILE, 1)
     PROFILE == abi.PROFILE_RESOURCE ||
     PROFILE == abi.PROFILE_3D ||
     PROFILE == abi.PROFILE_TEXTURED_3D ||
-    PROFILE == abi.PROFILE_ALPHA_3D,
+    PROFILE == abi.PROFILE_ALPHA_3D ||
+    PROFILE == abi.PROFILE_EFFECTS_3D,
 )
-when PROFILE == abi.PROFILE_ALPHA_3D {
+when PROFILE == abi.PROFILE_EFFECTS_3D {
+    VERSION :: "0.6.0"
+    VERSION_WORD :: u32(abi.EFFECTS_3D_SDK)
+} else when PROFILE == abi.PROFILE_ALPHA_3D {
     VERSION :: "0.5.0"
     VERSION_WORD :: u32(abi.ALPHA_3D_SDK)
 } else when PROFILE == abi.PROFILE_TEXTURED_3D {
@@ -332,6 +336,7 @@ game_abi :: proc "c" () -> u32 {
 game_profile :: proc "c" () -> u32 { return PROFILE }
 @(export)
 game_required_features :: proc "c" () -> u32 {
+    if PROFILE == abi.PROFILE_EFFECTS_3D { return abi.EFFECTS_3D_FEATURES }
     if PROFILE == abi.PROFILE_ALPHA_3D { return abi.ALPHA_3D_FEATURES }
     if PROFILE == abi.PROFILE_TEXTURED_3D { return abi.TEXTURED_3D_FEATURES }
     return(
@@ -451,6 +456,7 @@ game_error_length :: proc "c" () -> u32 {
 }
 @(export)
 game_resource_protocol :: proc "c" () -> u32 {
+    if PROFILE == abi.PROFILE_EFFECTS_3D { return abi.EFFECTS_3D_PROTOCOL }
     if PROFILE == abi.PROFILE_ALPHA_3D { return abi.ALPHA_3D_PROTOCOL }
     if PROFILE == abi.PROFILE_TEXTURED_3D { return abi.TEXTURED_3D_PROTOCOL }
     return abi.PREVIEW_3D_PROTOCOL if PROFILE == abi.PROFILE_3D else abi.RESOURCE_PROTOCOL

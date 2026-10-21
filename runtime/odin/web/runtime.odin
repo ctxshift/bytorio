@@ -36,7 +36,7 @@ when #config(GPU_RASTER, false) {
         read_frame_gpu :: proc "c" (color, depth, preview, mask, width, height, low, high: u32) -> u32 ---
         publish_frame_gpu :: proc "c" (low, high: u32) -> u32 ---
         invalidate_frame_gpu :: proc "c" () ---
-        texture_gpu :: proc "c" (pixels, width, height, low, high, address_u, address_v, cutout, alpha_cutoff: u32) ---
+        texture_gpu :: proc "c" (pixels, width, height, low, high, address_u, address_v, cutout, alpha_cutoff, effect, additive, skip_depth_test, skip_depth_write: u32) ---
         mesh_gpu :: proc "c" (low, high, data, vertices, indices, palette, model, view, light: u32, ambient: f32, textured: u32) ---
         raster_gpu :: proc "c" (vertices, count, color, depth, width, height: u32, x, y, w, h: i32, fog: u32, fog_start, fog_end: f32, border, continuation, defer_readback, mask: u32) -> u32 ---
     }
@@ -76,6 +76,10 @@ when #config(GPU_RASTER, false) {
             job.texture.address_v,
             u32(job.texture.cutout),
             job.texture.alpha_cutoff,
+            u32(job.texture.effect),
+            u32(job.texture.additive),
+            u32(job.texture.skip_depth_test),
+            u32(job.texture.skip_depth_write),
         )
         for value in job.draws {
             draw := value

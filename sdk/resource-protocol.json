@@ -1,10 +1,14 @@
 {
   "status": "published-resource-av-1",
-  "version": 7,
+  "version": 8,
   "stableVersion": 4,
   "meshProtocol": 5,
   "texturedProtocol": 6,
   "alphaProtocol": 7,
+  "effectProtocol": 8,
+  "materialEffect": 2,
+  "blendAlpha": 0,
+  "blendAdditive": 1,
   "materialCutout": 1,
   "defaultAlphaCutoff": 128,
   "maxAlphaCutoff": 255,
@@ -119,7 +123,8 @@
     "create_textured_mesh": 71,
     "create_material": 72,
     "draw_textured_mesh": 73,
-    "create_cutout_material": 74
+    "create_cutout_material": 74,
+    "create_effect_material": 75
   },
   "formats": {
     "index8": 1,
@@ -530,6 +535,7 @@
     ],
     "create_textured_mesh": ["vertices", "indices", "reserved", "reserved", "reserved", "reserved", "reserved", "reserved"],
     "create_material": ["texture", "addressU", "addressV", "reserved", "reserved", "reserved", "reserved", "reserved"],
+    "create_effect_material": ["texture", "addressU", "addressV", "blend", "depthTest", "depthWrite", "reserved", "reserved"],
     "create_cutout_material": ["texture", "addressU", "addressV", "alphaCutoff", "reserved", "reserved", "reserved", "reserved"],
     "draw_textured_mesh": ["material", "reserved", "reserved", "reserved", "reserved", "reserved", "reserved", "reserved"],
     "draw_mesh": [

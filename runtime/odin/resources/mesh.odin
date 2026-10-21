@@ -264,20 +264,22 @@ mesh_command :: proc(
 
         candidate.kind = .Textured_Mesh if textured else .Mesh
         candidate.vertex_count, candidate.index_count = a[0], a[1]
-    case w.op_create_material, w.op_create_cutout_material:
+    case w.op_create_material, w.op_create_cutout_material, w.op_create_effect_material:
         texture := lookup(t, a[0], .Texture)
         cutout := op == w.op_create_cutout_material
+        effect := op == w.op_create_effect_material
         if texture == nil ||
            texture.format != w.format_rgba8 ||
            a[1] > w.addressRepeat ||
            a[2] > w.addressRepeat ||
            (cutout && a[3] > w.maxAlphaCutoff) ||
-           !padding_zero(a[4:] if cutout else a[3:]) ||
+           (effect && (a[3] > w.blendAdditive || a[4] > 1 || a[5] > 1)) ||
+           !padding_zero(a[6:] if effect else a[4:] if cutout else a[3:]) ||
            len(data) != 0 {
             return fail(r, "invalid material texture or sampler")
         }
         candidate.kind, candidate.link = .Material, a[0]
-        candidate.format = w.materialCutout if cutout else 0
+        candidate.format = w.materialEffect if effect else w.materialCutout if cutout else 0
         size = w.descriptorBytes
     case w.op_create_depth:
         if a[0] == 0 ||
@@ -418,6 +420,10 @@ raster_mesh :: proc(t: ^Transaction, mesh: ^Slot, model: Matrix, material: ^Slot
             u32le(material.data, 8),
             material.format == w.materialCutout,
             u32le(material.data, 12),
+            material.format == w.materialEffect,
+            material.format == w.materialEffect && u32le(material.data, 12) == w.blendAdditive,
+            material.format == w.materialEffect && u32le(material.data, 16) == 0,
+            material.format == w.materialEffect && u32le(material.data, 20) == 0,
         }
     }
     accelerated := prepare_raster(t, texture_view)
@@ -674,6 +680,10 @@ raster_triangle :: proc(
     fog_color := u32le(camera, w.cameraFogColorOffset)
     texture: ^Slot
     address_u, address_v: u32
+    effect := material != nil && material.format == w.materialEffect
+    additive := effect && u32le(material.data, 12) == w.blendAdditive
+    depth_test := !effect || u32le(material.data, 16) != 0
+    depth_write := !effect || u32le(material.data, 20) != 0
     if material != nil {
         texture = lookup(t, material.link, .Texture)
         address_u, address_v = u32le(material.data, 4), u32le(material.data, 8)
@@ -712,7 +722,7 @@ raster_triangle :: proc(
 
             dz := f64(f32(weights[0] * z[0] + weights[1] * z[1] + weights[2] * z[2]))
             offset := (y * int(target.width) + x) * 4
-            if dz < 0 || dz >= f32le(depth.data, offset) {
+            if dz < 0 || dz > 1 || (depth_test && dz >= f32le(depth.data, offset)) {
                 continue
             }
 
@@ -738,7 +748,8 @@ raster_triangle :: proc(
                 }
             }
             fog := clamp((dz - fog_start) / (fog_end - fog_start), 0, 1)
-            color := u32(0xff000000)
+            alpha := texel >> 24 if effect else u32(255)
+            color := alpha << 24
             for channel in 0 ..< 3 {
                 value := 0.0
                 for b, i in weights {
@@ -750,11 +761,27 @@ raster_triangle :: proc(
                 if material != nil && material.format == w.materialCutout {
                     value *= 255 / f64(max(texel >> 24, 1))
                 }
-                value = value * (1 - fog) + f64((fog_color >> u32(channel * 8)) & 255) * fog
+                fog_alpha := f64(alpha) / 255 if effect else 1
+                if additive { fog_alpha = 0 }
+                value =
+                    value * (1 - fog) +
+                    f64((fog_color >> u32(channel * 8)) & 255) * fog * fog_alpha
                 color |= u32(clamp(math.round(value), 0, 255)) << u32(channel * 8)
             }
 
-            putf(depth.data, offset, dz)
+            if effect {
+                destination := u32le(target.data, offset)
+                blended := u32(0)
+                for channel in 0 ..< 4 {
+                    shift := u32(channel * 8)
+                    source := (color >> shift) & 255
+                    dest := (destination >> shift) & 255
+                    value := source + (dest if additive else (dest * (255 - alpha) + 127) / 255)
+                    blended |= min(value, 255) << shift
+                }
+                color = blended
+            }
+            if depth_write { putf(depth.data, offset, dz) }
             put32(target.data, offset, color)
         }
     }

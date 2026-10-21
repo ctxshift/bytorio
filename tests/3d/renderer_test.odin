@@ -565,6 +565,7 @@ software_quality :: proc(test: ^testing.T) {
 
 @(test)
 shared_3d :: proc(test: ^testing.T) {
+    effect_blending_depth_and_rollback(test)
     committed_frame_transactions(test)
     resident_attachment_sequences(test)
     textured_sampling_and_depth(test)

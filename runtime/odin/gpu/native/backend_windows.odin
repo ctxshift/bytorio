@@ -266,6 +266,10 @@ raster :: proc(job: resources.Raster_Job) -> bool {
     gl.BindVertexArray(device.vao)
     gl.Disable(gl.SCISSOR_TEST)
     gl.BindFramebuffer(gl.FRAMEBUFFER, device.high)
+    gl.Disable(gl.BLEND)
+    gl.DepthMask(gl.TRUE)
+    draw_buffers := [2]u32{gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1}
+    gl.DrawBuffers(2, &draw_buffers[0])
     gl.Enable(gl.DEPTH_TEST)
     if !job.continuation {
         gl.DepthFunc(gl.ALWAYS)
@@ -306,7 +310,7 @@ raster :: proc(job: resources.Raster_Job) -> bool {
     if !bind_material(program, job.texture) { return false }
     if len(job.vertices) != 0 || len(job.draws) != 0 { device.attachment_batches += 1 }
     if len(job.draws) != 0 {
-        for draw in job.draws { if !resident_draw(draw, w, h, border) { return false } }
+        for draw in job.draws { if !resident_draw(draw, w, h, border, job.texture) { return false } }
     } else {
         stride := resources.raster_stride(job.texture)
         gl.BindBuffer(gl.ARRAY_BUFFER, device.vertices)
@@ -324,8 +328,12 @@ raster :: proc(job: resources.Raster_Job) -> bool {
                 resources.RASTER_VERTEX_BYTES,
             )
         } else { gl.DisableVertexAttribArray(2) }
-        gl.DrawArrays(gl.TRIANGLES, 0, i32(len(job.vertices) / stride))
+        effect_draw(job.texture, 0, i32(len(job.vertices) / stride))
     }
+    gl.Disable(gl.BLEND)
+    gl.DepthMask(gl.TRUE)
+    buffers := [2]u32{gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1}
+    gl.DrawBuffers(2, &buffers[0])
     gl.Disable(gl.SCISSOR_TEST)
     gl.Disable(gl.DEPTH_TEST)
     if job.defer_readback {

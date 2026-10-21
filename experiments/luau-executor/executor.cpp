@@ -257,6 +257,8 @@ EMSCRIPTEN_KEEPALIVE std::uint32_t game_profile() {
 }
 
 EMSCRIPTEN_KEEPALIVE std::uint32_t game_required_features() {
+    if (profile == console_constants::PROFILE_EFFECTS_3D)
+        return console_constants::EFFECTS_3D_FEATURES;
     if (profile == console_constants::PROFILE_ALPHA_3D)
         return console_constants::ALPHA_3D_FEATURES;
     if (profile == console_constants::PROFILE_TEXTURED_3D)
@@ -268,6 +270,8 @@ EMSCRIPTEN_KEEPALIVE std::uint32_t game_required_features() {
 }
 
 EMSCRIPTEN_KEEPALIVE std::uint32_t game_abi() {
+    if (profile == console_constants::PROFILE_EFFECTS_3D)
+        return console_constants::RESOURCE_ABI_VERSION;
     if (profile == console_constants::PROFILE_ALPHA_3D)
         return console_constants::RESOURCE_ABI_VERSION;
     if (profile == console_constants::PROFILE_TEXTURED_3D)
@@ -279,6 +283,8 @@ EMSCRIPTEN_KEEPALIVE std::uint32_t game_abi() {
 }
 
 EMSCRIPTEN_KEEPALIVE std::uint32_t game_sdk_version() {
+    if (profile == console_constants::PROFILE_EFFECTS_3D)
+        return console_constants::EFFECTS_3D_SDK;
     if (profile == console_constants::PROFILE_ALPHA_3D)
         return console_constants::ALPHA_3D_SDK;
     if (profile == console_constants::PROFILE_TEXTURED_3D)

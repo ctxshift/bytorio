@@ -32,12 +32,13 @@ Resident_Draw :: struct {
 
 // Borrowed for one synchronous execution; immutable within a draw commit.
 Texture_View :: struct {
-    pixels:               []u8,
-    version:              u64,
-    width, height:        u32,
-    address_u, address_v: u32,
-    cutout:               bool,
-    alpha_cutoff:         u32,
+    pixels:                                              []u8,
+    version:                                             u64,
+    width, height:                                       u32,
+    address_u, address_v:                                u32,
+    cutout:                                              bool,
+    alpha_cutoff:                                        u32,
+    effect, additive, skip_depth_test, skip_depth_write: bool,
 }
 
 raster_stride :: proc(texture: Texture_View) -> int {

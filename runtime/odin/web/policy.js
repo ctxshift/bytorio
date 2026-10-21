@@ -18,6 +18,10 @@ import {
   TEXTURED_3D_SDK,
   TEXTURED_3D_FEATURES,
   TEXTURED_3D_PROTOCOL,
+  PROFILE_EFFECTS_3D,
+  EFFECTS_3D_SDK,
+  EFFECTS_3D_FEATURES,
+  EFFECTS_3D_PROTOCOL,
   PROFILE_ALPHA_3D,
   ALPHA_3D_SDK,
   ALPHA_3D_FEATURES,
@@ -37,28 +41,35 @@ export function negotiateProfile(game, cartridge = null) {
   const sdk = game.game_sdk_version?.();
   const preview = profile === PROFILE_3D;
   const textured = profile === PROFILE_TEXTURED_3D;
+  const effects = profile === PROFILE_EFFECTS_3D;
   const alpha = profile === PROFILE_ALPHA_3D;
-  const expectedSdk = alpha
-    ? ALPHA_3D_SDK
-    : textured
-      ? TEXTURED_3D_SDK
-      : preview
-        ? PREVIEW_3D_SDK
-        : RESOURCE_SDK_VERSION;
-  const expectedProtocol = alpha
-    ? ALPHA_3D_PROTOCOL
-    : textured
-      ? TEXTURED_3D_PROTOCOL
-      : preview
-        ? PREVIEW_3D_PROTOCOL
-        : RESOURCE_PROTOCOL;
-  const expectedFeatures = alpha
-    ? ALPHA_3D_FEATURES
-    : textured
-      ? TEXTURED_3D_FEATURES
-      : preview
-        ? PREVIEW_3D_FEATURES
-        : RESOURCE_FEATURES;
+  const expectedSdk = effects
+    ? EFFECTS_3D_SDK
+    : alpha
+      ? ALPHA_3D_SDK
+      : textured
+        ? TEXTURED_3D_SDK
+        : preview
+          ? PREVIEW_3D_SDK
+          : RESOURCE_SDK_VERSION;
+  const expectedProtocol = effects
+    ? EFFECTS_3D_PROTOCOL
+    : alpha
+      ? ALPHA_3D_PROTOCOL
+      : textured
+        ? TEXTURED_3D_PROTOCOL
+        : preview
+          ? PREVIEW_3D_PROTOCOL
+          : RESOURCE_PROTOCOL;
+  const expectedFeatures = effects
+    ? EFFECTS_3D_FEATURES
+    : alpha
+      ? ALPHA_3D_FEATURES
+      : textured
+        ? TEXTURED_3D_FEATURES
+        : preview
+          ? PREVIEW_3D_FEATURES
+          : RESOURCE_FEATURES;
   if (profile === 1 && (game.game_resource_protocol?.() ?? 0) > RESOURCE_PROTOCOL) {
     throw new Error("Experimental 3D requires its explicit cartridge profile.");
   }
@@ -72,7 +83,7 @@ export function negotiateProfile(game, cartridge = null) {
     game.game_frame_size() !== FRAME_BYTES ||
     (profile === 1
       ? abi !== 1
-      : (!preview && !textured && !alpha && profile !== PROFILE_RESOURCE) ||
+      : (!preview && !textured && !alpha && !effects && profile !== PROFILE_RESOURCE) ||
         abi !== RESOURCE_ABI_VERSION ||
         sdk !== expectedSdk)
   ) {

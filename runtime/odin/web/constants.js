@@ -2,6 +2,10 @@
 export const PRODUCT_NAME = "Bytorio";
 export const WEBSITE = "https://bytor.io";
 export const PLAYER_TITLE = "Bytorio player";
+export const PROFILE_EFFECTS_3D = 6;
+export const EFFECTS_3D_SDK = 1536;
+export const EFFECTS_3D_FEATURES = 127;
+export const EFFECTS_3D_PROTOCOL = 8;
 export const PROFILE_ALPHA_3D = 5;
 export const ALPHA_3D_SDK = 1280;
 export const ALPHA_3D_FEATURES = 63;
@@ -87,11 +91,15 @@ export const RESOURCE_EXPORTS = Object.freeze([
   { name: "game_error_length", params: [], results: [127] },
 ]);
 export const resourceSchema = Object.freeze({
-  version: 7,
+  version: 8,
   stableVersion: 4,
   meshProtocol: 5,
   texturedProtocol: 6,
   alphaProtocol: 7,
+  effectProtocol: 8,
+  materialEffect: 2,
+  blendAlpha: 0,
+  blendAdditive: 1,
   materialCutout: 1,
   defaultAlphaCutoff: 128,
   maxAlphaCutoff: 255,
@@ -252,6 +260,7 @@ export const resourceSchema = Object.freeze({
   op_create_material: 72,
   op_draw_textured_mesh: 73,
   op_create_cutout_material: 74,
+  op_create_effect_material: 75,
   format_index8: 1,
   format_rgba8: 2,
   format_f32: 3,

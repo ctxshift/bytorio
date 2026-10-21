@@ -5,6 +5,8 @@ uniform sampler2D materialTexture;
 uniform ivec2 textureAddress;
 uniform bool alphaCutout;
 uniform int alphaCutoff;
+uniform bool effectMaterial;
+uniform bool additiveMaterial;
 uniform vec3 fogColor;
 uniform vec2 fogRange;
 layout(location = 0) out vec4 colorResult;
@@ -12,6 +14,7 @@ layout(location = 1) out vec4 depthResult;
 void main() {
     float fog = clamp((gl_FragCoord.z - fogRange.x) / (fogRange.y - fogRange.x), 0.0, 1.0);
     vec3 tinted = vertexColor;
+    float alpha = 1.0;
     if (useTexture) {
         vec2 coordinate = vec2(textureAddress.x == 1 ? fract(vertexUV.x) : clamp(vertexUV.x, 0.0, 1.0),
                                textureAddress.y == 1 ? fract(vertexUV.y) : clamp(vertexUV.y, 0.0, 1.0));
@@ -21,8 +24,10 @@ void main() {
         if (alphaCutout && int(floor(sampleColor.a * 255.0 + 0.5)) < alphaCutoff) discard;
         tinted *= sampleColor.rgb;
         if (alphaCutout) tinted /= max(sampleColor.a, 1.0 / 255.0);
+        if (effectMaterial) alpha = sampleColor.a;
     }
-    colorResult = vec4(floor(mix(tinted, fogColor, fog) * 255.0 + 0.5) / 255.0, 1.0);
+    vec3 fogTarget = fogColor * (effectMaterial ? (additiveMaterial ? 0.0 : alpha) : 1.0);
+    colorResult = vec4(floor(mix(tinted, fogTarget, fog) * 255.0 + 0.5) / 255.0, alpha);
     uint bits = floatBitsToUint(gl_FragCoord.z);
     depthResult = vec4(uvec4(bits, bits >> 8, bits >> 16, bits >> 24) & 255u) / 255.0;
 }

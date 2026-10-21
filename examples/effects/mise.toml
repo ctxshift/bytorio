@@ -1,0 +1,19 @@
+[tasks."build"]
+dir = "../.."
+description = "Build both SDK cutout, smoke and additive gardens for native/browser"
+run = "node examples/effects/tools/build.mjs"
+
+[tasks."serve"]
+env.PORT = "8089"
+description = "Serve the built effects garden comparison"
+run = "node ../../tools/serve.mjs build"
+
+[tasks.test]
+description = "Verify both effects examples on native/browser CPU"
+dir = "../.."
+run = "node tools/verify-billboards.mjs --effects"
+
+[tasks."test:gpu"]
+description = "Verify both effects examples with opt-in GPU rendering"
+dir = "../.."
+run = "node tools/verify-billboards.mjs --effects --gpu"

@@ -7,6 +7,7 @@ export type Texture = resources.Texture
 export type Mesh = resources.Mesh
 export type TexturedMesh = resources.TexturedMesh
 export type Material = resources.Material
+export type EffectOptions = resources.EffectOptions
 export type Depth = resources.Depth
 export type Camera = resources.Camera
 export type Voxel = resources.Voxel

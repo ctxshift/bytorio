@@ -133,6 +133,7 @@ local function emit(op: number, id: number, values: { number }?, bytes: buffer?)
                 or op == schema.op_create_textured_mesh
                 or op == schema.op_create_material
                 or op == schema.op_create_cutout_material
+                or op == schema.op_create_effect_material
             ) and phase ~= "draw"
         )
             or (
@@ -1247,6 +1248,13 @@ local function matrixBytes(m: math3d.Matrix): buffer
 end
 export type Vertex = { position: { number }, color: number }
 export type TexturedVertex = { position: { number }, color: number, uv: { number } }
+export type EffectOptions = {
+    blend: ("alpha" | "additive")?,
+    depth_test: boolean?,
+    depth_write: boolean?,
+    address_u: ("clamp" | "repeat")?,
+    address_v: ("clamp" | "repeat")?,
+}
 export type MaterialOptions = { address_u: ("clamp" | "repeat")?, address_v: ("clamp" | "repeat")? }
 export type CameraDesc = {
     view_projection: math3d.Matrix,
@@ -1347,6 +1355,34 @@ function gfx3d.cutout_material(
     options: MaterialOptions?
 ): Material
     return makeMaterial(texture, options, cutoff or schema.defaultAlphaCutoff)
+end
+
+function gfx3d.effect_material(texture: Texture, options: EffectOptions?): Material
+    local record = check(texture, "texture")
+    assert(record.format == schema.format_rgba8, "effect material requires an RGBA texture")
+    local opts: EffectOptions = options or {}
+    assert(
+        opts.blend == nil or opts.blend == "alpha" or opts.blend == "additive",
+        "invalid effect blend"
+    )
+    assert(
+        opts.address_u == nil or opts.address_u == "clamp" or opts.address_u == "repeat",
+        "invalid U address"
+    )
+    assert(
+        opts.address_v == nil or opts.address_v == "clamp" or opts.address_v == "repeat",
+        "invalid V address"
+    )
+    local h = reserve("material", 0, 0)
+    emit(schema.op_create_effect_material, records[h].id, {
+        record.id,
+        if opts.address_u == "repeat" then schema.addressRepeat else schema.addressClamp,
+        if opts.address_v == "repeat" then schema.addressRepeat else schema.addressClamp,
+        if opts.blend == "additive" then schema.blendAdditive else schema.blendAlpha,
+        if opts.depth_test == false then 0 else 1,
+        if opts.depth_write == true then 1 else 0,
+    })
+    return h :: Material
 end
 
 function gfx3d.depth(width: number, height: number): Depth

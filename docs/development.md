@@ -97,6 +97,9 @@ textured mesh/material path across native/browser GPU hosts, both SDKs, display
 modes and SSAA/residency settings; ordinary `test:textured3d` remains CPU-capable.
 The billboard/cutout preview uses `test:billboards` and the optional hardware gate
 `test:billboards:gpu`; see [its contract and comparison bounds](billboards.md).
+The effects garden adds `//examples/effects:test` to the CPU gate and
+`//examples/effects:test:gpu` for independent blend/depth probes and both SDKs
+on native/browser hardware; see [scene-space effects](3d-effects.md).
 `test:models` validates static glTF/GLB import, generated examples and both SDKs
 on native/browser CPU; `test:models:gpu` additionally checks optional streamed and
 resident GPU execution. See [the import subset and authoring workflow](model-import.md).

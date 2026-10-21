@@ -105,7 +105,11 @@ cached_mesh :: proc(draw: resources.Resident_Draw) -> (Cached_Mesh, bool) {
     return result, true
 }
 
-resident_draw :: proc(value: resources.Resident_Draw, width, height, border: int) -> bool {
+resident_draw :: proc(
+    value: resources.Resident_Draw,
+    width, height, border: int,
+    texture: resources.Texture_View,
+) -> bool {
     draw := value
     samples := device.surface_samples && !draw.textured
     vertex_floats := TEXTURED_RESIDENT_VERTEX_FLOATS if draw.textured else RESIDENT_VERTEX_FLOATS
@@ -163,7 +167,7 @@ resident_draw :: proc(value: resources.Resident_Draw, width, height, border: int
             i32(entry.count * surface.POINTS_PER_PATCH),
         )
     } else {
-        gl.DrawArrays(gl.TRIANGLES, 0, i32(draw.index_count))
+        effect_draw(texture, 0, i32(draw.index_count))
     }
     return true
 }

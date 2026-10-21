@@ -206,6 +206,7 @@ run = [
   {task = "test:3d"},
   {task = "test:textured3d"},
   {task = "test:billboards"},
+    {task = "//examples/effects:test"},
   {task = "test:models"},
   {task = "//examples/kart3d:test"},
   {task = "test:riverside:geometry"},

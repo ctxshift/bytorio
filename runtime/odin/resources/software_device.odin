@@ -223,8 +223,13 @@ software_raster :: proc(job: Raster_Job) -> bool {
         put32(descriptor[:], 4, job.texture.address_u)
         put32(descriptor[:], 8, job.texture.address_v)
         put32(descriptor[:], 12, job.texture.alpha_cutoff)
+        if job.texture.effect {
+            put32(descriptor[:], 12, w.blendAdditive if job.texture.additive else w.blendAlpha)
+            put32(descriptor[:], 16, u32(!job.texture.skip_depth_test))
+            put32(descriptor[:], 20, u32(!job.texture.skip_depth_write))
+        }
         local_material = Slot {
-            format = w.materialCutout if job.texture.cutout else 0,
+            format = w.materialEffect if job.texture.effect else w.materialCutout if job.texture.cutout else 0,
             kind   = .Material,
             link   = w.handleGenerationStride | 2,
             data   = descriptor[:],

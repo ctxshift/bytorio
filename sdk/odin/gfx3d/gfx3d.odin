@@ -35,6 +35,42 @@ Material_Options :: struct {
     address_u, address_v: Address_Mode,
 }
 
+Blend :: enum u32 {
+    Alpha    = w.blendAlpha,
+    Additive = w.blendAdditive,
+}
+
+Effect_Options :: struct {
+    blend:                Blend,
+    depth_test:           bool,
+    depth_write:          bool,
+    address_u, address_v: Address_Mode,
+}
+
+effect_material :: proc(
+    texture: gfx.Texture,
+    options := Effect_Options{depth_test = true},
+) -> Material {
+    if !t.check(t.Handle(texture), u32(r.Kind.Texture)) { return {} }
+    if !t.valid(
+        t.slots[(texture.id & w.handleIndexMask) - 1].format == w.format_rgba8,
+        "effect material requires an RGBA texture",
+    ) { return {} }
+    h := t.reserve(w.kindMaterial, 0)
+    args := [8]u32 {
+        texture.id,
+        u32(options.address_u),
+        u32(options.address_v),
+        u32(options.blend),
+        u32(options.depth_test),
+        u32(options.depth_write),
+        0,
+        0,
+    }
+    t.emit(w.op_create_effect_material, h, args[:])
+    return Material(h)
+}
+
 material :: proc(texture: gfx.Texture, options := Material_Options{}) -> Material {
     return make_material(texture, options, w.op_create_material, 0)
 }

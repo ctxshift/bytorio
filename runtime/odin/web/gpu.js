@@ -304,6 +304,14 @@ export async function createGpu(settings) {
     gl.uniform1i(gl.getUniformLocation(program, "materialTexture"), 2);
     gl.uniform1i(gl.getUniformLocation(program, "alphaCutout"), Number(Boolean(material?.cutout)));
     gl.uniform1i(gl.getUniformLocation(program, "alphaCutoff"), material?.alphaCutoff || 0);
+    gl.uniform1i(
+      gl.getUniformLocation(program, "effectMaterial"),
+      Number(Boolean(material?.effect)),
+    );
+    gl.uniform1i(
+      gl.getUniformLocation(program, "additiveMaterial"),
+      Number(Boolean(material?.additive)),
+    );
     gl.activeTexture(gl.TEXTURE2);
     if (!material) {
       gl.bindTexture(gl.TEXTURE_2D, input[0]);
@@ -523,6 +531,10 @@ export async function createGpu(settings) {
       addressV,
       cutout = 0,
       alphaCutoff = 0,
+      effect = 0,
+      additive = 0,
+      skipDepthTest = 0,
+      skipDepthWrite = 0,
     ) {
       queuedTexture = pixels
         ? {
@@ -535,6 +547,10 @@ export async function createGpu(settings) {
             addressV,
             cutout: Boolean(cutout),
             alphaCutoff,
+            effect: Boolean(effect),
+            additive: Boolean(additive),
+            skipDepthTest: Boolean(skipDepthTest),
+            skipDepthWrite: Boolean(skipDepthWrite),
           }
         : null;
     },
@@ -781,6 +797,9 @@ export async function createGpu(settings) {
       gl.bindVertexArray(vao);
       gl.disable(gl.SCISSOR_TEST);
       gl.bindFramebuffer(gl.FRAMEBUFFER, high.fbo);
+      gl.disable(gl.BLEND);
+      gl.depthMask(true);
+      gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1]);
       gl.enable(gl.DEPTH_TEST);
       if (!continuation) {
         gl.depthFunc(gl.ALWAYS);
@@ -834,6 +853,29 @@ export async function createGpu(settings) {
       if (batch.length || count) {
         metrics.attachmentBatches++;
       }
+      const effect = material?.effect;
+      const drawTriangles = (count) => {
+        if (!effect) {
+          gl.drawArrays(gl.TRIANGLES, 0, count);
+          return;
+        }
+        // Publish depth per primitive, preserving order inside a mesh.
+        const step = material.skipDepthWrite ? count : 3;
+        for (let first = 0; first < count; first += step) {
+          gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.NONE]);
+          gl.enable(gl.BLEND);
+          gl.blendFunc(gl.ONE, material.additive ? gl.ONE : gl.ONE_MINUS_SRC_ALPHA);
+          gl.depthMask(false);
+          gl.depthFunc(material.skipDepthTest ? gl.ALWAYS : gl.LESS);
+          gl.drawArrays(gl.TRIANGLES, first, step);
+          if (!material.skipDepthWrite) {
+            gl.drawBuffers([gl.NONE, gl.COLOR_ATTACHMENT1]);
+            gl.disable(gl.BLEND);
+            gl.depthMask(true);
+            gl.drawArrays(gl.TRIANGLES, first, step);
+          }
+        }
+      };
       if (batch.length) {
         gl.uniform1i(
           gl.getUniformLocation(program, "surfaceSamples"),
@@ -880,7 +922,7 @@ export async function createGpu(settings) {
           if (samples) {
             gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, entry.count * SURFACE_POINTS_PER_PATCH);
           } else {
-            gl.drawArrays(gl.TRIANGLES, 0, draw.indexCount);
+            drawTriangles(draw.indexCount);
           }
         }
       } else {
@@ -899,8 +941,11 @@ export async function createGpu(settings) {
           gl.disableVertexAttribArray(2);
         }
         metrics.uploadBytes += count * stride;
-        gl.drawArrays(gl.TRIANGLES, 0, count);
+        drawTriangles(count);
       }
+      gl.disable(gl.BLEND);
+      gl.depthMask(true);
+      gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1]);
       gl.bindVertexArray(vao);
       gl.disable(gl.SCISSOR_TEST);
       gl.disable(gl.DEPTH_TEST);

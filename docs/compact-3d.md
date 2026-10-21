@@ -14,6 +14,9 @@ The [static model importer](model-import.md) prepares bounded glTF/GLB geometry,
 base-color textures and named rigid hierarchies for both SDKs. Imported models
 use these ordinary mesh/material resources and CPU or opt-in GPU execution.
 
+[Scene-space effects](3d-effects.md) add premultiplied/additive materials and
+independent depth controls under SDK 0.6.0, including bounded particle examples.
+
 The separate [voxel resolution study](../experiments/voxel-resolution/README.md)
 preserves a procedural winter scene for comparing visual detail at three output
 sizes. It uses an independent renderer and does not extend the console profile.
