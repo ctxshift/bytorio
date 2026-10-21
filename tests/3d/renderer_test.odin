@@ -566,6 +566,9 @@ software_quality :: proc(test: ^testing.T) {
 @(test)
 shared_3d :: proc(test: ^testing.T) {
     textured_sampling_and_depth(test)
+    billboard_pivots_and_axes(test)
+    cutout_color_and_depth_holes(test)
+    cutout_invalid_descriptors_roll_back(test)
     textured_resource_ownership(test)
     textured_creation_rejects_old_protocols_and_invalid_data(test)
     material_texture_edits_and_budget_rollback(test)

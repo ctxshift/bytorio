@@ -165,6 +165,14 @@ run = "node tools/verify-graphics.mjs"
 description = "Build both experimental mesh and voxel cartridges for native/browser"
 run = "node tools/build-3d.mjs"
 
+[tasks."build:billboards"]
+description = "Build both SDK billboard and cutout gardens for native/browser"
+run = "node tools/build-billboards.mjs"
+
+[tasks."serve:billboards"]
+description = "Serve the built billboard garden comparison"
+run = "node tools/serve.mjs build/billboards"
+
 [tasks."build:voxel-resolution"]
 description = "Render both voxel scenes at three output resolutions"
 run = ["node experiments/voxel-resolution/render.mjs", "node experiments/voxel-resolution/river.mjs"]
@@ -239,6 +247,14 @@ run = "node tools/verify-textured-3d.mjs"
 description = "Qualify optional textured GPU execution, residency and quality on native/browser hosts"
 run = "node tools/verify-textured-gpu.mjs"
 
+[tasks."test:billboards"]
+description = "Verify billboard transforms, cutout holes and native/browser CPU parity in both SDKs"
+run = "node tools/verify-billboards.mjs"
+
+[tasks."test:billboards:gpu"]
+description = "Qualify optional GPU cutout and billboard rendering in both SDKs"
+run = "node tools/verify-billboards.mjs --gpu"
+
 [tasks."test:odin"]
 depends = ["build:odin"]
 env = {SDL_VIDEODRIVER = "dummy", SDL_AUDIODRIVER = "dummy", SDL_RENDER_DRIVER = "software"}
@@ -268,6 +284,7 @@ run = [
   {task = "test:graphics"},
   {task = "test:3d"},
   {task = "test:textured3d"},
+  {task = "test:billboards"},
   {task = "test:riverside:geometry"},
   {task = "test:audio"},
   {task = "test:synthesis"},

@@ -36,14 +36,31 @@ Material_Options :: struct {
 }
 
 material :: proc(texture: gfx.Texture, options := Material_Options{}) -> Material {
+    return make_material(texture, options, w.op_create_material, 0)
+}
+
+cutout_material :: proc(
+    texture: gfx.Texture,
+    cutoff := u32(w.defaultAlphaCutoff),
+    options := Material_Options{},
+) -> Material {
+    if !t.valid(cutoff <= w.maxAlphaCutoff, "alpha cutoff must be a byte") { return {} }
+    return make_material(texture, options, w.op_create_cutout_material, cutoff)
+}
+
+make_material :: proc(
+    texture: gfx.Texture,
+    options: Material_Options,
+    opcode, cutoff: u32,
+) -> Material {
     if !t.check(t.Handle(texture), u32(r.Kind.Texture)) { return {} }
     if !t.valid(
         t.slots[(texture.id & w.handleIndexMask) - 1].format == w.format_rgba8,
         "material requires an RGBA texture",
     ) { return {} }
     h := t.reserve(w.kindMaterial, 0)
-    args := [8]u32{texture.id, u32(options.address_u), u32(options.address_v), 0, 0, 0, 0, 0}
-    t.emit(w.op_create_material, h, args[:])
+    args := [8]u32{texture.id, u32(options.address_u), u32(options.address_v), cutoff, 0, 0, 0, 0}
+    t.emit(opcode, h, args[:])
     return Material(h)
 }
 

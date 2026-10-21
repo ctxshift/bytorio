@@ -1,5 +1,13 @@
 --!strict
 export type Matrix = { number }
+export type BillboardDesc = {
+    position: { number },
+    size: { number },
+    pivot: { number }?,
+    view: Matrix,
+    rotation: number?,
+    mode: ("facing" | "upright")?,
+}
 local api = {}
 local rounding = buffer.create(4)
 local function f32(x: number): number

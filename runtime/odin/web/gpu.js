@@ -282,6 +282,8 @@ export async function createGpu(settings) {
   const bindMaterial = (memory, program, material) => {
     gl.uniform1i(gl.getUniformLocation(program, "useTexture"), Number(Boolean(material)));
     gl.uniform1i(gl.getUniformLocation(program, "materialTexture"), 2);
+    gl.uniform1i(gl.getUniformLocation(program, "alphaCutout"), Number(Boolean(material?.cutout)));
+    gl.uniform1i(gl.getUniformLocation(program, "alphaCutoff"), material?.alphaCutoff || 0);
     gl.activeTexture(gl.TEXTURE2);
     if (!material) {
       gl.bindTexture(gl.TEXTURE_2D, input[0]);
@@ -366,8 +368,30 @@ export async function createGpu(settings) {
   return {
     gl,
     metrics,
-    queueTexture(pixels, width, height, low, high, addressU, addressV) {
-      queuedTexture = pixels ? { pixels, width, height, low, high, addressU, addressV } : null;
+    queueTexture(
+      pixels,
+      width,
+      height,
+      low,
+      high,
+      addressU,
+      addressV,
+      cutout = 0,
+      alphaCutoff = 0,
+    ) {
+      queuedTexture = pixels
+        ? {
+            pixels,
+            width,
+            height,
+            low,
+            high,
+            addressU,
+            addressV,
+            cutout: Boolean(cutout),
+            alphaCutoff,
+          }
+        : null;
     },
     queueMesh(
       memory,

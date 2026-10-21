@@ -24,6 +24,7 @@ export type Voice = { _voice: "voice" }
 export type Sample = { _resourceKind: "sample" }
 export type Wavetable = { _resourceKind: "wavetable" }
 export type Instrument = { _resourceKind: "instrument" }
+export type BillboardDesc = math3d.BillboardDesc
 export type PixelBuffer = {
     read format: "index8" | "rgba8" | "stencil8",
     read width: number,
@@ -131,6 +132,7 @@ local function emit(op: number, id: number, values: { number }?, bytes: buffer?)
                 or (op >= schema.op_audio_bus and op < schema.op_begin_3d)
                 or op == schema.op_create_textured_mesh
                 or op == schema.op_create_material
+                or op == schema.op_create_cutout_material
             ) and phase ~= "draw"
         )
             or (
@@ -1311,7 +1313,7 @@ function gfx3d.textured_mesh(vertices: { TexturedVertex }, indices: { number }):
     return h :: TexturedMesh
 end
 
-function gfx3d.material(texture: Texture, options: MaterialOptions?): Material
+local function makeMaterial(texture: Texture, options: MaterialOptions?, cutoff: number?): Material
     local record = check(texture, "texture")
     assert(record.format == schema.format_rgba8, "material requires an RGBA texture")
     local function address(value: ("clamp" | "repeat")?): number
@@ -1322,12 +1324,29 @@ function gfx3d.material(texture: Texture, options: MaterialOptions?): Material
         return if value == "repeat" then schema.addressRepeat else schema.addressClamp
     end
     local h = reserve("material", 0, 0)
-    emit(schema.op_create_material, records[h].id, {
-        record.id,
-        address(if options then options.address_u else nil),
-        address(if options then options.address_v else nil),
-    })
+    emit(
+        if cutoff ~= nil then schema.op_create_cutout_material else schema.op_create_material,
+        records[h].id,
+        {
+            record.id,
+            address(if options then options.address_u else nil),
+            address(if options then options.address_v else nil),
+            if cutoff ~= nil then integer(cutoff, 0, schema.maxAlphaCutoff) else 0,
+        }
+    )
     return h :: Material
+end
+
+function gfx3d.material(texture: Texture, options: MaterialOptions?): Material
+    return makeMaterial(texture, options, nil)
+end
+
+function gfx3d.cutout_material(
+    texture: Texture,
+    cutoff: number?,
+    options: MaterialOptions?
+): Material
+    return makeMaterial(texture, options, cutoff or schema.defaultAlphaCutoff)
 end
 
 function gfx3d.depth(width: number, height: number): Depth
@@ -1420,6 +1439,20 @@ function gfx3d.draw_textured(
 end
 function gfx3d.destroy(value: Mesh | TexturedMesh | Material | Depth | Camera | Voxel)
     destroy(value, "any")
+end
+function gfx3d.billboard_model(desc: BillboardDesc): math3d.Matrix
+    return require("./billboard").model(desc)
+end
+function gfx3d.billboard(): TexturedMesh
+    return require("./billboard").geometry(gfx3d.textured_mesh)
+end
+function gfx3d.draw_billboard(
+    pass: Pass,
+    geometry: TexturedMesh,
+    surface: Material,
+    desc: BillboardDesc
+)
+    gfx3d.draw_textured(pass, geometry, surface, gfx3d.billboard_model(desc))
 end
 api.gfx3d = table.freeze(gfx3d)
 api.gfx = table.freeze(gfx)

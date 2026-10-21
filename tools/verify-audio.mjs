@@ -560,7 +560,8 @@ try {
         const base = `./${language}/build/web/`;
         await (await fetch(`${base}audio.wasm`)).arrayBuffer();
         const context = new AudioContext({ sampleRate: 48000 });
-        await context.resume();
+        // A running mixer can advance before the capture node is constructed.
+        await context.suspend();
         await context.audioWorklet.addModule(`${base}audio-worklet.js`);
         await context.audioWorklet.addModule("./capture-worklet.js");
         const module = await WebAssembly.compile(
@@ -571,6 +572,8 @@ try {
           outputChannelCount: [2],
           processorOptions: { module },
         });
+        // Exercise setup latency: DSP time must stay at zero until capture is connected.
+        await new Promise((resolve) => setTimeout(resolve, 50));
         const capture = new AudioWorkletNode(context, "capture", {
           numberOfInputs: 1,
           outputChannelCount: [2],
@@ -602,6 +605,7 @@ try {
         });
         mixer.connect(capture);
         capture.connect(context.destination);
+        await context.resume();
         await new Promise((resolve) => setTimeout(resolve, 150));
         const stalledWorker = new Worker("./stall-worker.js");
         const workerFinished = new Promise((resolve) => {
@@ -655,7 +659,17 @@ try {
     for (let i = 0; i < pcmReference.length; i++) {
       maximumError = Math.max(maximumError, Math.abs(pcmReference[i] - result.pcm[i]));
     }
-    assert.ok(maximumError <= 1e-6, `worklet PCM error ${maximumError}`);
+    if (maximumError > 1e-6) {
+      await writeFile(
+        resolve(root, `worklet-${language}-actual.f32`),
+        Buffer.from(new Float32Array(result.pcm).buffer),
+      );
+      await writeFile(
+        resolve(root, `worklet-${language}-expected.f32`),
+        Buffer.from(new Float32Array(pcmReference).buffer),
+      );
+    }
+    assert.ok(maximumError <= 1e-6, `${language} worklet PCM error ${maximumError}; ${root}`);
     const { pcm: _pcm, ...measurement } = result;
     report.worklet[language] = { ...measurement, maximumError };
   }

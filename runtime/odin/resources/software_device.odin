@@ -222,10 +222,12 @@ software_raster :: proc(job: Raster_Job) -> bool {
         }
         put32(descriptor[:], 4, job.texture.address_u)
         put32(descriptor[:], 8, job.texture.address_v)
+        put32(descriptor[:], 12, job.texture.alpha_cutoff)
         local_material = Slot {
-            kind = .Material,
-            link = w.handleGenerationStride | 2,
-            data = descriptor[:],
+            format = w.materialCutout if job.texture.cutout else 0,
+            kind   = .Material,
+            link   = w.handleGenerationStride | 2,
+            data   = descriptor[:],
         }
         material = &local_material
     }

@@ -1,6 +1,11 @@
 import { readFile, realpath, stat } from "node:fs/promises";
 import { resolve, dirname, relative, sep } from "node:path";
 import { formatSource } from "../code-tools.mjs";
+import { PROFILE_ALPHA_3D } from "../../runtime/odin/web/constants.js";
+
+// Optional SDK modules are loaded inside helpers, never during SDK initialization.
+// Older profiles keep their source budget and fail explicitly if a new helper is called.
+const SDK_MODULE_PROFILES = new Map([["billboard.luau", PROFILE_ALPHA_3D]]);
 
 // Only literal require("@console") and relative module paths are supported.
 // Tokenization protects comments and strings from accidental source rewriting.
@@ -90,7 +95,7 @@ export async function bundleLuau({
   display = [640, 360],
   profile = 1,
 }) {
-  if (![1, 2, 3, 4].includes(profile)) {
+  if (![1, 2, 3, 4, 5].includes(profile)) {
     throw new Error("Unsupported Luau cartridge profile");
   }
   project = await realpath(project);
@@ -164,11 +169,18 @@ export async function bundleLuau({
       ) {
         throw new Error("require must use one literal module path");
       }
-      const dependency = await visit(await resolveModule(lex[i + 2].value, file));
+      const dependencyFile = await resolveModule(lex[i + 2].value, file);
+      const minimumProfile = dependencyFile.startsWith(sdkRoot + sep)
+        ? SDK_MODULE_PROFILES.get(relative(sdkRoot, dependencyFile).replaceAll("\\", "/"))
+        : undefined;
+      const unavailable = minimumProfile !== undefined && profile < minimumProfile;
+      const dependency = unavailable ? null : await visit(dependencyFile);
       edits.push({
         start: t.start,
         end: lex[i + 3].end,
-        text: `__require(${JSON.stringify(dependency)})`,
+        text: unavailable
+          ? `(error("This SDK helper requires cartridge profile ${minimumProfile}"))`
+          : `__require(${JSON.stringify(dependency)})`,
       });
       i += 3;
     }
@@ -197,7 +209,7 @@ export async function bundleLuau({
     "utf8",
   );
   if (bytes.length > 256 * 1024) {
-    throw new Error("Bundled Luau source exceeds 256 KiB");
+    throw new Error(`Bundled Luau source exceeds 256 KiB (${bytes.length} bytes)`);
   }
   return bytes;
 }

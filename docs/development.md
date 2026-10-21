@@ -85,6 +85,8 @@ resident GPU qualification report; see [measurements](riverside-console-measurem
 `mise run validate test:textured3d:gpu` additionally qualifies the experimental
 textured mesh/material path across native/browser GPU hosts, both SDKs, display
 modes and SSAA/residency settings; ordinary `test:textured3d` remains CPU-capable.
+The billboard/cutout preview uses `test:billboards` and the optional hardware gate
+`test:billboards:gpu`; see [its contract and comparison bounds](billboards.md).
 `mise run validate bench:riverside:startup` measures PNG sizes, player readiness
 and the first complete scene through native/browser CPU/GPU paths, including
 fresh, reload and same-page executor cache behavior. It retains its observer
@@ -116,9 +118,7 @@ directory and executes every check. Sources cover the shared Odin packages each
 harness imports, its own player package, build helpers and toolchain/task
 configuration. Browser assets, SDK-only edits and unrelated test packages do not
 invalidate the harnesses. Missing executables also trigger a rebuild.
-Use `mise run --force deps:trace:audio` (or the corresponding
-task) when intentionally checking a clean harness build or after modifying an
-installed tool outside mise. Test results themselves are never cached.
+Test results themselves are never cached.
 
 All-target RPG/racing builds reuse `build:odin`'s optimized native player and
 browser runtime/audio modules. They still build their own cartridges and fault
@@ -131,9 +131,8 @@ An aggregate input/output check skips the nested task graph for unchanged builds
 Its inventory must cover every player task; the regression suite checks this.
 
 Tool pins live in `.mise/toolchain.toml` so ordinary command changes in
-`mise.toml` do not invalidate compiled players. Update pins in that file. After
-an external tool override or an in-place tool installation change, use
-`mise run --force build:odin`. `test:build-tasks` checks declared inputs against
+`mise.toml` do not invalidate compiled players. Update pins in that file.
+`test:build-tasks` checks declared inputs against
 Odin imports and embedded shaders, then exercises mise invalidation in a temporary
 fixture with inexpensive substitute commands. Existing conformance suites still
 compile and execute the real players.
@@ -162,6 +161,34 @@ sample per variant, checking quest/defeat replays, native/browser parity, audio,
 diagnostics, and executor cache behavior. `bench:unified` uses the same harness
 with multiple samples for performance measurement. Old C++-specific CTest and
 `test:web` commands no longer exist.
+
+## Iteration and cache decisions
+
+Use the smallest existing validation task that exercises the changed behavior.
+Let its declared dependencies select builds; run a separate build only when the
+task's documented setup requires it. Finish the implementation before the full
+completion run. After a valid pass, repeat checks only for new edits, a failure or
+an invalid report. Preserve test workloads and production optimization settings.
+
+| Situation | Action |
+| --- | --- |
+| Ordinary source, shader, browser or fixture edit | Run the affected validation tasks normally. Mise rebuilds the owning artifacts and reuses the rest. |
+| Missing cached output | Run its owning task normally; missing declared outputs invalidate it automatically. |
+| New local import, embedded file, staged asset, or task input/output | Update the leaf task's `sources`/`outputs` and the `build:odin` aggregate when applicable. Run `mise run validate test:build-tasks` and affected conformance. |
+| Tool replaced in place, external tool override, or explicit clean-build comparison | Force the affected artifact task, such as `mise run --force deps:player:web-cpu` or `mise run --force deps:trace:audio`. Force `build:odin` only when all player artifacts need rebuilding. |
+| Suspected stale artifact despite a normal build | Retain the failing report and command journal, force the smallest owning task once, and rerun the failing check. If that changes the result, repair the missing dependency declaration and add an invalidation case. |
+
+Keep `build/` artifacts and retained reports between iterations. A blanket clean
+discards useful compiled dependencies and diagnosis evidence. Caching applies
+only to artifacts: every selected verifier still executes its assertions and
+native/browser replays. Read the task log before treating a long run as a cache
+miss; a warm suite may spend its time exercising the actual player.
+
+`.gitattributes` checks out text with LF, matching formatters and generators on
+Windows as well as other hosts. For an older checkout with CRLF drift, inspect
+the affected diff and normalize it before starting final validation. Resolve
+generated-file changes before the final run so its source fingerprint stays
+stable; a stale report is not a pass.
 
 ## Formatting and linting
 

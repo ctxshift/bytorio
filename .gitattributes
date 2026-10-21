@@ -1,0 +1,2 @@
+# Match source formatters and generators across all development hosts.
+* text=auto eol=lf

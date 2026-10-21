@@ -33,6 +33,8 @@ Texture_View :: struct {
     version:              u64,
     width, height:        u32,
     address_u, address_v: u32,
+    cutout:               bool,
+    alpha_cutoff:         u32,
 }
 
 raster_stride :: proc(texture: Texture_View) -> int {

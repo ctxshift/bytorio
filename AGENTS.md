@@ -16,9 +16,11 @@ feature's contract and acceptance criteria.
   Do not repair source layout with ad hoc regular-expression formatters.
 - Put shared protocol values in the existing schemas and regenerate them. Name
   constants by meaning; identical numbers do not necessarily share a meaning.
-- Run focused `mise run validate <task...>` checks during iteration. Before
-  completion, finish edits and run `mise run validate` for the complete gates.
-  Preserve coverage; a focused pass does not substitute for final conformance.
+- Run focused `mise run validate <task...>` checks during iteration and let mise
+  reuse compiled artifacts. For check selection, dependency changes or suspected
+  stale outputs, follow [cache decisions](docs/development.md#iteration-and-cache-decisions).
+  Before completion, finish edits and run `mise run validate` for the complete
+  gates. Preserve coverage; a focused pass does not substitute for final conformance.
 - Read the runner's report and the failing task's retained log. A stale,
   interrupted or failed report is not a pass. Do not overlap benchmark runs with
   heavy builds/tests or repeatedly read unchanged logs.
