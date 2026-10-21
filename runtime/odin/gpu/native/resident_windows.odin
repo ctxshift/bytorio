@@ -1,5 +1,6 @@
 package gpu
 
+import w "../../resource_protocol"
 import resources "../../resources"
 import surface "../surface"
 import gl "vendor:OpenGL"
@@ -7,6 +8,7 @@ import gl "vendor:OpenGL"
 GPU_CACHE_BYTES :: 64 * 1024 * 1024
 GPU_CACHE_ENTRIES :: 1024
 RESIDENT_VERTEX_FLOATS :: 12
+TEXTURED_RESIDENT_VERTEX_FLOATS :: 14
 Cached_Mesh :: struct {
     buffer:  u32,
     bytes:   int,
@@ -26,6 +28,9 @@ clear_meshes :: proc() {
 }
 
 cached_mesh :: proc(draw: resources.Resident_Draw) -> (Cached_Mesh, bool) {
+    samples := device.surface_samples && !draw.textured
+    vertex_floats := TEXTURED_RESIDENT_VERTEX_FLOATS if draw.textured else RESIDENT_VERTEX_FLOATS
+    source_stride := w.texturedVertexBytes if draw.textured else w.meshVertexBytes
     entry, exists := device.cache[draw.version]
     same := exists && len(entry.palette) == len(draw.palette)
     if same {
@@ -35,7 +40,7 @@ cached_mesh :: proc(draw: resources.Resident_Draw) -> (Cached_Mesh, bool) {
     }
     if same { device.cache_hits += 1; return entry, true }
     vertices: []f32
-    if device.surface_samples {
+    if samples {
         ok: bool
         vertices, ok = surface.patches(
             draw.data,
@@ -45,7 +50,7 @@ cached_mesh :: proc(draw: resources.Resident_Draw) -> (Cached_Mesh, bool) {
         )
         if !ok { return {}, false }
     } else {
-        vertices = make([]f32, int(draw.index_count) * RESIDENT_VERTEX_FLOATS)
+        vertices = make([]f32, int(draw.index_count) * vertex_floats)
     }
     defer delete(vertices)
     size := len(vertices) * size_of(f32)
@@ -54,24 +59,28 @@ cached_mesh :: proc(draw: resources.Resident_Draw) -> (Cached_Mesh, bool) {
         clear_meshes()
         exists = false
     }
-    indices := draw.data[int(draw.vertex_count) * 16:]
-    for triangle := 0; !device.surface_samples && triangle < int(draw.index_count); triangle += 3 {
+    indices := draw.data[int(draw.vertex_count) * source_stride:]
+    for triangle := 0; !samples && triangle < int(draw.index_count); triangle += 3 {
         points: [3][3]f32
         colors: [3]u32
         for i in 0 ..< 3 {
-            at := int(resources.u32le(indices, (triangle + i) * 4)) * 16
+            at := int(resources.u32le(indices, (triangle + i) * 4)) * source_stride
             for axis in 0 ..< 3 { points[i][axis] = f32(resources.f32le(draw.data, at + axis * 4)) }
             colors[i] = resources.u32le(draw.data, at + 12)
             if len(draw.palette) !=
                0 { colors[i] = resources.u32le(draw.palette, int(colors[i]) * 4) }
         }
         for i in 0 ..< 3 {
-            at := (triangle + i) * RESIDENT_VERTEX_FLOATS
+            at := (triangle + i) * vertex_floats
             for axis in 0 ..< 3 {
                 vertices[at + axis] = points[i][axis]
                 vertices[at + 3 + axis] = f32((colors[i] >> u32(axis * 8)) & 255) / 255
                 vertices[at + 6 + axis] = points[1][axis] - points[0][axis]
                 vertices[at + 9 + axis] = points[2][axis] - points[0][axis]
+            }
+            if draw.textured {
+                source := int(resources.u32le(indices, (triangle + i) * 4)) * source_stride
+                for axis in 0 ..< 2 { vertices[at + RESIDENT_VERTEX_FLOATS + axis] = f32(resources.f32le(draw.data, source + w.texturedUvOffset + axis * 4)) }
             }
         }
     }
@@ -88,7 +97,7 @@ cached_mesh :: proc(draw: resources.Resident_Draw) -> (Cached_Mesh, bool) {
     if device.cache == nil { device.cache = make(map[u64]Cached_Mesh) }
     palette := make([]u8, len(draw.palette))
     copy(palette, draw.palette)
-    result := Cached_Mesh{buffer, size, palette, len(vertices) / RESIDENT_VERTEX_FLOATS}
+    result := Cached_Mesh{buffer, size, palette, len(vertices) / vertex_floats}
     device.cache[draw.version] = result
     device.cache_bytes += size
     device.upload_bytes += u64(size)
@@ -98,7 +107,9 @@ cached_mesh :: proc(draw: resources.Resident_Draw) -> (Cached_Mesh, bool) {
 
 resident_draw :: proc(value: resources.Resident_Draw, width, height, border: int) -> bool {
     draw := value
-    if device.surface_samples &&
+    samples := device.surface_samples && !draw.textured
+    vertex_floats := TEXTURED_RESIDENT_VERTEX_FLOATS if draw.textured else RESIDENT_VERTEX_FLOATS
+    if samples &&
        (draw.view[3] != 0 ||
                draw.view[7] != 0 ||
                draw.view[11] != 0 ||
@@ -114,11 +125,23 @@ resident_draw :: proc(value: resources.Resident_Draw, width, height, border: int
             3,
             gl.FLOAT,
             gl.FALSE,
-            RESIDENT_VERTEX_FLOATS * 4,
+            i32(vertex_floats * 4),
             uintptr(i * 12),
         )
-        gl.VertexAttribDivisor(u32(i), surface.POINTS_PER_PATCH if device.surface_samples else 0)
+        gl.VertexAttribDivisor(u32(i), surface.POINTS_PER_PATCH if samples else 0)
     }
+    if draw.textured {
+        gl.EnableVertexAttribArray(4)
+        gl.VertexAttribPointer(
+            4,
+            2,
+            gl.FLOAT,
+            gl.FALSE,
+            i32(vertex_floats * 4),
+            RESIDENT_VERTEX_FLOATS * 4,
+        )
+        gl.VertexAttribDivisor(4, 0)
+    } else { gl.DisableVertexAttribArray(4) }
     gl.UseProgram(device.resident)
     gl.UniformMatrix4fv(
         gl.GetUniformLocation(device.resident, "model"),
@@ -131,11 +154,8 @@ resident_draw :: proc(value: resources.Resident_Draw, width, height, border: int
     gl.Uniform1f(gl.GetUniformLocation(device.resident, "ambient"), draw.ambient)
     gl.Uniform2f(gl.GetUniformLocation(device.resident, "logicalSize"), f32(width), f32(height))
     gl.Uniform1i(gl.GetUniformLocation(device.resident, "border"), i32(border))
-    gl.Uniform1i(
-        gl.GetUniformLocation(device.resident, "surfaceSamples"),
-        1 if device.surface_samples else 0,
-    )
-    if device.surface_samples {
+    gl.Uniform1i(gl.GetUniformLocation(device.resident, "surfaceSamples"), 1 if samples else 0)
+    if samples {
         gl.DrawArraysInstanced(
             gl.TRIANGLE_STRIP,
             0,

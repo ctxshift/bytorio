@@ -2,6 +2,7 @@ layout(location = 0) in vec3 position;
 layout(location = 1) in vec3 color;
 layout(location = 2) in vec3 edgeA;
 layout(location = 3) in vec3 edgeB;
+layout(location = 4) in vec2 uv;
 uniform mat4 model;
 uniform mat4 view;
 uniform vec3 light;
@@ -10,6 +11,7 @@ uniform vec2 logicalSize;
 uniform int border;
 uniform bool surfaceSamples;
 out vec3 vertexColor;
+out vec2 vertexUV;
 const float SAMPLES_PER_AXIS = 2.0;
 const float SPLAT_OVERLAP = 1.4;
 void main() {
@@ -37,6 +39,7 @@ void main() {
     }
     gl_Position.xy *= logicalSize / (logicalSize + vec2(float(border * 2)));
     vertexColor = color;
+    vertexUV = uv;
     if (ambient == 1.0) return;
     float lengthSquared = dot(normal, normal);
     float diffuse = lengthSquared > 0.0 ? dot(normal * inversesqrt(lengthSquared), light) : 0.0;

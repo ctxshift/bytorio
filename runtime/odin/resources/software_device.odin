@@ -93,7 +93,12 @@ software_resolve :: proc(device: ^Software_Device, x, y, width, factor: int) -> 
     return c, nearest
 }
 
-software_triangle :: proc(t: ^Transaction, input: [3]Clip_Vertex, camera: []u8) -> bool {
+software_triangle :: proc(
+    t: ^Transaction,
+    input: [3]Clip_Vertex,
+    camera: []u8,
+    material: ^Slot = nil,
+) -> bool {
     any, all := u32(0), u32(63)
     for vertex in input {
         code := u32(0)
@@ -104,7 +109,7 @@ software_triangle :: proc(t: ^Transaction, input: [3]Clip_Vertex, camera: []u8) 
         all &= code
     }
     if all != 0 { return true }
-    if any == 0 { return raster_triangle(t, input, camera, account = false) }
+    if any == 0 { return raster_triangle(t, input, camera, account = false, material = material) }
     poly: [CLIP_CAPACITY]Clip_Vertex
     for vertex, i in input { poly[i] = vertex }
     count := 3
@@ -136,6 +141,7 @@ software_triangle :: proc(t: ^Transaction, input: [3]Clip_Vertex, camera: []u8) 
             {poly[0], poly[i], poly[i + 1]},
             camera,
             account = false,
+            material = material,
         ) { return false }
     }
     return true
@@ -200,6 +206,29 @@ software_raster :: proc(job: Raster_Job) -> bool {
         slots    = &device.registry.slots,
         screen   = &device.registry.screen,
     }
+    material: ^Slot
+    descriptor: [w.descriptorBytes]u8
+    local_material: Slot
+    defer device.registry.slots[1] = {}
+    if len(job.texture.pixels) != 0 {
+        // The quality renderer borrows the texture only for this job. Reset the
+        // virtual slot before returning so no callback input pointer is retained.
+        device.registry.slots[1] = Slot {
+            kind       = .Texture,
+            generation = 1,
+            width      = job.texture.width,
+            height     = job.texture.height,
+            data       = job.texture.pixels,
+        }
+        put32(descriptor[:], 4, job.texture.address_u)
+        put32(descriptor[:], 8, job.texture.address_v)
+        local_material = Slot {
+            kind = .Material,
+            link = w.handleGenerationStride | 2,
+            data = descriptor[:],
+        }
+        material = &local_material
+    }
     t.render.depth = w.handleGenerationStride | 1
     t.render.clip = {
         i32((int(job.clip[0]) + border) * factor),
@@ -212,15 +241,19 @@ software_raster :: proc(job: Raster_Job) -> bool {
     put32(camera[:], w.cameraFogColorOffset, job.fog_color)
     putf(camera[:], w.cameraFogStartOffset, f64(job.fog_start))
     putf(camera[:], w.cameraFogEndOffset, f64(job.fog_end))
-    for at := 0; at < len(job.vertices); at += 3 * RASTER_VERTEX_BYTES {
+    stride := raster_stride(job.texture)
+    for at := 0; at < len(job.vertices); at += 3 * stride {
         input: [3]Clip_Vertex
         for &vertex, i in input {
-            for &value, axis in vertex.p { value = f32le(job.vertices, at + i * RASTER_VERTEX_BYTES + axis * 4) }
+            for &value, axis in vertex.p { value = f32le(job.vertices, at + i * stride + axis * 4) }
             vertex.p[0] *= f64(job.width) / f64(rw)
             vertex.p[1] *= f64(job.height) / f64(rh)
-            for &value, channel in vertex.color { value = f32le(job.vertices, at + i * RASTER_VERTEX_BYTES + 16 + channel * 4) }
+            for &value, channel in vertex.color { value = f32le(job.vertices, at + i * stride + 16 + channel * 4) }
+            if material != nil {
+                for &value, axis in vertex.uv { value = f32le(job.vertices, at + i * stride + RASTER_VERTEX_BYTES + axis * 4) }
+            }
         }
-        if !software_triangle(&t, input, camera[:]) { return false }
+        if !software_triangle(&t, input, camera[:], material) { return false }
     }
     for y in 0 ..< rh {
         for x in 0 ..< rw {

@@ -261,7 +261,8 @@ submit :: proc(
         r.command = index
         cmd := packet[w.headerBytes + index * w.commandBytes:][:w.commandBytes]
         op, id := u16le(cmd, 0), u32le(cmd, 8)
-        if op != w.op_draw_mesh && !flush_raster(&txn) { return false }
+        if (op != w.op_draw_mesh || len(txn.gpu_texture.pixels) != 0) &&
+           !flush_raster(&txn) { return false }
         if r.protocol == 1 && op > w.op_destroy_sample {
 
             return fail(r, "graphics resources require resource protocol 2")
@@ -426,6 +427,7 @@ submit :: proc(
                 rate       = args[3],
                 data       = data,
             }
+            if kind == .Texture { slot.gpu_version = mesh_version(r) }
             txn.retained += len(data)
         } else {
             if slot.kind != kind && !(op == w.op_write_texture && slot.kind == .Target) {
@@ -529,6 +531,7 @@ submit :: proc(
             }
             if kind == .Texture {
                 bpp := 4 if slot.format == w.format_rgba8 else 1
+                slot.gpu_version = mesh_version(r)
                 for row in 0 ..< int(args[3]) {
                     dst := (int(args[1]) + row) * int(slot.width) * bpp + int(args[0]) * bpp
                     src_at := int(args[4]) + row * int(args[5])

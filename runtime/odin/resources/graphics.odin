@@ -8,6 +8,7 @@ import "core:math"
 import "core:mem"
 
 Transaction :: struct {
+    gpu_texture:                                          Texture_View,
     resident_count:                                       int,
     gpu_vertices:                                         []u8,
     gpu_count:                                            int,

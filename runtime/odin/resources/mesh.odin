@@ -392,10 +392,21 @@ cross3 :: proc(a, b: [3]f64) -> [3]f64 {
 raster_mesh :: proc(t: ^Transaction, mesh: ^Slot, model: Matrix, material: ^Slot = nil) -> bool {
     camera := lookup(t, t.render.camera, .Camera)
     view, _ := matrix_read(camera.data[:w.modelBytes])
-    // CPU fragments invalidate high-resolution presentation of earlier or later
-    // batches; publishing only their GPU preview would omit this geometry.
-    if material != nil && t.render.target == 0 { t.preview_disabled = true }
-    accelerated := material == nil && prepare_raster(t)
+    texture_view: Texture_View
+    if material != nil {
+        texture := lookup(t, material.link, .Texture)
+        texture_view = {
+            texture.data,
+            texture.gpu_version,
+            texture.width,
+            texture.height,
+            u32le(material.data, 4),
+            u32le(material.data, 8),
+        }
+    }
+    accelerated := prepare_raster(t, texture_view)
+    // Reference fallback must not publish a preview omitting its CPU fragments.
+    if !accelerated && material != nil && t.render.target == 0 { t.preview_disabled = true }
     t.gpu_ortho = view[3] == 0 && view[7] == 0 && view[11] == 0 && view[15] == 1
     if accelerated && t.registry.pixel_snap && t.gpu_ortho {
         target := image(t, t.render.target)

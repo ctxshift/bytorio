@@ -23,6 +23,13 @@ SDK 0.3.0 / `compact-3d-preview-1` is an explicit experimental opt-in for
 Create ordinary SDK projects, then set that SDK/profile tuple in `console.json`.
 `mise run build:3d` exports the matching native/browser prototypes.
 
+SDK 0.4.0 / `textured-3d-preview-1` extends that opt-in with
+[UV meshes and typed materials](../docs/textured-3d.md). Set `sdk` to `"0.4.0"`
+and `profile` to `"textured-3d-preview-1"` in `console.json`. Both SDKs expose
+`gfx3d.textured_mesh`, `gfx3d.material` and `gfx3d.draw_textured`. CPU rendering is
+the default; optional CPU supersampling and GPU rendering/residency use the same
+API. Existing profiles keep their original contracts and defaults.
+
 ## Start a game
 
 Run from the SDK repository root:

@@ -7,6 +7,7 @@ import "core:mem"
 // callbacks may write only the transaction's copy-on-write attachments.
 // The callback is synchronous and must not retain any supplied pointer.
 Raster_Job :: struct {
+    texture:            Texture_View,
     draws:              []Resident_Draw,
     vertices:           []u8,
     color, depth:       []u8,
@@ -17,12 +18,25 @@ Raster_Job :: struct {
     fog_start, fog_end: f32,
 }
 Resident_Draw :: struct {
+    textured:                  bool,
     version:                   u64,
     data, palette:             []u8,
     vertex_count, index_count: u32,
     model, view:               [16]f32,
     light:                     [3]f32,
     ambient:                   f32,
+}
+
+// Borrowed for one synchronous execution; immutable within a draw commit.
+Texture_View :: struct {
+    pixels:               []u8,
+    version:              u64,
+    width, height:        u32,
+    address_u, address_v: u32,
+}
+
+raster_stride :: proc(texture: Texture_View) -> int {
+    return TEXTURED_RASTER_VERTEX_BYTES if len(texture.pixels) != 0 else RASTER_VERTEX_BYTES
 }
 
 mesh_version :: proc(r: ^Registry) -> u64 {
@@ -33,6 +47,7 @@ mesh_version :: proc(r: ^Registry) -> u64 {
 }
 Raster_Proc :: proc(job: Raster_Job) -> bool
 RASTER_VERTEX_BYTES :: 7 * 4
+TEXTURED_RASTER_VERTEX_BYTES :: 9 * 4
 RASTER_STAGING_BYTES :: w.maxTrianglesPerCommit * 3 * RASTER_VERTEX_BYTES
 
 flush_raster :: proc(t: ^Transaction) -> bool {
@@ -43,6 +58,7 @@ flush_raster :: proc(t: ^Transaction) -> bool {
         t.gpu_vertices = nil
         t.gpu_count = 0
         t.resident_count = 0
+        t.gpu_texture = {}
     }
     target := owned(t, t.render.target)
     depth := mesh_owned(t, t.render.depth, .Depth)
@@ -78,6 +94,7 @@ flush_raster :: proc(t: ^Transaction) -> bool {
         }
     }
     job := Raster_Job {
+        texture   = t.gpu_texture,
         vertices  = t.gpu_vertices[:t.gpu_count],
         color     = target.data,
         depth     = depth.data,
@@ -99,13 +116,13 @@ flush_raster :: proc(t: ^Transaction) -> bool {
     return true
 }
 
-prepare_raster :: proc(t: ^Transaction) -> bool {
+prepare_raster :: proc(t: ^Transaction, texture := Texture_View{}) -> bool {
     if t.registry.rasterizer == nil { return false }
     if len(t.gpu_vertices) != 0 { return true }
     // Quality preferences must not make an otherwise valid resource packet
     // exceed its budget: use the reference rasterizer when staging cannot fit.
     size :=
-        w.maxCommands * size_of(Resident_Draw) if t.registry.resident_meshes else RASTER_STAGING_BYTES
+        w.maxCommands * size_of(Resident_Draw) if t.registry.resident_meshes else w.maxTrianglesPerCommit * 3 * raster_stride(texture)
     if size > t.budget - t.retained { return false }
     bytes, ok := allocate(t, size, zero = false, alignment = align_of(Resident_Draw))
     if !ok {
@@ -113,6 +130,7 @@ prepare_raster :: proc(t: ^Transaction) -> bool {
         return false
     }
     t.gpu_vertices = bytes
+    t.gpu_texture = texture
     return true
 }
 
@@ -125,6 +143,12 @@ queue_triangle :: proc(t: ^Transaction, vertices: [3]Clip_Vertex) {
         for value in vertex.color {
             putf(t.gpu_vertices, t.gpu_count, value)
             t.gpu_count += 4
+        }
+        if len(t.gpu_texture.pixels) != 0 {
+            for value in vertex.uv {
+                putf(t.gpu_vertices, t.gpu_count, value)
+                t.gpu_count += 4
+            }
         }
     }
 }

@@ -1,8 +1,12 @@
 import { surfacePatches, SURFACE_POINTS_PER_PATCH } from "./gpu-surface.js";
+import { resourceSchema } from "./constants.js";
 
 const RASTER_VERTEX_BYTES = 7 * Float32Array.BYTES_PER_ELEMENT;
 const RESIDENT_VERTEX_FLOATS = 12;
+const TEXTURED_RASTER_VERTEX_BYTES = 9 * Float32Array.BYTES_PER_ELEMENT;
+const TEXTURED_RESIDENT_VERTEX_FLOATS = 14;
 const GPU_CACHE_BYTES = 64 * 1024 * 1024;
+const GPU_TEXTURE_CACHE_BYTES = 32 * 1024 * 1024;
 const GPU_CACHE_ENTRIES = 1024;
 
 export function normalizeGraphics(value = {}) {
@@ -116,6 +120,9 @@ export async function createGpu(settings) {
   gl.vertexAttribPointer(1, 3, gl.FLOAT, false, RASTER_VERTEX_BYTES, 16);
   gl.disable(gl.DITHER);
   const cache = new Map();
+  const materialCache = new Map();
+  let materialCacheBytes = 0;
+  let queuedTexture = null;
   let cacheBytes = 0;
   const metrics = {
     meshUploads: 0,
@@ -124,6 +131,10 @@ export async function createGpu(settings) {
     textureUploadBytes: 0,
     cacheBytes: 0,
     textureBytes: 0,
+    materialUploads: 0,
+    materialCacheHits: 0,
+    materialUploadBytes: 0,
+    materialCacheBytes: 0,
   };
   const textureStorage = new Map();
   let draws = [];
@@ -148,10 +159,15 @@ export async function createGpu(settings) {
       return entry;
     }
     const data = new DataView(memory.buffer, draw.data);
-    const samples = settings.surfaceSamples
-      ? surfacePatches(data, draw.vertexCount, draw.indexCount, palette)
-      : null;
-    const bytes = samples ? samples.byteLength : draw.indexCount * RESIDENT_VERTEX_FLOATS * 4;
+    const vertexFloats = draw.textured ? TEXTURED_RESIDENT_VERTEX_FLOATS : RESIDENT_VERTEX_FLOATS;
+    const sourceStride = draw.textured
+      ? resourceSchema.texturedVertexBytes
+      : resourceSchema.meshVertexBytes;
+    const samples =
+      settings.surfaceSamples && !draw.textured
+        ? surfacePatches(data, draw.vertexCount, draw.indexCount, palette)
+        : null;
+    const bytes = samples ? samples.byteLength : draw.indexCount * vertexFloats * 4;
     if (bytes > GPU_CACHE_BYTES) {
       throw new Error("GPU mesh cache entry exceeds its bound.");
     }
@@ -159,12 +175,13 @@ export async function createGpu(settings) {
       clearMeshes();
       entry = null;
     }
-    const vertices = samples || new Float32Array(draw.indexCount * RESIDENT_VERTEX_FLOATS);
+    const vertices = samples || new Float32Array(draw.indexCount * vertexFloats);
     for (let triangle = 0; !samples && triangle < draw.indexCount; triangle += 3) {
       const points = [],
         colors = [];
       for (let i = 0; i < 3; i++) {
-        const at = data.getUint32(draw.vertexCount * 16 + (triangle + i) * 4, true) * 16;
+        const at =
+          data.getUint32(draw.vertexCount * sourceStride + (triangle + i) * 4, true) * sourceStride;
         points.push([0, 1, 2].map((axis) => data.getFloat32(at + axis * 4, true)));
         const color = data.getUint32(at + 12, true);
         colors.push(
@@ -177,12 +194,23 @@ export async function createGpu(settings) {
         );
       }
       for (let i = 0; i < 3; i++) {
-        const at = (triangle + i) * RESIDENT_VERTEX_FLOATS;
+        const at = (triangle + i) * vertexFloats;
         for (let axis = 0; axis < 3; axis++) {
           vertices[at + axis] = points[i][axis];
           vertices[at + axis + 3] = ((colors[i] >>> (axis * 8)) & 255) / 255;
           vertices[at + axis + 6] = points[1][axis] - points[0][axis];
           vertices[at + axis + 9] = points[2][axis] - points[0][axis];
+        }
+        if (draw.textured) {
+          const source =
+            data.getUint32(draw.vertexCount * sourceStride + (triangle + i) * 4, true) *
+            sourceStride;
+          for (let axis = 0; axis < 2; axis++) {
+            vertices[at + RESIDENT_VERTEX_FLOATS + axis] = data.getFloat32(
+              source + resourceSchema.texturedUvOffset + axis * 4,
+              true,
+            );
+          }
         }
       }
     }
@@ -200,7 +228,7 @@ export async function createGpu(settings) {
     const result = {
       buffer,
       bytes,
-      count: vertices.length / RESIDENT_VERTEX_FLOATS,
+      count: vertices.length / vertexFloats,
       palette: palette?.slice(),
     };
     cache.set(key, result);
@@ -240,6 +268,68 @@ export async function createGpu(settings) {
       metrics.textureUploadBytes += bytes.byteLength;
     }
   };
+  const clearTextures = () => {
+    for (const entry of materialCache.values()) {
+      gl.deleteTexture(entry.texture);
+      const storage = textureStorage.get(entry.texture);
+      metrics.textureBytes -= storage?.size || 0;
+      textureStorage.delete(entry.texture);
+    }
+    materialCache.clear();
+    materialCacheBytes = 0;
+    metrics.materialCacheBytes = 0;
+  };
+  const bindMaterial = (memory, program, material) => {
+    gl.uniform1i(gl.getUniformLocation(program, "useTexture"), Number(Boolean(material)));
+    gl.uniform1i(gl.getUniformLocation(program, "materialTexture"), 2);
+    gl.activeTexture(gl.TEXTURE2);
+    if (!material) {
+      gl.bindTexture(gl.TEXTURE_2D, input[0]);
+      return;
+    }
+    const key = `${material.high}:${material.low}`;
+    let entry = materialCache.get(key);
+    if (entry) {
+      metrics.materialCacheHits++;
+    } else {
+      const size = material.width * material.height * 4;
+      if (size > GPU_TEXTURE_CACHE_BYTES || (!material.low && !material.high)) {
+        throw new Error("Invalid GPU texture snapshot.");
+      }
+      if (
+        materialCacheBytes + size > GPU_TEXTURE_CACHE_BYTES ||
+        materialCache.size >= GPU_CACHE_ENTRIES
+      ) {
+        clearTextures();
+      }
+      const value = texture();
+      allocate(
+        value,
+        material.width,
+        material.height,
+        false,
+        new Uint8Array(memory.buffer, material.pixels, size),
+      );
+      if (gl.getError() !== gl.NO_ERROR) {
+        gl.deleteTexture(value);
+        metrics.textureBytes -= textureStorage.get(value)?.size || 0;
+        textureStorage.delete(value);
+        throw new Error("GPU texture upload failed.");
+      }
+      entry = { texture: value, size };
+      materialCache.set(key, entry);
+      materialCacheBytes += size;
+      metrics.materialUploads++;
+      metrics.materialUploadBytes += size;
+      metrics.materialCacheBytes = materialCacheBytes;
+    }
+    gl.bindTexture(gl.TEXTURE_2D, entry.texture);
+    gl.uniform2i(
+      gl.getUniformLocation(program, "textureAddress"),
+      material.addressU,
+      material.addressV,
+    );
+  };
   const target = (value, w, h) => {
     gl.bindFramebuffer(gl.FRAMEBUFFER, value.fbo);
     for (const [t, attachment, depth] of [
@@ -276,6 +366,9 @@ export async function createGpu(settings) {
   return {
     gl,
     metrics,
+    queueTexture(pixels, width, height, low, high, addressU, addressV) {
+      queuedTexture = pixels ? { pixels, width, height, low, high, addressU, addressV } : null;
+    },
     queueMesh(
       memory,
       low,
@@ -288,6 +381,7 @@ export async function createGpu(settings) {
       view,
       light,
       ambient,
+      textured = 0,
     ) {
       draws.push({
         low,
@@ -300,6 +394,7 @@ export async function createGpu(settings) {
         view: new Float32Array(memory.buffer, view, 16).slice(),
         light: new Float32Array(memory.buffer, light, 3).slice(),
         ambient,
+        textured: Boolean(textured),
       });
     },
     present(
@@ -413,6 +508,7 @@ export async function createGpu(settings) {
     },
     close() {
       clearMeshes();
+      clearTextures();
       const lose = gl.getExtension("WEBGL_lose_context");
       lose?.loseContext();
     },
@@ -435,6 +531,9 @@ export async function createGpu(settings) {
     ) {
       const batch = draws;
       draws = [];
+      const material = queuedTexture;
+      queuedTexture = null;
+      const stride = material ? TEXTURED_RASTER_VERTEX_BYTES : RASTER_VERTEX_BYTES;
       if (width < 1 || height < 1 || width > 1920 || height > 1080) {
         return 0;
       }
@@ -509,31 +608,51 @@ export async function createGpu(settings) {
         ((fogColor >>> 16) & 255) / 255,
       );
       gl.uniform2f(gl.getUniformLocation(program, "fogRange"), fogStart, fogEnd);
+      bindMaterial(memory, program, material);
       if (batch.length) {
         gl.uniform1i(
           gl.getUniformLocation(program, "surfaceSamples"),
-          Number(settings.surfaceSamples),
+          Number(settings.surfaceSamples && !material),
         );
         gl.bindVertexArray(residentVao);
         for (const draw of batch) {
           if (
             settings.surfaceSamples &&
+            !draw.textured &&
             (draw.view[3] !== 0 || draw.view[7] !== 0 || draw.view[11] !== 0 || draw.view[15] !== 1)
           ) {
             throw new Error("Surface samples require an orthographic camera.");
           }
           const entry = cachedMesh(memory, draw);
+          const vertexFloats = draw.textured
+            ? TEXTURED_RESIDENT_VERTEX_FLOATS
+            : RESIDENT_VERTEX_FLOATS;
+          const samples = settings.surfaceSamples && !draw.textured;
           gl.bindBuffer(gl.ARRAY_BUFFER, entry.buffer);
           for (let i = 0; i < 4; i++) {
             gl.enableVertexAttribArray(i);
-            gl.vertexAttribPointer(i, 3, gl.FLOAT, false, RESIDENT_VERTEX_FLOATS * 4, i * 12);
-            gl.vertexAttribDivisor(i, settings.surfaceSamples ? SURFACE_POINTS_PER_PATCH : 0);
+            gl.vertexAttribPointer(i, 3, gl.FLOAT, false, vertexFloats * 4, i * 12);
+            gl.vertexAttribDivisor(i, samples ? SURFACE_POINTS_PER_PATCH : 0);
+          }
+          if (draw.textured) {
+            gl.enableVertexAttribArray(4);
+            gl.vertexAttribPointer(
+              4,
+              2,
+              gl.FLOAT,
+              false,
+              vertexFloats * 4,
+              RESIDENT_VERTEX_FLOATS * 4,
+            );
+            gl.vertexAttribDivisor(4, 0);
+          } else {
+            gl.disableVertexAttribArray(4);
           }
           gl.uniformMatrix4fv(gl.getUniformLocation(program, "model"), false, draw.model);
           gl.uniformMatrix4fv(gl.getUniformLocation(program, "view"), false, draw.view);
           gl.uniform3fv(gl.getUniformLocation(program, "light"), draw.light);
           gl.uniform1f(gl.getUniformLocation(program, "ambient"), draw.ambient);
-          if (settings.surfaceSamples) {
+          if (samples) {
             gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, entry.count * SURFACE_POINTS_PER_PATCH);
           } else {
             gl.drawArrays(gl.TRIANGLES, 0, draw.indexCount);
@@ -543,10 +662,18 @@ export async function createGpu(settings) {
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
         gl.bufferData(
           gl.ARRAY_BUFFER,
-          new Uint8Array(memory.buffer, vertices, count * RASTER_VERTEX_BYTES),
+          new Uint8Array(memory.buffer, vertices, count * stride),
           gl.STREAM_DRAW,
         );
-        metrics.uploadBytes += count * RASTER_VERTEX_BYTES;
+        gl.vertexAttribPointer(0, 4, gl.FLOAT, false, stride, 0);
+        gl.vertexAttribPointer(1, 3, gl.FLOAT, false, stride, 16);
+        if (material) {
+          gl.enableVertexAttribArray(2);
+          gl.vertexAttribPointer(2, 2, gl.FLOAT, false, stride, RASTER_VERTEX_BYTES);
+        } else {
+          gl.disableVertexAttribArray(2);
+        }
+        metrics.uploadBytes += count * stride;
         gl.drawArrays(gl.TRIANGLES, 0, count);
       }
       gl.bindVertexArray(vao);

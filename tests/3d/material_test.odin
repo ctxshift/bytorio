@@ -17,6 +17,7 @@ uv_triangle :: proc() -> [3]g.Textured_Vertex {
 }
 
 textured_sampling_and_depth :: proc(test: ^testing.T) {
+    defer r.software_close()
     registry: r.Registry
     defer r.close(&registry)
     testing.expect(test, r.reset(&registry, 820, w.texturedProtocol))
@@ -114,7 +115,21 @@ textured_sampling_and_depth :: proc(test: ^testing.T) {
         expected := [4]u32{0xff0000ff, 0xff80ffff, 0xff408080, 0xff408080}
         testing.expect_value(test, registry.output[90 * 320 + 160], expected[scenario])
     }
-    // The reference draw must flush queued GPU work and suppress its preview.
+    // Quality execution must preserve interior texture samples at every scale.
+    for quality in ([3]int{1, 2, 6}) {
+        r.software_configure(quality)
+        registry.rasterizer = r.software_raster
+        t.begin_draw(0)
+        pass := gfx.begin_pass(gfx.screen(), {clear = true, color = 0xff222222})
+        g.bind(pass, depth, view)
+        g.draw_textured(pass, mesh, material)
+        gfx.end_pass(pass)
+        gfx.present(gfx.screen())
+        commit(test, &registry)
+        testing.expect_value(test, registry.output[90 * 320 + 160], u32(0xff00ff00))
+    }
+    r.software_configure(1)
+    // Mixed textured and colored batches must flush and suppress a partial preview.
     registry.rasterizer = test_device
     registry.smooth_pan, registry.pixel_snap = true, true
     device_resident, device_failure, device_calls = false, false, 0
@@ -127,7 +142,7 @@ textured_sampling_and_depth :: proc(test: ^testing.T) {
     gfx.end_pass(pass)
     gfx.present(gfx.screen())
     commit(test, &registry)
-    testing.expect_value(test, device_calls, 1)
+    testing.expect_value(test, device_calls, 2)
     testing.expect(test, !registry.preview_enabled)
     testing.expect(test, registry.output[90 * 320 + 160] != 0xff00ffff)
     registry.rasterizer = nil
@@ -265,6 +280,8 @@ material_texture_edits_and_budget_rollback :: proc(test: ^testing.T) {
     gfx.upload(texture, {0, 0, 1, 1}, pixels)
     commit(test, &registry)
     testing.expect_value(test, registry.slots[0].data[0], u8(73))
+    version := registry.slots[0].gpu_version
+    testing.expect(test, version > 0)
     t.begin(1)
     pixels.bytes[0] = 99
     gfx.upload(texture, {0, 0, 1, 1}, pixels)
@@ -272,6 +289,7 @@ material_texture_edits_and_budget_rollback :: proc(test: ^testing.T) {
     _ = invalid
     commit(test, &registry, false)
     testing.expect_value(test, registry.slots[0].data[0], u8(73))
+    testing.expect_value(test, registry.slots[0].gpu_version, version)
     t.begin(2)
     _ = g.material(texture)
     commit(test, &registry, false, registry.bytes)
@@ -279,4 +297,9 @@ material_texture_edits_and_budget_rollback :: proc(test: ^testing.T) {
     testing.expect_value(test, registry.slots[0].data[0], u8(73))
     testing.expect(test, r.reset(&registry, 821, w.texturedProtocol))
     testing.expect_value(test, registry.bytes, 0)
+    testing.expect(test, t.configure(821))
+    t.begin(0)
+    _ = gfx.texture({.RGBA8, 1, 1})
+    commit(test, &registry)
+    testing.expect(test, registry.slots[0].gpu_version > version)
 }

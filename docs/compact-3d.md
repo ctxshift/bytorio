@@ -7,7 +7,8 @@ implementation using the existing resource ownership and transaction machinery.
 
 The separate [textured resource contract](textured-3d.md) adds experimental UV
 mesh and material lifecycles under SDK 0.4.0 without changing this profile.
-CPU textured drawing is available through that profile.
+Textured drawing, optional GPU residency and quality rendering are available
+through that profile.
 
 The separate [voxel resolution study](../experiments/voxel-resolution/README.md)
 preserves a procedural winter scene for comparing visual detail at three output

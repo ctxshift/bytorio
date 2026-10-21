@@ -231,6 +231,10 @@ run = "node tools/verify-3d.mjs"
 description = "Verify typed textured resources through both SDKs and native/browser hosts"
 run = "node tools/verify-textured-3d.mjs"
 
+[tasks."test:textured3d:gpu"]
+description = "Qualify optional textured GPU execution, residency and quality on native/browser hosts"
+run = "node tools/verify-textured-gpu.mjs"
+
 [tasks."test:odin"]
 depends = ["build:odin"]
 env = {SDL_VIDEODRIVER = "dummy", SDL_AUDIODRIVER = "dummy", SDL_RENDER_DRIVER = "software"}

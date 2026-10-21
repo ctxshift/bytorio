@@ -253,6 +253,7 @@ self.onmessage = async ({ data }) => {
       }
       imports.env.raster_gpu = (...args) => gpu.raster(runtime.memory, ...args);
       imports.env.mesh_gpu = (...args) => gpu.queueMesh(runtime.memory, ...args);
+      imports.env.texture_gpu = (...args) => gpu.queueTexture(...args);
       resourceTrace = !!data.resourceTrace;
       const url = new URL(data.gameUrl, location.href);
       if (url.origin !== location.origin) {

@@ -310,6 +310,7 @@ device_calls: int
 device_failure: bool
 test_device :: proc(job: r.Raster_Job) -> bool {
     device_calls += 1
+    if len(job.texture.pixels) != 0 { return r.software_raster(job) }
     if device_resident {
         if len(job.vertices) != 0 ||
            len(job.draws) != 2 ||

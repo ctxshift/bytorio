@@ -130,11 +130,16 @@ benchmark :: proc(app: ^App, path: string, startup_ms: f64, baseline_working: ui
     stats := app.game.resources.stats
     if app.gpu_enabled {
         counts := gpu.statistics()
+        textures := gpu.texture_statistics()
         fmt.printf(
-            "\"gpuStats\":{{\"meshUploads\":%d,\"cacheHits\":%d,\"uploadBytes\":%d,\"gpuPresentation\":true}},",
+            "\"gpuStats\":{{\"meshUploads\":%d,\"cacheHits\":%d,\"uploadBytes\":%d,\"materialUploads\":%d,\"materialCacheHits\":%d,\"materialUploadBytes\":%d,\"materialCacheBytes\":%d,\"gpuPresentation\":true}},",
             counts[0],
             counts[1],
             counts[2],
+            textures[0],
+            textures[1],
+            textures[2],
+            gpu.texture_cached_bytes(),
         )
     }
     storage := resources.mesh_storage(&app.game.resources)

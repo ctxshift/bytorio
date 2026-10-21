@@ -81,6 +81,9 @@ gates: `mise run validate test:gpu test:riverside:controls`. The latter verifies
 WASD walking, Q/E orbit, arrow panning, reset, counters and native/browser CPU
 quality replays for both SDKs. `mise run validate bench:riverside` retains the
 resident GPU qualification report; see [measurements](riverside-console-measurements.md).
+`mise run validate test:textured3d:gpu` additionally qualifies the experimental
+textured mesh/material path across native/browser GPU hosts, both SDKs, display
+modes and SSAA/residency settings; ordinary `test:textured3d` remains CPU-capable.
 `mise run validate bench:riverside:startup` measures PNG sizes, player readiness
 and the first complete scene through native/browser CPU/GPU paths, including
 fresh, reload and same-page executor cache behavior. It retains its observer

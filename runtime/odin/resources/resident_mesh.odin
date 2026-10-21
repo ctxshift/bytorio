@@ -18,6 +18,7 @@ resident_mesh :: proc(t: ^Transaction, mesh: ^Slot, model, view: Matrix, camera:
     draws := (cast([^]Resident_Draw)raw_data(t.gpu_vertices))[:capacity]
     draw := &draws[t.resident_count]
     draw^ = Resident_Draw {
+        textured     = mesh.kind == .Textured_Mesh,
         version      = mesh.gpu_version,
         data         = mesh.data[int(mesh.mesh_offset):],
         vertex_count = mesh.vertex_count,
@@ -37,8 +38,9 @@ resident_mesh :: proc(t: ^Transaction, mesh: ^Slot, model, view: Matrix, camera:
     defer { t.retained -= size; delete(scratch) }
     points := (cast([^]Account_Vertex)raw_data(scratch))[:mesh.vertex_count]
     target := image(t, t.render.target)
+    stride := w.texturedVertexBytes if draw.textured else w.meshVertexBytes
     for &vertex, i in points {
-        at := i * w.meshVertexBytes
+        at := i * stride
         vertex.point = matrix_point(
             view,
             matrix_point(
@@ -56,7 +58,7 @@ resident_mesh :: proc(t: ^Transaction, mesh: ^Slot, model, view: Matrix, camera:
             vertex.pixel = project_pixel(vertex.point, int(target.width), int(target.height))
         }
     }
-    indices := draw.data[int(mesh.vertex_count) * w.meshVertexBytes:]
+    indices := draw.data[int(mesh.vertex_count) * stride:]
     for at := 0; at < int(mesh.index_count) * w.meshIndexBytes; at += 12 {
         indexed: [3]Account_Vertex
         outside_any := u32(0)

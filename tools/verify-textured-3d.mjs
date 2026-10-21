@@ -22,6 +22,7 @@ import {
 } from "../runtime/odin/web/constants.js";
 import { run, task, tool, dependencyRoot } from "./toolchain.mjs";
 import { serve } from "./serve.mjs";
+import { buildTexturedDrawing } from "./build-textured-3d.mjs";
 
 const root = resolve("build/textured-3d-verification", randomUUID());
 const profile = JSON.parse(await readFile("sdk/profiles/textured-3d-preview-1.json"));
@@ -284,21 +285,7 @@ try {
       );
     }
   }
-  for (const language of ["odin", "luau"]) {
-    const project = resolve(root, `drawing-${language}`);
-    await createProject(project, language);
-    const manifest = JSON.parse(await readFile(resolve(project, "console.json")));
-    Object.assign(manifest, {
-      sdk: "0.4.0",
-      profile: "textured-3d-preview-1",
-      display: [320, 180],
-    });
-    await writeFile(resolve(project, "console.json"), JSON.stringify(manifest, null, 2));
-    await copyFile(
-      `tests/textured3d/drawing/main.${language}`,
-      resolve(project, `src/main.${language}`),
-    );
-    await buildProject(project);
+  for (const { language, project } of await buildTexturedDrawing(resolve(root, "drawing"))) {
     const web = resolve(project, "build/web");
     const instantiate = async (file) =>
       (await WebAssembly.instantiate(await readFile(file), { env: { sin: Math.sin } })).instance

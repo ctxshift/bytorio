@@ -1,6 +1,7 @@
 package main
 
 import gpu "../../../runtime/odin/gpu/native"
+import w "../../../runtime/odin/resource_protocol"
 import r "../../../runtime/odin/resources"
 import "core:fmt"
 import "core:os"
@@ -121,6 +122,83 @@ main :: proc() {
        r.u32le(capture, (540 * 1920 + 960) * 4) != 0xffff00ff { os.exit(1) }
     gpu.close()
     verify_surface_samples()
+    verify_textured_meshes()
+}
+
+verify_textured_meshes :: proc() {
+    for quality in ([3]int{1, 2, 6}) {
+        for resident in ([2]bool{false, true}) {
+            if !gpu.open(quality) { os.exit(1) }
+            color := make([]u8, 32 * 32 * 4)
+            depth := make([]u8, len(color))
+            stream: [3 * r.TEXTURED_RASTER_VERTEX_BYTES]u8
+            mesh: [3 * w.texturedVertexBytes + 3 * w.meshIndexBytes]u8
+            texture: [16]u8
+            points := [3][4]f64{{-1, -1, 0.5, 1}, {2, -2, 1, 2}, {0, 4, 2, 4}}
+            for point, i in points {
+                for value, axis in point { r.putf(stream[:], i * r.TEXTURED_RASTER_VERTEX_BYTES + axis * 4, value) }
+                for axis in 0 ..< 3 { r.putf(stream[:], i * r.TEXTURED_RASTER_VERTEX_BYTES + 16 + axis * 4, 255) }
+                for axis in 0 ..< 2 { r.putf(stream[:], i * r.TEXTURED_RASTER_VERTEX_BYTES + r.RASTER_VERTEX_BYTES + axis * 4, 1.2 if i == 2 && axis == 1 else 0) }
+                for axis in 0 ..< 3 { r.putf(mesh[:], i * w.texturedVertexBytes + axis * 4, point[axis] * (2 if axis == 2 else 1)) }
+                r.put32(mesh[:], i * w.texturedVertexBytes + w.meshColorOffset, 0xffffffff)
+                r.putf(
+                    mesh[:],
+                    i * w.texturedVertexBytes + w.texturedUvOffset + 4,
+                    1.2 if i == 2 else 0,
+                )
+                r.put32(mesh[:], 3 * w.texturedVertexBytes + i * w.meshIndexBytes, u32(i))
+            }
+            for value, i in ([4]u32{0xff0000ff, 0xff00ff00, 0xffff0000, 0xff0000ff}) { r.put32(texture[:], i * 4, value) }
+            identity := [16]f32{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}
+            projection := identity
+            projection[10], projection[11], projection[15] = 0.5, 1, 0
+            draws := [1]r.Resident_Draw {
+                {
+                    textured     = true,
+                    version      = 201,
+                    data         = mesh[:],
+                    vertex_count = 3,
+                    index_count  = 3,
+                    model        = identity,
+                    view         = projection,
+                    ambient      = 1,
+                },
+            }
+            job := r.Raster_Job {
+                texture   = {texture[:], 101, 1, 4, 0, 1},
+                vertices  = stream[:],
+                color     = color,
+                depth     = depth,
+                width     = 32,
+                height    = 32,
+                clip      = {0, 0, 32, 32},
+                fog_start = 1,
+                fog_end   = 2,
+            }
+            if resident {
+                job.vertices = nil
+                job.draws = draws[:]
+            }
+            for frame in 0 ..< 3 {
+                for &value in color { value = 0 }
+                for at := 0; at < len(depth); at += 4 { r.putf(depth, at, 1) }
+                if frame == 2 {
+                    r.put32(texture[:], 4, 0xff000080)
+                    job.texture.version = 102
+                }
+                expected := u32(0xff000080) if frame == 2 else u32(0xff00ff00)
+                if !gpu.raster(job) || r.u32le(color, (16 * 32 + 16) * 4) != expected {
+                    fmt.eprintln("Textured GPU fixture failed", quality, resident, frame)
+                    os.exit(1)
+                }
+            }
+            if gpu.texture_statistics() != ([3]u64{2, 1, 32}) { os.exit(1) }
+            if resident && gpu.statistics() != ([3]u64{1, 2, 168}) { os.exit(1) }
+            delete(color)
+            delete(depth)
+            gpu.close()
+        }
+    }
 }
 
 verify_surface_samples :: proc() {

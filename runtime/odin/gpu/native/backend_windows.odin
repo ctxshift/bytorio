@@ -5,6 +5,9 @@ import gl "vendor:OpenGL"
 import sdl "vendor:sdl3"
 
 Device :: struct {
+    material_cache:                                             map[u64]Cached_Texture,
+    material_cache_bytes:                                       int,
+    texture_uploads, texture_cache_hits, texture_upload_bytes:  u64,
     surface_samples:                                            bool,
     present_program, present_fbo, present_texture, hud_texture: u32,
     present_width, present_height:                              int,
@@ -112,6 +115,7 @@ close :: proc() {
     if device.gl_context != nil {
         _ = sdl.GL_MakeCurrent(device.window, device.gl_context)
         clear_meshes()
+        clear_textures()
         gl.DeleteProgram(device.present_program)
         gl.DeleteFramebuffers(1, &device.present_fbo)
         gl.DeleteTextures(1, &device.present_texture)
@@ -257,12 +261,27 @@ raster :: proc(job: resources.Raster_Job) -> bool {
         f32((fog >> 16) & 255) / 255,
     )
     gl.Uniform2f(gl.GetUniformLocation(program, "fogRange"), job.fog_start, job.fog_end)
+    if !bind_material(program, job.texture) { return false }
     if len(job.draws) != 0 {
         for draw in job.draws { if !resident_draw(draw, w, h, border) { return false } }
     } else {
+        stride := resources.raster_stride(job.texture)
         gl.BindBuffer(gl.ARRAY_BUFFER, device.vertices)
         gl.BufferData(gl.ARRAY_BUFFER, len(job.vertices), raw_data(job.vertices), gl.STREAM_DRAW)
-        gl.DrawArrays(gl.TRIANGLES, 0, i32(len(job.vertices) / resources.RASTER_VERTEX_BYTES))
+        gl.VertexAttribPointer(0, 4, gl.FLOAT, gl.FALSE, i32(stride), 0)
+        gl.VertexAttribPointer(1, 3, gl.FLOAT, gl.FALSE, i32(stride), 16)
+        if len(job.texture.pixels) != 0 {
+            gl.EnableVertexAttribArray(2)
+            gl.VertexAttribPointer(
+                2,
+                2,
+                gl.FLOAT,
+                gl.FALSE,
+                i32(stride),
+                resources.RASTER_VERTEX_BYTES,
+            )
+        } else { gl.DisableVertexAttribArray(2) }
+        gl.DrawArrays(gl.TRIANGLES, 0, i32(len(job.vertices) / stride))
     }
     gl.Disable(gl.SCISSOR_TEST)
     gl.Disable(gl.DEPTH_TEST)
