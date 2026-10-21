@@ -30,9 +30,11 @@ An Odin cartridge is a freestanding core Wasm module. A Luau cartridge is bundle
 UTF-8 source run inside the player-provided, sandboxed Wasm executor. Both use the
 same exports, shared renderer and input/timing semantics. Native execution uses
 Wasmtime in the standalone Odin player; web execution uses a dedicated Worker.
-There are no guest OS/WASI capabilities. SDK-generated modules need no host
-imports. The older ABI also permits only `env.sin`; new SDK games should use
-their language's supported math library rather than adding arbitrary imports.
+There are no guest OS/WASI capabilities. In addition to `env.sin`, updated players
+provide the bounded `env.content_size` and `env.content_read` imports described in
+[indexed content](indexed-content.md). The Luau executor imports these functions;
+Odin modules import them only when using the content SDK. Arbitrary imports are
+rejected, and guest memory limits are unchanged.
 
 Every module defines and exports exactly one unshared, 32-bit memory with an
 explicit maximum at or below 8 MiB. Module size is at most 1 MiB. Luau bundled

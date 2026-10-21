@@ -22,7 +22,17 @@ for (const file of ["game.wasm", "luau-executor.wasm", "racing.luau"]) {
     "identical cartridge/executor bytes on both hosts",
   );
 }
-const imports = { env: { sin: Math.sin } };
+const imports = {
+  env: {
+    sin: Math.sin,
+    content_size: () => 0,
+    content_read: () => 0,
+    save_size: () => 0,
+    save_status: () => 3,
+    save_read: () => 0,
+    save_write: () => 3,
+  },
+};
 export async function instance(language) {
   const game = (
     await WebAssembly.instantiate(

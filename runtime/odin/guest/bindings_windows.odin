@@ -80,6 +80,8 @@ foreign wasmtime {
     wasmtime_config_max_wasm_stack_set :: proc(config: Config, bytes: uint) ---
     wasmtime_store_new :: proc(engine: Engine, data, finalizer: rawptr) -> Store ---
     wasmtime_store_context :: proc(store: Store) -> Context ---
+    wasmtime_caller_context :: proc(caller: rawptr) -> Context ---
+    wasmtime_caller_export_get :: proc(caller: rawptr, name: [^]u8, length: uint, out: ^Extern) -> bool ---
     wasmtime_store_delete :: proc(store: Store) ---
     wasmtime_store_limiter :: proc(store: Store, memory_size, table_elements, instances, tables, memories: i64) ---
     wasmtime_context_set_fuel :: proc(ctx: Context, fuel: u64) -> Error ---

@@ -4,6 +4,24 @@ local function unavailable(): never
     error("The Bytorio native bridge is provided by the player")
 end
 return {
+    save_size = function(): number
+        return unavailable()
+    end,
+    save_status = function(): number
+        return unavailable()
+    end,
+    save_read = function(_destination: buffer): number
+        return unavailable()
+    end,
+    save_write = function(_source: buffer): number
+        return unavailable()
+    end,
+    content_size = function(_id: number): number
+        return unavailable()
+    end,
+    content_read = function(_id: number, _offset: number, _destination: buffer): boolean
+        return unavailable()
+    end,
     profile = (function(): number
         return unavailable()
     end) :: (() -> number)?,

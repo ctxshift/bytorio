@@ -1,6 +1,7 @@
 package guest
 
 import abi "../abi"
+import cartridge "../cartridge"
 import w "../resource_protocol"
 import resources "../resources"
 import "base:runtime"
@@ -37,11 +38,15 @@ Game :: struct {
     resource_enabled:                          bool,
     resource_protocol:                         u32,
     profile:                                   u32,
+    content:                                   cartridge.Content,
+    save:                                      Save_State,
 }
 
 resource_session: u32
 
 close :: proc(game: ^Game) {
+    delete(game.save.directory)
+    delete(game.save.path)
     resources.close(&game.resources)
     delete(game.resource_packet)
     if game.store != nil {
@@ -217,7 +222,11 @@ load :: proc(
     metered := true,
     cache_config := "",
     expected_profile: u32 = 0,
+    content: cartridge.Content = {},
+    save_identity: []u8 = nil,
 ) -> bool {
+    game.content = content
+    save_open(&game.save, save_identity)
     if len(bytes) == 0 || len(bytes) > abi.MAX_GAME_BYTES {
 
         return fail(game, "game module exceeds prototype size limit")
@@ -253,6 +262,9 @@ load :: proc(
     game.compile_ms = time.duration_seconds(time.tick_since(compile_start)) * 1000
     // Odin's freestanding math.sin lowers to this one explicitly allowed import.
     game.linker = wasmtime_linker_new(game.engine)
+    if !define_content_imports(game) || !define_save_imports(game) {
+        return false
+    }
     params, results: TypeVec
     wasm_valtype_vec_new_uninitialized(&params, 1)
     wasm_valtype_vec_new_uninitialized(&results, 1)
@@ -610,6 +622,7 @@ sine :: proc "c" (
 }
 
 update :: proc(game: ^Game, input: abi.Input) -> bool {
+    game.save.write_allowed = true
     if !deliver_resources(game) {
 
         return false
@@ -623,6 +636,7 @@ update :: proc(game: ^Game, input: abi.Input) -> bool {
 }
 
 initialize :: proc(game: ^Game) -> bool {
+    game.save.write_allowed = true
     game.resource_enabled = has_export(game, "game_resource_protocol")
     if game.resource_enabled {
         protocol, configure: Func

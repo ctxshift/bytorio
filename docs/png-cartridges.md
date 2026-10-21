@@ -2,7 +2,9 @@
 
 Both cartridge languages can be distributed as one ordinary, viewable `.png`
 file. The PNG carries the complete bundled game: Luau source and its embedded
-assets, or an Odin Wasm module and its embedded assets. The console supplies the
+assets, or an Odin Wasm module and its embedded assets. Optional
+[indexed content](indexed-content.md) stores larger immutable blobs separately
+from code. The console supplies the
 Luau executor, renderer and audio; these are runtime components, not game data.
 
 ## Package and play
@@ -50,7 +52,8 @@ big-endian chunk lengths and CRC-32 follow the
 [W3C PNG specification](https://www.w3.org/TR/png-3/#5Chunk-layout).
 The game payload is not stored in pixel colors or appended after `IEND`.
 
-The implemented preview accepts PNGs up to **2 MiB**, covers from 1×1 through
+The implemented preview accepts a **2 MiB** base PNG plus an optional **64 MiB**
+indexed-content payload and its 12-byte PNG chunk envelope, covers from 1×1 through
 1024×1024, at most 4,096 chunks, and a single static image. Standard grayscale,
 RGB, indexed and alpha PNG header encodings are accepted. The cartridge parser
 validates the signature, chunk boundaries, names, checksums, critical chunk
@@ -88,7 +91,8 @@ existing guest memory, ABI, drawing, execution and diagnostic checks.
 
 Unsupported container, profile, SDK, ABI, language or flags fail explicitly.
 These preview limits do not implement the proposed 128/512 MB full-ROM profile;
-streamed assets, a resource index and larger containers remain later work.
+The optional `coNt` resource index provides bounded synchronous byte reads;
+asynchronous streaming and the proposed full-ROM profiles remain later work.
 Constants are recorded in [the SDK contract](../sdk/contract.json).
 
 ## Implementation and verification

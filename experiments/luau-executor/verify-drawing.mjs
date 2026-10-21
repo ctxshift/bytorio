@@ -7,7 +7,17 @@ import {
   rasterizeDrawing,
 } from "../../runtime/odin/web/policy.js";
 const dir = "examples/rpg/build/player/web",
-  imports = { env: { sin: Math.sin } };
+  imports = {
+    env: {
+      sin: Math.sin,
+      content_size: () => 0,
+      content_read: () => 0,
+      save_size: () => 0,
+      save_status: () => 3,
+      save_read: () => 0,
+      save_write: () => 3,
+    },
+  };
 const game = (await WebAssembly.instantiate(await readFile(`${dir}/game.wasm`), imports)).instance
   .exports;
 const runtime = (await WebAssembly.instantiate(await readFile(`${dir}/runtime.wasm`), imports))

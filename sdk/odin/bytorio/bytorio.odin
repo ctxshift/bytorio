@@ -37,12 +37,14 @@ when PROFILE == abi.PROFILE_EFFECTS_3D {
 }
 DT :: 1.0 / 60.0
 Capabilities :: struct {
+    input_version:                                                       u32,
     profile, abi, sdk, features, protocol:                               u32,
     resource_bytes, slots, payload_bytes, audio_rate, audio_lead_frames: u32,
 }
 capabilities :: proc() -> Capabilities {
     resource := PROFILE != 1
     return {
+        abi.INPUT_VERSION,
         u32(PROFILE),
         u32(abi.RESOURCE_ABI_VERSION) if resource else 1,
         VERSION_WORD,
@@ -56,22 +58,38 @@ capabilities :: proc() -> Capabilities {
     }
 }
 Button :: enum u32 {
-    Left        = 1,
-    Right       = 2,
-    Up          = 4,
-    Down        = 8,
-    Action      = 16,
-    MoveLeft    = abi.BUTTON_MOVE_LEFT,
-    MoveRight   = abi.BUTTON_MOVE_RIGHT,
-    MoveUp      = abi.BUTTON_MOVE_UP,
-    MoveDown    = abi.BUTTON_MOVE_DOWN,
-    PanLeft     = abi.BUTTON_PAN_LEFT,
-    PanRight    = abi.BUTTON_PAN_RIGHT,
-    PanUp       = abi.BUTTON_PAN_UP,
-    PanDown     = abi.BUTTON_PAN_DOWN,
-    RotateLeft  = abi.BUTTON_ROTATE_LEFT,
-    RotateRight = abi.BUTTON_ROTATE_RIGHT,
-    Reset       = abi.BUTTON_RESET,
+    Left         = 1,
+    Right        = 2,
+    Up           = 4,
+    Down         = 8,
+    Action       = 16,
+    MoveLeft     = abi.BUTTON_MOVE_LEFT,
+    MoveRight    = abi.BUTTON_MOVE_RIGHT,
+    MoveUp       = abi.BUTTON_MOVE_UP,
+    MoveDown     = abi.BUTTON_MOVE_DOWN,
+    PanLeft      = abi.BUTTON_PAN_LEFT,
+    PanRight     = abi.BUTTON_PAN_RIGHT,
+    PanUp        = abi.BUTTON_PAN_UP,
+    PanDown      = abi.BUTTON_PAN_DOWN,
+    RotateLeft   = abi.BUTTON_ROTATE_LEFT,
+    RotateRight  = abi.BUTTON_ROTATE_RIGHT,
+    Reset        = abi.BUTTON_RESET,
+    PointerLeft  = abi.BUTTON_POINTER_LEFT,
+    PointerRight = abi.BUTTON_POINTER_RIGHT,
+    PointerHover = abi.BUTTON_POINTER_HOVER,
+    WheelUp      = abi.BUTTON_WHEEL_UP,
+    WheelDown    = abi.BUTTON_WHEEL_DOWN,
+    Inventory    = abi.BUTTON_INVENTORY,
+    Character    = abi.BUTTON_CHARACTER,
+    Skills       = abi.BUTTON_SKILLS,
+    Quest        = abi.BUTTON_QUEST,
+    Map          = abi.BUTTON_MAP,
+    Potion1      = abi.BUTTON_POTION_1,
+    Potion2      = abi.BUTTON_POTION_2,
+    Potion3      = abi.BUTTON_POTION_3,
+    Potion4      = abi.BUTTON_POTION_4,
+    Shift        = abi.BUTTON_SHIFT,
+    Escape       = abi.BUTTON_ESCAPE,
 }
 Display :: enum u32 {
     High = abi.DISPLAY_HIGH,
@@ -92,6 +110,7 @@ graphics: []u8
 frame: abi.Frame
 held, down, up, clock, random_state: u32
 pointer_active: bool
+pointer_hover: bool
 pointer_x, pointer_y: f64
 diagnostic: [1024]u8
 diagnostic_size: u32
@@ -139,6 +158,7 @@ start :: proc(hooks: Callbacks, config: Config) {
     diagnostic_size = 0
     held, down, up, clock = 0, 0, 0, 0
     pointer_active = false
+    pointer_hover = false
     pointer_x, pointer_y = 0, 0
     random_state = abi.DEFAULT_RANDOM_SEED
     frame = {
@@ -291,7 +311,13 @@ released :: proc(key: Button) -> bool {
 }
 pointer :: proc() -> (bool, f64, f64) {
 
-    return pointer_active, pointer_x, pointer_y
+    return pointer_active, pointer_x if pointer_active else 0, pointer_y if pointer_active else 0
+}
+pointer_position :: proc() -> (bool, f64, f64) {
+    return pointer_hover, pointer_x, pointer_y
+}
+wheel :: proc() -> i32 {
+    return i32(button(.WheelUp)) - i32(button(.WheelDown))
 }
 ticks :: proc() -> u32 {
 
@@ -373,9 +399,11 @@ game_update :: proc "c" (mask, active: u32, x, y: f64) {
     down, up = next &~ held, held &~ next
     held = next
     width, height := size()
-    pointer_active = active != 0 && x >= 0 && x < f64(width) && y >= 0 && y < f64(height)
+    in_bounds := x >= 0 && x < f64(width) && y >= 0 && y < f64(height)
+    pointer_active = active != 0 && in_bounds
+    pointer_hover = (pointer_active || button(.PointerHover)) && in_bounds
     pointer_x, pointer_y = 0, 0
-    if pointer_active {
+    if pointer_hover {
 
         pointer_x, pointer_y = x, y
     }

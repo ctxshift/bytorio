@@ -48,15 +48,33 @@ export type Button =
     | "rotate_left"
     | "rotate_right"
     | "reset"
+    | "pointer_left"
+    | "pointer_right"
+    | "pointer_hover"
+    | "wheel_up"
+    | "wheel_down"
+    | "inventory"
+    | "character"
+    | "skills"
+    | "quest"
+    | "map"
+    | "potion_1"
+    | "potion_2"
+    | "potion_3"
+    | "potion_4"
+    | "shift"
+    | "escape"
 export type Game = { init: () -> (), update: (number) -> (), draw: () -> () }
 local profileQuery = host.profile
 local profile = if profileQuery then profileQuery() else 1
 local selected = c.PROFILES[profile]
 assert(selected, "Unsupported cartridge profile")
-local api = { version = selected.version }
+local api = { version = selected.version, content = require("./content") }
+api.save = require("./save")
 function api.capabilities()
     return table.freeze({
         profile = profile,
+        input_version = c.INPUT_VERSION,
         abi = if profile ~= 1 then c.RESOURCE_ABI_VERSION else 1,
         sdk = selected.sdk,
         features = selected.features,
@@ -80,8 +98,18 @@ masks.pan_up, masks.pan_down = c.BUTTON_PAN_UP, c.BUTTON_PAN_DOWN
 masks.rotate_left, masks.rotate_right, masks.reset =
     c.BUTTON_ROTATE_LEFT, c.BUTTON_ROTATE_RIGHT, c.BUTTON_RESET
 local held, down, up, clock, randomState = 0, 0, 0, 0, c.DEFAULT_RANDOM_SEED
+masks.pointer_left, masks.pointer_right, masks.pointer_hover =
+    c.BUTTON_POINTER_LEFT, c.BUTTON_POINTER_RIGHT, c.BUTTON_POINTER_HOVER
+masks.wheel_up, masks.wheel_down = c.BUTTON_WHEEL_UP, c.BUTTON_WHEEL_DOWN
+masks.inventory, masks.character, masks.skills =
+    c.BUTTON_INVENTORY, c.BUTTON_CHARACTER, c.BUTTON_SKILLS
+masks.quest, masks.map = c.BUTTON_QUEST, c.BUTTON_MAP
+masks.potion_1, masks.potion_2, masks.potion_3, masks.potion_4 =
+    c.BUTTON_POTION_1, c.BUTTON_POTION_2, c.BUTTON_POTION_3, c.BUTTON_POTION_4
+masks.shift, masks.escape = c.BUTTON_SHIFT, c.BUTTON_ESCAPE
 local width, height = 640, 360
 local pointerActive, pointerX, pointerY = false, 0, 0
+local pointerHover = false
 local phase = "load"
 local function integer(value: number, lo: number, hi: number): number
     assert(
@@ -178,7 +206,15 @@ function api.released(key: Button): boolean
     return bit32.band(up, keyMask(key)) ~= 0
 end
 function api.pointer(): (boolean, number, number)
-    return pointerActive, pointerX, pointerY
+    return pointerActive,
+        if pointerActive then pointerX else 0,
+        if pointerActive then pointerY else 0
+end
+function api.pointer_position(): (boolean, number, number)
+    return pointerHover, pointerX, pointerY
+end
+function api.wheel(): number
+    return (if api.button("wheel_up") then 1 else 0) - (if api.button("wheel_down") then 1 else 0)
 end
 function api.ticks(): number
     return clock
@@ -210,6 +246,7 @@ function api._wrap(game: Game, initialWidth: number?, initialHeight: number?): G
         init = function()
             held, down, up, clock, randomState = 0, 0, 0, 0, c.DEFAULT_RANDOM_SEED
             pointerActive, pointerX, pointerY = false, 0, 0
+            pointerHover = false
             width, height = initialWidth or 640, initialHeight or 360
             host.display(width, height)
             resources._begin(0)
@@ -225,8 +262,10 @@ function api._wrap(game: Game, initialWidth: number?, initialHeight: number?): G
             held = nextHeld
             clock = (clock + 1) % c.U32_MODULUS
             local active, x, y = host.pointer()
-            pointerActive = active and x >= 0 and y >= 0 and x < width and y < height
-            pointerX, pointerY = if pointerActive then x else 0, if pointerActive then y else 0
+            local inBounds = x >= 0 and y >= 0 and x < width and y < height
+            pointerActive = active and inBounds
+            pointerHover = (active or api.button("pointer_hover")) and inBounds
+            pointerX, pointerY = if pointerHover then x else 0, if pointerHover then y else 0
             resources._begin(clock)
             phase = "update"
             game.update(dt)

@@ -6,7 +6,7 @@ import "core:unicode/utf8"
 
 // PNG container v1 for the published profiles. All returned views
 // borrow the input; callers retain it until they have copied/compiled the code.
-MAX_BYTES :: 2 * 1024 * 1024
+MAX_BYTES :: abi.MAX_CARTRIDGE_BYTES
 HEADER_BYTES :: 32
 LEGACY_SDK_VERSION :: u32(256)
 LUAU :: u32(1)
@@ -16,6 +16,7 @@ Cartridge :: struct {
     profile, sdk, abi_version: u32,
     title:                     string,
     code:                      []u8,
+    content:                   Content,
 }
 
 be32 :: proc(b: []u8) -> u32 {
@@ -108,6 +109,8 @@ parse :: proc(b: []u8) -> (cart: Cartridge, error: string) {
     header, palette, idat, idat_ended, found := false, false, false, false, false
     color, depth: u8
     image_bytes: u64
+    content_found := false
+    content_bytes: u64
     for count := 0; offset < len(b) && count < 4096; count += 1 {
         if len(b) - offset < 12 {
 
@@ -205,6 +208,16 @@ parse :: proc(b: []u8) -> (cart: Cartridge, error: string) {
                 return {}, error
             }
             found = true
+        case "coNt":
+            if content_found || !found {
+                return {}, "duplicate or misplaced cartridge content"
+            }
+            cart.content, error = parse_content(data)
+            if error != "" {
+                return {}, error
+            }
+            content_found = true
+            content_bytes = size + 12
         case "IEND":
             if size != 0 || !idat || image_bytes == 0 || int(end) != len(b) {
 
@@ -213,6 +226,9 @@ parse :: proc(b: []u8) -> (cart: Cartridge, error: string) {
             if !found {
 
                 return {}, "PNG has no cartridge payload"
+            }
+            if u64(len(b)) - content_bytes > abi.MAX_CARTRIDGE_BASE_BYTES {
+                return {}, "PNG cover and code exceed cartridge base limit"
             }
             return cart, ""
         case "acTL", "fcTL", "fdAT":

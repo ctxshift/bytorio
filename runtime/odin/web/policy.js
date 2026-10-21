@@ -290,10 +290,23 @@ export function inspectGuest(bytes, compiledModule) {
         const module = name(end),
           field = name(end),
           kind = data[cursor++];
-        if (kind !== 0 || module !== "env" || field !== "sin") {
+        const expected = {
+          sin: { params: [124], results: [124] },
+          content_size: { params: [127], results: [127] },
+          content_read: { params: [127, 127, 127, 127], results: [127] },
+          save_size: { params: [], results: [127] },
+          save_status: { params: [], results: [127] },
+          save_read: { params: [127, 127], results: [127] },
+          save_write: { params: [127, 127], results: [127] },
+        }[field];
+        if (kind !== 0 || module !== "env" || !expected) {
           throw new Error("Unsupported game import.");
         }
-        functions.push(leb(end));
+        const type = leb(end);
+        if (JSON.stringify(types[type]) !== JSON.stringify(expected)) {
+          throw new Error("Invalid game import signature.");
+        }
+        functions.push(type);
       }
     } else if (section === 3) {
       const count = leb(end);
@@ -332,7 +345,19 @@ export function inspectGuest(bytes, compiledModule) {
   }
   const module = compiledModule || new WebAssembly.Module(data);
   for (const item of WebAssembly.Module.imports(module)) {
-    if (item.module !== "env" || item.name !== "sin" || item.kind !== "function") {
+    if (
+      item.module !== "env" ||
+      ![
+        "sin",
+        "content_size",
+        "content_read",
+        "save_size",
+        "save_status",
+        "save_read",
+        "save_write",
+      ].includes(item.name) ||
+      item.kind !== "function"
+    ) {
       throw new Error("Unsupported game import.");
     }
   }
@@ -460,7 +485,11 @@ export function displayMode(game) {
   ) {
     throw new Error("Unsupported display mode.");
   }
-  return { mode, width: mode >>> DISPLAY_DIMENSION_BITS, height: mode & DISPLAY_DIMENSION_MASK };
+  return {
+    mode,
+    width: mode >>> DISPLAY_DIMENSION_BITS,
+    height: mode & DISPLAY_DIMENSION_MASK,
+  };
 }
 export function submitDrawing(game, runtime) {
   const record = readFrame(game);

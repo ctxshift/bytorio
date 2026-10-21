@@ -57,6 +57,7 @@ if (language === "cpp") {
       pkg === "examples/kart3d/tests" ||
       pkg === "tests/resources" ||
       pkg === "tests/timing" ||
+      pkg === "tests/sdk/input" ||
       pkg === "tests/audio";
     const args = [
       "check",

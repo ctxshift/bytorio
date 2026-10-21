@@ -34,7 +34,17 @@ for (const invalid of [false, true]) {
 }
 const runtimeBytes = await readFile(`${web}/runtime.wasm`);
 const expected = [];
-const imports = { env: { sin: Math.sin } };
+const imports = {
+  env: {
+    sin: Math.sin,
+    content_size: () => 0,
+    content_read: () => 0,
+    save_size: () => 0,
+    save_status: () => 3,
+    save_read: () => 0,
+    save_write: () => 3,
+  },
+};
 const game = (await WebAssembly.instantiate(await readFile(`${web}/display/switch.wasm`), imports))
   .instance.exports;
 const runtime = (await WebAssembly.instantiate(runtimeBytes, imports)).instance.exports;

@@ -236,8 +236,19 @@ try {
             const policy = await import("./policy.js");
             try {
               const module = policy.inspectGuest(new Uint8Array(code));
-              const game = (await WebAssembly.instantiate(module, { env: { sin: Math.sin } }))
-                .exports;
+              const game = (
+                await WebAssembly.instantiate(module, {
+                  env: {
+                    sin: Math.sin,
+                    content_size: () => 0,
+                    content_read: () => 0,
+                    save_size: () => 0,
+                    save_status: () => 3,
+                    save_read: () => 0,
+                    save_write: () => 3,
+                  },
+                })
+              ).exports;
               game._initialize?.();
               if (source) {
                 policy.loadSource(game, new Uint8Array(source));
@@ -275,7 +286,18 @@ try {
         const error = await page.evaluate(
           async ({ code, source }) => {
             const policy = await import("./policy.js");
-            const game = (await WebAssembly.instantiate(new Uint8Array(code))).instance.exports;
+            const game = (
+              await WebAssembly.instantiate(new Uint8Array(code), {
+                env: {
+                  content_size: () => 0,
+                  content_read: () => 0,
+                  save_size: () => 0,
+                  save_status: () => 3,
+                  save_read: () => 0,
+                  save_write: () => 3,
+                },
+              })
+            ).instance.exports;
             game._initialize?.();
             policy.loadSource(game, new Uint8Array(source));
             try {
@@ -352,7 +374,13 @@ try {
         timings: measured.timings,
       });
     }
-    const record = { demo, language, nativeHash: nativePng.hash, nativeBenchmarks, loads: [] };
+    const record = {
+      demo,
+      language,
+      nativeHash: nativePng.hash,
+      nativeBenchmarks,
+      loads: [],
+    };
     for (const [index, game] of [
       "game.png",
       language === "luau" ? "game.luau" : "game.wasm",

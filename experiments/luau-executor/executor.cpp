@@ -13,6 +13,19 @@
 #include <luacode.h>
 #include <lualib.h>
 
+extern "C" __attribute__((import_module("env"), import_name("content_size"))) std::uint32_t
+host_content_size(std::uint32_t id);
+extern "C" __attribute__((import_module("env"), import_name("content_read"))) std::uint32_t
+host_content_read(std::uint32_t id, std::uint32_t offset, void* destination, std::uint32_t length);
+extern "C" __attribute__((import_module("env"), import_name("save_size"))) std::uint32_t
+host_save_size();
+extern "C" __attribute__((import_module("env"), import_name("save_status"))) std::uint32_t
+host_save_status();
+extern "C" __attribute__((import_module("env"), import_name("save_read"))) std::uint32_t
+host_save_read(void* destination, std::uint32_t capacity);
+extern "C" __attribute__((import_module("env"), import_name("save_write"))) std::uint32_t
+host_save_write(const void* source, std::uint32_t length);
+
 namespace {
 using namespace console_constants;
 
@@ -215,11 +228,63 @@ int input_buttons(lua_State* L) {
     return 1;
 }
 
+std::uint32_t content_integer(lua_State* L, int argument) {
+    const double value = luaL_checknumber(L, argument);
+    if (!std::isfinite(value) || value < 0 || value > U32_MAX || std::floor(value) != value)
+        luaL_argerror(L, argument, "expected unsigned 32-bit integer");
+    return static_cast<std::uint32_t>(value);
+}
+
+int content_size(lua_State* L) {
+    lua_pushnumber(L, host_content_size(content_integer(L, 1)));
+    return 1;
+}
+
+int content_read(lua_State* L) {
+    const auto id = content_integer(L, 1);
+    const auto offset = content_integer(L, 2);
+    std::size_t length = 0;
+    void* destination = luaL_checkbuffer(L, 3, &length);
+    const bool accepted =
+        length <= MAX_CONTENT_READ_BYTES &&
+        host_content_read(id, offset, destination, static_cast<std::uint32_t>(length)) == 1;
+    lua_pushboolean(L, accepted);
+    return 1;
+}
+
 int input_pointer(lua_State* L) {
     lua_pushboolean(L, pointer_active);
     lua_pushnumber(L, pointer_x);
     lua_pushnumber(L, pointer_y);
     return 3;
+}
+
+int save_size(lua_State* L) {
+    lua_pushnumber(L, host_save_size());
+    return 1;
+}
+
+int save_status(lua_State* L) {
+    lua_pushnumber(L, host_save_status());
+    return 1;
+}
+
+int save_read(lua_State* L) {
+    std::size_t length = 0;
+    void* destination = luaL_checkbuffer(L, 1, &length);
+    lua_pushnumber(L, length <= MAX_SAVE_BYTES
+                          ? host_save_read(destination, static_cast<std::uint32_t>(length))
+                          : 0);
+    return 1;
+}
+
+int save_write(lua_State* L) {
+    std::size_t length = 0;
+    const void* source = luaL_checkbuffer(L, 1, &length);
+    lua_pushnumber(L, length > 0 && length <= MAX_SAVE_BYTES
+                          ? host_save_write(source, static_cast<std::uint32_t>(length))
+                          : SAVE_ERROR);
+    return 1;
 }
 
 int debug_position(lua_State* L) {
@@ -366,6 +431,12 @@ EMSCRIPTEN_KEEPALIVE void game_init() {
                                  return 1;
                              }},
                             {"resource_audio_status", resource_transport::audio_status},
+                            {"content_size", content_size},
+                            {"content_read", content_read},
+                            {"save_size", save_size},
+                            {"save_status", save_status},
+                            {"save_read", save_read},
+                            {"save_write", save_write},
                             {"resource_results", resource_transport::results},
                             {"resource_session", resource_transport::session},
                             {"resource_emit", resource_transport::emit},

@@ -151,6 +151,7 @@ outputs = [
   "build/odin-player/web/audio-worklet.js",
   "build/odin-player/web/constants.js",
   "build/odin-player/web/cartridge.js",
+  "build/odin-player/web/save.js",
   "build/odin-player/web/executor-cache.js",
   "build/odin-player/web/executor-cache-core.js",
   "build/odin-player/web/frame-clock.js",

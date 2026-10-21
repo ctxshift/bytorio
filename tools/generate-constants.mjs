@@ -77,6 +77,27 @@ const exportSignatures = Object.entries(contract.requiredExports).map(([name, si
 });
 // Numeric encodings are fixed-width; policy limits and defaults come from the contract.
 const common = {
+  MAX_CARTRIDGE_BASE_BYTES: contract.cartridge.maxPngBytes,
+  MAX_CARTRIDGE_BYTES: contract.cartridge.maxPngBytes + contract.cartridge.content.maxBytes + 12,
+  CONTENT_VERSION: contract.cartridge.content.version,
+  CONTENT_MAGIC: contract.cartridge.content.magic,
+  ...Object.fromEntries(
+    Object.entries(contract.cartridge.content.headerFields).map(([name, offset]) => [
+      `CONTENT_HEADER_${name.toUpperCase()}`,
+      offset,
+    ]),
+  ),
+  ...Object.fromEntries(
+    Object.entries(contract.cartridge.content.recordFields).map(([name, offset]) => [
+      `CONTENT_RECORD_${name.toUpperCase()}`,
+      offset,
+    ]),
+  ),
+  CONTENT_HEADER_BYTES: contract.cartridge.content.headerBytes,
+  CONTENT_RECORD_BYTES: contract.cartridge.content.recordBytes,
+  MAX_CONTENT_ENTRIES: contract.cartridge.content.maxEntries,
+  MAX_CONTENT_BYTES: contract.cartridge.content.maxBytes,
+  MAX_CONTENT_READ_BYTES: contract.cartridge.content.maxReadBytes,
   PROFILE_EFFECTS_3D: contract.profiles[5].id,
   EFFECTS_3D_SDK: contract.profiles[5].sdkWord,
   EFFECTS_3D_FEATURES: contract.profiles[5].features,
@@ -125,10 +146,19 @@ const common = {
   COORDINATE_MAX: contract.limits.coordinateMax,
   MAX_TEXT_BYTES_PER_COMMAND: contract.limits.textBytesPerCommand,
   LEGACY_BUTTON_MASK: Object.values(contract.buttons).reduce((mask, bit) => mask | bit, 0),
+  INPUT_VERSION: contract.inputVersion,
+  SAVE_VERSION: contract.save.version,
+  MAX_SAVE_BYTES: contract.save.maxBytes,
+  ...Object.fromEntries(
+    Object.entries(contract.save.status).map(([name, value]) => [
+      `SAVE_${name.toUpperCase()}`,
+      value,
+    ]),
+  ),
   INPUT_BUTTON_MASK: [
     ...Object.values(contract.buttons),
     ...Object.values(contract.extendedButtons),
-  ].reduce((mask, bit) => mask | bit, 0),
+  ].reduce((mask, bit) => (mask | bit) >>> 0, 0),
   ...Object.fromEntries(
     Object.entries(contract.extendedButtons).map(([name, bit]) => [
       `BUTTON_${name.toUpperCase()}`,

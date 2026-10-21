@@ -1,5 +1,7 @@
 import { parentPort, workerData } from "node:worker_threads";
 import { readFile } from "node:fs/promises";
+import { decodeCartridge, contentImports } from "../../runtime/odin/web/cartridge.js";
+import { unavailableSaveImports } from "../../runtime/odin/web/save.js";
 import {
   inspectGuest,
   loadSource,
@@ -15,9 +17,15 @@ try {
   const imports = { env: { sin: Math.sin } };
   const bytes = await readFile(workerData.game);
   inspectGuest(bytes);
-  const game = (await WebAssembly.instantiate(bytes, imports)).instance.exports;
   const runtime = (await WebAssembly.instantiate(await readFile(workerData.runtime), imports))
     .instance.exports;
+  decodeCartridge(runtime, workerData.cartridge);
+  let game = null;
+  game = (
+    await WebAssembly.instantiate(bytes, {
+      env: { sin: Math.sin, ...contentImports(runtime, () => game), ...unavailableSaveImports },
+    })
+  ).instance.exports;
   const source = workerData.source ? await readFile(workerData.source) : null;
   parentPort.postMessage({ type: "executing" });
   game._initialize?.();

@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir, readdir, copyFile, realpath } from "node:fs/promises";
+import { readFile, writeFile, mkdir, readdir, copyFile, realpath, stat } from "node:fs/promises";
 import { resolve, dirname, relative, sep } from "node:path";
 import { timedSpawnSync as spawnSync } from "../command-timing.mjs";
 import { fileURLToPath } from "node:url";
@@ -16,7 +16,12 @@ import { branding } from "../branding.mjs";
 export const repo = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const contract = JSON.parse(await readFile(resolve(repo, "sdk/contract.json"), "utf8"));
 export function command(exe, args, options = {}) {
-  const result = spawnSync(exe, args, { cwd: repo, stdio: "inherit", timeout: 600000, ...options });
+  const result = spawnSync(exe, args, {
+    cwd: repo,
+    stdio: "inherit",
+    timeout: 600000,
+    ...options,
+  });
   if (result.error) {
     throw result.error;
   }
@@ -103,6 +108,8 @@ export async function syncEditor(project) {
     "billboard.luau",
     "resource_schema.luau",
     "constants.luau",
+    "content.luau",
+    "save.luau",
   ]) {
     await copyFile(resolve(repo, "sdk/luau", file), resolve(target, file));
   }
@@ -291,11 +298,46 @@ async function player() {
 async function executor() {
   task("deps:luau");
 }
+async function projectCartridge(spec, coverPath = spec.cover) {
+  if (spec.content !== undefined && !Array.isArray(spec.content)) {
+    throw new Error("content must be an array of { id, path } entries");
+  }
+  const content = [];
+  const limits = contract.cartridge.content;
+  if ((spec.content?.length || 0) > limits.maxEntries) {
+    throw new Error("Cartridge content exceeds its entry limit");
+  }
+  let contentBytes = limits.headerBytes + (spec.content?.length || 0) * limits.recordBytes;
+  for (const entry of spec.content || []) {
+    const path = await inside(spec.project, entry.path);
+    const info = await stat(path);
+    contentBytes += info.size;
+    if (!info.isFile() || contentBytes > limits.maxBytes) {
+      throw new Error("Invalid content file or cartridge content exceeds its byte limit");
+    }
+    content.push({ id: entry.id, bytes: await readFile(path) });
+  }
+  return encodeCartridge({
+    title: spec.title || branding.gameTitle,
+    profile: spec.profile,
+    language: spec.language,
+    display: spec.display,
+    code: await readFile(
+      resolve(spec.generated, spec.language === "luau" ? "game.luau" : "game.wasm"),
+    ),
+    assets: JSON.parse(await readFile(spec.assets, "utf8")),
+    cover: coverPath ? await readFile(coverPath) : null,
+    content,
+  });
+}
+
 async function smoke(spec) {
   const luau = spec.language === "luau";
+  const cartridge = await projectCartridge(spec);
   await new Promise((done, reject) => {
     const worker = new Worker(new URL("./smoke-worker.mjs", import.meta.url), {
       workerData: {
+        cartridge,
         game: luau
           ? resolve(repo, "build/luau-executor/luau-executor.wasm")
           : resolve(spec.generated, "game.wasm"),
@@ -352,15 +394,7 @@ export async function buildProject(path, options = {}) {
   const spec = await checkProject(path),
     luau = spec.language === "luau";
   const coverPath = options.cover ? resolve(options.cover) : spec.cover;
-  const png = encodeCartridge({
-    title: spec.title || branding.gameTitle,
-    profile: spec.profile,
-    language: spec.language,
-    display: spec.display,
-    code: await readFile(resolve(spec.generated, luau ? "game.luau" : "game.wasm")),
-    assets: JSON.parse(await readFile(spec.assets, "utf8")),
-    cover: coverPath ? await readFile(coverPath) : null,
-  });
+  const png = await projectCartridge(spec, coverPath);
   // Validate generated and user-provided covers with the actual player parser.
   const runtime = (
     await WebAssembly.instantiate(

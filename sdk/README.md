@@ -97,6 +97,10 @@ also accepts local PNGs through **Open cartridge** or drag-and-drop. See
 [PNG cartridges](../docs/png-cartridges.md) for the format, custom artwork,
 runtime components, loading commands and current preview limits.
 
+For assets larger than the code budget, declare `content: [{"id": 1, "path":
+"assets/atlas.rgba"}]` in `console.json`. The [indexed content guide](../docs/indexed-content.md)
+describes both SDK read APIs, byte limits and the immutable cartridge index.
+
 ## Project structure and lifecycle
 
 `console.json` declares SDK version, title, language, entry path, asset path, optional PNG cover path and
@@ -158,11 +162,38 @@ and `released` support every named button. `all_buttons()` returns the complete
 mask. These optional controls require the current player; older SDKs continue
 to ignore the extra bits. See the canonical values in `contract.json`.
 
+Input version 2 adds `pointer_left`, `pointer_right`, `pointer_hover`,
+`wheel_up/down`, `inventory` (I), `character` (C), `skills` (K), `quest` (Q),
+`map` (Tab), `potion_1` through `potion_4` (1–4), `shift` (either Shift), and
+`escape` (Escape). Odin names are `PointerLeft`, `PointerRight`, `PointerHover`,
+`WheelUp`, `WheelDown`, `Inventory`, `Character`, `Skills`, `Quest`, `Map`,
+`Potion1` through `Potion4`, `Shift`, and `Escape`. Q also retains `rotate_left`.
+`capabilities().input_version` reports 2 without changing cartridge profile ABIs.
+
+`pointer_position()` returns `(hover, x, y)` in logical display coordinates,
+including movement with no mouse button held. `pointer()` retains its original
+left-held meaning and returns `(false, 0, 0)` when inactive. Both discard
+out-of-display coordinates. `wheel()` returns +1 for up, -1 for down, or 0;
+the host coalesces wheel events to the latest direction before the next tick and
+consumes it once, even when several simulation ticks share a rendered frame.
+Focus loss clears held controls and pending wheel input.
+
+Native `--replay` accepts the original whitespace-separated unsigned button
+masks or versioned `v2:mask:leftHeld:x:y` tokens. For example,
+`v2:262144:0:80.5:60.75` hovers without pressing a button. Masks are unsigned
+32-bit integers; Escape occupies bit 31. Browser worker step requests use the
+equivalent `{buttons, pointer, x, y}` input snapshot. Old SDKs ignore the added
+bits and continue to receive their original pointer semantics.
+
 ## Verify
+
+Both SDKs also provide a versioned [persistent save slot](save.md), with a
+4096-byte limit, native atomic replacement and browser transaction status.
 
 ```text
 npm run test:sdk
 npm run test:cartridge
+mise run validate test:save
 ```
 
 The suite builds real projects with both SDKs and verifies native/browser parity,

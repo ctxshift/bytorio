@@ -11,6 +11,7 @@ const webScripts = [
   "audio-worklet.js",
   "constants.js",
   "cartridge.js",
+  "save.js",
   "executor-cache.js",
   "executor-cache-core.js",
   "frame-clock.js",

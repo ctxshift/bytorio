@@ -123,7 +123,8 @@ document.getElementById("graphics-apply").addEventListener("click", () => {
   load(started).catch((error) => fail(error.message));
 });
 const keys = new Set();
-const pointer = { pointer: false, x: 0, y: 0 };
+const pointer = { pointer: false, hover: false, right: false, x: 0, y: 0 };
+let wheelDirection = 0;
 let worker,
   watchdog,
   pending = false,
@@ -264,6 +265,9 @@ globalThis.playerAudio = {
 function stopOutput() {
   keys.clear();
   pointer.pointer = false;
+  pointer.right = false;
+  pointer.hover = false;
+  wheelDirection = 0;
   const audio = globalThis.playerAudio;
   if (audio.source) {
     audio.source.onended = null;
@@ -542,8 +546,8 @@ async function openCartridge(file) {
     return;
   }
   const currentSelection = ++selection;
-  if (!file.size || file.size > 2 * 1024 * 1024) {
-    fail("PNG cartridge must be at most 2 MiB for the current preview.");
+  if (!file.size || file.size > controls.MAX_CARTRIDGE_BYTES) {
+    fail("PNG cartridge exceeds its container size limit.");
     return;
   }
   try {
@@ -570,7 +574,7 @@ window.addEventListener("drop", (event) => {
   openCartridge(event.dataTransfer.files[0]);
 });
 
-function input() {
+function input(consumeWheel = true) {
   let buttons = 0;
   for (const [key, mask] of [
     ["KeyA", controls.BUTTON_MOVE_LEFT],
@@ -584,6 +588,18 @@ function input() {
     ["KeyQ", controls.BUTTON_ROTATE_LEFT],
     ["KeyE", controls.BUTTON_ROTATE_RIGHT],
     ["KeyR", controls.BUTTON_RESET],
+    ["KeyI", controls.BUTTON_INVENTORY],
+    ["KeyC", controls.BUTTON_CHARACTER],
+    ["KeyK", controls.BUTTON_SKILLS],
+    ["KeyQ", controls.BUTTON_QUEST],
+    ["Tab", controls.BUTTON_MAP],
+    ["Digit1", controls.BUTTON_POTION_1],
+    ["Digit2", controls.BUTTON_POTION_2],
+    ["Digit3", controls.BUTTON_POTION_3],
+    ["Digit4", controls.BUTTON_POTION_4],
+    ["ShiftLeft", controls.BUTTON_SHIFT],
+    ["ShiftRight", controls.BUTTON_SHIFT],
+    ["Escape", controls.BUTTON_ESCAPE],
   ]) {
     if (keys.has(key)) {
       buttons |= mask;
@@ -624,15 +640,35 @@ function input() {
       buttons |= 16;
     }
   }
+  const hover =
+    pointer.hover &&
+    pointer.x >= 0 &&
+    pointer.x < (globalThis.playerStatus.width || canvas.width) &&
+    pointer.y >= 0 &&
+    pointer.y < (globalThis.playerStatus.height || canvas.height);
+  if (hover) {
+    buttons |= controls.BUTTON_POINTER_HOVER;
+    if (pointer.pointer) {
+      buttons |= controls.BUTTON_POINTER_LEFT;
+    }
+    if (pointer.right) {
+      buttons |= controls.BUTTON_POINTER_RIGHT;
+    }
+  }
+  if (wheelDirection > 0) {
+    buttons |= controls.BUTTON_WHEEL_UP;
+  }
+  if (wheelDirection < 0) {
+    buttons |= controls.BUTTON_WHEEL_DOWN;
+  }
+  if (consumeWheel) {
+    wheelDirection = 0;
+  }
   return {
-    buttons,
-    ...pointer,
-    pointer:
-      pointer.pointer &&
-      pointer.x >= 0 &&
-      pointer.x < canvas.width &&
-      pointer.y >= 0 &&
-      pointer.y < canvas.height,
+    buttons: buttons >>> 0,
+    pointer: pointer.pointer && hover,
+    x: pointer.x,
+    y: pointer.y,
   };
 }
 
@@ -665,7 +701,7 @@ function requestFrame(now = performance.now(), displayOpportunity = false) {
         diagnostics: false,
         steps,
         render,
-        input: input(),
+        input: input(steps > 0),
         presentationSize: displayPixels(),
       });
     }
@@ -681,6 +717,9 @@ function resetInput() {
   frameTimer = undefined;
   keys.clear();
   pointer.pointer = false;
+  pointer.right = false;
+  pointer.hover = false;
+  wheelDirection = 0;
   clock = new FrameClock();
 }
 window.addEventListener("blur", () => {
@@ -714,6 +753,17 @@ window.addEventListener("keydown", (event) => {
       "KeyQ",
       "KeyE",
       "KeyR",
+      "KeyI",
+      "KeyC",
+      "KeyK",
+      "Tab",
+      "Digit1",
+      "Digit2",
+      "Digit3",
+      "Digit4",
+      "ShiftLeft",
+      "ShiftRight",
+      "Escape",
     ].includes(event.code)
   ) {
     event.preventDefault();
@@ -727,17 +777,42 @@ function point(event) {
     ((event.clientX - rect.left) * (globalThis.playerStatus.width || canvas.width)) / rect.width;
   pointer.y =
     ((event.clientY - rect.top) * (globalThis.playerStatus.height || canvas.height)) / rect.height;
+  pointer.hover = true;
+  pointer.pointer = (event.buttons & 1) !== 0;
+  pointer.right = (event.buttons & 2) !== 0;
 }
 canvas.addEventListener("pointerdown", (event) => {
   canvas.focus();
   canvas.setPointerCapture(event.pointerId);
   point(event);
-  pointer.pointer = true;
 });
 canvas.addEventListener("pointermove", point);
-for (const name of ["pointerup", "pointercancel", "lostpointercapture"]) {
+canvas.addEventListener("pointerenter", point);
+canvas.addEventListener("pointerup", point);
+canvas.addEventListener("pointerleave", () => {
+  pointer.hover = false;
+});
+canvas.addEventListener("contextmenu", (event) => event.preventDefault());
+canvas.addEventListener(
+  "wheel",
+  (event) => {
+    if (document.activeElement !== canvas) {
+      return;
+    }
+    event.preventDefault();
+    if (event.deltaY !== 0) {
+      wheelDirection = -Math.sign(event.deltaY);
+    }
+  },
+  { passive: false },
+);
+for (const name of ["pointercancel", "lostpointercapture"]) {
   canvas.addEventListener(name, () => {
     pointer.pointer = false;
+    pointer.right = false;
+    if (name === "pointercancel") {
+      pointer.hover = false;
+    }
   });
 }
 button.addEventListener("click", () => start().catch((error) => fail(error.message)));

@@ -10,13 +10,24 @@ import { run } from "../../../tools/toolchain.mjs";
 import { odinUnitTests } from "../../../tools/odin-unit-tests.mjs";
 import { serve } from "../../../tools/serve.mjs";
 import * as policy from "../../../runtime/odin/web/policy.js";
+import { MAX_LUAU_SOURCE_BYTES } from "../../../runtime/odin/web/constants.js";
 
 const gpu = process.argv.includes("--gpu");
 const output = resolve("examples/kart3d/build/validation", randomUUID());
 await mkdir(output, { recursive: true });
 odinUnitTests("examples/kart3d/tests", resolve(output, "race.exe"));
 const projects = await buildKart3d();
-const imports = { env: { sin: Math.sin } };
+const imports = {
+  env: {
+    sin: Math.sin,
+    content_size: () => 0,
+    content_read: () => 0,
+    save_size: () => 0,
+    save_status: () => 3,
+    save_read: () => 0,
+    save_write: () => 3,
+  },
+};
 async function pair(language, source) {
   const base = resolve(root, language, "build/web");
   const runtime = (
@@ -173,27 +184,52 @@ const original = await readFile(resolve(root, "luau/build/web/game.luau"), "utf8
 // Bundle source contains the authored game module; instrument its unique return.
 const needle = "return { init = init, update = update, draw = draw }";
 assert.equal(original.split(needle).length, 2, "one game lifecycle return");
-// Base-36 text preserves every integer exactly while keeping development-only
-// expectations within the same source ceiling as the shipping cartridge.
+// Store changed columns as exact integer deltas. All snapshots and assertions
+// remain present without repeating unchanged fields in the instrumented source.
+let previousState = Array(states[0].length).fill(0);
 const checks = states
-  .map((row) => JSON.stringify(row.map((value) => value.toString(36)).join(",")))
+  .map((row) => {
+    const words = [row[0].toString(36)];
+    for (let column = 1; column < row.length; column++) {
+      if (row[column] !== previousState[column]) {
+        words.push((column + 1).toString(36), (row[column] - previousState[column]).toString(36));
+      }
+    }
+    previousState = row;
+    return JSON.stringify(words.join(","));
+  })
   .join(",\n");
 const wrapper = `local checks = {${checks}}
 local checkIndex, verificationTick = 1, 0
+local previous = table.create(${stateExpressions.length + 1}, 0)
+local function decodeWord(word: string)
+    local sign = 1
+    if string.sub(word, 1, 1) == "-" then
+        sign = -1
+        word = string.sub(word, 2)
+    end
+    local value = tonumber(word, 36)
+    assert(value ~= nil, "invalid replay expectation")
+    return value * sign
+end
 local function expectedAt(index: number)
     local encoded = checks[index]
     if not encoded then return nil end
-    local result = {}
-    for word in string.gmatch(encoded, "[^,]+") do
-        local sign = 1
-        if string.sub(word, 1, 1) == "-" then
-            sign = -1
-            word = string.sub(word, 2)
-        end
-        local value = tonumber(word, 36)
-        assert(value ~= nil, "invalid replay expectation")
-        table.insert(result, value * sign)
+    local words = string.gmatch(encoded, "[^,]+")
+    local result = table.clone(previous)
+    local tick = words()
+    assert(tick ~= nil, "missing replay tick")
+    result[1] = decodeWord(tick)
+    while true do
+        local columnWord = words()
+        if not columnWord then break end
+        local delta = words()
+        assert(delta ~= nil, "missing replay delta")
+        local column = decodeWord(columnWord)
+        assert(column >= 2 and column <= #result, "invalid replay column")
+        result[column] += decodeWord(delta)
     end
+    previous = result
     return result
 end
 local expected = expectedAt(checkIndex)
@@ -211,6 +247,10 @@ local function verifiedUpdate(dt: number)
 end
 return {init=init,update=verifiedUpdate,draw=draw}`;
 const verifiedSource = Buffer.from(original.replace(needle, wrapper));
+assert.ok(
+  verifiedSource.length <= MAX_LUAU_SOURCE_BYTES,
+  "instrumented replay fits the Luau source budget",
+);
 const luau = await pair("luau", verifiedSource);
 let sampleIndex = 0;
 for (let i = 0; i < masks.length; i++) {
@@ -257,7 +297,9 @@ const report = {
 };
 const server = serve(".", 0);
 await once(server, "listening");
-const browser = await chromium.launch({ channel: process.env.PLAYER_BROWSER_CHANNEL || "chrome" });
+const browser = await chromium.launch({
+  channel: process.env.PLAYER_BROWSER_CHANNEL || "chrome",
+});
 const imageIndices = samples.filter((_, i) => i % 13 === 0).map((x) => x.index);
 for (const sample of samples) {
   if (sample.width === 640 && imageIndices.length < 14) {

@@ -73,7 +73,17 @@ for (let i = 0; i < 20; i++) {
 defeat.push(16, 0, 4, 0, 16, 0);
 assert.equal(defeat.length, 76);
 await writeFile(`${out}/defeat.inputs`, defeat.join("\n") + "\n");
-const imports = { env: { sin: Math.sin } };
+const imports = {
+  env: {
+    sin: Math.sin,
+    content_size: () => 0,
+    content_read: () => 0,
+    save_size: () => 0,
+    save_status: () => 3,
+    save_read: () => 0,
+    save_write: () => 3,
+  },
+};
 const wasm = {
   odin: await readFile(`${root}/web/game.wasm`),
   luau: await readFile(`${root}/web/luau-executor.wasm`),
@@ -82,8 +92,15 @@ const source = await readFile(`${root}/web/rpg.luau`),
   runtimeBytes = await readFile(`${root}/web/runtime.wasm`);
 assert.deepEqual(
   WebAssembly.Module.imports(new WebAssembly.Module(wasm.luau)),
-  [],
-  "executor has no host imports",
+  [
+    { module: "env", name: "content_size", kind: "function" },
+    { module: "env", name: "content_read", kind: "function" },
+    { module: "env", name: "save_size", kind: "function" },
+    { module: "env", name: "save_status", kind: "function" },
+    { module: "env", name: "save_read", kind: "function" },
+    { module: "env", name: "save_write", kind: "function" },
+  ],
+  "executor imports only the bounded content interface",
 );
 for (const language of ["odin", "luau"]) {
   assert.deepEqual(
@@ -288,7 +305,9 @@ await once(server, "listening");
 let browser;
 const browserResults = { odin: [], luau: [], luauCached: [] };
 try {
-  browser = await chromium.launch({ channel: process.env.PLAYER_BROWSER_CHANNEL || undefined });
+  browser = await chromium.launch({
+    channel: process.env.PLAYER_BROWSER_CHANNEL || undefined,
+  });
   const page = await browser.newPage({ viewport: { width: 1200, height: 850 } }),
     errors = [];
   page.on("pageerror", (error) => errors.push(error.message));

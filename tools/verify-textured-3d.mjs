@@ -124,11 +124,33 @@ for (const language of ["odin", "luau"]) {
   const base = resolve(project, "build/web");
   const wasm = resolve(base, language === "luau" ? "luau-executor.wasm" : "game.wasm");
   const source = language === "luau" ? resolve(base, "game.luau") : null;
-  const game = (await WebAssembly.instantiate(await readFile(wasm), { env: { sin: Math.sin } }))
-    .instance.exports;
+  const game = (
+    await WebAssembly.instantiate(await readFile(wasm), {
+      env: {
+        sin: Math.sin,
+        content_size: () => 0,
+        content_read: () => 0,
+        save_size: () => 0,
+        save_status: () => 3,
+        save_read: () => 0,
+        save_write: () => 3,
+      },
+    })
+  ).instance.exports;
   const bytes = await readFile(resolve(base, "runtime.wasm"));
-  const runtime = (await WebAssembly.instantiate(bytes, { env: { sin: Math.sin } })).instance
-    .exports;
+  const runtime = (
+    await WebAssembly.instantiate(bytes, {
+      env: {
+        sin: Math.sin,
+        content_size: () => 0,
+        content_read: () => 0,
+        save_size: () => 0,
+        save_status: () => 3,
+        save_read: () => 0,
+        save_write: () => 3,
+      },
+    })
+  ).instance.exports;
   game._initialize?.();
   if (source) {
     loadSource(game, await readFile(source));
@@ -167,7 +189,19 @@ for (const language of ["odin", "luau"]) {
     assert.equal(runtime.runtime_resource_bytes(), 0, `${name}: rollback`);
   }
   for (const protocol of [4, 5]) {
-    const old = (await WebAssembly.instantiate(bytes, { env: { sin: Math.sin } })).instance.exports;
+    const old = (
+      await WebAssembly.instantiate(bytes, {
+        env: {
+          sin: Math.sin,
+          content_size: () => 0,
+          content_read: () => 0,
+          save_size: () => 0,
+          save_status: () => 3,
+          save_read: () => 0,
+          save_write: () => 3,
+        },
+      })
+    ).instance.exports;
     assert.equal(old.runtime_resource_reset(protocol), 1);
     new Uint8Array(old.memory.buffer, old.runtime_resource_packet(), packet.length).set(packet);
     assert.equal(
@@ -213,7 +247,9 @@ for (const language of ["odin", "luau"]) {
 
 const server = serve(".", 0);
 await once(server, "listening");
-const browser = await chromium.launch({ channel: process.env.PLAYER_BROWSER_CHANNEL || undefined });
+const browser = await chromium.launch({
+  channel: process.env.PLAYER_BROWSER_CHANNEL || undefined,
+});
 try {
   const page = await browser.newPage();
   await page.goto(
@@ -264,7 +300,11 @@ try {
             for (let tick = 0; tick < 8; tick++) {
               trace.push(
                 await request(
-                  { type: "step", steps: 1, input: { buttons: 0, pointer: false, x: 0, y: 0 } },
+                  {
+                    type: "step",
+                    steps: 1,
+                    input: { buttons: 0, pointer: false, x: 0, y: 0 },
+                  },
                   "frame",
                 ),
               );
@@ -289,8 +329,19 @@ try {
   for (const { language, project } of await buildTexturedDrawing(resolve(root, "drawing"))) {
     const web = resolve(project, "build/web");
     const instantiate = async (file) =>
-      (await WebAssembly.instantiate(await readFile(file), { env: { sin: Math.sin } })).instance
-        .exports;
+      (
+        await WebAssembly.instantiate(await readFile(file), {
+          env: {
+            sin: Math.sin,
+            content_size: () => 0,
+            content_read: () => 0,
+            save_size: () => 0,
+            save_status: () => 3,
+            save_read: () => 0,
+            save_write: () => 3,
+          },
+        })
+      ).instance.exports;
     const game = await instantiate(
       resolve(web, language === "luau" ? "luau-executor.wasm" : "game.wasm"),
     );

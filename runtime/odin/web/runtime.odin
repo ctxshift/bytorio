@@ -300,13 +300,26 @@ runtime_resource_stat :: proc "c" (index: u32) -> u64 {
     return 0
 }
 
-cartridge_buffer: [cartridge.MAX_BYTES]u8
+cartridge_buffer: []u8
 cartridge_info: cartridge.Cartridge
 cartridge_error: string
 @(export)
 runtime_cartridge_buffer :: proc "c" () -> u32 {
 
-    return u32(uintptr(&cartridge_buffer))
+    return u32(uintptr(raw_data(cartridge_buffer)))
+}
+@(export)
+runtime_cartridge_reserve :: proc "c" (size: u32) -> u32 {
+    context = runtime.default_context()
+    context.allocator = runtime.default_wasm_allocator()
+    cartridge_info = {}
+    delete(cartridge_buffer)
+    cartridge_buffer = nil
+    if size == 0 || size > cartridge.MAX_BYTES {
+        return 0
+    }
+    cartridge_buffer = make([]u8, int(size))
+    return u32(uintptr(raw_data(cartridge_buffer)))
 }
 @(export)
 runtime_cartridge_capacity :: proc "c" () -> u32 {
@@ -318,12 +331,22 @@ runtime_cartridge_parse :: proc "c" (size: u32) -> u32 {
     context = runtime.default_context()
     cartridge_info = {}
     cartridge_error = "invalid PNG cartridge size"
-    if size > cartridge.MAX_BYTES {
+    if size > u32(len(cartridge_buffer)) {
 
         return 0
     }
     cartridge_info, cartridge_error = cartridge.parse(cartridge_buffer[:size])
     return cartridge_info.language
+}
+@(export)
+runtime_content_size :: proc "c" (id: u32) -> u32 {
+    context = runtime.default_context()
+    return u32(len(cartridge.content_blob(cartridge_info.content, id)))
+}
+@(export)
+runtime_content_pointer :: proc "c" (id: u32) -> u32 {
+    context = runtime.default_context()
+    return u32(uintptr(raw_data(cartridge.content_blob(cartridge_info.content, id))))
 }
 @(export)
 runtime_cartridge_code :: proc "c" () -> u32 {

@@ -3,7 +3,9 @@ import { deflateSync } from "node:zlib";
 import { readFileSync } from "node:fs";
 const contract = JSON.parse(readFileSync(new URL("../../sdk/contract.json", import.meta.url)));
 
-export const PNG_LIMIT = 2 * 1024 * 1024;
+export const PNG_LIMIT = contract.cartridge.maxPngBytes;
+export const CONTENT_LIMIT = contract.cartridge.content.maxBytes;
+export const CARTRIDGE_LIMIT = PNG_LIMIT + CONTENT_LIMIT + 12;
 export const signature = Buffer.from("89504e470d0a1a0a", "hex");
 const CRC32_POLYNOMIAL = 0xedb88320;
 const CRC32_INITIAL = 0xffffffff;
@@ -30,7 +32,7 @@ export function chunk(type, data) {
   return result;
 }
 export function chunks(bytes) {
-  if (bytes.length > PNG_LIMIT || !bytes.subarray(0, 8).equals(signature)) {
+  if (bytes.length > CARTRIDGE_LIMIT || !bytes.subarray(0, 8).equals(signature)) {
     throw new Error("Invalid PNG signature or size");
   }
   const result = [];
@@ -133,6 +135,50 @@ export function defaultCover({ title, language, assets }) {
   ]);
 }
 
+export function encodeContent(entries) {
+  const limits = contract.cartridge.content;
+  if (!Array.isArray(entries) || entries.length > limits.maxEntries) {
+    throw new Error("Invalid cartridge content entries");
+  }
+  if (entries.length === 0) {
+    return null;
+  }
+  const sorted = [...entries].sort((a, b) => a.id - b.id);
+  const headerBytes = limits.headerBytes + sorted.length * limits.recordBytes;
+  let total = headerBytes;
+  let previous = 0;
+  for (const { id, bytes } of sorted) {
+    if (
+      !Number.isInteger(id) ||
+      id <= previous ||
+      id > 0xffffffff ||
+      !(bytes instanceof Uint8Array) ||
+      !bytes.length
+    ) {
+      throw new Error("Content IDs must be unique positive u32 values with nonempty byte data");
+    }
+    previous = id;
+    total += bytes.length;
+    if (total > limits.maxBytes) {
+      throw new Error("Cartridge content exceeds its byte limit");
+    }
+  }
+  const result = Buffer.alloc(total);
+  result.writeUInt32LE(limits.magic, limits.headerFields.magic);
+  result.writeUInt32LE(limits.version, limits.headerFields.version);
+  result.writeUInt32LE(sorted.length, limits.headerFields.count);
+  let offset = 0;
+  sorted.forEach(({ id, bytes }, i) => {
+    const record = limits.headerBytes + i * limits.recordBytes;
+    result.writeUInt32LE(id, record + limits.recordFields.id);
+    result.writeUInt32LE(offset, record + limits.recordFields.offset);
+    result.writeUInt32LE(bytes.length, record + limits.recordFields.length);
+    result.set(bytes, headerBytes + offset);
+    offset += bytes.length;
+  });
+  return result;
+}
+
 export function encodeCartridge({
   title,
   language,
@@ -140,6 +186,7 @@ export function encodeCartridge({
   code,
   cover,
   assets,
+  content = [],
   profile = "2d-preview-1",
 }) {
   const requirements = contract.profiles.find((item) => item.name === profile);
@@ -185,16 +232,18 @@ export function encodeCartridge({
   header.writeUInt32LE(code.length, 24);
   const image = cover || defaultCover({ title, language, assets });
   const parts = chunks(image);
-  if (parts.some(({ type }) => type === "caRt")) {
+  if (parts.some(({ type }) => type === "caRt" || type === "coNt")) {
     throw new Error("Cover already contains a cartridge");
   }
   const end = parts.at(-1).offset;
+  const contentBytes = encodeContent(content);
   const png = Buffer.concat([
     image.subarray(0, end),
     chunk("caRt", Buffer.concat([header, name, code])),
+    ...(contentBytes ? [chunk("coNt", contentBytes)] : []),
     image.subarray(end),
   ]);
-  if (png.length > PNG_LIMIT) {
+  if (png.length - (contentBytes ? contentBytes.length + 12 : 0) > PNG_LIMIT) {
     throw new Error("PNG cartridge exceeds the 2 MiB preview limit");
   }
   return png;

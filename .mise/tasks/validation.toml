@@ -2,6 +2,7 @@
 
 ["deps:trace:resources"]
 sources = [
+  "runtime/odin/cartridge/**/*.odin",
   "runtime/odin/abi/**/*.odin",
   "runtime/odin/audio/**/*.odin",
   "runtime/odin/core/**/*.odin",
@@ -19,6 +20,7 @@ run = "node tools/build-trace.mjs resources"
 
 ["deps:trace:graphics"]
 sources = [
+  "runtime/odin/cartridge/**/*.odin",
   "runtime/odin/abi/**/*.odin",
   "runtime/odin/audio/**/*.odin",
   "runtime/odin/core/**/*.odin",
@@ -36,6 +38,7 @@ run = "node tools/build-trace.mjs graphics"
 
 ["deps:trace:audio"]
 sources = [
+  "runtime/odin/cartridge/**/*.odin",
   "runtime/odin/abi/**/*.odin",
   "runtime/odin/audio/**/*.odin",
   "runtime/odin/core/**/*.odin",

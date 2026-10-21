@@ -1,5 +1,9 @@
 package abi
 
+import "core:math"
+import "core:strconv"
+import "core:strings"
+
 VERSION :: u32(1)
 WIDTH :: 640
 HEIGHT :: 360
@@ -39,6 +43,43 @@ Input :: struct {
     buttons: u32,
     pointer: bool,
     x, y:    f64,
+}
+
+// Legacy decimal masks remain valid. Version 2 adds left-held and logical coordinates.
+parse_input :: proc(token: string) -> (Input, bool) {
+    result: Input
+    fields := strings.split(token, ":")
+    defer delete(fields)
+    if len(fields) == 1 {
+        mask, ok := strconv.parse_u64(token)
+        if !ok || mask > INPUT_BUTTON_MASK { return {}, false }
+        result.buttons = u32(mask)
+        return result, true
+    }
+    if len(fields) != 5 || fields[0] != "v2" { return {}, false }
+    mask, mask_ok := strconv.parse_u64(fields[1])
+    active, active_ok := strconv.parse_u64(fields[2])
+    x, x_ok := strconv.parse_f64(fields[3])
+    y, y_ok := strconv.parse_f64(fields[4])
+    if !mask_ok ||
+       mask > INPUT_BUTTON_MASK ||
+       !active_ok ||
+       active > 1 ||
+       !x_ok ||
+       !y_ok ||
+       math.is_nan(x) ||
+       math.is_inf(x) ||
+       math.is_nan(y) ||
+       math.is_inf(y) {
+        return {}, false
+    }
+    result = Input {
+        buttons = u32(mask),
+        pointer = active != 0,
+        x       = x,
+        y       = y,
+    }
+    return result, true
 }
 
 smoke_input :: proc(tick: u32) -> Input {

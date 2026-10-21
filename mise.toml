@@ -69,6 +69,7 @@ outputs = [
   "build/odin-player/web/audio-worklet.js",
   "build/odin-player/web/audio.wasm",
   "build/odin-player/web/cartridge.js",
+  "build/odin-player/web/save.js",
   "build/odin-player/web/constants.js",
   "build/odin-player/web/executor-cache-core.js",
   "build/odin-player/web/executor-cache.js",
@@ -135,8 +136,14 @@ sources = [
 [tasks."test:sdk"]
 run = ["node tools/verify-sdk.mjs", "node tools/verify-sdk-cli.mjs"]
 
+[tasks."test:save"]
+run = ["node --test tools/save.test.mjs", "node tools/verify-save.mjs"]
+
 [tasks."test:cartridge"]
-run = "node tools/verify-cartridge.mjs"
+run = ["node tools/verify-cartridge.mjs", "node tools/verify-content.mjs"]
+
+[tasks."test:content"]
+run = "node tools/verify-content.mjs"
 
 [tasks."test:resources"]
 run = "node tools/verify-resources.mjs"
@@ -201,6 +208,7 @@ run = [
   {task = "test:build-tasks"},
   {task = "test:player-export"},
   {task = "test:sdk"},
+  {task = "test:save"},
   {task = "test:cartridge"},
   {task = "test:resources"},
   {task = "test:graphics"},

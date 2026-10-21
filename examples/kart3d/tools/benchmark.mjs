@@ -28,7 +28,17 @@ if (previous) {
   assert.equal(previous.method.measuredPasses, 5);
 }
 await mkdir(root, { recursive: true });
-const imports = { env: { sin: Math.sin } };
+const imports = {
+  env: {
+    sin: Math.sin,
+    content_size: () => 0,
+    content_read: () => 0,
+    save_size: () => 0,
+    save_status: () => 3,
+    save_read: () => 0,
+    save_write: () => 3,
+  },
+};
 const game = (
   await WebAssembly.instantiate(
     await readFile("examples/kart3d/build/odin/build/web/game.wasm"),
@@ -61,7 +71,9 @@ for (let i = 0; i < 300; i++) {
 }
 const server = serve(".", 0);
 await once(server, "listening");
-const browser = await chromium.launch({ channel: process.env.PLAYER_BROWSER_CHANNEL || "chrome" });
+const browser = await chromium.launch({
+  channel: process.env.PLAYER_BROWSER_CHANNEL || "chrome",
+});
 const report = {
   status: "running",
   recordedAt: new Date().toISOString(),
@@ -205,7 +217,10 @@ try {
               ],
               {
                 timeout: 300000,
-                env: { ...process.env, ...(backend === "cpu" ? { SDL_VIDEODRIVER: "dummy" } : {}) },
+                env: {
+                  ...process.env,
+                  ...(backend === "cpu" ? { SDL_VIDEODRIVER: "dummy" } : {}),
+                },
               },
             ),
           );

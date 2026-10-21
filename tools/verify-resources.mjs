@@ -137,9 +137,31 @@ for (const language of ["odin", "luau"]) {
   const base = resolve(project, "build/web");
   const wasm = resolve(base, language === "luau" ? "luau-executor.wasm" : "game.wasm");
   const source = language === "luau" ? resolve(base, "game.luau") : null;
-  const imports = { env: { sin: Math.sin } };
+  const imports = {
+    env: {
+      sin: Math.sin,
+      content_size: () => 0,
+      content_read: () => 0,
+      save_size: () => 0,
+      save_status: () => 3,
+      save_read: () => 0,
+      save_write: () => 3,
+    },
+  };
   const game = (await WebAssembly.instantiate(await readFile(wasm), imports)).instance.exports;
-  assert.deepEqual(WebAssembly.Module.imports(new WebAssembly.Module(await readFile(wasm))), []);
+  assert.deepEqual(
+    WebAssembly.Module.imports(new WebAssembly.Module(await readFile(wasm))),
+    language === "luau"
+      ? [
+          { module: "env", name: "content_size", kind: "function" },
+          { module: "env", name: "content_read", kind: "function" },
+          { module: "env", name: "save_size", kind: "function" },
+          { module: "env", name: "save_status", kind: "function" },
+          { module: "env", name: "save_read", kind: "function" },
+          { module: "env", name: "save_write", kind: "function" },
+        ]
+      : [],
+  );
   const runtime = (
     await WebAssembly.instantiate(await readFile(resolve(base, "runtime.wasm")), imports)
   ).instance.exports;
@@ -228,7 +250,9 @@ const server = serve(".", 0);
 await once(server, "listening");
 let browser;
 try {
-  browser = await chromium.launch({ channel: process.env.PLAYER_BROWSER_CHANNEL || undefined });
+  browser = await chromium.launch({
+    channel: process.env.PLAYER_BROWSER_CHANNEL || undefined,
+  });
   const page = await browser.newPage();
   await page.goto(
     `http://127.0.0.1:${server.address().port}/${relative(process.cwd(), root).replaceAll("\\", "/")}/harness.html`,

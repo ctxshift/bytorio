@@ -1,4 +1,10 @@
-import { INPUT_BUTTON_MASK, resourceSchema as audioLimits } from "./constants.js";
+import {
+  INPUT_BUTTON_MASK,
+  MAX_CARTRIDGE_BYTES,
+  BUTTON_WHEEL_UP,
+  BUTTON_WHEEL_DOWN,
+  resourceSchema as audioLimits,
+} from "./constants.js";
 import {
   inspectGuest,
   checkExecutor,
@@ -11,10 +17,12 @@ import {
   submitResources,
   deliverResources,
 } from "./policy.js";
-import { decodeCartridge } from "./cartridge.js";
+import { decodeCartridge, contentImports } from "./cartridge.js";
+import { openSaveSlot } from "./save.js";
 import { normalizeGraphics, createGpu } from "./gpu.js";
 
 let game, runtime;
+let saveSlot;
 let gpu;
 let presentationSize = [1920, 1080];
 let smoke = false;
@@ -284,7 +292,7 @@ self.onmessage = async ({ data }) => {
       const isSource = url.pathname.endsWith(".luau");
       const isPNG = !!data.cartridge || url.pathname.toLowerCase().endsWith(".png");
       const [input, runtimeBytes] = await Promise.all([
-        data.cartridge || fetchBytes(url, isPNG ? 2 * 1024 * 1024 : 1024 * 1024),
+        data.cartridge || fetchBytes(url, isPNG ? MAX_CARTRIDGE_BYTES : 1024 * 1024),
         fetchBytes(gpu ? "./runtime-gpu.wasm" : "./runtime.wasm"),
       ]);
       runtime = (await WebAssembly.instantiate(runtimeBytes, imports)).instance.exports;
@@ -323,7 +331,19 @@ self.onmessage = async ({ data }) => {
       self.postMessage({ type: "executing" });
       const gameModule = inspectGuest(gameBytes, executor?.module);
       const compiled = performance.now();
-      game = (await WebAssembly.instantiate(gameModule, imports)).exports;
+      await saveSlot?.settled();
+      saveSlot?.close();
+      game = undefined;
+      saveSlot = await openSaveSlot(input, () => game);
+      game = (
+        await WebAssembly.instantiate(gameModule, {
+          env: {
+            ...imports.env,
+            ...contentImports(runtime, () => game, !!cartridge),
+            ...saveSlot.imports,
+          },
+        })
+      ).exports;
       const instantiated = performance.now();
       initialMemory = game.memory.buffer.byteLength;
       runtime.runtime_init();
@@ -392,8 +412,12 @@ self.onmessage = async ({ data }) => {
       let output;
       const uploadsBefore = gpu ? gpu.metrics.uploadBytes + gpu.metrics.textureUploadBytes : 0;
       for (let i = 0; i < data.steps && (!smoke || lastTick < 120); i++) {
-        const buttons = smoke ? (lastTick < 60 ? 2 : lastTick === 60 ? 16 : 0) : data.input.buttons;
+        let buttons = smoke ? (lastTick < 60 ? 2 : lastTick === 60 ? 16 : 0) : data.input.buttons;
+        if (i > 0) {
+          buttons = (buttons & ~(BUTTON_WHEEL_UP | BUTTON_WHEEL_DOWN)) >>> 0;
+        }
         deliverResources(game, runtime);
+        saveSlot?.beginTick();
         game.game_update(
           buttons,
           smoke ? 0 : Number(data.input.pointer),
@@ -457,6 +481,7 @@ self.onmessage = async ({ data }) => {
       let resourceBaseline = [0, 0, 0];
       for (let pass = 0; pass < (data.diagnostic ? 1 : 7); pass++) {
         configureResources(game, runtime);
+        saveSlot?.beginTick();
         game.game_init();
         checkExecutor(game);
         submitResources(game, runtime);
@@ -466,6 +491,7 @@ self.onmessage = async ({ data }) => {
         for (const [frameIndex, mask] of data.masks.entries()) {
           const t0 = performance.now();
           deliverResources(game, runtime);
+          saveSlot?.beginTick();
           game.game_update(mask, 0, 0, 0);
           checkExecutor(game);
           submitResources(game, runtime);
@@ -505,7 +531,11 @@ self.onmessage = async ({ data }) => {
       self.postMessage({
         type: "benchmark",
         startup,
-        memory: { ...memoryReport(), peakLinear, peakHeap: game.game_heap_peak ? peakHeap : null },
+        memory: {
+          ...memoryReport(),
+          peakLinear,
+          peakHeap: game.game_heap_peak ? peakHeap : null,
+        },
         cpuStats: {
           allocatedBytes: runtime.runtime_cpu_bytes?.() || 0,
           attachmentImportBytes: Number(runtime.runtime_cpu_stat?.(0) || 0),

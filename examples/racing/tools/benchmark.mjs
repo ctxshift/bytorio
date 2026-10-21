@@ -24,7 +24,17 @@ assert.equal(masks.length, 720, "run examples/racing/tools/verify.mjs first");
 await writeFile(`${out}/race.inputs`, masks.join("\n") + "\n");
 const samples = Number(process.env.RACING_BENCH_SAMPLES || 3);
 assert.ok(Number.isInteger(samples) && samples >= 1 && samples <= 9);
-const imports = { env: { sin: Math.sin } };
+const imports = {
+  env: {
+    sin: Math.sin,
+    content_size: () => 0,
+    content_read: () => 0,
+    save_size: () => 0,
+    save_status: () => 3,
+    save_read: () => 0,
+    save_write: () => 3,
+  },
+};
 const game = (await WebAssembly.instantiate(await readFile(`${root}/web/game.wasm`), imports))
   .instance.exports;
 const runtime = (await WebAssembly.instantiate(await readFile(`${root}/web/runtime.wasm`), imports))
@@ -94,7 +104,9 @@ try {
           const executor =
             variant === "odin"
               ? null
-              : await prepareExecutor("./luau-executor.wasm", { bypass: variant === "luauCold" });
+              : await prepareExecutor("./luau-executor.wasm", {
+                  bypass: variant === "luauCold",
+                });
           const worker = new Worker("./worker.js", { type: "module" });
           const next = () =>
             new Promise((resolve, reject) => {

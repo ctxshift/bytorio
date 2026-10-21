@@ -12,6 +12,8 @@
     {"id": 6, "name": "effects-3d-preview-1", "sdk": "0.6.0", "sdkWord": 1536, "abi": 2, "protocol": 8, "features": 127}
   ],
   "tickRate": 60,
+  "inputVersion": 2,
+  "save": {"version": 1, "maxBytes": 4096, "status": {"empty": 0, "ready": 1, "pending": 2, "error": 3}},
   "defaults": {"clearColor": 4281475093, "randomSeed": 1, "zeroSeedFallback": 1831565813, "previewSampleRate": 48000},
   "displayModes": [[640, 360], [320, 180]],
   "defaultDisplayMode": [640, 360],
@@ -22,6 +24,7 @@
     "profileId": 2,
     "headerBytes": 32,
     "maxPngBytes": 2097152,
+    "content": {"magic": 1414419523, "version": 1, "headerBytes": 12, "recordBytes": 12, "maxEntries": 65536, "maxBytes": 67108864, "maxReadBytes": 1048576, "headerFields": {"magic": 0, "version": 4, "count": 8}, "recordFields": {"id": 0, "offset": 4, "length": 8}},
     "maxCoverWidth": 1024,
     "maxCoverHeight": 1024,
     "maxTitleBytes": 128,
@@ -43,7 +46,7 @@
     "coordinateMax": 4096
   },
   "buttons": {"left": 1, "right": 2, "up": 4, "down": 8, "action": 16},
-  "extendedButtons": {"move_left": 32, "move_right": 64, "move_up": 128, "move_down": 256, "pan_left": 512, "pan_right": 1024, "pan_up": 2048, "pan_down": 4096, "rotate_left": 8192, "rotate_right": 16384, "reset": 32768},
+  "extendedButtons": {"move_left": 32, "move_right": 64, "move_up": 128, "move_down": 256, "pan_left": 512, "pan_right": 1024, "pan_up": 2048, "pan_down": 4096, "rotate_left": 8192, "rotate_right": 16384, "reset": 32768, "pointer_left": 65536, "pointer_right": 131072, "pointer_hover": 262144, "wheel_up": 524288, "wheel_down": 1048576, "inventory": 2097152, "character": 4194304, "skills": 8388608, "quest": 16777216, "map": 33554432, "potion_1": 67108864, "potion_2": 134217728, "potion_3": 268435456, "potion_4": 536870912, "shift": 1073741824, "escape": 2147483648},
   "records": {
     "frame": {"bytes": 40, "fields": {"version": 0, "clear": 4, "spriteX": 8, "spriteY": 12, "ticks": 16, "sounds": 20, "debugX": 24, "debugY": 32}},
     "command": {"bytes": 32, "fields": {"kind": 0, "x": 4, "y": 8, "w": 12, "h": 16, "color": 20, "offset": 24, "length": 28}},

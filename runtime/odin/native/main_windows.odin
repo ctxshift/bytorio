@@ -60,6 +60,7 @@ App :: struct {
     audio_buffer:                  [w.maxAudioDeviceBlock * 2]f32,
     gamepad:                       ^sdl.Gamepad,
     focused:                       bool,
+    wheel:                         i32,
     texture_width, texture_height: int,
     logical_width, logical_height: int,
     sounds_played, audio_queued:   u32,
@@ -117,6 +118,21 @@ input :: proc(app: ^App) -> abi.Input {
     if keys[sdl.Scancode.Q] { result.buttons |= abi.BUTTON_ROTATE_LEFT }
     if keys[sdl.Scancode.E] { result.buttons |= abi.BUTTON_ROTATE_RIGHT }
     if keys[sdl.Scancode.R] { result.buttons |= abi.BUTTON_RESET }
+    if keys[sdl.Scancode.I] { result.buttons |= abi.BUTTON_INVENTORY }
+    if keys[sdl.Scancode.C] { result.buttons |= abi.BUTTON_CHARACTER }
+    if keys[sdl.Scancode.K] { result.buttons |= abi.BUTTON_SKILLS }
+    if keys[sdl.Scancode.Q] { result.buttons |= abi.BUTTON_QUEST }
+    if keys[sdl.Scancode.TAB] { result.buttons |= abi.BUTTON_MAP }
+    if keys[sdl.Scancode._1] { result.buttons |= abi.BUTTON_POTION_1 }
+    if keys[sdl.Scancode._2] { result.buttons |= abi.BUTTON_POTION_2 }
+    if keys[sdl.Scancode._3] { result.buttons |= abi.BUTTON_POTION_3 }
+    if keys[sdl.Scancode._4] { result.buttons |= abi.BUTTON_POTION_4 }
+    if keys[sdl.Scancode.LSHIFT] ||
+       keys[sdl.Scancode.RSHIFT] { result.buttons |= abi.BUTTON_SHIFT }
+    if keys[sdl.Scancode.ESCAPE] { result.buttons |= abi.BUTTON_ESCAPE }
+    if app.wheel > 0 { result.buttons |= abi.BUTTON_WHEEL_UP }
+    if app.wheel < 0 { result.buttons |= abi.BUTTON_WHEEL_DOWN }
+    app.wheel = 0
     if keys[sdl.Scancode.LEFT] || keys[sdl.Scancode.A] {
 
         result.buttons |= 1
@@ -186,8 +202,18 @@ input :: proc(app: ^App) -> abi.Input {
         mapped = sdl.RenderCoordinatesFromWindow(app.renderer, x, y, &lx, &ly)
     }
     if mapped {
-        result.pointer =
-            .LEFT in buttons && lx >= 0 && lx < f32(core.width) && ly >= 0 && ly < f32(core.height)
+        hover :=
+            sdl.GetMouseFocus() == app.window &&
+            lx >= 0 &&
+            lx < f32(core.width) &&
+            ly >= 0 &&
+            ly < f32(core.height)
+        result.pointer = .LEFT in buttons && hover
+        if hover {
+            result.buttons |= abi.BUTTON_POINTER_HOVER
+            if .LEFT in buttons { result.buttons |= abi.BUTTON_POINTER_LEFT }
+            if .RIGHT in buttons { result.buttons |= abi.BUTTON_POINTER_RIGHT }
+        }
         result.x, result.y = f64(lx), f64(ly)
     }
     return result
@@ -488,7 +514,16 @@ run :: proc() -> int {
 
         cache_config = ""
     }
-    if !guest.load(&app.game, bytes, source, !unmetered, cache_config, cart.profile) {
+    if !guest.load(
+        &app.game,
+        bytes,
+        source,
+        !unmetered,
+        cache_config,
+        cart.profile,
+        cart.content,
+        file_bytes if packaged || len(source) == 0 else source,
+    ) {
 
         return error(app.game.error)
     }
@@ -561,12 +596,12 @@ run :: proc() -> int {
         }
         defer delete(data)
         for field in strings.fields(string(data)) {
-            mask, ok := strconv.parse_u64(field)
-            if !ok || mask > abi.INPUT_BUTTON_MASK {
+            replay_input, ok := abi.parse_input(field)
+            if !ok {
 
                 return error("invalid input replay")
             }
-            if !guest.update(&app.game, abi.Input{buttons = u32(mask)}) || !draw(app) {
+            if !guest.update(&app.game, replay_input) || !draw(app) {
 
                 return error(app.game.error)
             }
@@ -669,8 +704,16 @@ run :: proc() -> int {
                     }
                 case .WINDOW_FOCUS_LOST:
                     app.focused = false; clock = {}
+                    app.wheel = 0
                 case .WINDOW_FOCUS_GAINED:
                     app.focused = true; clock = {}
+                case .MOUSE_WHEEL:
+                    if app.focused {
+                        direction: i32 = 1
+                        if event.wheel.direction == .FLIPPED { direction = -1 }
+                        if event.wheel.y > 0 { app.wheel = direction }
+                        if event.wheel.y < 0 { app.wheel = -direction }
+                    }
                 case .GAMEPAD_ADDED:
                     if app.gamepad == nil {
 

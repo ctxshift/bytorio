@@ -87,14 +87,33 @@ for (const language of ["odin", "luau"]) {
   );
   const source = language === "luau" ? await readFile(resolve(base, "game.luau")) : null;
   async function prepare() {
-    const game = (await WebAssembly.instantiate(gameBytes, {})).instance.exports;
+    const game = (
+      await WebAssembly.instantiate(gameBytes, {
+        env: {
+          content_size: () => 0,
+          content_read: () => 0,
+          save_size: () => 0,
+          save_status: () => 3,
+          save_read: () => 0,
+          save_write: () => 3,
+        },
+      })
+    ).instance.exports;
     game._initialize?.();
     if (source) {
       loadSource(game, source);
     }
     const runtime = (
       await WebAssembly.instantiate(await readFile(resolve(base, "runtime.wasm")), {
-        env: { sin: Math.sin },
+        env: {
+          sin: Math.sin,
+          content_size: () => 0,
+          content_read: () => 0,
+          save_size: () => 0,
+          save_status: () => 3,
+          save_read: () => 0,
+          save_write: () => 3,
+        },
       })
     ).instance.exports;
     runtime.runtime_init();
@@ -158,7 +177,15 @@ for (const language of ["odin", "luau"]) {
     ];
     const verifier = (
       await WebAssembly.instantiate(await readFile(resolve(base, "runtime.wasm")), {
-        env: { sin: Math.sin },
+        env: {
+          sin: Math.sin,
+          content_size: () => 0,
+          content_read: () => 0,
+          save_size: () => 0,
+          save_status: () => 3,
+          save_read: () => 0,
+          save_write: () => 3,
+        },
       })
     ).instance.exports;
     for (const [name, mutate] of mutations) {
@@ -222,7 +249,15 @@ for (const language of ["odin", "luau"]) {
     );
     const verifier = (
       await WebAssembly.instantiate(await readFile(resolve(base, "runtime.wasm")), {
-        env: { sin: Math.sin },
+        env: {
+          sin: Math.sin,
+          content_size: () => 0,
+          content_read: () => 0,
+          save_size: () => 0,
+          save_status: () => 3,
+          save_read: () => 0,
+          save_write: () => 3,
+        },
       })
     ).instance.exports;
     for (const [name, mutate] of invalid) {
@@ -403,7 +438,10 @@ for (const language of ["odin", "luau"]) {
         memoryBytes,
         "rendering does not grow Wasm memory",
       );
-      report.fullVoiceBank[rate] = { renderAndCheckMs: performance.now() - started, memoryBytes };
+      report.fullVoiceBank[rate] = {
+        renderAndCheckMs: performance.now() - started,
+        memoryBytes,
+      };
     }
   }
   if (packetReference) {

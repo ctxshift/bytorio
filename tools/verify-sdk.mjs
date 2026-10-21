@@ -9,6 +9,7 @@ import { createProject, buildProject, checkProject } from "./sdk/project.mjs";
 import { bundleLuau } from "./sdk/bundle.mjs";
 import { graphicsPacket } from "./sdk/assets.mjs";
 import { serve } from "./serve.mjs";
+import { tool, run } from "./toolchain.mjs";
 import {
   loadSource,
   checkExecutor,
@@ -19,6 +20,12 @@ import {
 const contract = JSON.parse(await readFile("sdk/contract.json", "utf8"));
 const root = resolve("build/sdk-verification", randomUUID());
 await mkdir(root, { recursive: true });
+run(tool("odin"), [
+  "test",
+  "tests/sdk/input",
+  "-o:none",
+  `-out:${resolve(root, "input-tests.exe")}`,
+]);
 const paths = {};
 for (const language of ["luau", "odin"]) {
   const path = resolve(root, language);
@@ -35,26 +42,57 @@ for (const language of ["luau", "odin"]) {
         assert.ok((await readFile(resolve(exported, "licenses", `${name}.txt`))).length > 0);
       }
     } else {
-      await assert.rejects(readFile(resolve(exported, "luau-executor.wasm")), { code: "ENOENT" });
+      await assert.rejects(readFile(resolve(exported, "luau-executor.wasm")), {
+        code: "ENOENT",
+      });
     }
   }
   paths[language] = path;
 }
-const imports = { env: { sin: Math.sin } };
+const imports = {
+  env: {
+    sin: Math.sin,
+    content_size: () => 0,
+    content_read: () => 0,
+    save_size: () => 0,
+    save_status: () => 3,
+    save_read: () => 0,
+    save_write: () => 3,
+  },
+};
 const inputs = Array.from({ length: 120 }, (_, i) => ({
   buttons: ((i >= 5 && i < 15) || (i >= 45 && i < 48) ? 16 : 0) | (i >= 10 && i < 30 ? 2 : 0),
   pointer: (i >= 22 && i < 28) || i === 70,
   x: i === 70 ? 500 : 80.5,
   y: 60.75,
 }));
-const masks = inputs.map((input) => input.buttons);
+for (const i of [80, 81]) {
+  inputs[i].buttons = 0xffff0000;
+}
+inputs[83] = { buttons: 262144, pointer: false, x: 320, y: 60 };
+inputs[84].buttons = 524288;
+inputs[85].buttons = 1048576;
+inputs[86] = { buttons: 65536 | 262144, pointer: true, x: 17.25, y: 18.5 };
 async function pair(language) {
   const base = resolve(paths[language], "build/web");
   const bytes = await readFile(
     resolve(base, language === "luau" ? "luau-executor.wasm" : "game.wasm"),
   );
   const module = new WebAssembly.Module(bytes);
-  assert.deepEqual(WebAssembly.Module.imports(module), [], "SDK guest has no host imports");
+  assert.deepEqual(
+    WebAssembly.Module.imports(module),
+    language === "luau"
+      ? [
+          { module: "env", name: "content_size", kind: "function" },
+          { module: "env", name: "content_read", kind: "function" },
+          { module: "env", name: "save_size", kind: "function" },
+          { module: "env", name: "save_status", kind: "function" },
+          { module: "env", name: "save_read", kind: "function" },
+          { module: "env", name: "save_write", kind: "function" },
+        ]
+      : [],
+    "SDK guest imports only the bounded content interface",
+  );
   for (const name of Object.keys(contract.requiredExports)) {
     assert.ok(
       WebAssembly.Module.exports(module).some(
@@ -112,7 +150,7 @@ for (const language of ["odin", "luau"]) {
     );
     assert.equal(
       frame.sounds,
-      i < 5 ? 1 : i < 45 ? 2 : 3,
+      i < 5 ? 1 : i < 45 ? 2 : i < 80 ? 3 : 4,
       "sound requests occur only on press edges",
     );
     if (i < 3) {
@@ -132,12 +170,17 @@ for (const language of ["odin", "luau"]) {
   checkExecutor(p.game);
   assert.equal(draw(p).sounds, 1, "reload resets sound events");
   assert.equal(draw(p).width, 640, "reload resets display");
-  // Native replay tests the actual Wasmtime adapter; pointer delivery is covered above and in the browser.
+  // Versioned native replay exercises the same pointer and unsigned high-bit inputs.
   const nativeInputs = resolve(root, `${language}.inputs`);
-  await writeFile(nativeInputs, masks.join("\n") + "\n");
+  await writeFile(
+    nativeInputs,
+    inputs
+      .map(({ buttons, pointer, x, y }) => `v2:${buttons}:${Number(pointer)}:${x}:${y}`)
+      .join("\n") + "\n",
+  );
   const replayPair = await pair(language);
-  const nativeExpected = masks.map((mask) => {
-    replayPair.game.game_update(mask, 0, 0, 0);
+  const nativeExpected = inputs.map((input) => {
+    replayPair.game.game_update(input.buttons, Number(input.pointer), input.x, input.y);
     const f = draw(replayPair);
     return { hash: f.hash, sounds: f.sounds };
   });
@@ -236,6 +279,17 @@ try {
             width: f.width,
             height: f.height,
           });
+        }
+        pending = next();
+        worker.postMessage({
+          type: "step",
+          steps: 3,
+          render: true,
+          input: { buttons: 524288, pointer: false, x: 0, y: 0 },
+        });
+        const wheelFrame = await pending;
+        if (wheelFrame.sounds !== 5 || wheelFrame.ticks !== 123) {
+          throw new Error("Wheel input must be consumed once across catch-up simulation ticks");
         }
         worker.terminate();
         return frames;
