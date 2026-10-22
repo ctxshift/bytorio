@@ -40,7 +40,7 @@ An [experimental Luau Wasm executor](experiments/luau-executor/README.md) runs b
 - [Odin development guide](docs/odin-development.md): build, run, controls, tests, and prototype limitations.
 - [Development guide](docs/development.md): current player, SDK, and Luau toolchain commands.
 - [DS versus 3DS target](docs/target-comparison.md): recommendation and supporting research.
-- [Odin decision](docs/adr/0001-use-odin-for-games-and-runtime.md): Odin for games and runtime, with migration constraints.
+- [Language decision](docs/adr/0001-use-odin-for-games-and-runtime.md): Odin for the console runtime; Odin or Luau for cartridges.
 - [Odin evaluation](docs/odin-evaluation.md): supporting research, an isolated compiler probe, and remaining integration risks.
 
 The current recommendation is to retain the agreed 2D-first scope while leaving room for richer 3D later. A move to a 3DS-level fidelity target remains an open product decision.

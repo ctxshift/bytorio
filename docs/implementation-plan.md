@@ -17,7 +17,7 @@ default authoring language alongside Odin. Both SDKs provide lifecycle handling,
 drawing, input, timing, deterministic random numbers, typed graphics resources,
 PCM playback and synthesis/effects. The shared CLI
 creates, checks, builds, packages, runs and watches projects; see [the SDK guide](../sdk/README.md).
-This supersedes the earlier Odin-only authoring direction. The runtime remains Odin.
+Both cartridge languages remain supported, as recorded in the [language decision](adr/0001-use-odin-for-games-and-runtime.md). The runtime remains Odin.
 
 - The removed Luau/C++ reference established the original sprite, sound, input and replay baseline. Its RPG golden traces remain in tests; current checks run both languages through the Odin player.
 - The [Odin probe](../experiments/odin/README.md) compiles scalar game-state logic to Windows native code and an identical import-free Wasm module executed in Node and Chrome. It verifies movement, sound-event counts, and one bounds trap.

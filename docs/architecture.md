@@ -1,6 +1,6 @@
 # Bytorio architecture
 
-Status: target design, updated 2026-10-19. The runtime is Odin, with Luau as the default cartridge language and Odin also supported. The [SDK specification](cartridge-spec.md) supersedes the earlier Odin-only authoring direction in [the language decision](adr/0001-use-odin-for-games-and-runtime.md). The native/browser RPG and racing examples use the shared SDKs. The original C++ player has been removed. C++ remains only for the Luau compiler/VM executor and analyzer. Broader profile features below are still proposed.
+Status: target design, updated 2026-10-19. The runtime is Odin, with Luau as the default cartridge language and Odin also supported. The [language decision](adr/0001-use-odin-for-games-and-runtime.md) retains both cartridge languages; the [SDK specification](cartridge-spec.md) defines their shared contract. The native/browser RPG and racing examples use the shared SDKs. The original C++ player has been removed. C++ remains only for the Luau compiler/VM executor and analyzer. Broader profile features below are still proposed.
 
 ## Product intent and accepted decisions
 
@@ -54,6 +54,7 @@ Do not invent a virtual CPU frequency. Start with performance measurements and r
 
 ```text
 Odin game source -> portable game.wasm + cartridge assets
+Luau game source -> Luau executor + cartridge assets
                   |
        versioned guest ABI and console services
                   |
@@ -67,7 +68,7 @@ Odin game source -> portable game.wasm + cartridge assets
  SDL3/files/audio            fetch/storage/audio/JS bridge
 ```
 
-The shared Odin core owns observable console behavior. The host owns delivery to physical devices and platform services. Proposed cartridges contain one freestanding Wasm game module, with the same module loaded on native and web. Game code never calls SDL, OpenGL, browser globals, native filesystem APIs, or arbitrary host libraries directly.
+The shared Odin core owns observable console behavior. The host owns delivery to physical devices and platform services. Odin cartridges contain a freestanding Wasm game module; Luau cartridges contain game code executed by the player-supplied Luau Wasm executor. Each cartridge runs on both native and web players. Game code never calls SDL, OpenGL, browser globals, native filesystem APIs, or arbitrary host libraries directly.
 
 Suggested implementation choices, subject to the first integration milestone:
 
@@ -85,13 +86,13 @@ Keep interfaces specific: input snapshot, asset read request/completion, save re
 
 ## Game execution and language services
 
-Compile game source during development/packing into a validated freestanding Wasm module. Players execute the module without shipping the Odin compiler. Start with one instance and separate linear memory per running game; pin an allowed Wasm feature subset and validate imports, exports, memory declarations, and ABI version before running it.
+Compile Odin game source during development/packing into a validated freestanding Wasm module. Players execute the module without shipping the Odin compiler. Luau cartridges use the player-supplied Luau Wasm executor; choosing the Odin runtime does not require authors to compile their games from Odin. Start with one instance and separate linear memory per running game; pin an allowed Wasm feature subset and validate imports, exports, memory declarations, and ABI version before running it.
 
 Expose initialization, fixed update, and render entry points through a versioned scalar/buffer ABI. Freeze integer widths, layout, byte order, resource handles, and error codes. Odin context, strings, slices, pointers, and C++ objects are not public ABI types. Establish required Odin context at exported entry points and keep mutable game state explicit.
 
 Use small SDK packages for graphics, input, audio, assets, storage, math, and diagnostics. Provide packed data and bulk command submission to avoid a host transition per pixel or vertex. Supply persistent and per-frame allocation conventions, with development tracking; explicit memory control is part of the programming model. A guest can corrupt its own memory, so every host operation independently validates guest offsets, lengths, handles, and ownership.
 
-Ship ordinary Odin SDK packages that the compiler and OLS can inspect, plus generated ABI documentation. Validate completion, navigation, build diagnostics, and runtime source locations in the supported editor workflow. Source-level Wasm failure diagnostics remain an integration requirement, not a capability established by the compiler probe.
+Ship typed Luau authoring APIs and ordinary Odin SDK packages that the compiler and OLS can inspect, plus shared generated ABI documentation. Validate completion, navigation, build diagnostics, and runtime source locations in the supported editor workflow. Source-level Wasm failure diagnostics remain an integration requirement, not a capability established by the compiler probe.
 
 Initial editing behavior is compile, validate, then restart with a new instance after valid source changes. Preserve saves. Add live asset replacement next. State-preserving reload needs explicit serialization and schema migration; reusing raw heaps can retain invalid pointers, layouts, or function references.
 

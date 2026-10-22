@@ -4,15 +4,15 @@ Historical evaluation: the current [architecture](architecture.md) supports both
 Luau and Odin cartridges through one Odin player. The C++ reference player has
 been removed; the implementation discussion below records the earlier decision.
 
-Date: 2026-10-19. Status: supporting evaluation; the subsequent [accepted decision](adr/0001-use-odin-for-games-and-runtime.md) selects Odin for both games and runtime.
+Date: 2026-10-19. Status: supporting evaluation; the subsequent [accepted decision](adr/0001-use-odin-for-games-and-runtime.md) selects Odin for the runtime while retaining both Odin and Luau for games.
 
 The working Luau/C++ implementation remains unchanged as a reference. A subsequent [Odin reproduction](odin-development.md) now runs real sprite/sound behavior on native and browser; the scalar probe below remains the original evaluation evidence, not the integration result. This report evaluates the two language roles separately to explain their tradeoffs. The display, mostly 2D scope, standalone native player, browser player, and full PNG cartridge requirement remain fixed.
 
 ## Recommendation
 
-The selected direction is **Odin game code compiled to a portable Wasm module, hosted by an Odin player on native and an Odin/browser runtime on web**. That keeps one game binary inside the PNG and preserves a separate player. It adds a native Wasm engine through a foreign interface, a stable binary interface, browser bridging, and new debugging and interruption work.
+The Odin cartridge path is **Odin game code compiled to a portable Wasm module, hosted by an Odin player on native and an Odin/browser runtime on web**. Luau remains a supported alternative for cartridge development through the shared player’s Luau executor. That keeps one game binary inside the PNG and preserves a separate player. It adds a native Wasm engine through a foreign interface, a stable binary interface, browser bridging, and new debugging and interruption work.
 
-The user subsequently selected Odin for the runtime as well. Apply the guest ABI and isolation recommendations below to an Odin host through foreign interfaces instead of a maintained C++ core. Keep the reference player functional until the Odin implementation demonstrates an acceptable edit/run loop and equivalent protections. Permanent dual-language game support is not selected.
+The user subsequently selected Odin for the runtime as well. Apply the guest ABI and isolation recommendations below to an Odin host through foreign interfaces instead of a maintained C++ core. Keep the reference player functional until the Odin implementation demonstrates an acceptable edit/run loop and equivalent protections. Both Odin and Luau remain supported cartridge languages.
 
 ## What changes for game authors
 
@@ -28,10 +28,10 @@ There is an existing language server, OLS, with completion, definitions, referen
 
 | Choice | Game distribution | Benefits | Main cost | Assessment |
 | --- | --- | --- | --- | --- |
-| Odin games and Odin host, with portable Wasm guests | One portable guest module plus assets | One primary maintained language, explicit memory, one cartridge executable | Native guest-engine integration, Odin host migration, ABI and browser bridge | Selected direction; integration gates remain |
+| Odin games and Odin host, with portable Wasm guests | One portable guest module plus assets | One primary maintained language, explicit memory, one cartridge executable | Native guest-engine integration, Odin host migration, ABI and browser bridge | Selected Odin cartridge path; Luau also supported |
 | Odin games compiled to Wasm; C++ host retained | One portable guest module plus assets | Explicit game memory, one cartridge executable, restricted host imports | Native Wasm engine, binary SDK, browser bridge, tooling | Original guest-only alternative; host decision supersedes it |
 | Odin games compiled natively and to Wasm | Per-platform executable/library variants plus web module | Native execution without guest engine | Platform/architecture matrix, unsafe native plugins, incompatible debugging paths | Poor default for a portable fantasy console |
-| Odin replaces C++ host; Luau remains | Existing source-based games | Odin for engine development; game ergonomics retained | Host rewrite and Luau C interface wrappers | Separate decision; no demonstrated need |
+| Odin replaces C++ host; Luau remains | Existing source-based games | Odin for engine development; game ergonomics retained | Host rewrite and Luau C interface wrappers | Selected runtime direction, alongside Odin cartridges |
 
 ### 1. Portable Wasm games
 
@@ -63,7 +63,7 @@ An Odin game can instead be built as native code for each supported desktop and 
 
 Keeping Luau while replacing C++ is independent of changing the game language. Odin documents foreign procedures and C calling conventions, so a narrow C wrapper around Luau's C++ implementation is a plausible integration boundary. SDL and graphics bindings would also need validation on both targets. [Foreign interface](https://odin-lang.org/docs/overview/#foreign-system)
 
-The subsequent user decision chooses Odin for both language roles. Migrate the host while preserving the working reference until parity; Luau is not the long-term game-language target. A host rewrite alone would not establish portable cartridge execution, so the Odin Wasm guest ABI and engine integration still require separate validation.
+The accepted decision chooses Odin for the runtime and either Odin or Luau for cartridge implementation. Migrating the host does not remove Luau as a long-term game-language option. A host rewrite alone would not establish portable cartridge execution, so the Odin Wasm guest ABI and engine integration still require separate validation.
 
 ## Memory, runaway code, and errors
 
