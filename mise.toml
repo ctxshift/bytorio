@@ -4,7 +4,7 @@ min_version = "2026.10.8"
 monorepo_root = true
 
 [monorepo]
-config_roots = ["examples/*", "experiments/voxel-resolution"]
+config_roots = ["examples/*", "experiments/voxel-resolution", "experiments/vorbis-prototype"]
 
 [env]
 MISE_BIN = "{{ mise_bin }}"

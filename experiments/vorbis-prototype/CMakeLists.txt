@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.16)
+project(vorbis_probe C)
+find_package(Ogg REQUIRED)
+find_package(Vorbis REQUIRED)
+add_executable(vorbis-probe native.c)
+target_link_libraries(vorbis-probe PRIVATE Vorbis::vorbisfile Vorbis::vorbis Ogg::ogg winmm psapi)

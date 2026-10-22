@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" /><title>Vorbis prototype</title>
+  <style>
+    body {
+      font: 17px system-ui;
+      background: #141923;
+      color: #eee;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+    }
+    button {
+      padding: 14px;
+      margin: 8px;
+    }
+    pre {
+      white-space: pre-wrap;
+    }
+    a {
+      color: #aef;
+    }
+  </style>
+  <h1>Vorbis streaming prototype</h1>
+  <p>
+    Throwaway decoder experiment. Browser package → bounded PCM queue → AudioWorklet. No production
+    cartridge APIs.
+  </p>
+  <button id="play">Play streamed music (8 seconds)</button
+  ><button id="loop">Play late-track loop (8 seconds)</button>
+  <button id="stall">Play with a 250 ms producer stall</button
+  ><button id="starve">Play with a 1 second producer stall</button>
+  <button id="cached">Play cached loop with the console-sized queue</button>
+  <p>
+    Loop: source frames 7,212,000–7,332,000 (150.25–152.75 seconds). Loop endpoints are deliberately
+    not zero crossings.
+  </p>
+  <pre id="state">Ready. Click a playback scenario to unlock audio.</pre>
+  <script src="decoder.js"></script>
+  <script type="module" src="browser.js"></script>
+</html>
