@@ -19,8 +19,14 @@ feature's contract and acceptance criteria.
 - Run focused `mise run validate <task...>` checks during iteration and let mise
   reuse compiled artifacts. For check selection, dependency changes or suspected
   stale outputs, follow [cache decisions](docs/development.md#iteration-and-cache-decisions).
-  Before completion, finish edits and run `mise run validate` for the complete
-  gates. Preserve coverage; a focused pass does not substitute for final conformance.
+  For changes affecting code, tests, build behavior or code generation, finish
+  edits and run `mise run validate` for the complete gates before completion.
+  Documentation-only prose changes do not require the full suite: check the diff,
+  relevant formatting and links, and rebuild/inspect affected website pages when
+  published there. Treat executable examples, generated inputs and documentation
+  consumed by tests or generators according to their behavioral impact.
+  Preserve coverage; a focused pass does not substitute for final conformance
+  when the full gates apply.
 - Read the runner's report and the failing task's retained log. A stale,
   interrupted or failed report is not a pass. Do not overlap benchmark runs with
   heavy builds/tests or repeatedly read unchanged logs.

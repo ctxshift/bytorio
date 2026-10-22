@@ -63,12 +63,19 @@ part of the full gate; `test:kart3d:gpu` additionally requires a usable GPU.
 
 ## Checks
 
-Use `mise run validate` for the complete quality and conformance gates, including
+For changes affecting code, tests, build behavior or code generation, use
+`mise run validate` for the complete quality and conformance gates, including
 all existing suites, drawing batches, executor caching, and formatting after
 asset generation. CI runs the same command. For a focused iteration, pass task
 names, for example `mise run validate test:validation` or
 `mise run validate generate:check test:resources`. Existing `mise run test` and
 individual `test:*` tasks remain available with their original coverage.
+
+Documentation-only prose changes do not require the full test suite. Review the
+diff, check relevant formatting and links, and rebuild/inspect affected website
+pages when published there. Executable examples, generated inputs, or documents
+consumed by tests or generators must be assessed for behavioral impact; a
+Markdown extension alone does not make a change documentation-only.
 
 The runner executes tasks sequentially and stops at the first failure. It prints
 one start/result line per task and retains complete output in unique
