@@ -20,7 +20,7 @@ import {
 import { loadCartridge, contentImports } from "./cartridge.js";
 import { openSaveSlot } from "./save.js";
 import { normalizeGraphics, createGpu } from "./gpu.js";
-import { createOggPump } from "./ogg.js";
+import { createOggPump, prepareOggDecoder } from "./ogg.js";
 
 let game, runtime;
 let saveSlot;
@@ -46,7 +46,11 @@ let audioConnected = false;
 let audioCapacityWaiter;
 let oggPump, oggTimer, oggLoading;
 async function initializeOgg() {
-  if (oggPump || oggLoading || game?.game_profile?.() !== PROFILE_OGG) {
+  if (oggPump || game?.game_profile?.() !== PROFILE_OGG) {
+    return;
+  }
+  if (oggLoading) {
+    await oggLoading;
     return;
   }
   let needed = false;
@@ -449,6 +453,9 @@ self.onmessage = async ({ data }) => {
           ? await requestExecutor()
           : { bytes: await fetchBytes("./luau-executor.wasm") };
         gameBytes = executor.bytes;
+      }
+      if (cartridge?.profile === PROFILE_OGG) {
+        await prepareOggDecoder(() => fetchBytes("./vorbis.wasm", undefined, reportProgress));
       }
       const fetched = performance.now();
       self.postMessage({ type: "executing" });

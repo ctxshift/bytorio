@@ -1,9 +1,43 @@
 import { resourceSchema as limits } from "./constants.js";
 
+let preparedDecoder;
+
+async function loadDecoderBinary() {
+  const response = await fetch(new URL("./vorbis.wasm", import.meta.url));
+  if (!response.ok) {
+    throw new Error("Cannot load Vorbis decoder.");
+  }
+  return response.arrayBuffer();
+}
+
+// Prepare code before the audio clock starts. The decoder's bounded heap is
+// still instantiated only after the first stream reserves its resources.
+export async function prepareOggDecoder(loadBinary = loadDecoderBinary) {
+  if (!preparedDecoder) {
+    preparedDecoder = (async () => {
+      const [{ default: createDecoder }, bytes] = await Promise.all([
+        import("./vorbis.js"),
+        loadBinary(),
+      ]);
+      return { createDecoder, module: await WebAssembly.compile(bytes) };
+    })().catch((error) => {
+      preparedDecoder = null;
+      throw error;
+    });
+  }
+  return preparedDecoder;
+}
+
 // Runs on the game Worker. No codec work or refill messages pass through the UI.
 export async function createOggPump(runtime) {
-  const { default: createDecoder } = await import("./vorbis.js");
-  const decoder = await createDecoder();
+  const { createDecoder, module } = await prepareOggDecoder();
+  const decoder = await createDecoder({
+    instantiateWasm(imports, receive) {
+      const instance = new WebAssembly.Instance(module, imports);
+      receive(instance);
+      return instance.exports;
+    },
+  });
   const output = decoder._malloc(limits.oggChunkFrames * 8);
   if (!output) {
     throw new Error("Cannot allocate Vorbis output buffer.");

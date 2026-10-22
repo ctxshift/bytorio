@@ -219,6 +219,11 @@ depends = ["build:odin"]
 description = "Verify actual browser guest admission under saturated audio credits"
 run = "node tools/verify-audio-admission.mjs"
 
+[tasks."test:ogg-startup"]
+depends = ["build:odin"]
+description = "Verify decoder code warmup before delayed real browser Ogg playback"
+run = "node tools/verify-ogg-startup.mjs"
+
 [tasks."test:display"]
 depends = ["//examples/rpg:build"]
 run = "node tools/verify-display.mjs"
@@ -248,6 +253,7 @@ run = [
   {task = "test:odin"},
   {task = "test:player-loading"},
   {task = "test:audio-admission"},
+  {task = "test:ogg-startup"},
   {task = "test:display"},
   {task = "//examples/rpg:test"},
   {task = "//examples/racing:test"},
