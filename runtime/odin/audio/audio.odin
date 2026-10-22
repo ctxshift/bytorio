@@ -326,6 +326,27 @@ consume :: proc(e: ^Engine) {
     }
     store(&e.tail, tail)
 }
+// Destruction is scheduled in the same ordered queue as prefetched PCM. Once it
+// takes effect, later writes/end markers for that handle are cancelled, even if
+// the physical stream slot is immediately reused. Release producer-owned leases
+// through the completion queue and retire admission credits exactly once.
+cancel_stream_prefetch :: proc(e: ^Engine, resource: u32) {
+    kept := 0
+    for command in e.events[:e.event_count] {
+        if command.resource == resource &&
+           (command.op == w.op_audio_stream_write || command.op == w.op_audio_stream_end) {
+            finish(e, command.lease, NO_VOICE, 0)
+            e.processed_local += 1
+        } else {
+            e.events[kept] = command
+            kept += 1
+        }
+    }
+    // Rebuild the bounded heap in place. push only writes at or below its input
+    // index, so no remaining compacted command is overwritten before being read.
+    e.event_count = 0
+    for index in 0 ..< kept { push(e, e.events[index]) }
+}
 apply :: proc(e: ^Engine, c: Command) {
     if c.at < e.frame { e.late_local += 1 }
     if c.op >= w.op_audio_wavetable && c.op != w.op_audio_stream_end {
@@ -355,6 +376,7 @@ apply :: proc(e: ^Engine, c: Command) {
         } else {
             s := &e.streams[c.id]
             for chunk in s.chunks[:s.count] { finish(e, chunk.lease, NO_VOICE, 0) }
+            cancel_stream_prefetch(e, c.resource)
             s^ = {}
             for v, i in e.voices { if v.kind == 2 && v.resource == c.resource { stop_voice(e, u32(i), w.audioReasonCancelled) } }
         }
