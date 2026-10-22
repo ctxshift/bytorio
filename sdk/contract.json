@@ -13,7 +13,7 @@
   ],
   "tickRate": 60,
   "inputVersion": 2,
-  "save": {"version": 1, "maxBytes": 4096, "status": {"empty": 0, "ready": 1, "pending": 2, "error": 3}},
+  "save": {"version": 1, "maxBytes": 65536, "status": {"empty": 0, "ready": 1, "pending": 2, "error": 3}},
   "defaults": {"clearColor": 4281475093, "randomSeed": 1, "zeroSeedFallback": 1831565813, "previewSampleRate": 48000},
   "displayModes": [[640, 360], [320, 180]],
   "defaultDisplayMode": [640, 360],

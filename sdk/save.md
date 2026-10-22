@@ -1,8 +1,12 @@
 # Save slot version 1
 
-Each cartridge has one persistent slot containing 1–4096 bytes. Luau uses
+Each cartridge has one persistent slot containing 1–65536 bytes (64 KiB). Luau uses
 `byt.save`; Odin imports `save "sdk:save"`. Games own their record format,
 versioning, checksums and migrations. The host stores opaque bytes.
+
+The interface remains version 1 after expanding its bound from 4096 bytes.
+Existing records within the former bound remain readable without migration.
+Older players still enforce their smaller bound and cannot load larger records.
 
 | Operation                            | Luau                               | Odin                          |
 | ------------------------------------ | ---------------------------------- | ----------------------------- |
@@ -14,7 +18,7 @@ versioning, checksums and migrations. The host stores opaque bytes.
 | Interface version                    | `byt.save.version`                 | `save.VERSION`                |
 
 `read` returns the actual record length. It returns zero for an absent record,
-an insufficient destination, or a destination larger than 4096 bytes. Rejected
+an insufficient destination, or a destination larger than 65536 bytes. Rejected
 reads leave the whole destination unchanged. Reads see the last committed
 snapshot, including while a newer write is pending or after a failed write.
 

@@ -10,7 +10,7 @@ import { serve } from "./serve.mjs";
 
 const root = resolve("build/save-verification", randomUUID());
 await mkdir(root, { recursive: true });
-const expected = Buffer.from(Array.from({ length: 4096 }, (_, i) => (i * 37 + 11) % 256));
+const expected = Buffer.from(Array.from({ length: 65536 }, (_, i) => (i * 37 + 11) % 256));
 const projects = {};
 const savedKeys = [];
 for (const language of ["odin", "luau"]) {
@@ -59,6 +59,9 @@ for (const language of ["odin", "luau"]) {
   } finally {
     await chmod(saved, 0o666);
   }
+  await native([8, 0, 2]);
+  assert.deepEqual(await readFile(saved), expected.subarray(0, 4096));
+  assert.equal((await native([0]))[0].sounds, 1, "legacy-size record remains readable");
   const replaced = await native([4, 0, 2]);
   assert.deepEqual(
     replaced.map((frame) => frame.sounds),
@@ -71,7 +74,7 @@ for (const language of ["odin", "luau"]) {
     [...savedKeys].sort(),
     "temporary file cleaned after success and failure",
   );
-  await writeFile(saved, Buffer.alloc(4097));
+  await writeFile(saved, Buffer.alloc(65537));
   assert.equal((await native([0]))[0].sounds, 0, "oversized disk record rejected before reading");
 }
 
@@ -148,7 +151,7 @@ try {
         throw new Error("new cartridge must start empty");
       }
       frame = await game.committed(await game.step(16));
-      if (frame.x !== 4096) {
+      if (frame.x * 16 !== 65536) {
         throw new Error("maximum save length missing");
       }
       await game.step();
@@ -164,18 +167,25 @@ try {
       game.worker.terminate();
       game = await session();
       frame = await game.step();
-      if (frame.x !== 4096 || frame.y !== 1 || frame.sounds !== 1) {
+      if (frame.x * 16 !== 65536 || frame.y !== 1 || frame.sounds !== 1) {
         throw new Error("restart lost committed save");
+      }
+      await game.committed(await game.step(8));
+      game.worker.terminate();
+      game = await session();
+      frame = await game.step();
+      if (frame.x * 16 !== 4096 || frame.y !== 1 || frame.sounds !== 1) {
+        throw new Error("legacy-size record did not remain readable");
       }
       await game.committed(await game.step(4));
       game.worker.terminate();
       game = await session();
       frame = await game.step();
-      if (frame.x !== 3 || frame.y !== 1 || frame.sounds !== 1) {
+      if (frame.x * 16 !== 3 || frame.y !== 1 || frame.sounds !== 1) {
         throw new Error("replacement did not persist");
       }
       game.worker.terminate();
-      return { length: frame.x, state: frame.y, sounds: frame.sounds };
+      return { length: frame.x * 16, state: frame.y, sounds: frame.sounds };
     });
     assert.deepEqual(report, { length: 3, state: 1, sounds: 1 });
   }
@@ -184,5 +194,5 @@ try {
   await new Promise((done) => server.close(done));
 }
 console.log(
-  "Save conformance passed: both SDKs/native/browser, maximum-size snapshots, restart, cartridge isolation, atomic replacement, rollback and bounds.",
+  "Save conformance passed: both SDKs/native/browser, 64 KiB snapshots, legacy-size restart, cartridge isolation, atomic replacement, rollback and bounds.",
 );

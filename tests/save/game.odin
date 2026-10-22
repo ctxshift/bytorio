@@ -8,9 +8,9 @@ staging: [save.MAX_BYTES]u8
 verify_saved :: proc() {
     length := save.read(staging[:])
     assert(length == save.size())
-    assert(length == save.MAX_BYTES || length == 3)
+    assert(length == save.MAX_BYTES || length == 4096 || length == 3)
     for i in 0 ..< int(length) {
-        expected := u8((i * 37 + 11) % 256) if length == save.MAX_BYTES else u8(i + 7)
+        expected := u8((i * 37 + 11) % 256) if length != 3 else u8(i + 7)
         assert(staging[i] == expected)
     }
     byt.sound()
@@ -43,7 +43,14 @@ update :: proc(_dt: f64) {
         assert(result == .Ready || result == .Pending)
         staging[0], staging[1], staging[2] = 0, 0, 0
     }
-    byt.debug_position(f64(save.size()), f64(save.status()))
+    if byt.pressed(.Down) {
+        for i in 0 ..< 4096 { staging[i] = u8((i * 37 + 11) % 256) }
+        result := save.write(staging[:4096])
+        assert(result == .Ready || result == .Pending)
+        for &byte in staging { byte = 0 }
+    }
+    // Sixteen-byte units keep the maximum length within debug-position bounds.
+    byt.debug_position(f64(save.size()) / 16, f64(save.status()))
 }
 
 draw :: proc() { byt.clear(byt.rgb(16, 32, 48)) }

@@ -40,7 +40,7 @@ test("save failures preserve previous snapshot and enforce independent bounds", 
   new Uint8Array(memory.buffer).fill(123);
   for (const [pointer, length] of [
     [0, 0],
-    [0, 4097],
+    [0, 65537],
     [65535, 2],
     [-1, 4],
   ]) {
@@ -48,9 +48,9 @@ test("save failures preserve previous snapshot and enforce independent bounds", 
   }
   assert.equal(host.save_read(0, 2), 0);
   assert.equal(host.save_read(65535, 3), 0);
-  assert.equal(host.save_read(0, 4097), 0);
+  assert.equal(host.save_read(0, 65537), 0);
   assert.deepEqual([...new Uint8Array(memory.buffer, 0, 3)], [123, 123, 123]);
-  assert.equal(host.save_write(0, 4096), 2);
+  assert.equal(host.save_write(0, 65536), 2);
   await slot.settled();
   assert.equal(host.save_status(), 3);
   assert.equal(host.save_read(0, 4096), 3);
@@ -60,7 +60,7 @@ test("save failures preserve previous snapshot and enforce independent bounds", 
 test("invalid stored records can be replaced and the per-tick allowance remains bounded", async () => {
   const memory = new WebAssembly.Memory({ initial: 1 });
   const slot = createSaveSlot(() => ({ memory }), {
-    initial: new Uint8Array(4097),
+    initial: new Uint8Array(65537),
     commit: async () => {},
   });
   const host = slot.imports;
@@ -74,4 +74,40 @@ test("invalid stored records can be replaced and the per-tick allowance remains 
   assert.equal(host.save_write(0, 2), 2);
   await slot.settled();
   assert.equal(host.save_size(), 2);
+});
+
+test("64 KiB pending snapshots retain legacy records and own their complete payload", async () => {
+  const memory = new WebAssembly.Memory({ initial: 3 });
+  const legacy = Uint8Array.from({ length: 4096 }, (_, index) => index % 251);
+  const expected = Uint8Array.from({ length: 65536 }, (_, index) => (index * 37 + 11) % 256);
+  let complete;
+  const slot = createSaveSlot(() => ({ memory }), {
+    initial: legacy,
+    commit: () =>
+      new Promise((resolve) => {
+        complete = resolve;
+      }),
+  });
+  const host = slot.imports;
+  const staging = new Uint8Array(memory.buffer, 0, 65536);
+  const destination = new Uint8Array(memory.buffer, 65536, 65536);
+  staging.set(expected);
+  destination.fill(123);
+  assert.equal(host.save_write(0, 65536), 2);
+  staging.fill(0);
+  assert.equal(host.save_read(65536, 65536), 4096, "pending read retains the old snapshot");
+  assert.deepEqual(destination.subarray(0, 4096), legacy);
+  assert(destination.subarray(4096).every((value) => value === 123));
+  slot.beginTick();
+  assert.equal(host.save_write(0, 1), 3, "a later tick cannot replace a pending snapshot");
+  await Promise.resolve();
+  complete();
+  await slot.settled();
+  assert.equal(host.save_status(), 1);
+  assert.equal(host.save_read(65536, 65536), 65536);
+  assert.deepEqual(destination, expected);
+  assert.equal(host.save_write(0, 65537), 3, "bound is independent of available guest memory");
+  assert.equal(host.save_status(), 1);
+  assert.equal(host.save_read(65536, 65536), 65536);
+  assert.deepEqual(destination, expected);
 });

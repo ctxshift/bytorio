@@ -66,7 +66,7 @@ return table.freeze({
     LEGACY_BUTTON_MASK = 31,
     INPUT_VERSION = 2,
     SAVE_VERSION = 1,
-    MAX_SAVE_BYTES = 4096,
+    MAX_SAVE_BYTES = 65536,
     SAVE_EMPTY = 0,
     SAVE_READY = 1,
     SAVE_PENDING = 2,

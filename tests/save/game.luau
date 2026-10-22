@@ -6,9 +6,9 @@ local staging = buffer.create(save.max_bytes)
 local function verifySaved()
     local length = save.read(staging)
     assert(length == save.size())
-    assert(length == save.max_bytes or length == 3)
+    assert(length == save.max_bytes or length == 4096 or length == 3)
     for i = 0, length - 1 do
-        local expected = if length == save.max_bytes then (i * 37 + 11) % 256 else i + 7
+        local expected = if length ~= 3 then (i * 37 + 11) % 256 else i + 7
         assert(buffer.readu8(staging, i) == expected)
     end
     byt.sound()
@@ -47,7 +47,17 @@ local function update(_dt: number)
         assert(result == save.ready or result == save.pending)
         buffer.fill(replacement, 0, 0)
     end
-    byt.debug_position(save.size(), save.status())
+    if byt.pressed("down") then
+        local legacy = buffer.create(4096)
+        for i = 0, buffer.len(legacy) - 1 do
+            buffer.writeu8(legacy, i, (i * 37 + 11) % 256)
+        end
+        local result = save.write(legacy)
+        assert(result == save.ready or result == save.pending)
+        buffer.fill(legacy, 0, 0)
+    end
+    -- Sixteen-byte units keep the maximum length within debug-position bounds.
+    byt.debug_position(save.size() / 16, save.status())
 end
 
 local function draw()

@@ -201,7 +201,7 @@ bits and continue to receive their original pointer semantics.
 ## Verify
 
 Both SDKs also provide a versioned [persistent save slot](save.md), with a
-4096-byte limit, native atomic replacement and browser transaction status.
+64 KiB limit, native atomic replacement and browser transaction status.
 
 ```text
 npm run test:sdk
