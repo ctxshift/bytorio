@@ -343,6 +343,11 @@ async function start() {
 }
 
 async function load(restart = false) {
+  if (parameters.has("local") && !selectedCartridge) {
+    status.textContent = "Choose a PNG cartridge from your device to begin.";
+    button.disabled = true;
+    return;
+  }
   if (!display || display.isContextLost?.()) {
     fail("Display context unavailable. Restore the display and restart the game.");
     return;
@@ -353,6 +358,7 @@ async function load(restart = false) {
   closeMixer();
   pending = started = false;
   autoStart = restart;
+  let loading = true;
   soundsPlayed = 0;
   globalThis.playerAudio.buffer = null;
   globalThis.playerStatus = { ready: false, error: "", ticks: 0 };
@@ -368,6 +374,13 @@ async function load(restart = false) {
   };
   worker.onmessage = ({ data }) => {
     if (currentGeneration !== generation) {
+      return;
+    }
+    if (data.type === "loading" && loading) {
+      armWatchdog(10000);
+      const downloaded = `${mib(data.received)} MiB`;
+      const total = data.total ? ` / ${mib(data.total)} MiB` : "";
+      status.textContent = `Loading ${PLAYER_TITLE}… ${downloaded}${total}`;
       return;
     }
     if (data.type === "audio-status") {
@@ -415,6 +428,7 @@ async function load(restart = false) {
       return;
     }
     if (data.type === "executing") {
+      loading = false;
       armWatchdog(1000);
       return;
     }
@@ -436,6 +450,7 @@ async function load(restart = false) {
       return;
     }
     if (data.type === "ready") {
+      loading = false;
       if (data.title) {
         document.title = data.title;
       }
@@ -550,6 +565,7 @@ async function load(restart = false) {
     worker.postMessage({
       type: "load",
       gameUrl,
+      progress: true,
       smoke,
       executor,
       cartridge: selectedCartridge,

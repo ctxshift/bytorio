@@ -209,6 +209,11 @@ depends = ["build:odin"]
 env = {SDL_VIDEODRIVER = "dummy", SDL_AUDIODRIVER = "dummy", SDL_RENDER_DRIVER = "software"}
 run = "node tools/verify-odin.mjs"
 
+[tasks."test:player-loading"]
+depends = ["build:odin"]
+description = "Verify actual browser loading progress and stalled-download watchdog"
+run = "node tools/verify-player-loading.mjs"
+
 [tasks."test:display"]
 depends = ["//examples/rpg:build"]
 run = "node tools/verify-display.mjs"
@@ -236,6 +241,7 @@ run = [
   {task = "test:synthesis"},
   {task = "test:profile"},
   {task = "test:odin"},
+  {task = "test:player-loading"},
   {task = "test:display"},
   {task = "//examples/rpg:test"},
   {task = "//examples/racing:test"},

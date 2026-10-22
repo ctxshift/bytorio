@@ -143,7 +143,7 @@ function requestExecutor() {
   });
 }
 
-async function fetchBytes(url, limit = 1024 * 1024) {
+async function fetchBytes(url, limit = 1024 * 1024, onProgress) {
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`Could not load ${new URL(url, location.href).pathname}.`);
@@ -163,6 +163,7 @@ async function fetchBytes(url, limit = 1024 * 1024) {
         throw new Error("Module or PNG exceeds prototype size limit.");
       }
       chunks.push(value);
+      onProgress?.(size, Number(response.headers.get("content-length")) || 0);
     }
   } finally {
     reader.releaseLock();
@@ -377,9 +378,21 @@ self.onmessage = async ({ data }) => {
       const start = performance.now();
       const isSource = url.pathname.endsWith(".luau");
       const isPNG = !!data.cartridge || url.pathname.toLowerCase().endsWith(".png");
+      let lastProgress = -Infinity;
+      const reportProgress = (received, total) => {
+        if (data.progress !== true) {
+          return;
+        }
+        const now = performance.now();
+        if (now - lastProgress < 100 && received !== total) {
+          return;
+        }
+        lastProgress = now;
+        self.postMessage({ type: "loading", received, total });
+      };
       const [input, runtimeBytes] = await Promise.all([
-        data.cartridge || (isPNG ? fetch(url) : fetchBytes(url)),
-        fetchBytes(gpu ? "./runtime-gpu.wasm" : "./runtime.wasm"),
+        data.cartridge || (isPNG ? fetch(url) : fetchBytes(url, undefined, reportProgress)),
+        fetchBytes(gpu ? "./runtime-gpu.wasm" : "./runtime.wasm", undefined, reportProgress),
       ]);
       runtime = (await WebAssembly.instantiate(runtimeBytes, imports)).instance.exports;
       if (
@@ -402,7 +415,9 @@ self.onmessage = async ({ data }) => {
       ) {
         throw new Error("Runtime does not support GPU execution.");
       }
-      const cartridge = isPNG ? await loadCartridge(runtime, input) : null;
+      const cartridge = isPNG
+        ? await loadCartridge(runtime, input, { onProgress: reportProgress })
+        : null;
       let executor = isSource ? data.executor : null;
       let gameBytes = cartridge ? cartridge.code : input;
       let source = null;

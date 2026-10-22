@@ -39,7 +39,7 @@ function parseReservedCartridge(runtime, length) {
 
 // Blob/File messages share immutable browser storage. Known-length HTTP bodies
 // and files stream directly into the one runtime-owned cartridge allocation.
-export async function loadCartridge(runtime, source) {
+export async function loadCartridge(runtime, source, { onProgress } = {}) {
   if (source instanceof ArrayBuffer || source instanceof Uint8Array) {
     const cartridge = decodeCartridge(runtime, source);
     return { ...cartridge, length: source.byteLength };
@@ -77,6 +77,7 @@ export async function loadCartridge(runtime, source) {
             throw new Error("Invalid PNG cartridge size");
           }
           parts.push(value);
+          onProgress?.(size, 0);
         }
       } catch (error) {
         await reader.cancel().catch(() => {});
@@ -85,6 +86,7 @@ export async function loadCartridge(runtime, source) {
       } finally {
         reader.releaseLock();
       }
+      onProgress?.(size, size);
       return loadCartridge(runtime, new Blob(parts));
     }
   } else {
@@ -104,6 +106,7 @@ export async function loadCartridge(runtime, source) {
   const reader = stream.getReader();
   let offset = 0;
   try {
+    onProgress?.(0, length);
     while (true) {
       const { value, done } = await reader.read();
       if (done) {
@@ -114,6 +117,7 @@ export async function loadCartridge(runtime, source) {
       }
       new Uint8Array(runtime.memory.buffer, pointer + offset, value.byteLength).set(value);
       offset += value.byteLength;
+      onProgress?.(offset, length);
     }
     if (offset !== length) {
       throw new Error("PNG cartridge length mismatch");

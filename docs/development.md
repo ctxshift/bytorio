@@ -35,6 +35,13 @@ mise exec -- npm run serve
 Open `http://127.0.0.1:8080/player.html` and click **Start game**. Native:
 `./build/odin-player/native/player.exe`.
 
+For a cartridge already on the device, open `player.html?local` and use
+**Open cartridge** to select its PNG. This mode waits for file selection without
+fetching the default game. The browser still loads the player runtime from the
+server. Network cartridge loads display byte progress; continued data delivery
+refreshes the loading timeout, while stalled loads and runaway execution remain
+bounded.
+
 For new Luau or Odin games, use [the SDK CLI](../sdk/README.md). For matching
 native/browser examples in both languages:
 

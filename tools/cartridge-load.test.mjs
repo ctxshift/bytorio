@@ -110,3 +110,38 @@ test("chunked and compressed responses use decoded lengths with a bounded fallba
   await assert.rejects(loadCartridge(runtime, new Response(expected)), /size/);
   assert.deepEqual(reservations, [0]);
 });
+
+test("throwing progress callbacks cancel the stream and release runtime ownership", async () => {
+  for (const [knownLength, failureAt] of [
+    [true, 0],
+    [true, 4],
+    [false, 4],
+  ]) {
+    const { runtime, reservations } = fixture();
+    let cancellations = 0;
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new Uint8Array([1, 2, 3, 4]));
+      },
+      cancel() {
+        cancellations++;
+      },
+    });
+    const response = new Response(stream, {
+      headers: knownLength ? { "Content-Length": "4" } : {},
+    });
+    await assert.rejects(
+      loadCartridge(runtime, response, {
+        onProgress(received) {
+          if (received === failureAt) {
+            throw new Error("progress observer failed");
+          }
+        },
+      }),
+      /progress observer failed/,
+    );
+    assert.equal(cancellations, 1);
+    assert.equal(stream.locked, false);
+    assert.deepEqual(reservations, knownLength ? [4, 0] : [0]);
+  }
+});
