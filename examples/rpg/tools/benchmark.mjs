@@ -82,6 +82,8 @@ const imports = {
     save_status: () => 3,
     save_read: () => 0,
     save_write: () => 3,
+    text_configure: () => 0,
+    text_read: () => 0,
   },
 };
 const wasm = {
@@ -98,9 +100,11 @@ assert.deepEqual(
     { module: "env", name: "save_size", kind: "function" },
     { module: "env", name: "save_status", kind: "function" },
     { module: "env", name: "save_read", kind: "function" },
+    { module: "env", name: "text_configure", kind: "function" },
+    { module: "env", name: "text_read", kind: "function" },
     { module: "env", name: "save_write", kind: "function" },
   ],
-  "executor imports only the bounded content interface",
+  "executor imports exactly its bounded host interfaces",
 );
 for (const language of ["odin", "luau"]) {
   assert.deepEqual(
@@ -346,7 +350,7 @@ try {
               : null;
           const worker = new Worker("./worker.js", { type: "module" });
           try {
-            const exchange = (data) =>
+            const exchange = (message, expectedType) =>
               new Promise((resolve, reject) => {
                 const timeout = setTimeout(
                   () => reject(new Error("Unified Worker benchmark timeout")),
@@ -357,26 +361,29 @@ try {
                   reject(new Error(event.message));
                 };
                 worker.onmessage = ({ data }) => {
-                  if (data.type === "executing") {
+                  if (data.type !== "error" && data.type !== expectedType) {
                     return;
                   }
                   clearTimeout(timeout);
                   data.type === "error" ? reject(new Error(data.error)) : resolve(data);
                 };
-                worker.postMessage(data);
+                worker.postMessage(message);
               });
-            const ready = await exchange({
-              type: "load",
-              gameUrl: language === "luau" ? "./rpg.luau" : "./game.wasm",
-              executor,
-            });
+            const ready = await exchange(
+              {
+                type: "load",
+                gameUrl: language === "luau" ? "./rpg.luau" : "./game.wasm",
+                executor,
+              },
+              "ready",
+            );
             if (ready.ticks !== 0 || ready.sounds !== 1) {
               throw new Error("Cartridge state leaked across cached instances.");
             }
             const workerReadyMs = performance.now() - started;
-            const benchmark = await exchange({ type: "benchmark", masks });
+            const benchmark = await exchange({ type: "benchmark", masks }, "benchmark");
             // Restart the same instance, then check the separate defeat route.
-            const recovered = await exchange({ type: "benchmark", masks: defeat });
+            const recovered = await exchange({ type: "benchmark", masks: defeat }, "benchmark");
             return {
               ...benchmark,
               workerReadyMs,

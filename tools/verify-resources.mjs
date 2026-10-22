@@ -146,6 +146,8 @@ for (const language of ["odin", "luau"]) {
       save_status: () => 3,
       save_read: () => 0,
       save_write: () => 3,
+      text_configure: () => 0,
+      text_read: () => 0,
     },
   };
   const game = (await WebAssembly.instantiate(await readFile(wasm), imports)).instance.exports;
@@ -158,6 +160,8 @@ for (const language of ["odin", "luau"]) {
           { module: "env", name: "save_size", kind: "function" },
           { module: "env", name: "save_status", kind: "function" },
           { module: "env", name: "save_read", kind: "function" },
+          { module: "env", name: "text_configure", kind: "function" },
+          { module: "env", name: "text_read", kind: "function" },
           { module: "env", name: "save_write", kind: "function" },
         ]
       : [],

@@ -4,6 +4,12 @@ local function unavailable(): never
     error("The Bytorio native bridge is provided by the player")
 end
 return {
+    text_configure = function(_source: buffer): number
+        return unavailable()
+    end,
+    text_read = function(_destination: buffer): number
+        return unavailable()
+    end,
     save_size = function(): number
         return unavailable()
     end,

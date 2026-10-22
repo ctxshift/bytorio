@@ -112,6 +112,7 @@ export async function syncEditor(project) {
     "constants.luau",
     "content.luau",
     "save.luau",
+    "text.luau",
   ]) {
     await copyFile(resolve(repo, "sdk/luau", file), resolve(target, file));
   }

@@ -14,6 +14,8 @@ const webScripts = [
   "cartridge.js",
   "cartridge-cache.js",
   "save.js",
+  "text-session.js",
+  "text-input.js",
   "executor-cache.js",
   "executor-cache-core.js",
   "frame-clock.js",

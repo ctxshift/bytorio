@@ -8,6 +8,8 @@ compatibility checks before game initialization.
 
 The current player also provides a bounded [persistent save slot](save.md)
 through `byt.save` in Luau and `save "sdk:save"` in Odin.
+Bounded [operating-system text entry](text-input.md) is available through
+`byt.text_input` in Luau and `text "sdk:text"` in Odin, including phone keyboard focus.
 
 Luau imports `local byt = require("@bytorio")`. Odin imports
 `byt "sdk:bytorio"`. Sprite IDs start at zero. Drawing coordinates use the

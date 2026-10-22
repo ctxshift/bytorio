@@ -58,6 +58,8 @@ const imports = {
     save_status: () => 3,
     save_read: () => 0,
     save_write: () => 3,
+    text_configure: () => 0,
+    text_read: () => 0,
   },
 };
 const inputs = Array.from({ length: 120 }, (_, i) => ({
@@ -88,10 +90,12 @@ async function pair(language) {
           { module: "env", name: "save_size", kind: "function" },
           { module: "env", name: "save_status", kind: "function" },
           { module: "env", name: "save_read", kind: "function" },
+          { module: "env", name: "text_configure", kind: "function" },
+          { module: "env", name: "text_read", kind: "function" },
           { module: "env", name: "save_write", kind: "function" },
         ]
       : [],
-    "SDK guest imports only the bounded content interface",
+    "SDK guest imports exactly its bounded host interfaces",
   );
   for (const name of Object.keys(contract.requiredExports)) {
     assert.ok(

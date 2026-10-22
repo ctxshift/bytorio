@@ -33,6 +33,8 @@ const imports = {
     save_status: () => 3,
     save_read: () => 0,
     save_write: () => 3,
+    text_configure: () => 0,
+    text_read: () => 0,
   },
 };
 const game = (await WebAssembly.instantiate(await readFile(`${root}/web/game.wasm`), imports))
@@ -108,11 +110,11 @@ try {
                   bypass: variant === "luauCold",
                 });
           const worker = new Worker("./worker.js", { type: "module" });
-          const next = () =>
+          const next = (expectedType) =>
             new Promise((resolve, reject) => {
               const deadline = setTimeout(() => reject(new Error("Benchmark deadline")), 30000);
               worker.onmessage = ({ data }) => {
-                if (data.type === "executing") {
+                if (data.type !== "error" && data.type !== expectedType) {
                   return;
                 }
                 clearTimeout(deadline);
@@ -124,14 +126,14 @@ try {
               };
               worker.onerror = reject;
             });
-          let pending = next();
+          let pending = next("ready");
           worker.postMessage({
             type: "load",
             gameUrl: variant === "odin" ? "./game.wasm" : "./racing.luau",
             executor,
           });
           const ready = await pending;
-          pending = next();
+          pending = next("benchmark");
           worker.postMessage({ type: "benchmark", masks });
           const report = await pending;
           worker.terminate();

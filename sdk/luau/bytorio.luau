@@ -71,6 +71,7 @@ local selected = c.PROFILES[profile]
 assert(selected, "Unsupported cartridge profile")
 local api = { version = selected.version, content = require("./content") }
 api.save = require("./save")
+api.text_input = require("./text")
 function api.capabilities()
     return table.freeze({
         profile = profile,

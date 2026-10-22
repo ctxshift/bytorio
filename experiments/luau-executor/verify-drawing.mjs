@@ -16,6 +16,8 @@ const dir = "examples/rpg/build/player/web",
       save_status: () => 3,
       save_read: () => 0,
       save_write: () => 3,
+      text_configure: () => 0,
+      text_read: () => 0,
     },
   };
 const game = (await WebAssembly.instantiate(await readFile(`${dir}/game.wasm`), imports)).instance

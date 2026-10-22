@@ -41,6 +41,7 @@ Game :: struct {
     profile:                                   u32,
     content:                                   cartridge.Content,
     save:                                      Save_State,
+    text_input:                                abi.Text_State,
 }
 
 resource_session: u32
@@ -229,6 +230,7 @@ load :: proc(
 ) -> bool {
     game.content = content
     save_open(&game.save, save_identity)
+    game.text_input.read_allowed = true
     if len(bytes) == 0 || len(bytes) > abi.MAX_GAME_BYTES {
 
         return fail(game, "game module exceeds prototype size limit")
@@ -264,7 +266,7 @@ load :: proc(
     game.compile_ms = time.duration_seconds(time.tick_since(compile_start)) * 1000
     // Odin's freestanding math.sin lowers to this one explicitly allowed import.
     game.linker = wasmtime_linker_new(game.engine)
-    if !define_content_imports(game) || !define_save_imports(game) {
+    if !define_content_imports(game) || !define_save_imports(game) || !define_text_imports(game) {
         return false
     }
     params, results: TypeVec
@@ -628,6 +630,7 @@ sine :: proc "c" (
 }
 
 update :: proc(game: ^Game, input: abi.Input) -> bool {
+    game.text_input.read_allowed = true
     game.save.write_allowed = true
     if !deliver_resources(game) {
 

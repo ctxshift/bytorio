@@ -134,6 +134,8 @@ for (const language of ["odin", "luau"]) {
         save_status: () => 3,
         save_read: () => 0,
         save_write: () => 3,
+        text_configure: () => 0,
+        text_read: () => 0,
       },
     })
   ).instance.exports;
@@ -148,6 +150,8 @@ for (const language of ["odin", "luau"]) {
         save_status: () => 3,
         save_read: () => 0,
         save_write: () => 3,
+        text_configure: () => 0,
+        text_read: () => 0,
       },
     })
   ).instance.exports;
@@ -199,6 +203,8 @@ for (const language of ["odin", "luau"]) {
           save_status: () => 3,
           save_read: () => 0,
           save_write: () => 3,
+          text_configure: () => 0,
+          text_read: () => 0,
         },
       })
     ).instance.exports;
@@ -339,6 +345,8 @@ try {
             save_status: () => 3,
             save_read: () => 0,
             save_write: () => 3,
+            text_configure: () => 0,
+            text_read: () => 0,
           },
         })
       ).instance.exports;

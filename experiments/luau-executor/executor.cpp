@@ -25,6 +25,10 @@ extern "C" __attribute__((import_module("env"), import_name("save_read"))) std::
 host_save_read(void* destination, std::uint32_t capacity);
 extern "C" __attribute__((import_module("env"), import_name("save_write"))) std::uint32_t
 host_save_write(const void* source, std::uint32_t length);
+extern "C" __attribute__((import_module("env"), import_name("text_configure"))) std::uint32_t
+host_text_configure(const void* source, std::uint32_t length);
+extern "C" __attribute__((import_module("env"), import_name("text_read"))) std::uint32_t
+host_text_read(void* destination, std::uint32_t capacity);
 
 namespace {
 using namespace console_constants;
@@ -264,6 +268,24 @@ int save_size(lua_State* L) {
     return 1;
 }
 
+int text_configure(lua_State* L) {
+    std::size_t length = 0;
+    const void* source = luaL_checkbuffer(L, 1, &length);
+    lua_pushnumber(L, length <= TEXT_INPUT_HEADER_BYTES + TEXT_INPUT_MAX_BYTES
+                          ? host_text_configure(source, static_cast<std::uint32_t>(length))
+                          : 0);
+    return 1;
+}
+
+int text_read(lua_State* L) {
+    std::size_t length = 0;
+    void* destination = luaL_checkbuffer(L, 1, &length);
+    lua_pushnumber(L, length <= TEXT_INPUT_HEADER_BYTES + TEXT_INPUT_MAX_BYTES
+                          ? host_text_read(destination, static_cast<std::uint32_t>(length))
+                          : 0);
+    return 1;
+}
+
 int save_status(lua_State* L) {
     lua_pushnumber(L, host_save_status());
     return 1;
@@ -442,6 +464,8 @@ EMSCRIPTEN_KEEPALIVE void game_init() {
                             {"save_size", save_size},
                             {"save_status", save_status},
                             {"save_read", save_read},
+                            {"text_configure", text_configure},
+                            {"text_read", text_read},
                             {"save_write", save_write},
                             {"resource_results", resource_transport::results},
                             {"resource_session", resource_transport::session},

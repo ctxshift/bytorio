@@ -60,6 +60,7 @@ App :: struct {
     audio_buffer:                  [w.maxAudioDeviceBlock * 2]f32,
     gamepad:                       ^sdl.Gamepad,
     focused:                       bool,
+    text_revision:                 u32,
     wheel:                         i32,
     texture_width, texture_height: int,
     logical_width, logical_height: int,
@@ -107,72 +108,74 @@ input :: proc(app: ^App) -> abi.Input {
         return result
     }
     keys := sdl.GetKeyboardState(nil)
-    if keys[sdl.Scancode.A] { result.buttons |= abi.BUTTON_MOVE_LEFT }
-    if keys[sdl.Scancode.D] { result.buttons |= abi.BUTTON_MOVE_RIGHT }
-    if keys[sdl.Scancode.W] { result.buttons |= abi.BUTTON_MOVE_UP }
-    if keys[sdl.Scancode.S] { result.buttons |= abi.BUTTON_MOVE_DOWN }
-    if keys[sdl.Scancode.LEFT] { result.buttons |= abi.BUTTON_PAN_LEFT }
-    if keys[sdl.Scancode.RIGHT] { result.buttons |= abi.BUTTON_PAN_RIGHT }
-    if keys[sdl.Scancode.UP] { result.buttons |= abi.BUTTON_PAN_UP }
-    if keys[sdl.Scancode.DOWN] { result.buttons |= abi.BUTTON_PAN_DOWN }
-    if keys[sdl.Scancode.Q] { result.buttons |= abi.BUTTON_ROTATE_LEFT }
-    if keys[sdl.Scancode.E] { result.buttons |= abi.BUTTON_ROTATE_RIGHT }
-    if keys[sdl.Scancode.R] { result.buttons |= abi.BUTTON_RESET }
-    if keys[sdl.Scancode.I] { result.buttons |= abi.BUTTON_INVENTORY }
-    if keys[sdl.Scancode.C] { result.buttons |= abi.BUTTON_CHARACTER }
-    if keys[sdl.Scancode.K] { result.buttons |= abi.BUTTON_SKILLS }
-    if keys[sdl.Scancode.Q] { result.buttons |= abi.BUTTON_QUEST }
-    if keys[sdl.Scancode.TAB] { result.buttons |= abi.BUTTON_MAP }
-    if keys[sdl.Scancode._1] { result.buttons |= abi.BUTTON_POTION_1 }
-    if keys[sdl.Scancode._2] { result.buttons |= abi.BUTTON_POTION_2 }
-    if keys[sdl.Scancode._3] { result.buttons |= abi.BUTTON_POTION_3 }
-    if keys[sdl.Scancode._4] { result.buttons |= abi.BUTTON_POTION_4 }
-    if keys[sdl.Scancode.LSHIFT] ||
-       keys[sdl.Scancode.RSHIFT] { result.buttons |= abi.BUTTON_SHIFT }
-    if keys[sdl.Scancode.ESCAPE] { result.buttons |= abi.BUTTON_ESCAPE }
-    if app.wheel > 0 { result.buttons |= abi.BUTTON_WHEEL_UP }
-    if app.wheel < 0 { result.buttons |= abi.BUTTON_WHEEL_DOWN }
-    app.wheel = 0
-    if keys[sdl.Scancode.LEFT] || keys[sdl.Scancode.A] {
+    if !abi.text_active(&app.game.text_input) {
+        if keys[sdl.Scancode.A] { result.buttons |= abi.BUTTON_MOVE_LEFT }
+        if keys[sdl.Scancode.D] { result.buttons |= abi.BUTTON_MOVE_RIGHT }
+        if keys[sdl.Scancode.W] { result.buttons |= abi.BUTTON_MOVE_UP }
+        if keys[sdl.Scancode.S] { result.buttons |= abi.BUTTON_MOVE_DOWN }
+        if keys[sdl.Scancode.LEFT] { result.buttons |= abi.BUTTON_PAN_LEFT }
+        if keys[sdl.Scancode.RIGHT] { result.buttons |= abi.BUTTON_PAN_RIGHT }
+        if keys[sdl.Scancode.UP] { result.buttons |= abi.BUTTON_PAN_UP }
+        if keys[sdl.Scancode.DOWN] { result.buttons |= abi.BUTTON_PAN_DOWN }
+        if keys[sdl.Scancode.Q] { result.buttons |= abi.BUTTON_ROTATE_LEFT }
+        if keys[sdl.Scancode.E] { result.buttons |= abi.BUTTON_ROTATE_RIGHT }
+        if keys[sdl.Scancode.R] { result.buttons |= abi.BUTTON_RESET }
+        if keys[sdl.Scancode.I] { result.buttons |= abi.BUTTON_INVENTORY }
+        if keys[sdl.Scancode.C] { result.buttons |= abi.BUTTON_CHARACTER }
+        if keys[sdl.Scancode.K] { result.buttons |= abi.BUTTON_SKILLS }
+        if keys[sdl.Scancode.Q] { result.buttons |= abi.BUTTON_QUEST }
+        if keys[sdl.Scancode.TAB] { result.buttons |= abi.BUTTON_MAP }
+        if keys[sdl.Scancode._1] { result.buttons |= abi.BUTTON_POTION_1 }
+        if keys[sdl.Scancode._2] { result.buttons |= abi.BUTTON_POTION_2 }
+        if keys[sdl.Scancode._3] { result.buttons |= abi.BUTTON_POTION_3 }
+        if keys[sdl.Scancode._4] { result.buttons |= abi.BUTTON_POTION_4 }
+        if keys[sdl.Scancode.LSHIFT] ||
+           keys[sdl.Scancode.RSHIFT] { result.buttons |= abi.BUTTON_SHIFT }
+        if keys[sdl.Scancode.ESCAPE] { result.buttons |= abi.BUTTON_ESCAPE }
+        if app.wheel > 0 { result.buttons |= abi.BUTTON_WHEEL_UP }
+        if app.wheel < 0 { result.buttons |= abi.BUTTON_WHEEL_DOWN }
+        app.wheel = 0
+        if keys[sdl.Scancode.LEFT] || keys[sdl.Scancode.A] {
 
-        result.buttons |= 1
-    }
-    if keys[sdl.Scancode.RIGHT] || keys[sdl.Scancode.D] {
-
-        result.buttons |= 2
-    }
-    if keys[sdl.Scancode.UP] || keys[sdl.Scancode.W] {
-
-        result.buttons |= 4
-    }
-    if keys[sdl.Scancode.DOWN] || keys[sdl.Scancode.S] {
-
-        result.buttons |= 8
-    }
-    if keys[sdl.Scancode.SPACE] {
-
-        result.buttons |= 16
-    }
-    if app.gamepad != nil {
-        if sdl.GetGamepadButton(app.gamepad, .DPAD_LEFT) {
-
-            result.buttons |= 1 | abi.BUTTON_MOVE_LEFT
+            result.buttons |= 1
         }
-        if sdl.GetGamepadButton(app.gamepad, .DPAD_RIGHT) {
+        if keys[sdl.Scancode.RIGHT] || keys[sdl.Scancode.D] {
 
-            result.buttons |= 2 | abi.BUTTON_MOVE_RIGHT
+            result.buttons |= 2
         }
-        if sdl.GetGamepadButton(app.gamepad, .DPAD_UP) {
+        if keys[sdl.Scancode.UP] || keys[sdl.Scancode.W] {
 
-            result.buttons |= 4 | abi.BUTTON_MOVE_UP
+            result.buttons |= 4
         }
-        if sdl.GetGamepadButton(app.gamepad, .DPAD_DOWN) {
+        if keys[sdl.Scancode.DOWN] || keys[sdl.Scancode.S] {
 
-            result.buttons |= 8 | abi.BUTTON_MOVE_DOWN
+            result.buttons |= 8
         }
-        if sdl.GetGamepadButton(app.gamepad, .SOUTH) {
+        if keys[sdl.Scancode.SPACE] {
 
             result.buttons |= 16
+        }
+        if app.gamepad != nil {
+            if sdl.GetGamepadButton(app.gamepad, .DPAD_LEFT) {
+
+                result.buttons |= 1 | abi.BUTTON_MOVE_LEFT
+            }
+            if sdl.GetGamepadButton(app.gamepad, .DPAD_RIGHT) {
+
+                result.buttons |= 2 | abi.BUTTON_MOVE_RIGHT
+            }
+            if sdl.GetGamepadButton(app.gamepad, .DPAD_UP) {
+
+                result.buttons |= 4 | abi.BUTTON_MOVE_UP
+            }
+            if sdl.GetGamepadButton(app.gamepad, .DPAD_DOWN) {
+
+                result.buttons |= 8 | abi.BUTTON_MOVE_DOWN
+            }
+            if sdl.GetGamepadButton(app.gamepad, .SOUTH) {
+
+                result.buttons |= 16
+            }
         }
     }
     x, y, lx, ly: f32
@@ -686,9 +689,11 @@ run :: proc() -> int {
     previous := f64(sdl.GetTicksNS()) / 1e9
     clock: timing.Clock
     for running {
+        sync_text_input(app)
         event: sdl.Event
         if !check_only {
             for sdl.PollEvent(&event) {
+                text_event(app, &event)
                 #partial switch event.type {
                 case .QUIT:
                     running = false
@@ -703,6 +708,8 @@ run :: proc() -> int {
                         )
                     }
                 case .WINDOW_FOCUS_LOST:
+                    app.game.text_input.composing = false
+                    abi.text_finish(&app.game.text_input, true)
                     app.focused = false; clock = {}
                     app.wheel = 0
                 case .WINDOW_FOCUS_GAINED:
@@ -751,6 +758,7 @@ run :: proc() -> int {
 
                 return error(app.game.error)
             }
+            sync_text_input(app)
         }
         // Draws may run without an update, or after multiple fixed updates.
         if render && !draw(app) { return error(app.game.error) }

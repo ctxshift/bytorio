@@ -14,6 +14,7 @@
   ],
   "tickRate": 60,
   "inputVersion": 2,
+  "textInput": {"version": 1, "maxBytes": 256, "headerBytes": 48, "flags": {"active": 1, "changed": 2, "submitted": 4, "cancelled": 8}, "fields": {"version": 0, "id": 4, "revision": 8, "flags": 12, "maxBytes": 16, "length": 20, "start": 24, "end": 28, "x": 32, "y": 36, "width": 40, "height": 44}},
   "save": {"version": 1, "maxBytes": 65536, "status": {"empty": 0, "ready": 1, "pending": 2, "error": 3}},
   "defaults": {"clearColor": 4281475093, "randomSeed": 1, "zeroSeedFallback": 1831565813, "previewSampleRate": 48000},
   "displayModes": [[640, 360], [320, 180]],

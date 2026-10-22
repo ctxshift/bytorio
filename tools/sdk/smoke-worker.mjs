@@ -2,6 +2,7 @@ import { parentPort, workerData } from "node:worker_threads";
 import { readFile } from "node:fs/promises";
 import { decodeCartridge, contentImports } from "../../runtime/odin/web/cartridge.js";
 import { unavailableSaveImports } from "../../runtime/odin/web/save.js";
+import { createTextInputSession } from "../../runtime/odin/web/text-session.js";
 import {
   inspectGuest,
   loadSource,
@@ -21,9 +22,15 @@ try {
     .instance.exports;
   decodeCartridge(runtime, workerData.cartridge);
   let game = null;
+  const textSession = createTextInputSession(() => game);
   game = (
     await WebAssembly.instantiate(bytes, {
-      env: { sin: Math.sin, ...contentImports(runtime, () => game), ...unavailableSaveImports },
+      env: {
+        sin: Math.sin,
+        ...contentImports(runtime, () => game),
+        ...unavailableSaveImports,
+        ...textSession.imports,
+      },
     })
   ).instance.exports;
   const source = workerData.source ? await readFile(workerData.source) : null;
@@ -43,6 +50,7 @@ try {
   uploadGraphics(game, runtime);
   for (let i = 0; i < 3; i++) {
     deliverResources(game, runtime);
+    textSession.beginTick();
     game.game_update(0, 0, 0, 0);
     checkExecutor(game);
     submitResources(game, runtime);

@@ -4,6 +4,7 @@ import { prepareExecutor } from "./executor-cache.js";
 import { normalizeGraphics } from "./gpu.js";
 import * as controls from "./constants.js";
 import { FrameClock, parseFrameRate } from "./frame-clock.js";
+import { createTextInputOverlay } from "./text-input.js";
 const canvas = document.getElementById("canvas");
 const display = canvas.getContext("2d", { alpha: false });
 const button = document.getElementById("start");
@@ -136,6 +137,22 @@ let mixerNode = null;
 let mixerLoading = null;
 let mixerGeneration = 0;
 const mixerPackets = [];
+const textInput = createTextInputOverlay({
+  canvas,
+  logicalSize: () => [
+    globalThis.playerStatus.width || canvas.width,
+    globalThis.playerStatus.height || canvas.height,
+  ],
+  send: (update) => worker?.postMessage({ type: "text-input", update }),
+  onEditing: (active) => {
+    if (!active) {
+      return;
+    }
+    keys.clear();
+    pointer.pointer = pointer.right = pointer.hover = false;
+    wheelDirection = 0;
+  },
+});
 
 async function ensureMixer() {
   if (mixerNode || !globalThis.playerAudio.lowEnabled) {
@@ -282,6 +299,7 @@ function stopOutput() {
 }
 
 function fail(message) {
+  textInput.close();
   clearTimeout(watchdog);
   worker?.terminate();
   stopOutput();
@@ -353,6 +371,7 @@ async function load(restart = false) {
     return;
   }
   const currentGeneration = ++generation;
+  textInput.close();
   worker?.terminate();
   stopOutput();
   closeMixer();
@@ -374,6 +393,10 @@ async function load(restart = false) {
   };
   worker.onmessage = ({ data }) => {
     if (currentGeneration !== generation) {
+      return;
+    }
+    if (data.type === "text-state") {
+      textInput.configure(data.state);
       return;
     }
     if (data.type === "loading" && loading) {
@@ -612,6 +635,9 @@ window.addEventListener("drop", (event) => {
 });
 
 function input(consumeWheel = true) {
+  if (textInput.editing()) {
+    return { buttons: 0, pointer: false, x: 0, y: 0 };
+  }
   let buttons = 0;
   for (const [key, mask] of [
     ["KeyA", controls.BUTTON_MOVE_LEFT],
@@ -866,6 +892,7 @@ function resize() {
   const scale = available >= 1 ? Math.floor(available) : Math.max(0.25, available);
   canvas.style.width = `${(width * scale) / density}px`;
   canvas.style.height = `${(height * scale) / density}px`;
+  textInput.reposition();
 }
 function displayPixels() {
   const full = document.fullscreenElement === document.getElementById("screen");

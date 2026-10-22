@@ -10,7 +10,18 @@ import { run } from "../../../tools/toolchain.mjs";
 import { odinUnitTests } from "../../../tools/odin-unit-tests.mjs";
 import { serve } from "../../../tools/serve.mjs";
 import * as policy from "../../../runtime/odin/web/policy.js";
-import { MAX_LUAU_SOURCE_BYTES } from "../../../runtime/odin/web/constants.js";
+import { contentImports, decodeCartridge } from "../../../runtime/odin/web/cartridge.js";
+import { chunks, chunk, signature, encodeContent } from "../../../tools/sdk/cartridge.mjs";
+import {
+  MAX_LUAU_SOURCE_BYTES,
+  MAX_CONTENT_READ_BYTES,
+  CONTENT_HEADER_BYTES,
+  CONTENT_HEADER_COUNT,
+  CONTENT_RECORD_BYTES,
+  CONTENT_RECORD_ID,
+  CONTENT_RECORD_OFFSET,
+  CONTENT_RECORD_LENGTH,
+} from "../../../runtime/odin/web/constants.js";
 
 const gpu = process.argv.includes("--gpu");
 const output = resolve("examples/kart3d/build/validation", randomUUID());
@@ -26,17 +37,21 @@ const imports = {
     save_status: () => 3,
     save_read: () => 0,
     save_write: () => 3,
+    text_configure: () => 0,
+    text_read: () => 0,
   },
 };
-async function pair(language, source) {
+async function pair(language, source, cartridge) {
   const base = resolve(root, language, "build/web");
   const runtime = (
     await WebAssembly.instantiate(await readFile(resolve(base, "runtime.wasm")), imports)
   ).instance.exports;
-  const game = (
+  decodeCartridge(runtime, cartridge || (await readFile(resolve(base, "game.png"))));
+  let game = null;
+  game = (
     await WebAssembly.instantiate(
       await readFile(resolve(base, language === "odin" ? "game.wasm" : "luau-executor.wasm")),
-      imports,
+      { env: { ...imports.env, ...contentImports(runtime, () => game) } },
     )
   ).instance.exports;
   game._initialize?.();
@@ -181,11 +196,15 @@ const stateExpressions = [
   "polish.inspect()[3]",
 ];
 const original = await readFile(resolve(root, "luau/build/web/game.luau"), "utf8");
+assert.ok(
+  Buffer.byteLength(original) <= MAX_LUAU_SOURCE_BYTES,
+  "shipping source fits its unchanged budget",
+);
 // Bundle source contains the authored game module; instrument its unique return.
 const needle = "return { init = init, update = update, draw = draw }";
 assert.equal(original.split(needle).length, 2, "one game lifecycle return");
-// Store changed columns as exact integer deltas. All snapshots and assertions
-// remain present without repeating unchanged fields in the instrumented source.
+// Store every sampled state as exact integer deltas in verification-only content.
+// Replay data must not consume the shipping cartridge's source-code budget.
 let previousState = Array(states[0].length).fill(0);
 const checks = states
   .map((row) => {
@@ -196,10 +215,58 @@ const checks = states
       }
     }
     previousState = row;
-    return JSON.stringify(words.join(","));
+    return words.join(",");
   })
-  .join(",\n");
-const wrapper = `local checks = {${checks}}
+  .join("\n");
+const expectationBytes = Buffer.from(checks);
+assert.ok(
+  expectationBytes.length <= MAX_CONTENT_READ_BYTES,
+  "replay expectations fit one bounded content read",
+);
+await writeFile(resolve(output, "replay-expectations.bin"), expectationBytes);
+
+// Preserve existing content IDs and bytes in the private verification cartridge.
+const parts = chunks(await readFile(resolve(root, "luau/build/web/game.png")));
+const entries = [];
+for (const part of parts.filter((part) => part.type === "coNt")) {
+  const count = part.data.readUInt32LE(CONTENT_HEADER_COUNT);
+  const payload = CONTENT_HEADER_BYTES + count * CONTENT_RECORD_BYTES;
+  for (let index = 0; index < count; index++) {
+    const record = CONTENT_HEADER_BYTES + index * CONTENT_RECORD_BYTES;
+    const id = part.data.readUInt32LE(record + CONTENT_RECORD_ID);
+    const offset = part.data.readUInt32LE(record + CONTENT_RECORD_OFFSET);
+    const length = part.data.readUInt32LE(record + CONTENT_RECORD_LENGTH);
+    entries.push({ id, bytes: part.data.subarray(payload + offset, payload + offset + length) });
+  }
+}
+let expectationId = 1;
+while (entries.some((entry) => entry.id === expectationId)) {
+  expectationId++;
+}
+const verificationContent = encodeContent([
+  ...entries,
+  { id: expectationId, bytes: expectationBytes },
+]);
+const verificationCartridge = Buffer.concat([
+  signature,
+  ...parts
+    .filter((part) => part.type !== "coNt")
+    .flatMap((part) => [
+      ...(part.type === "IEND" ? [chunk("coNt", verificationContent)] : []),
+      chunk(part.type, part.data),
+    ]),
+]);
+await writeFile(resolve(output, "verification.png"), verificationCartridge);
+const wrapper = `local function loadChecks()
+    local size = byt.content.size(${expectationId})
+    assert(size == ${expectationBytes.length}, "complete replay expectations content")
+    local bytes = buffer.create(size)
+    assert(byt.content.read(${expectationId}, 0, bytes), "bounded replay expectations read")
+    local checks = string.split(buffer.tostring(bytes), "\\n")
+    assert(#checks == ${states.length}, "every replay expectation is present")
+    return checks
+end
+local checks = loadChecks()
 local checkIndex, verificationTick = 1, 0
 local previous = table.create(${stateExpressions.length + 1}, 0)
 local function decodeWord(word: string)
@@ -244,6 +311,9 @@ local function verifiedUpdate(dt: number)
         checkIndex += 1
         expected = expectedAt(checkIndex)
     end
+    if verificationTick == ${masks.length} then
+        assert(expected == nil and checkIndex == #checks + 1, "every replay expectation was checked")
+    end
 end
 return {init=init,update=verifiedUpdate,draw=draw}`;
 const verifiedSource = Buffer.from(original.replace(needle, wrapper));
@@ -251,7 +321,23 @@ assert.ok(
   verifiedSource.length <= MAX_LUAU_SOURCE_BYTES,
   `instrumented replay (${verifiedSource.length} bytes) fits the ${MAX_LUAU_SOURCE_BYTES}-byte Luau source budget`,
 );
-const luau = await pair("luau", verifiedSource);
+await writeFile(resolve(output, "verified.luau"), verifiedSource);
+console.log(
+  `Kart replay source: production ${Buffer.byteLength(original)}, instrumented ${verifiedSource.length}, expectations ${expectationBytes.length} bytes (${states.length} snapshots).`,
+);
+const luau = await pair("luau", verifiedSource, verificationCartridge);
+for (const entry of entries) {
+  assert.equal(luau.runtime.runtime_content_size(entry.id), entry.bytes.length);
+  assert.deepEqual(
+    new Uint8Array(
+      luau.runtime.memory.buffer,
+      luau.runtime.runtime_content_pointer(entry.id),
+      entry.bytes.length,
+    ),
+    new Uint8Array(entry.bytes),
+    "verification content preserves every production entry",
+  );
+}
 let sampleIndex = 0;
 for (let i = 0; i < masks.length; i++) {
   step(luau, masks[i]);

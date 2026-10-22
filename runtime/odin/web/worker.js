@@ -20,11 +20,13 @@ import {
 import { loadCartridge, contentImports } from "./cartridge.js";
 import { fetchCartridge, discardCachedCartridge } from "./cartridge-cache.js";
 import { openSaveSlot } from "./save.js";
+import { createTextInputSession } from "./text-session.js";
 import { normalizeGraphics, createGpu } from "./gpu.js";
 import { createOggPump, prepareOggDecoder } from "./ogg.js";
 
 let game, runtime;
 let saveSlot;
+let textSession;
 let gpu;
 let presentationSize = [1920, 1080];
 let smoke = false;
@@ -484,12 +486,17 @@ self.onmessage = async ({ data }) => {
           )
         : input;
       saveSlot = await openSaveSlot(identity, () => game);
+      textSession?.close();
+      textSession = createTextInputSession(() => game, {
+        onConfigure: (state) => self.postMessage({ type: "text-state", state }),
+      });
       game = (
         await WebAssembly.instantiate(gameModule, {
           env: {
             ...imports.env,
             ...contentImports(runtime, () => game, !!cartridge),
             ...saveSlot.imports,
+            ...textSession.imports,
           },
         })
       ).exports;
@@ -559,6 +566,9 @@ self.onmessage = async ({ data }) => {
         },
         [output.bitmap || output.pixels, sample.buffer],
       );
+    } else if (data.type === "text-input") {
+      // Stale or invalid UI messages never mutate a newer field or stop a game.
+      textSession?.accept(data.update);
     } else if (data.type === "step") {
       if (
         !game ||
@@ -580,6 +590,7 @@ self.onmessage = async ({ data }) => {
         }
         deliverResources(game, runtime);
         saveSlot?.beginTick();
+        textSession?.beginTick();
         game.game_update(
           buttons,
           smoke ? 0 : Number(data.input.pointer),
@@ -644,6 +655,8 @@ self.onmessage = async ({ data }) => {
       for (let pass = 0; pass < (data.diagnostic ? 1 : 7); pass++) {
         configureResources(game, runtime);
         saveSlot?.beginTick();
+        textSession?.close();
+        textSession?.beginTick();
         game.game_init();
         checkExecutor(game);
         submitResources(game, runtime);
@@ -654,6 +667,7 @@ self.onmessage = async ({ data }) => {
           const t0 = performance.now();
           deliverResources(game, runtime);
           saveSlot?.beginTick();
+          textSession?.beginTick();
           game.game_update(mask, 0, 0, 0);
           checkExecutor(game);
           submitResources(game, runtime);

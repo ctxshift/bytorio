@@ -31,6 +31,8 @@ const imports = {
     save_status: () => 3,
     save_read: () => 0,
     save_write: () => 3,
+    text_configure: () => 0,
+    text_read: () => 0,
   },
 };
 export async function instance(language) {
@@ -204,11 +206,11 @@ try {
     const traces = await page.evaluate(
       async ({ race, handling, language }) => {
         const worker = new Worker("./worker.js", { type: "module" });
-        const next = () =>
+        const next = (expectedType) =>
           new Promise((resolve, reject) => {
             const deadline = setTimeout(() => reject(new Error("Worker deadline")), 30000);
             worker.onmessage = ({ data }) => {
-              if (data.type === "executing") {
+              if (data.type !== "error" && data.type !== expectedType) {
                 return;
               }
               clearTimeout(deadline);
@@ -220,7 +222,7 @@ try {
             };
             worker.onerror = reject;
           });
-        let pending = next();
+        let pending = next("ready");
         worker.postMessage({
           type: "load",
           gameUrl: language === "luau" ? "./racing.luau" : "./game.wasm",
@@ -228,7 +230,7 @@ try {
         await pending;
         const result = [];
         for (const masks of [race, handling]) {
-          pending = next();
+          pending = next("benchmark");
           worker.postMessage({ type: "benchmark", masks });
           result.push((await pending).traces);
         }

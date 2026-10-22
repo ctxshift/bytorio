@@ -309,6 +309,8 @@ export function inspectGuest(bytes, compiledModule) {
           save_status: { params: [], results: [127] },
           save_read: { params: [127, 127], results: [127] },
           save_write: { params: [127, 127], results: [127] },
+          text_configure: { params: [127, 127], results: [127] },
+          text_read: { params: [127, 127], results: [127] },
         }[field];
         if (kind !== 0 || module !== "env" || !expected) {
           throw new Error("Unsupported game import.");
@@ -366,6 +368,8 @@ export function inspectGuest(bytes, compiledModule) {
         "save_status",
         "save_read",
         "save_write",
+        "text_configure",
+        "text_read",
       ].includes(item.name) ||
       item.kind !== "function"
     ) {

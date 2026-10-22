@@ -151,6 +151,21 @@ const common = {
   MAX_TEXT_BYTES_PER_COMMAND: contract.limits.textBytesPerCommand,
   LEGACY_BUTTON_MASK: Object.values(contract.buttons).reduce((mask, bit) => mask | bit, 0),
   INPUT_VERSION: contract.inputVersion,
+  TEXT_INPUT_VERSION: contract.textInput.version,
+  TEXT_INPUT_MAX_BYTES: contract.textInput.maxBytes,
+  TEXT_INPUT_HEADER_BYTES: contract.textInput.headerBytes,
+  ...Object.fromEntries(
+    Object.entries(contract.textInput.flags).map(([name, value]) => [
+      `TEXT_INPUT_${name.toUpperCase()}`,
+      value,
+    ]),
+  ),
+  ...Object.fromEntries(
+    Object.entries(contract.textInput.fields).map(([name, value]) => [
+      `TEXT_INPUT_FIELD_${name.replace(/[A-Z]/g, (letter) => `_${letter}`).toUpperCase()}`,
+      value,
+    ]),
+  ),
   SAVE_VERSION: contract.save.version,
   MAX_SAVE_BYTES: contract.save.maxBytes,
   ...Object.fromEntries(
