@@ -89,8 +89,10 @@ test("native export includes the runtime libraries and their notices", async () 
   assert.deepEqual((await readdir(join(options.target, "licenses"))).sort(), [
     "glad.txt",
     "odin.txt",
+    "ogg.txt",
     "opengl.txt",
     "sdl3.txt",
+    "vorbis.txt",
     "wasmtime.txt",
   ]);
   await assert.rejects(readFile(join(options.target, "player.html")), { code: "ENOENT" });

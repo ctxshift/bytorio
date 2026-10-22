@@ -46,6 +46,17 @@ Stream_Options :: struct {
     pan:  f32,
     bus:  Bus,
 }
+Ogg_Options :: struct {
+    loop:                 bool,
+    loop_start, loop_end: u32,
+}
+ogg_stream :: proc(content_id: u32, opts: Ogg_Options = {}) -> Stream {
+    if !ready() || !t.valid(content_id != 0, "invalid Ogg content id") { return {} }
+    handle := t.reserve(10, 0)
+    args := [8]u32{content_id, u32(opts.loop), opts.loop_start, opts.loop_end, 0, 0, 0, 0}
+    t.emit(w.op_audio_ogg_stream, handle, args[:])
+    return Stream(handle)
+}
 Status :: struct {
     frame, late_events, underrun_frames, rejected_writes, completed, completion_overflow: u64,
     lead_frames, epoch, pending_events:                                                   u32,

@@ -213,6 +213,7 @@ runtime_resource_reset :: proc "c" (protocol: u32) -> u32 {
         return 0
     }
     resource_session += 1
+    resource_registry.content = cartridge_info.content
     if !resources.reset(&resource_registry, resource_session, protocol if protocol != 0 else 2) {
 
         return 0

@@ -1,0 +1,8 @@
+["deps:vorbis"]
+sources = ["runtime/vorbis/**", "tools/vorbis-build.mjs", ".mise/toolchain.toml"]
+outputs = ["build/vorbis/vorbis.js", "build/vorbis/vorbis.wasm", "build/vorbis/native/Release/bytorio-vorbis.lib"]
+run = "node tools/vorbis-build.mjs"
+
+["test:ogg"]
+description = "Verify Vorbis looping and EOF in both SDKs and hosts"
+run = "node tools/verify-ogg.mjs"

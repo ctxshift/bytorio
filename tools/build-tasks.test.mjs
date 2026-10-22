@@ -31,7 +31,10 @@ const tasks = JSON.parse(execute(["tasks", "ls", "--json"]))
   .map((task) => ({ ...task, name: task.name.replace(/^\/\/:/, "") }))
   .filter(
     ({ name }) =>
-      name === "build:odin" || name.startsWith("deps:player:") || name.startsWith("deps:trace:"),
+      name === "build:odin" ||
+      name === "deps:vorbis" ||
+      name.startsWith("deps:player:") ||
+      name.startsWith("deps:trace:"),
   );
 const byName = new Map(tasks.map((task) => [task.name, task]));
 const forward = (path) => path.replaceAll("\\", "/");
@@ -203,7 +206,13 @@ test("mise rebuilds only the artifacts affected by edits and missing outputs", a
   const all = Object.keys(outputs).sort();
   assert.deepEqual(run(...targets), all);
   assert.deepEqual(run(...targets), [], "unchanged inputs reuse every artifact");
-  assert.deepEqual(run("--force", ...targets), all, "force reaches the nested player graph");
+  // The shared decoder is reached once by the outer traces and once by the
+  // explicitly forced nested player graph.
+  assert.deepEqual(
+    run("--force", ...targets),
+    [...all, "deps:vorbis"].sort(),
+    "force reaches the nested player graph",
+  );
 
   async function edit(file, expected) {
     // Separate modification times on filesystems whose clock has millisecond precision.
@@ -240,7 +249,11 @@ test("mise rebuilds only the artifacts affected by edits and missing outputs", a
   for (const [name, files] of Object.entries(outputs)) {
     const missing = files.at(-1);
     unlinkSync(resolve(root, missing));
-    assert.deepEqual(run(...targets), [name], `recover missing ${missing} through aggregate`);
+    const rebuilt =
+      name === "deps:vorbis"
+        ? ["deps:trace:audio", "deps:trace:graphics", "deps:trace:resources", name]
+        : [name];
+    assert.deepEqual(run(...targets), rebuilt, `recover missing ${missing} through aggregate`);
     for (const file of files) {
       assert.ok(existsSync(resolve(root, file)));
     }

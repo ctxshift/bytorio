@@ -2,7 +2,14 @@
 #pragma once
 
 namespace resource_schema {
-constexpr unsigned version = 8;
+constexpr unsigned version = 9;
+constexpr unsigned oggProtocol = 9;
+constexpr unsigned maxOggStreams = 4;
+constexpr unsigned maxOggSourceBytes = 2097152;
+constexpr unsigned maxOggEncodedBytes = 4194304;
+constexpr unsigned maxOggDecoderBytes = 8388608;
+constexpr unsigned oggChunkFrames = 1024;
+constexpr unsigned oggRequestWords = 10;
 constexpr unsigned stableVersion = 4;
 constexpr unsigned meshProtocol = 5;
 constexpr unsigned texturedProtocol = 6;
@@ -160,6 +167,8 @@ constexpr unsigned op_audio_effects = 48;
 constexpr unsigned op_audio_destroy_synth = 49;
 constexpr unsigned op_audio_source = 50;
 constexpr unsigned op_audio_source_destroy = 51;
+constexpr unsigned op_audio_ogg_stream = 52;
+constexpr unsigned op_audio_stream_end = 53;
 constexpr unsigned op_create_mesh = 64;
 constexpr unsigned op_create_depth = 65;
 constexpr unsigned op_create_camera = 66;

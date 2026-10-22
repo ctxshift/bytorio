@@ -160,10 +160,13 @@ async function ensureMixer() {
       numberOfInputs: 0,
       numberOfOutputs: 1,
       outputChannelCount: [2],
-      processorOptions: { module },
+      processorOptions: { module, waitForProducer: true },
     });
     mixerNode = node;
     mixerGeneration = current;
+    const channel = new MessageChannel();
+    node.port.postMessage({ type: "worker-port", port: channel.port1 }, [channel.port1]);
+    worker.postMessage({ type: "audio-connect", port: channel.port2 }, [channel.port2]);
     node.port.onmessage = ({ data }) => {
       if (data.type === "closed") {
         node.port.close();
@@ -365,6 +368,17 @@ async function load(restart = false) {
   };
   worker.onmessage = ({ data }) => {
     if (currentGeneration !== generation) {
+      return;
+    }
+    if (data.type === "audio-status") {
+      const context = globalThis.playerAudio.context;
+      globalThis.playerAudio.mixerStatus = {
+        ...data.status,
+        deviceRate: context?.sampleRate,
+        leadFrames: audioLimits.audioLeadFrames,
+        baseLatency: context?.baseLatency,
+        outputLatency: context?.outputLatency ?? null,
+      };
       return;
     }
     if (data.type === "audio-packet") {

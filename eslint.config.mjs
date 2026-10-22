@@ -60,7 +60,7 @@ export default [
     },
   },
   {
-    files: ["tests/audio/web/*.js"],
+    files: ["tests/audio/web/*.js", "tests/ogg/worker.js"],
     languageOptions: { globals: globals.worker },
   },
   {

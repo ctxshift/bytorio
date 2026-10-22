@@ -755,6 +755,7 @@ run :: proc() -> int {
         // Draws may run without an update, or after multiple fixed updates.
         if render && !draw(app) { return error(app.game.error) }
         if !check_only {
+            if !guest.pump_ogg(&app.game) { return error(app.game.error) }
             if !attach_audio(app) { return error("cannot start PCM mixer output") }
             mixer.pause(app.audio_engine, !app.focused)
             if app.audio_paused != !app.focused {

@@ -12,6 +12,7 @@ audio_command :: proc(
     tick: u64,
 ) -> bool {
     r := t.registry
+    if op == w.op_audio_ogg_stream { return ogg_command(t, id, a, data, phase, tick) }
     if phase == 2 { return fail(r, "audio commands require init/update") }
     if op >= w.op_audio_wavetable {
         if r.protocol < 4 { return fail(r, "synthesis requires resource protocol 4") }
@@ -112,6 +113,7 @@ audio_command :: proc(
             i, ok := audio.stream_index(model, id)
             if !ok { return fail(r, "unknown PCM stream") }
             c.id = i; model.streams[i] = {}
+            t.ogg[i] = {}
         }
         original := &r.slots[(id & w.handleIndexMask) - 1]
         if raw_data(slot.data) !=
@@ -172,6 +174,7 @@ audio_command :: proc(
            c.ramp > w.audioHorizonFrames { return fail(r, "invalid bus gain control") }
     case w.op_audio_stream_write:
         index, ok := audio.stream_index(model, id)
+        if ok && t.ogg[index].id != 0 { return fail(r, "Ogg streams own their PCM queue") }
         if !ok ||
            a[2] == 0 ||
            a[2] > w.maxStreamFrames ||

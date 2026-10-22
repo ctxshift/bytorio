@@ -65,6 +65,9 @@ decode :: proc(b: []u8) -> Command {
     }
 }
 valid_command :: proc(c: Command) -> bool {
+    if c.op == w.op_audio_stream_end {
+        return c.id < w.maxStreams && c.lease == 0 && c.at <= w.audioMaxExactFrame
+    }
     if c.op >=
        w.op_audio_wavetable { return c.at <= w.audioMaxExactFrame && c.ramp <= w.audioHorizonFrames && valid_synthesis_command(c) }
     if c.at > w.audioMaxExactFrame || c.ramp > w.audioHorizonFrames { return false }
@@ -209,6 +212,7 @@ import_batch :: proc(e: ^Engine, bytes: []u8) -> bool {
             }
         } else if size != 0 || offset != 0 { return false }
         if c.op >= w.op_audio_wavetable &&
+           c.op != w.op_audio_stream_end &&
            !validate_prepared_synthesis(
                    c,
                    bytes[int(offset):][:int(size)],

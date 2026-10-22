@@ -72,6 +72,7 @@ Chunk :: struct {
     data:       []f32,
 }
 Stream :: struct {
+    ended:  bool,
     id:     u32,
     live:   bool,
     count:  int,
@@ -327,7 +328,7 @@ consume :: proc(e: ^Engine) {
 }
 apply :: proc(e: ^Engine, c: Command) {
     if c.at < e.frame { e.late_local += 1 }
-    if c.op >= w.op_audio_wavetable {
+    if c.op >= w.op_audio_wavetable && c.op != w.op_audio_stream_end {
         apply_synthesis(e, c)
         return
     }
@@ -363,8 +364,10 @@ apply :: proc(e: ^Engine, c: Command) {
         }
         if c.op == w.op_audio_play_stream {
             found := false
-            for s in e.streams { if s.live && s.id == c.resource { found = true; break } }
+            ended := false
+            for s in e.streams { if s.live && s.id == c.resource { found = true; ended = s.ended; break } }
             if !found { finish(e, 0, c.id, w.audioReasonCancelled); break }
+            if ended { stop_voice(e, c.id, w.audioReasonStopped); finish(e, 0, c.id, w.audioReasonNatural); break }
         }
         if c.op == w.op_audio_play_sample && c.parameter == 1 {
             source := &e.sources[source_slot(c.resource)]
@@ -412,6 +415,15 @@ apply :: proc(e: ^Engine, c: Command) {
     case w.op_audio_bus_gain:
         if e.buses[c.id].live &&
            e.buses[c.id].id == c.resource { set_ramp(&e.buses[c.id].gain, f64(c.gain), c.ramp) }
+    case w.op_audio_stream_end:
+        s := &e.streams[c.id]
+        if s.live && s.id == c.resource {
+            s.ended = true
+            for v, i in e.voices {
+                if v.kind == 2 &&
+                   v.resource == c.resource { stop_voice(e, u32(i), w.audioReasonNatural) }
+            }
+        }
     case w.op_audio_stream_write:
         s := &e.streams[c.id]
         if c.at < e.frame || !s.live || s.id != c.resource || s.count == w.maxStreamChunks {

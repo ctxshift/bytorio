@@ -1,13 +1,16 @@
 import { readFile, realpath, stat } from "node:fs/promises";
 import { resolve, dirname, relative, sep } from "node:path";
 import { formatSource } from "../code-tools.mjs";
-import { PROFILE_ALPHA_3D } from "../../runtime/odin/web/constants.js";
+import { PROFILE_ALPHA_3D, PROFILE_OGG } from "../../runtime/odin/web/constants.js";
 
 const contract = JSON.parse(await readFile(new URL("../../sdk/contract.json", import.meta.url)));
 
 // Optional SDK modules are loaded inside helpers, never during SDK initialization.
 // Older profiles keep their source budget and fail explicitly if a new helper is called.
-const SDK_MODULE_PROFILES = new Map([["billboard.luau", PROFILE_ALPHA_3D]]);
+const SDK_MODULE_PROFILES = new Map([
+  ["billboard.luau", PROFILE_ALPHA_3D],
+  ["ogg.luau", PROFILE_OGG],
+]);
 
 // Only literal require("@bytorio") and relative module paths are supported.
 // Tokenization protects comments and strings from accidental source rewriting.

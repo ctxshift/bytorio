@@ -8,6 +8,8 @@ import "core:math"
 import "core:mem"
 
 Transaction :: struct {
+    ogg:                                                  [w.maxOggStreams]Ogg_Stream,
+    ogg_reserved:                                         bool,
     gpu_present, gpu_overlay, last_command, draw_phase:   bool,
     gpu_target, gpu_depth:                                u32,
     gpu_frame:                                            Committed_Frame,

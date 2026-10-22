@@ -1,6 +1,13 @@
 {
   "status": "published-resource-av-1",
-  "version": 8,
+  "version": 9,
+  "oggProtocol": 9,
+  "maxOggStreams": 4,
+  "maxOggSourceBytes": 2097152,
+  "maxOggEncodedBytes": 4194304,
+  "maxOggDecoderBytes": 8388608,
+  "oggChunkFrames": 1024,
+  "oggRequestWords": 10,
   "stableVersion": 4,
   "meshProtocol": 5,
   "texturedProtocol": 6,
@@ -113,6 +120,8 @@
     "audio_destroy_synth": 49,
     "audio_source": 50,
     "audio_source_destroy": 51,
+    "audio_ogg_stream": 52,
+    "audio_stream_end": 53,
     "create_mesh": 64,
     "create_depth": 65,
     "create_camera": 66,
@@ -158,6 +167,7 @@
     "reserved": 28
   },
   "descriptor": {
+    "audio_ogg_stream": ["content", "loop", "loop_start", "loop_end", "reserved", "reserved", "reserved", "reserved"],
     "create_texture": [
       "format",
       "width",

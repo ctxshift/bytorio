@@ -249,7 +249,7 @@ return {init=init,update=verifiedUpdate,draw=draw}`;
 const verifiedSource = Buffer.from(original.replace(needle, wrapper));
 assert.ok(
   verifiedSource.length <= MAX_LUAU_SOURCE_BYTES,
-  "instrumented replay fits the Luau source budget",
+  `instrumented replay (${verifiedSource.length} bytes) fits the ${MAX_LUAU_SOURCE_BYTES}-byte Luau source budget`,
 );
 const luau = await pair("luau", verifiedSource);
 let sampleIndex = 0;
