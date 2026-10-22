@@ -73,6 +73,49 @@ run("cmake", [
 run("cmake", ["--build", resolve(root, "native-build"), "--config", "Release", "--parallel", "4"]);
 const web = resolve(root, "web");
 await mkdir(web, { recursive: true });
+const vorbisSources = [
+  "mdct",
+  "smallft",
+  "block",
+  "envelope",
+  "window",
+  "lsp",
+  "lpc",
+  "analysis",
+  "synthesis",
+  "psy",
+  "info",
+  "floor1",
+  "floor0",
+  "res0",
+  "mapping0",
+  "registry",
+  "codebook",
+  "sharedbook",
+  "lookup",
+  "bitrate",
+  "vorbisfile",
+];
+run("emcc", [
+  resolve(source, "wasm.c"),
+  ...vorbisSources.map((name) => resolve(root, `libvorbis-1.3.7/lib/${name}.c`)),
+  resolve(root, "libogg-1.3.5/src/bitwise.c"),
+  resolve(root, "libogg-1.3.5/src/framing.c"),
+  `-I${resolve(root, "libvorbis-1.3.7/include")}`,
+  `-I${resolve(root, "libogg-1.3.5/include")}`,
+  `-I${resolve(root, "install/include")}`,
+  "-O3",
+  "-sMODULARIZE=1",
+  "-sEXPORT_ES6=1",
+  "-sENVIRONMENT=worker",
+  "-sFILESYSTEM=0",
+  "-sINITIAL_MEMORY=8388608",
+  "-sALLOW_MEMORY_GROWTH=0",
+  "-sEXPORTED_FUNCTIONS=['_malloc','_free']",
+  "-sEXPORTED_RUNTIME_METHODS=['HEAPU8','HEAPF32']",
+  "-o",
+  resolve(web, "vorbis-module.js"),
+]);
 for (const [name, rate, channels, seconds] of [
   ["music", 48000, 2, 180],
   ["mono", 44100, 1, 8],
@@ -134,7 +177,7 @@ await copyFile(
   resolve(source, "node_modules/@wasm-audio-decoders/ogg-vorbis/dist/ogg-vorbis-decoder.min.js"),
   resolve(web, "decoder.js"),
 );
-for (const file of ["index.html", "browser.js", "worklet.js"]) {
+for (const file of ["index.html", "browser.js", "worklet.js", "wasm-worker.js", "wasm-client.js"]) {
   await copyFile(resolve(source, file), resolve(web, file));
 }
 await writeFile(

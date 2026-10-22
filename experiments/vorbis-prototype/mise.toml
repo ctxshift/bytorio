@@ -11,3 +11,8 @@ run = "node experiments/vorbis-prototype/measure.mjs"
 dir = "../.."
 depends = ["build"]
 run = "node experiments/vorbis-prototype/serve.mjs"
+
+[tasks.compare]
+dir = "../.."
+depends = ["build"]
+run = "node experiments/vorbis-prototype/compare.mjs"

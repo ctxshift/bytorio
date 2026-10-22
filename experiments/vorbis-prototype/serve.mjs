@@ -20,8 +20,9 @@ createServer(async (request, response) => {
   try {
     response.setHeader(
       "Content-Type",
-      { ".html": "text/html", ".js": "text/javascript" }[extname(name)] ??
-        "application/octet-stream",
+      { ".html": "text/html", ".js": "text/javascript", ".wasm": "application/wasm" }[
+        extname(name)
+      ] ?? "application/octet-stream",
     );
     response.end(await readFile(resolve("build/vorbis-prototype/web", name)));
   } catch {

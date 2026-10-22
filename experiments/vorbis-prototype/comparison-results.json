@@ -1,0 +1,2331 @@
+{
+  "status": "complete",
+  "candidates": {
+    "package": {
+      "playback": {
+        "stream-0-8192": {
+          "maxDecodeMs": 312.90000009536743,
+          "maxChunkFrames": 48000,
+          "peakJsHeap": 19704467,
+          "loop": false,
+          "stallMs": 0,
+          "cacheLoop": false,
+          "backend": "package",
+          "loopSetupMs": [622.7000000476837],
+          "ringCapacityFrames": 8192,
+          "captureBytes": 3072000,
+          "startupMs": 623.8999999761581,
+          "loopCacheBytes": 0,
+          "type": "done",
+          "underruns": 0,
+          "overflows": 0,
+          "maxQueue": 7040,
+          "frames": 384000
+        },
+        "loop-0-8192": {
+          "maxDecodeMs": 373.5,
+          "maxChunkFrames": 48000,
+          "peakJsHeap": 64220719,
+          "loop": true,
+          "stallMs": 0,
+          "cacheLoop": false,
+          "backend": "package",
+          "loopSetupMs": [954.2000000476837, 1023.6000000238419, 1098],
+          "ringCapacityFrames": 8192,
+          "captureBytes": 3072000,
+          "startupMs": 954.3000000715256,
+          "loopCacheBytes": 0,
+          "type": "done",
+          "underruns": 89344,
+          "overflows": 0,
+          "maxQueue": 7072,
+          "frames": 384000
+        },
+        "loop-0-8192-cached": {
+          "maxDecodeMs": 307.8000000715256,
+          "maxChunkFrames": 48000,
+          "peakJsHeap": 82441000,
+          "loop": true,
+          "stallMs": 0,
+          "cacheLoop": true,
+          "backend": "package",
+          "loopSetupMs": [1013.3999999761581, 0.3999999761581421, 0, 0],
+          "ringCapacityFrames": 8192,
+          "captureBytes": 3072000,
+          "startupMs": 1013.7000000476837,
+          "loopCacheBytes": 960000,
+          "type": "done",
+          "underruns": 0,
+          "overflows": 0,
+          "maxQueue": 7072,
+          "frames": 384000
+        },
+        "stream-250-8192": {
+          "maxDecodeMs": 325.5,
+          "maxChunkFrames": 48000,
+          "peakJsHeap": 29881805,
+          "loop": false,
+          "stallMs": 250,
+          "cacheLoop": false,
+          "backend": "package",
+          "loopSetupMs": [637.2000000476837],
+          "ringCapacityFrames": 8192,
+          "captureBytes": 3072000,
+          "startupMs": 637.3000000715256,
+          "loopCacheBytes": 0,
+          "type": "done",
+          "underruns": 5888,
+          "overflows": 0,
+          "maxQueue": 7040,
+          "frames": 384000
+        }
+      },
+      "decode": {
+        "music-1": {
+          "maxDecodeMs": 304.59999990463257,
+          "maxChunkFrames": 48000,
+          "peakJsHeap": 49492438,
+          "inputBytes": 1249816,
+          "frames": 8640000,
+          "loopSetupMs": [596.1999999284744],
+          "passHeap": [26407373],
+          "rate": 48000,
+          "channels": 2,
+          "elapsedMs": 5146,
+          "afterFreeHeap": 26409141
+        },
+        "music-loop-4": {
+          "maxDecodeMs": 333,
+          "maxChunkFrames": 48000,
+          "peakJsHeap": 73966446,
+          "inputBytes": 1249816,
+          "frames": 480000,
+          "loopSetupMs": [
+            1031.7999999523163, 950.7999999523163, 1039.7999999523163, 936.1999999284744
+          ],
+          "passHeap": [26889683, 38724498, 28159019, 45396110],
+          "rate": 48000,
+          "channels": 2,
+          "elapsedMs": 4289.700000047684,
+          "afterFreeHeap": 45397706
+        },
+        "mono-1": {
+          "maxDecodeMs": 246.59999990463257,
+          "maxChunkFrames": 44608,
+          "peakJsHeap": 58601741,
+          "inputBytes": 44520,
+          "frames": 352800,
+          "loopSetupMs": [498.5],
+          "passHeap": [9511520],
+          "rate": 44100,
+          "channels": 1,
+          "elapsedMs": 597.7999999523163,
+          "afterFreeHeap": 9513176
+        },
+        "mono-24": {
+          "maxDecodeMs": 334.8000000715256,
+          "maxChunkFrames": 44608,
+          "peakJsHeap": 56222163,
+          "inputBytes": 44520,
+          "frames": 8467200,
+          "loopSetupMs": [
+            470.10000002384186, 423.7999999523163, 500.2999999523163, 469.60000002384186, 619.5,
+            596.2000000476837, 561.5999999046326, 642.8999999761581, 540.3999999761581,
+            594.3999999761581, 557.2999999523163, 588.8999999761581, 551.1000000238419,
+            596.1000000238419, 553.2999999523163, 514.1000000238419, 528.5, 588.6999999284744, 516,
+            575.7999999523163, 534.5, 583.6000000238419, 605.8000000715256, 577.8999999761581
+          ],
+          "passHeap": [
+            26355480, 43033522, 5166775, 21778061, 38487539, 5178119, 21789401, 10544423, 19370236,
+            8343574, 19266292, 5169135, 21792409, 16405769, 7900867, 18963697, 5179015, 21966017,
+            16480013, 7883383, 18866505, 5212087, 21982749, 16408617
+          ],
+          "rate": 44100,
+          "channels": 1,
+          "elapsedMs": 15654.100000023842,
+          "afterFreeHeap": 16410197
+        }
+      },
+      "parity": {
+        "stream-0-8192": {
+          "actualSamples": 768000,
+          "expectedSamples": 768000,
+          "maxAbsoluteError": 2.086162567138672e-7,
+          "pass": true
+        },
+        "loop-0-8192": {
+          "actualSamples": 768000,
+          "expectedSamples": 768000,
+          "maxAbsoluteError": 0.7904717326164246,
+          "pass": false
+        },
+        "loop-0-8192-cached": {
+          "actualSamples": 768000,
+          "expectedSamples": 768000,
+          "maxAbsoluteError": 1.7881393432617188e-7,
+          "pass": true
+        },
+        "stream-250-8192": {
+          "actualSamples": 768000,
+          "expectedSamples": 768000,
+          "maxAbsoluteError": 0.7681130170822144,
+          "pass": false
+        },
+        "music-1": {
+          "actualSamples": 17280000,
+          "expectedSamples": 17280000,
+          "maxAbsoluteError": 2.384185791015625e-7,
+          "pass": true
+        },
+        "music-loop-4": {
+          "actualSamples": 960000,
+          "expectedSamples": 960000,
+          "maxAbsoluteError": 1.7881393432617188e-7,
+          "pass": true
+        },
+        "mono-1": {
+          "actualSamples": 352800,
+          "expectedSamples": 352800,
+          "maxAbsoluteError": 2.384185791015625e-7,
+          "pass": true
+        },
+        "mono-24": {
+          "actualSamples": 8467200,
+          "expectedSamples": 8467200,
+          "maxAbsoluteError": 2.384185791015625e-7,
+          "pass": true
+        }
+      },
+      "memory": [
+        {
+          "label": "baseline",
+          "privateBytes": 84611072
+        },
+        {
+          "label": "sample",
+          "privateBytes": 246874112
+        },
+        {
+          "label": "sample",
+          "privateBytes": 248606720
+        },
+        {
+          "label": "sample",
+          "privateBytes": 250245120
+        },
+        {
+          "label": "sample",
+          "privateBytes": 251879424
+        },
+        {
+          "label": "sample",
+          "privateBytes": 253599744
+        },
+        {
+          "label": "sample",
+          "privateBytes": 255209472
+        },
+        {
+          "label": "sample",
+          "privateBytes": 256520192
+        },
+        {
+          "label": "sample",
+          "privateBytes": 258277376
+        },
+        {
+          "label": "sample",
+          "privateBytes": 232026112
+        },
+        {
+          "label": "sample",
+          "privateBytes": 265596928
+        },
+        {
+          "label": "sample",
+          "privateBytes": 266809344
+        },
+        {
+          "label": "sample",
+          "privateBytes": 268021760
+        },
+        {
+          "label": "sample",
+          "privateBytes": 275881984
+        },
+        {
+          "label": "sample",
+          "privateBytes": 297050112
+        },
+        {
+          "label": "sample",
+          "privateBytes": 298274816
+        },
+        {
+          "label": "sample",
+          "privateBytes": 278507520
+        },
+        {
+          "label": "sample",
+          "privateBytes": 296984576
+        },
+        {
+          "label": "sample",
+          "privateBytes": 232992768
+        },
+        {
+          "label": "sample",
+          "privateBytes": 288907264
+        },
+        {
+          "label": "sample",
+          "privateBytes": 291966976
+        },
+        {
+          "label": "sample",
+          "privateBytes": 293523456
+        },
+        {
+          "label": "sample",
+          "privateBytes": 293937152
+        },
+        {
+          "label": "sample",
+          "privateBytes": 294309888
+        },
+        {
+          "label": "sample",
+          "privateBytes": 294772736
+        },
+        {
+          "label": "sample",
+          "privateBytes": 295178240
+        },
+        {
+          "label": "sample",
+          "privateBytes": 295620608
+        },
+        {
+          "label": "sample",
+          "privateBytes": 338526208
+        },
+        {
+          "label": "sample",
+          "privateBytes": 314707968
+        },
+        {
+          "label": "sample",
+          "privateBytes": 226353152
+        },
+        {
+          "label": "sample",
+          "privateBytes": 229707776
+        },
+        {
+          "label": "sample",
+          "privateBytes": 229044224
+        },
+        {
+          "label": "sample",
+          "privateBytes": 230248448
+        },
+        {
+          "label": "sample",
+          "privateBytes": 231522304
+        },
+        {
+          "label": "sample",
+          "privateBytes": 232738816
+        },
+        {
+          "label": "sample",
+          "privateBytes": 233971712
+        },
+        {
+          "label": "sample",
+          "privateBytes": 264626176
+        },
+        {
+          "label": "sample",
+          "privateBytes": 278372352
+        },
+        {
+          "label": "sample",
+          "privateBytes": 310542336
+        },
+        {
+          "label": "sample",
+          "privateBytes": 317808640
+        },
+        {
+          "label": "sample",
+          "privateBytes": 338534400
+        },
+        {
+          "label": "sample",
+          "privateBytes": 331235328
+        },
+        {
+          "label": "sample",
+          "privateBytes": 372367360
+        },
+        {
+          "label": "sample",
+          "privateBytes": 397574144
+        },
+        {
+          "label": "sample",
+          "privateBytes": 390438912
+        },
+        {
+          "label": "sample",
+          "privateBytes": 407891968
+        },
+        {
+          "label": "sample",
+          "privateBytes": 448565248
+        },
+        {
+          "label": "sample",
+          "privateBytes": 461266944
+        },
+        {
+          "label": "sample",
+          "privateBytes": 516493312
+        },
+        {
+          "label": "sample",
+          "privateBytes": 471568384
+        },
+        {
+          "label": "sample",
+          "privateBytes": 525824000
+        },
+        {
+          "label": "sample",
+          "privateBytes": 516931584
+        },
+        {
+          "label": "sample",
+          "privateBytes": 510689280
+        },
+        {
+          "label": "sample",
+          "privateBytes": 490102784
+        },
+        {
+          "label": "sample",
+          "privateBytes": 530096128
+        },
+        {
+          "label": "sample",
+          "privateBytes": 493645824
+        },
+        {
+          "label": "sample",
+          "privateBytes": 525983744
+        },
+        {
+          "label": "sample",
+          "privateBytes": 492367872
+        },
+        {
+          "label": "sample",
+          "privateBytes": 493600768
+        },
+        {
+          "label": "sample",
+          "privateBytes": 532230144
+        },
+        {
+          "label": "sample",
+          "privateBytes": 467107840
+        },
+        {
+          "label": "sample",
+          "privateBytes": 500674560
+        },
+        {
+          "label": "after-free-and-main-gc",
+          "privateBytes": 307236864
+        }
+      ]
+    },
+    "libvorbisfile": {
+      "playback": {
+        "stream-0-8192-wasm": {
+          "maxDecodeMs": 0.7999999523162842,
+          "maxChunkFrames": 1024,
+          "peakJsHeap": 7009173,
+          "loop": false,
+          "stallMs": 0,
+          "cacheLoop": false,
+          "backend": "libvorbisfile",
+          "loopSetupMs": [3],
+          "ringCapacityFrames": 8192,
+          "captureBytes": 3072000,
+          "seekMs": [1.7999999523162842],
+          "wasmMemory": {
+            "used": 1421136,
+            "peakUsed": 1423448,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          "startupMs": 5.100000023841858,
+          "loopCacheBytes": 0,
+          "type": "done",
+          "underruns": 0,
+          "overflows": 0,
+          "maxQueue": 7104,
+          "frames": 384000,
+          "afterFreeMemory": {
+            "used": 0,
+            "peakUsed": 1423448,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          }
+        },
+        "loop-0-8192-wasm": {
+          "maxDecodeMs": 0.5,
+          "maxChunkFrames": 1024,
+          "peakJsHeap": 15203461,
+          "loop": true,
+          "stallMs": 0,
+          "cacheLoop": false,
+          "backend": "libvorbisfile",
+          "loopSetupMs": [3.799999952316284, 0.5, 0.5, 0.5],
+          "ringCapacityFrames": 8192,
+          "captureBytes": 3072000,
+          "seekMs": [
+            2.899999976158142, 0.19999992847442627, 0.20000004768371582, 0.10000002384185791
+          ],
+          "wasmMemory": {
+            "used": 1421144,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          "startupMs": 5.5,
+          "loopCacheBytes": 0,
+          "type": "done",
+          "underruns": 0,
+          "overflows": 0,
+          "maxQueue": 7136,
+          "frames": 384000,
+          "afterFreeMemory": {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          }
+        },
+        "stream-250-8192-wasm": {
+          "maxDecodeMs": 1.1999999284744263,
+          "maxChunkFrames": 1024,
+          "peakJsHeap": 23480853,
+          "loop": false,
+          "stallMs": 250,
+          "cacheLoop": false,
+          "backend": "libvorbisfile",
+          "loopSetupMs": [4.5],
+          "ringCapacityFrames": 8192,
+          "captureBytes": 3072000,
+          "seekMs": [2.899999976158142],
+          "wasmMemory": {
+            "used": 1421136,
+            "peakUsed": 1423448,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          "startupMs": 6.800000071525574,
+          "loopCacheBytes": 0,
+          "type": "done",
+          "underruns": 5696,
+          "overflows": 0,
+          "maxQueue": 7040,
+          "frames": 384000,
+          "afterFreeMemory": {
+            "used": 0,
+            "peakUsed": 1423448,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          }
+        }
+      },
+      "decode": {
+        "music-1": {
+          "maxDecodeMs": 4,
+          "maxChunkFrames": 1024,
+          "peakJsHeap": 45326053,
+          "frames": 8640000,
+          "seeks": [
+            {
+              "seekMs": 2,
+              "memory": {
+                "used": 1404392,
+                "peakUsed": 1404392,
+                "baselineUsed": 0,
+                "heapCapacity": 8388608
+              }
+            }
+          ],
+          "inputBytes": 1249816,
+          "cycles": [
+            {
+              "used": 1421136,
+              "peakUsed": 1423448,
+              "baselineUsed": 0,
+              "heapCapacity": 8388608
+            }
+          ],
+          "open": {
+            "channels": 2,
+            "rate": 48000,
+            "memory": {
+              "used": 1323536,
+              "peakUsed": 1323536,
+              "baselineUsed": 0,
+              "heapCapacity": 8388608
+            }
+          },
+          "wasmMemory": {
+            "used": 1421136,
+            "peakUsed": 1423448,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          "elapsedMs": 29235.900000095367,
+          "afterFreeMemory": {
+            "used": 0,
+            "peakUsed": 1423448,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          }
+        },
+        "music-loop-4": {
+          "maxDecodeMs": 1.600000023841858,
+          "maxChunkFrames": 1024,
+          "peakJsHeap": 14834981,
+          "frames": 480000,
+          "seeks": [
+            {
+              "seekMs": 3.799999952316284,
+              "memory": {
+                "used": 1421144,
+                "peakUsed": 1421144,
+                "baselineUsed": 0,
+                "heapCapacity": 8388608
+              }
+            },
+            {
+              "seekMs": 0.19999992847442627,
+              "memory": {
+                "used": 1421144,
+                "peakUsed": 1421144,
+                "baselineUsed": 0,
+                "heapCapacity": 8388608
+              }
+            },
+            {
+              "seekMs": 0.20000004768371582,
+              "memory": {
+                "used": 1421144,
+                "peakUsed": 1421144,
+                "baselineUsed": 0,
+                "heapCapacity": 8388608
+              }
+            },
+            {
+              "seekMs": 0.19999992847442627,
+              "memory": {
+                "used": 1421144,
+                "peakUsed": 1421144,
+                "baselineUsed": 0,
+                "heapCapacity": 8388608
+              }
+            }
+          ],
+          "inputBytes": 1249816,
+          "cycles": [
+            {
+              "used": 1421144,
+              "peakUsed": 1421144,
+              "baselineUsed": 0,
+              "heapCapacity": 8388608
+            },
+            {
+              "used": 1421144,
+              "peakUsed": 1421144,
+              "baselineUsed": 0,
+              "heapCapacity": 8388608
+            },
+            {
+              "used": 1421144,
+              "peakUsed": 1421144,
+              "baselineUsed": 0,
+              "heapCapacity": 8388608
+            },
+            {
+              "used": 1421144,
+              "peakUsed": 1421144,
+              "baselineUsed": 0,
+              "heapCapacity": 8388608
+            }
+          ],
+          "open": {
+            "channels": 2,
+            "rate": 48000,
+            "memory": {
+              "used": 1323536,
+              "peakUsed": 1323536,
+              "baselineUsed": 0,
+              "heapCapacity": 8388608
+            }
+          },
+          "wasmMemory": {
+            "used": 1421144,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          "elapsedMs": 1913.2000000476837,
+          "afterFreeMemory": {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          }
+        },
+        "mono-1": {
+          "maxDecodeMs": 5.899999976158142,
+          "maxChunkFrames": 1024,
+          "peakJsHeap": 14470393,
+          "frames": 352800,
+          "seeks": [
+            {
+              "seekMs": 2.399999976158142,
+              "memory": {
+                "used": 205704,
+                "peakUsed": 205704,
+                "baselineUsed": 0,
+                "heapCapacity": 8388608
+              }
+            }
+          ],
+          "inputBytes": 44520,
+          "cycles": [
+            {
+              "used": 214088,
+              "peakUsed": 215256,
+              "baselineUsed": 0,
+              "heapCapacity": 8388608
+            }
+          ],
+          "open": {
+            "channels": 1,
+            "rate": 44100,
+            "memory": {
+              "used": 109344,
+              "peakUsed": 109344,
+              "baselineUsed": 0,
+              "heapCapacity": 8388608
+            }
+          },
+          "wasmMemory": {
+            "used": 214088,
+            "peakUsed": 215256,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          "elapsedMs": 1378.6000000238419,
+          "afterFreeMemory": {
+            "used": 0,
+            "peakUsed": 215256,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          }
+        },
+        "mono-24": {
+          "maxDecodeMs": 5,
+          "maxChunkFrames": 1024,
+          "peakJsHeap": 17177453,
+          "frames": 8467200,
+          "seeks": [
+            {
+              "seekMs": 3,
+              "memory": {
+                "used": 205704,
+                "peakUsed": 205704,
+                "baselineUsed": 0,
+                "heapCapacity": 8388608
+              }
+            },
+            {
+              "seekMs": 0.09999990463256836,
+              "memory": {
+                "used": 214088,
+                "peakUsed": 215256,
+                "baselineUsed": 0,
+                "heapCapacity": 8388608
+              }
+            },
+            {
+              "seekMs": 0,
+              "memory": {
+                "used": 214088,
+                "peakUsed": 215256,
+                "baselineUsed": 0,
+                "heapCapacity": 8388608
+              }
+            },
+            {
+              "seekMs": 0,
+              "memory": {
+                "used": 214088,
+                "peakUsed": 215256,
+                "baselineUsed": 0,
+                "heapCapacity": 8388608
+              }
+            },
+            {
+              "seekMs": 0,
+              "memory": {
+                "used": 214088,
+                "peakUsed": 215256,
+                "baselineUsed": 0,
+                "heapCapacity": 8388608
+              }
+            },
+            {
+              "seekMs": 0,
+              "memory": {
+                "used": 214088,
+                "peakUsed": 215256,
+                "baselineUsed": 0,
+                "heapCapacity": 8388608
+              }
+            },
+            {
+              "seekMs": 0.10000002384185791,
+              "memory": {
+                "used": 214088,
+                "peakUsed": 215256,
+                "baselineUsed": 0,
+                "heapCapacity": 8388608
+              }
+            },
+            {
+              "seekMs": 0.10000002384185791,
+              "memory": {
+                "used": 214088,
+                "peakUsed": 215256,
+                "baselineUsed": 0,
+                "heapCapacity": 8388608
+              }
+            },
+            {
+              "seekMs": 0,
+              "memory": {
+                "used": 214088,
+                "peakUsed": 215256,
+                "baselineUsed": 0,
+                "heapCapacity": 8388608
+              }
+            },
+            {
+              "seekMs": 0,
+              "memory": {
+                "used": 214088,
+                "peakUsed": 215256,
+                "baselineUsed": 0,
+                "heapCapacity": 8388608
+              }
+            },
+            {
+              "seekMs": 0.10000002384185791,
+              "memory": {
+                "used": 214088,
+                "peakUsed": 215256,
+                "baselineUsed": 0,
+                "heapCapacity": 8388608
+              }
+            },
+            {
+              "seekMs": 0,
+              "memory": {
+                "used": 214088,
+                "peakUsed": 215256,
+                "baselineUsed": 0,
+                "heapCapacity": 8388608
+              }
+            },
+            {
+              "seekMs": 0,
+              "memory": {
+                "used": 214088,
+                "peakUsed": 215256,
+                "baselineUsed": 0,
+                "heapCapacity": 8388608
+              }
+            },
+            {
+              "seekMs": 0,
+              "memory": {
+                "used": 214088,
+                "peakUsed": 215256,
+                "baselineUsed": 0,
+                "heapCapacity": 8388608
+              }
+            },
+            {
+              "seekMs": 0,
+              "memory": {
+                "used": 214088,
+                "peakUsed": 215256,
+                "baselineUsed": 0,
+                "heapCapacity": 8388608
+              }
+            },
+            {
+              "seekMs": 0,
+              "memory": {
+                "used": 214088,
+                "peakUsed": 215256,
+                "baselineUsed": 0,
+                "heapCapacity": 8388608
+              }
+            },
+            {
+              "seekMs": 0.10000002384185791,
+              "memory": {
+                "used": 214088,
+                "peakUsed": 215256,
+                "baselineUsed": 0,
+                "heapCapacity": 8388608
+              }
+            },
+            {
+              "seekMs": 0,
+              "memory": {
+                "used": 214088,
+                "peakUsed": 215256,
+                "baselineUsed": 0,
+                "heapCapacity": 8388608
+              }
+            },
+            {
+              "seekMs": 0,
+              "memory": {
+                "used": 214088,
+                "peakUsed": 215256,
+                "baselineUsed": 0,
+                "heapCapacity": 8388608
+              }
+            },
+            {
+              "seekMs": 0,
+              "memory": {
+                "used": 214088,
+                "peakUsed": 215256,
+                "baselineUsed": 0,
+                "heapCapacity": 8388608
+              }
+            },
+            {
+              "seekMs": 0,
+              "memory": {
+                "used": 214088,
+                "peakUsed": 215256,
+                "baselineUsed": 0,
+                "heapCapacity": 8388608
+              }
+            },
+            {
+              "seekMs": 0,
+              "memory": {
+                "used": 214088,
+                "peakUsed": 215256,
+                "baselineUsed": 0,
+                "heapCapacity": 8388608
+              }
+            },
+            {
+              "seekMs": 0,
+              "memory": {
+                "used": 214088,
+                "peakUsed": 215256,
+                "baselineUsed": 0,
+                "heapCapacity": 8388608
+              }
+            },
+            {
+              "seekMs": 0,
+              "memory": {
+                "used": 214088,
+                "peakUsed": 215256,
+                "baselineUsed": 0,
+                "heapCapacity": 8388608
+              }
+            }
+          ],
+          "inputBytes": 44520,
+          "cycles": [
+            {
+              "used": 214088,
+              "peakUsed": 215256,
+              "baselineUsed": 0,
+              "heapCapacity": 8388608
+            },
+            {
+              "used": 214088,
+              "peakUsed": 215256,
+              "baselineUsed": 0,
+              "heapCapacity": 8388608
+            },
+            {
+              "used": 214088,
+              "peakUsed": 215256,
+              "baselineUsed": 0,
+              "heapCapacity": 8388608
+            },
+            {
+              "used": 214088,
+              "peakUsed": 215256,
+              "baselineUsed": 0,
+              "heapCapacity": 8388608
+            },
+            {
+              "used": 214088,
+              "peakUsed": 215256,
+              "baselineUsed": 0,
+              "heapCapacity": 8388608
+            },
+            {
+              "used": 214088,
+              "peakUsed": 215256,
+              "baselineUsed": 0,
+              "heapCapacity": 8388608
+            },
+            {
+              "used": 214088,
+              "peakUsed": 215256,
+              "baselineUsed": 0,
+              "heapCapacity": 8388608
+            },
+            {
+              "used": 214088,
+              "peakUsed": 215256,
+              "baselineUsed": 0,
+              "heapCapacity": 8388608
+            },
+            {
+              "used": 214088,
+              "peakUsed": 215256,
+              "baselineUsed": 0,
+              "heapCapacity": 8388608
+            },
+            {
+              "used": 214088,
+              "peakUsed": 215256,
+              "baselineUsed": 0,
+              "heapCapacity": 8388608
+            },
+            {
+              "used": 214088,
+              "peakUsed": 215256,
+              "baselineUsed": 0,
+              "heapCapacity": 8388608
+            },
+            {
+              "used": 214088,
+              "peakUsed": 215256,
+              "baselineUsed": 0,
+              "heapCapacity": 8388608
+            },
+            {
+              "used": 214088,
+              "peakUsed": 215256,
+              "baselineUsed": 0,
+              "heapCapacity": 8388608
+            },
+            {
+              "used": 214088,
+              "peakUsed": 215256,
+              "baselineUsed": 0,
+              "heapCapacity": 8388608
+            },
+            {
+              "used": 214088,
+              "peakUsed": 215256,
+              "baselineUsed": 0,
+              "heapCapacity": 8388608
+            },
+            {
+              "used": 214088,
+              "peakUsed": 215256,
+              "baselineUsed": 0,
+              "heapCapacity": 8388608
+            },
+            {
+              "used": 214088,
+              "peakUsed": 215256,
+              "baselineUsed": 0,
+              "heapCapacity": 8388608
+            },
+            {
+              "used": 214088,
+              "peakUsed": 215256,
+              "baselineUsed": 0,
+              "heapCapacity": 8388608
+            },
+            {
+              "used": 214088,
+              "peakUsed": 215256,
+              "baselineUsed": 0,
+              "heapCapacity": 8388608
+            },
+            {
+              "used": 214088,
+              "peakUsed": 215256,
+              "baselineUsed": 0,
+              "heapCapacity": 8388608
+            },
+            {
+              "used": 214088,
+              "peakUsed": 215256,
+              "baselineUsed": 0,
+              "heapCapacity": 8388608
+            },
+            {
+              "used": 214088,
+              "peakUsed": 215256,
+              "baselineUsed": 0,
+              "heapCapacity": 8388608
+            },
+            {
+              "used": 214088,
+              "peakUsed": 215256,
+              "baselineUsed": 0,
+              "heapCapacity": 8388608
+            },
+            {
+              "used": 214088,
+              "peakUsed": 215256,
+              "baselineUsed": 0,
+              "heapCapacity": 8388608
+            }
+          ],
+          "open": {
+            "channels": 1,
+            "rate": 44100,
+            "memory": {
+              "used": 109344,
+              "peakUsed": 109344,
+              "baselineUsed": 0,
+              "heapCapacity": 8388608
+            }
+          },
+          "wasmMemory": {
+            "used": 214088,
+            "peakUsed": 215256,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          "elapsedMs": 28153.900000095367,
+          "afterFreeMemory": {
+            "used": 0,
+            "peakUsed": 215256,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          }
+        }
+      },
+      "parity": {
+        "stream-0-8192-wasm": {
+          "actualSamples": 768000,
+          "expectedSamples": 768000,
+          "maxAbsoluteError": 2.086162567138672e-7,
+          "pass": true
+        },
+        "loop-0-8192-wasm": {
+          "actualSamples": 768000,
+          "expectedSamples": 768000,
+          "maxAbsoluteError": 1.7881393432617188e-7,
+          "pass": true
+        },
+        "stream-250-8192-wasm": {
+          "actualSamples": 768000,
+          "expectedSamples": 768000,
+          "maxAbsoluteError": 0.7800768315792084,
+          "pass": false
+        },
+        "music-1": {
+          "actualSamples": 17280000,
+          "expectedSamples": 17280000,
+          "maxAbsoluteError": 2.384185791015625e-7,
+          "pass": true
+        },
+        "music-loop-4": {
+          "actualSamples": 960000,
+          "expectedSamples": 960000,
+          "maxAbsoluteError": 1.7881393432617188e-7,
+          "pass": true
+        },
+        "mono-1": {
+          "actualSamples": 352800,
+          "expectedSamples": 352800,
+          "maxAbsoluteError": 2.384185791015625e-7,
+          "pass": true
+        },
+        "mono-24": {
+          "actualSamples": 8467200,
+          "expectedSamples": 8467200,
+          "maxAbsoluteError": 2.384185791015625e-7,
+          "pass": true
+        }
+      },
+      "memory": [
+        {
+          "label": "baseline",
+          "privateBytes": 82006016
+        },
+        {
+          "label": "sample",
+          "privateBytes": 134148096
+        },
+        {
+          "label": "sample",
+          "privateBytes": 135028736
+        },
+        {
+          "label": "sample",
+          "privateBytes": 136331264
+        },
+        {
+          "label": "sample",
+          "privateBytes": 137539584
+        },
+        {
+          "label": "sample",
+          "privateBytes": 138825728
+        },
+        {
+          "label": "sample",
+          "privateBytes": 139919360
+        },
+        {
+          "label": "sample",
+          "privateBytes": 141246464
+        },
+        {
+          "label": "sample",
+          "privateBytes": 140771328
+        },
+        {
+          "label": "sample",
+          "privateBytes": 154955776
+        },
+        {
+          "label": "sample",
+          "privateBytes": 155697152
+        },
+        {
+          "label": "sample",
+          "privateBytes": 156680192
+        },
+        {
+          "label": "sample",
+          "privateBytes": 157458432
+        },
+        {
+          "label": "sample",
+          "privateBytes": 158146560
+        },
+        {
+          "label": "sample",
+          "privateBytes": 159211520
+        },
+        {
+          "label": "sample",
+          "privateBytes": 160690176
+        },
+        {
+          "label": "sample",
+          "privateBytes": 190763008
+        },
+        {
+          "label": "sample",
+          "privateBytes": 173584384
+        },
+        {
+          "label": "sample",
+          "privateBytes": 174878720
+        },
+        {
+          "label": "sample",
+          "privateBytes": 176050176
+        },
+        {
+          "label": "sample",
+          "privateBytes": 177147904
+        },
+        {
+          "label": "sample",
+          "privateBytes": 178556928
+        },
+        {
+          "label": "sample",
+          "privateBytes": 179818496
+        },
+        {
+          "label": "sample",
+          "privateBytes": 181284864
+        },
+        {
+          "label": "sample",
+          "privateBytes": 182767616
+        },
+        {
+          "label": "sample",
+          "privateBytes": 192761856
+        },
+        {
+          "label": "sample",
+          "privateBytes": 210124800
+        },
+        {
+          "label": "sample",
+          "privateBytes": 228823040
+        },
+        {
+          "label": "sample",
+          "privateBytes": 197189632
+        },
+        {
+          "label": "sample",
+          "privateBytes": 200364032
+        },
+        {
+          "label": "sample",
+          "privateBytes": 200257536
+        },
+        {
+          "label": "sample",
+          "privateBytes": 201121792
+        },
+        {
+          "label": "sample",
+          "privateBytes": 205479936
+        },
+        {
+          "label": "sample",
+          "privateBytes": 208576512
+        },
+        {
+          "label": "sample",
+          "privateBytes": 208879616
+        },
+        {
+          "label": "sample",
+          "privateBytes": 214888448
+        },
+        {
+          "label": "sample",
+          "privateBytes": 218091520
+        },
+        {
+          "label": "sample",
+          "privateBytes": 222859264
+        },
+        {
+          "label": "sample",
+          "privateBytes": 228474880
+        },
+        {
+          "label": "sample",
+          "privateBytes": 238538752
+        },
+        {
+          "label": "sample",
+          "privateBytes": 242810880
+        },
+        {
+          "label": "sample",
+          "privateBytes": 249016320
+        },
+        {
+          "label": "sample",
+          "privateBytes": 249077760
+        },
+        {
+          "label": "sample",
+          "privateBytes": 253698048
+        },
+        {
+          "label": "sample",
+          "privateBytes": 258764800
+        },
+        {
+          "label": "sample",
+          "privateBytes": 263712768
+        },
+        {
+          "label": "sample",
+          "privateBytes": 268152832
+        },
+        {
+          "label": "sample",
+          "privateBytes": 272293888
+        },
+        {
+          "label": "sample",
+          "privateBytes": 275304448
+        },
+        {
+          "label": "sample",
+          "privateBytes": 279711744
+        },
+        {
+          "label": "sample",
+          "privateBytes": 285573120
+        },
+        {
+          "label": "sample",
+          "privateBytes": 290455552
+        },
+        {
+          "label": "sample",
+          "privateBytes": 294051840
+        },
+        {
+          "label": "sample",
+          "privateBytes": 295190528
+        },
+        {
+          "label": "sample",
+          "privateBytes": 291545088
+        },
+        {
+          "label": "sample",
+          "privateBytes": 292769792
+        },
+        {
+          "label": "sample",
+          "privateBytes": 296239104
+        },
+        {
+          "label": "sample",
+          "privateBytes": 301723648
+        },
+        {
+          "label": "sample",
+          "privateBytes": 301441024
+        },
+        {
+          "label": "sample",
+          "privateBytes": 302006272
+        },
+        {
+          "label": "sample",
+          "privateBytes": 308822016
+        },
+        {
+          "label": "sample",
+          "privateBytes": 309854208
+        },
+        {
+          "label": "sample",
+          "privateBytes": 311164928
+        },
+        {
+          "label": "sample",
+          "privateBytes": 318001152
+        },
+        {
+          "label": "sample",
+          "privateBytes": 319070208
+        },
+        {
+          "label": "sample",
+          "privateBytes": 321810432
+        },
+        {
+          "label": "sample",
+          "privateBytes": 328691712
+        },
+        {
+          "label": "sample",
+          "privateBytes": 329048064
+        },
+        {
+          "label": "sample",
+          "privateBytes": 330338304
+        },
+        {
+          "label": "sample",
+          "privateBytes": 338833408
+        },
+        {
+          "label": "sample",
+          "privateBytes": 339169280
+        },
+        {
+          "label": "sample",
+          "privateBytes": 341086208
+        },
+        {
+          "label": "sample",
+          "privateBytes": 344502272
+        },
+        {
+          "label": "sample",
+          "privateBytes": 347049984
+        },
+        {
+          "label": "sample",
+          "privateBytes": 351096832
+        },
+        {
+          "label": "sample",
+          "privateBytes": 353304576
+        },
+        {
+          "label": "sample",
+          "privateBytes": 366612480
+        },
+        {
+          "label": "sample",
+          "privateBytes": 365735936
+        },
+        {
+          "label": "sample",
+          "privateBytes": 369344512
+        },
+        {
+          "label": "sample",
+          "privateBytes": 377741312
+        },
+        {
+          "label": "sample",
+          "privateBytes": 382693376
+        },
+        {
+          "label": "sample",
+          "privateBytes": 366788608
+        },
+        {
+          "label": "after-free-and-main-gc",
+          "privateBytes": 341753856
+        }
+      ],
+      "openCloseStress": {
+        "samples": [
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          },
+          {
+            "used": 0,
+            "peakUsed": 1421144,
+            "baselineUsed": 0,
+            "heapCapacity": 8388608
+          }
+        ],
+        "final": {
+          "used": 0,
+          "peakUsed": 1421144,
+          "baselineUsed": 0,
+          "heapCapacity": 8388608
+        }
+      }
+    }
+  },
+  "native": {
+    "music": {
+      "frames": 8640000,
+      "rate": 48000,
+      "channels": 2,
+      "elapsedMs": 370.322,
+      "maxDecodeMs": 0.41,
+      "seekMs": 0,
+      "baselinePrivateBytes": 839680,
+      "peakPrivateBytes": 1032192,
+      "afterPrivateBytes": 946176,
+      "resetPeakPrivateBytes": 1384448,
+      "resetAfterPrivateBytes": 1380352,
+      "playedFrames": 0
+    },
+    "mono": {
+      "frames": 352800,
+      "rate": 44100,
+      "channels": 1,
+      "elapsedMs": 92.401,
+      "maxDecodeMs": 0.569,
+      "seekMs": 0,
+      "baselinePrivateBytes": 839680,
+      "peakPrivateBytes": 1044480,
+      "afterPrivateBytes": 946176,
+      "resetPeakPrivateBytes": 1667072,
+      "resetAfterPrivateBytes": 1642496,
+      "playedFrames": 0
+    }
+  }
+}

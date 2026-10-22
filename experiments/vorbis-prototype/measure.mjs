@@ -55,8 +55,9 @@ const server = createServer(async (request, response) => {
     }
     response.setHeader(
       "Content-Type",
-      { ".html": "text/html", ".js": "text/javascript" }[extname(name)] ??
-        "application/octet-stream",
+      { ".html": "text/html", ".js": "text/javascript", ".wasm": "application/wasm" }[
+        extname(name)
+      ] ?? "application/octet-stream",
     );
     response.end(await readFile(resolve(root, "web", name)));
   } catch (error) {

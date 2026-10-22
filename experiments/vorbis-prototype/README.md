@@ -5,6 +5,14 @@ cartridge format, either SDK, or the existing PCM API.
 
 ## Verdict
 
+The follow-up [custom WASM comparison](WASM-COMPARISON.md) resolves the observed
+seek/loop failure: compiling libvorbisfile with Emscripten provides the same
+`ov_pcm_seek` operation used by native, with gap-free playback and no PCM loop
+cache on the tested fixture. Prefer this direction for the next integration
+slice, while keeping mobile playback and overall browser memory unqualified.
+
+The original package-only findings below are retained as baseline evidence.
+
 Native libvorbis is a promising decoder. The browser package produces matching
 PCM and supports incremental playback, but its current reset-and-discard approach
 does not provide reliable arbitrary music loops. Keep the library choice
@@ -24,6 +32,7 @@ an audio output device, and FFmpeg with libvorbis encoding. Run from the root:
 mise exec -- npm ci
 mise exec -- npm ci --prefix experiments/vorbis-prototype
 mise run //experiments/vorbis-prototype:measure
+mise run //experiments/vorbis-prototype:compare
 mise run //experiments/vorbis-prototype:serve
 ```
 
@@ -36,7 +45,8 @@ the individual verdict fields. `parityPassed` deliberately includes the failing
 uncached loop case. The build downloads hash-checked official Xiph source archives.
 
 Pinned candidates: `@wasm-audio-decoders/ogg-vorbis` 0.1.20, libvorbis 1.3.7 and
-libogg 1.3.5. No downloaded libraries or generated audio are tracked.
+libogg 1.3.5. The custom WASM build uses the repository's Emscripten 6.0.12.
+No downloaded libraries or generated audio are tracked.
 
 ## What is measured
 
