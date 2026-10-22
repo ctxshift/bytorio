@@ -1,0 +1,18 @@
+[tasks.build]
+dir = "../.."
+run = "node experiments/vorbis-prototype/build.mjs"
+
+[tasks.measure]
+dir = "../.."
+depends = ["build"]
+run = "node experiments/vorbis-prototype/measure.mjs"
+
+[tasks.serve]
+dir = "../.."
+depends = ["build"]
+run = "node experiments/vorbis-prototype/serve.mjs"
+
+[tasks.compare]
+dir = "../.."
+depends = ["build"]
+run = "node experiments/vorbis-prototype/compare.mjs"

@@ -18,6 +18,10 @@ export const MAX_CONTENT_ENTRIES = 65536;
 export const MAX_CONTENT_BYTES = 536870912;
 export const MAX_CONTENT_READ_BYTES = 1048576;
 export const PROFILE_EFFECTS_3D = 6;
+export const PROFILE_OGG = 7;
+export const OGG_SDK = 1792;
+export const OGG_FEATURES = 255;
+export const OGG_PROTOCOL = 9;
 export const EFFECTS_3D_SDK = 1536;
 export const EFFECTS_3D_FEATURES = 127;
 export const EFFECTS_3D_PROTOCOL = 8;
@@ -129,7 +133,14 @@ export const RESOURCE_EXPORTS = Object.freeze([
   { name: "game_error_length", params: [], results: [127] },
 ]);
 export const resourceSchema = Object.freeze({
-  version: 8,
+  version: 9,
+  oggProtocol: 9,
+  maxOggStreams: 4,
+  maxOggSourceBytes: 2097152,
+  maxOggEncodedBytes: 4194304,
+  maxOggDecoderBytes: 8388608,
+  oggChunkFrames: 1024,
+  oggRequestWords: 10,
   stableVersion: 4,
   meshProtocol: 5,
   texturedProtocol: 6,
@@ -287,6 +298,8 @@ export const resourceSchema = Object.freeze({
   op_audio_destroy_synth: 49,
   op_audio_source: 50,
   op_audio_source_destroy: 51,
+  op_audio_ogg_stream: 52,
+  op_audio_stream_end: 53,
   op_create_mesh: 64,
   op_create_depth: 65,
   op_create_camera: 66,

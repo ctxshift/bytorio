@@ -61,6 +61,43 @@ target immediately. Release ramps gain to zero, then stops; it is not an ADSR.
 
 ## Scheduling, snapshots and streams
 
+### Experimental Ogg Vorbis streams
+
+SDK **0.7.0**, profile **`ogg-streaming-preview-1`**, adds
+`audio.ogg_stream(content_id, options)` in both languages. Package the `.ogg`
+file as an immutable cartridge content entry. This path uses libvorbisfile on
+native and a project-owned WASM build of that library in the browser.
+
+```luau
+local music = audio.ogg_stream(1, {
+    loop = true,
+    loop_start = 0,
+    loop_end = 480000,
+})
+audio.play_stream(audio.voice(0), music, { gain = 0.5 })
+```
+
+```odin
+music := audio.ogg_stream(1, {loop = true, loop_start = 0, loop_end = 480000})
+audio.play_stream(audio.voice(0), music, {gain = f32(0.5)})
+```
+
+Odin options use `audio.Ogg_Options`; Luau uses the matching table fields.
+Only single-link mono/stereo 48 kHz Vorbis is supported initially. Loop frames
+are measured in the source; the end is exclusive and must not exceed its length.
+Disabled loops require both endpoints to be zero. The example requires a source
+at least ten seconds long. Other sample rates and chained files are rejected.
+
+The stream starts its source clock at creation, including when no voice is
+attached. Stopping a voice does not rewind it. Recreate a stream to restart;
+destroy it with `audio.destroy_stream`. Nonlooping playback completes naturally
+at EOF. Manual `audio.write_stream` calls on an Ogg stream are rejected.
+
+Four PCM/Ogg stream slots are shared. Ogg input is limited to 2 MiB per stream
+and 4 MiB across live streams. Decoding fills the existing 8,192-frame queues;
+the browser decoder uses a fixed 8 MiB WASM memory instead of a full-song PCM
+cache. See [integration limits and validation](../docs/ogg-streaming-integration.md).
+
 All `at` values are absolute **48 kHz logical frames**, never milliseconds,
 device samples or source frames. `audio.time()` is the simulation clock
 `tick * 800`, identical in both languages. Omitted times use this clock. The

@@ -683,6 +683,7 @@ export type PlayOptions = {
     loop_end: number?,
 }
 export type StreamOptions = { at: number?, gain: number?, pan: number?, bus: Bus? }
+export type OggOptions = { loop: boolean?, loop_start: number?, loop_end: number? }
 export type AudioStatus = {
     frame: number,
     lead_frames: number,
@@ -1051,6 +1052,13 @@ function audio.stream(): Stream
     audioReady()
     local handle = reserve("stream", 0, 0)
     emit(schema.op_audio_stream, records[handle].id, {})
+    return handle :: Stream
+end
+function audio.ogg_stream(contentId: number, opts: OggOptions?): Stream
+    audioReady()
+    local args = require("./ogg").descriptor(contentId, opts, integer)
+    local handle = reserve("stream", 0, 0)
+    emit(schema.op_audio_ogg_stream, records[handle].id, args)
     return handle :: Stream
 end
 function audio.play_sample(voice: Voice, source: Sample, opts: PlayOptions?)

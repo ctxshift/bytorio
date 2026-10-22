@@ -21,7 +21,14 @@ class MixerProcessor extends AudioWorkletProcessor {
       limits.maxAudioFeedbackBytes,
     );
     this.frames = 0;
+    this.audioPort = this.port;
     this.running = true;
+    this.primed = !options.processorOptions.waitForProducer;
+    this.packetSlots = Array.from({ length: limits.maxAudioTransfers }, (_, id) => ({
+      pending: false,
+      message: { type: "recycle", id, buffer: null },
+      transfer: [null],
+    }));
     this.failure = { type: "error", error: "Audio mixer queue or block was invalid." };
     this.slots = Array.from({ length: limits.maxAudioTransfers }, (_, id) => {
       const buffer = new ArrayBuffer(limits.maxAudioFeedbackBytes);
@@ -33,8 +40,17 @@ class MixerProcessor extends AudioWorkletProcessor {
       };
     });
     this.port.onmessage = ({ data }) => {
-      if (data.type === "packet") {
+      if (data.type === "worker-port") {
+        this.audioPort = data.port;
+        this.audioPort.onmessage = this.port.onmessage;
+        this.audioPort.postMessage({ type: "ready" });
+      } else if (data.type === "start") {
+        this.primed = true;
+      } else if (data.type === "packet") {
+        const packetSlot = this.packetSlots[data.id];
         if (
+          !packetSlot ||
+          packetSlot.pending ||
           !Number.isInteger(data.bytes) ||
           data.bytes < limits.audioPacketHeaderBytes ||
           data.bytes > limits.maxAudioPacketBytes ||
@@ -49,14 +65,20 @@ class MixerProcessor extends AudioWorkletProcessor {
         );
         if (this.runtime.audio_submit(data.bytes) !== 1) {
           this.running = false;
+          this.failure.error = "Audio mixer rejected an incoming command packet.";
           this.port.postMessage(this.failure);
           return;
         }
-        this.port.postMessage({ type: "recycle", id: data.id, buffer: data.buffer }, [data.buffer]);
+        // Return producer credits only after process() drains the batch queue.
+        // Immediate recycling can let a refill burst overrun its eight slots.
+        packetSlot.message.buffer = data.buffer;
+        packetSlot.transfer[0] = data.buffer;
+        packetSlot.pending = true;
       } else if (data.type === "feedback-recycle") {
         const slot = this.slots[data.id];
         if (!slot || slot.buffer || data.buffer.byteLength !== limits.maxAudioFeedbackBytes) {
           this.running = false;
+          this.failure.error = "Audio mixer received an invalid feedback recycle.";
           this.port.postMessage(this.failure);
           return;
         }
@@ -68,6 +90,9 @@ class MixerProcessor extends AudioWorkletProcessor {
         this.runtime.audio_pause(Number(data.paused));
       } else if (data.type === "close") {
         this.running = false;
+        if (this.audioPort !== this.port) {
+          this.audioPort.close();
+        }
         this.port.postMessage({ type: "closed" });
       }
     };
@@ -84,13 +109,23 @@ class MixerProcessor extends AudioWorkletProcessor {
       return false;
     }
     const frames = channels[0].length;
-    if (!this.runtime.audio_render(frames, sampleRate)) {
+    if (!this.primed) {
+      this.runtime.audio_consume();
+    } else if (!this.runtime.audio_render(frames, sampleRate)) {
       this.port.postMessage(this.failure);
       return false;
     }
+    for (const slot of this.packetSlots) {
+      if (slot.pending) {
+        this.audioPort.postMessage(slot.message, slot.transfer);
+        slot.pending = false;
+        slot.message.buffer = null;
+        slot.transfer[0] = null;
+      }
+    }
     for (let i = 0; i < frames; i++) {
-      channels[0][i] = this.output[i * 2];
-      channels[1][i] = this.output[i * 2 + 1];
+      channels[0][i] = this.primed ? this.output[i * 2] : 0;
+      channels[1][i] = this.primed ? this.output[i * 2 + 1] : 0;
     }
     this.frames += frames;
     if (this.frames >= sampleRate / 60) {
@@ -104,7 +139,7 @@ class MixerProcessor extends AudioWorkletProcessor {
           slot.view[i] = this.feedback[i];
         }
         slot.message.bytes = size;
-        this.port.postMessage(slot.message, slot.transfer);
+        this.audioPort.postMessage(slot.message, slot.transfer);
         slot.buffer = null;
         this.frames = 0;
         break;

@@ -68,6 +68,7 @@ outputs = [
 run = "node tools/player-build.mjs web-audio"
 
 ["deps:player:native-binary"]
+depends = ["deps:vorbis"]
 sources = [
   "runtime/odin/abi/**/*.odin",
   "runtime/odin/audio/**/*.odin",
@@ -132,6 +133,7 @@ outputs = [
 run = "node tools/player-build.mjs fixtures"
 
 ["deps:player:web-support"]
+depends = ["deps:vorbis"]
 sources = [
   "runtime/odin/web/*.js",
   "runtime/odin/web/*.html",
@@ -149,6 +151,13 @@ outputs = [
   "build/odin-player/web/worker.js",
   "build/odin-player/web/policy.js",
   "build/odin-player/web/audio-worklet.js",
+  "build/odin-player/web/ogg.js",
+  "build/odin-player/web/vorbis.js",
+  "build/odin-player/web/vorbis.wasm",
+  "build/odin-player/web/licenses/ogg.txt",
+  "build/odin-player/web/licenses/emscripten.txt",
+  "build/odin-player/web/licenses/musl.txt",
+  "build/odin-player/web/licenses/vorbis.txt",
   "build/odin-player/web/constants.js",
   "build/odin-player/web/cartridge.js",
   "build/odin-player/web/save.js",
@@ -169,6 +178,7 @@ outputs = [
 run = "node tools/stage-player.mjs web"
 
 ["deps:player:native-support"]
+depends = ["deps:vorbis"]
 sources = [
   "tools/stage-player.mjs",
   "tools/player-export.mjs",
@@ -184,5 +194,7 @@ outputs = [
   "build/odin-player/native/licenses/odin.txt",
   "build/odin-player/native/licenses/opengl.txt",
   "build/odin-player/native/licenses/glad.txt",
+  "build/odin-player/native/licenses/ogg.txt",
+  "build/odin-player/native/licenses/vorbis.txt",
 ]
 run = "node tools/stage-player.mjs native"

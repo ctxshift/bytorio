@@ -26,6 +26,10 @@ import {
   ALPHA_3D_SDK,
   ALPHA_3D_FEATURES,
   ALPHA_3D_PROTOCOL,
+  PROFILE_OGG,
+  OGG_SDK,
+  OGG_PROTOCOL,
+  OGG_FEATURES,
 } from "./constants.js";
 export { FRAME_BYTES, MAX_GAME_BYTES };
 export const MAX_PAGES = MAX_MEMORY_BYTES / WASM_PAGE_BYTES;
@@ -43,33 +47,40 @@ export function negotiateProfile(game, cartridge = null) {
   const textured = profile === PROFILE_TEXTURED_3D;
   const effects = profile === PROFILE_EFFECTS_3D;
   const alpha = profile === PROFILE_ALPHA_3D;
-  const expectedSdk = effects
-    ? EFFECTS_3D_SDK
-    : alpha
-      ? ALPHA_3D_SDK
-      : textured
-        ? TEXTURED_3D_SDK
-        : preview
-          ? PREVIEW_3D_SDK
-          : RESOURCE_SDK_VERSION;
-  const expectedProtocol = effects
-    ? EFFECTS_3D_PROTOCOL
-    : alpha
-      ? ALPHA_3D_PROTOCOL
-      : textured
-        ? TEXTURED_3D_PROTOCOL
-        : preview
-          ? PREVIEW_3D_PROTOCOL
-          : RESOURCE_PROTOCOL;
-  const expectedFeatures = effects
-    ? EFFECTS_3D_FEATURES
-    : alpha
-      ? ALPHA_3D_FEATURES
-      : textured
-        ? TEXTURED_3D_FEATURES
-        : preview
-          ? PREVIEW_3D_FEATURES
-          : RESOURCE_FEATURES;
+  const ogg = profile === PROFILE_OGG;
+  const expectedSdk = ogg
+    ? OGG_SDK
+    : effects
+      ? EFFECTS_3D_SDK
+      : alpha
+        ? ALPHA_3D_SDK
+        : textured
+          ? TEXTURED_3D_SDK
+          : preview
+            ? PREVIEW_3D_SDK
+            : RESOURCE_SDK_VERSION;
+  const expectedProtocol = ogg
+    ? OGG_PROTOCOL
+    : effects
+      ? EFFECTS_3D_PROTOCOL
+      : alpha
+        ? ALPHA_3D_PROTOCOL
+        : textured
+          ? TEXTURED_3D_PROTOCOL
+          : preview
+            ? PREVIEW_3D_PROTOCOL
+            : RESOURCE_PROTOCOL;
+  const expectedFeatures = ogg
+    ? OGG_FEATURES
+    : effects
+      ? EFFECTS_3D_FEATURES
+      : alpha
+        ? ALPHA_3D_FEATURES
+        : textured
+          ? TEXTURED_3D_FEATURES
+          : preview
+            ? PREVIEW_3D_FEATURES
+            : RESOURCE_FEATURES;
   if (profile === 1 && (game.game_resource_protocol?.() ?? 0) > RESOURCE_PROTOCOL) {
     throw new Error("Experimental 3D requires its explicit cartridge profile.");
   }
@@ -83,7 +94,7 @@ export function negotiateProfile(game, cartridge = null) {
     game.game_frame_size() !== FRAME_BYTES ||
     (profile === 1
       ? abi !== 1
-      : (!preview && !textured && !alpha && !effects && profile !== PROFILE_RESOURCE) ||
+      : (!preview && !textured && !alpha && !effects && !ogg && profile !== PROFILE_RESOURCE) ||
         abi !== RESOURCE_ABI_VERSION ||
         sdk !== expectedSdk)
   ) {

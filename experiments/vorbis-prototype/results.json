@@ -1,0 +1,858 @@
+{
+  "status": "complete",
+  "native": {
+    "music": {
+      "frames": 8640000,
+      "rate": 48000,
+      "channels": 2,
+      "elapsedMs": 409.613,
+      "maxDecodeMs": 0.399,
+      "seekMs": 0,
+      "baselinePrivateBytes": 835584,
+      "peakPrivateBytes": 1048576,
+      "afterPrivateBytes": 868352,
+      "resetPeakPrivateBytes": 1466368,
+      "resetAfterPrivateBytes": 1323008,
+      "playedFrames": 0
+    },
+    "mono": {
+      "frames": 352800,
+      "rate": 44100,
+      "channels": 1,
+      "elapsedMs": 81.181,
+      "maxDecodeMs": 0.423,
+      "seekMs": 0,
+      "baselinePrivateBytes": 835584,
+      "peakPrivateBytes": 1040384,
+      "afterPrivateBytes": 942080,
+      "resetPeakPrivateBytes": 1323008,
+      "resetAfterPrivateBytes": 1318912,
+      "playedFrames": 0
+    },
+    "music-loop": {
+      "frames": 480000,
+      "rate": 48000,
+      "channels": 2,
+      "elapsedMs": 8150.343,
+      "maxDecodeMs": 0.041,
+      "seekMs": 1.061,
+      "baselinePrivateBytes": 847872,
+      "peakPrivateBytes": 1052672,
+      "afterPrivateBytes": 958464,
+      "resetPeakPrivateBytes": 1507328,
+      "resetAfterPrivateBytes": 1486848,
+      "playedFrames": 382976
+    }
+  },
+  "browser": {
+    "music": {
+      "maxDecodeMs": 217.19999992847443,
+      "maxChunkFrames": 48000,
+      "peakJsHeap": 59492191,
+      "inputBytes": 1249816,
+      "frames": 8640000,
+      "loopSetupMs": [424.3000000715256],
+      "passHeap": [4355309],
+      "rate": 48000,
+      "channels": 2,
+      "elapsedMs": 4150.200000047684,
+      "afterFreeHeap": 4357869
+    },
+    "mono": {
+      "maxDecodeMs": 192.60000002384186,
+      "maxChunkFrames": 44608,
+      "peakJsHeap": 15306880,
+      "inputBytes": 44520,
+      "frames": 352800,
+      "loopSetupMs": [386.89999997615814],
+      "passHeap": [9179623],
+      "rate": 44100,
+      "channels": 1,
+      "elapsedMs": 493.39999997615814,
+      "afterFreeHeap": 9181391
+    },
+    "music-loop": {
+      "maxDecodeMs": 219.5,
+      "maxChunkFrames": 48000,
+      "peakJsHeap": 103467658,
+      "inputBytes": 1249816,
+      "frames": 480000,
+      "loopSetupMs": [685.3000000715256, 680.8999999761581, 678.3000000715256, 671.5],
+      "passHeap": [56847505, 88897380, 76182804, 69401363],
+      "rate": 48000,
+      "channels": 2,
+      "elapsedMs": 2891.3000000715256,
+      "afterFreeHeap": 69402899
+    },
+    "resetStress": {
+      "maxDecodeMs": 278.60000002384186,
+      "maxChunkFrames": 44608,
+      "peakJsHeap": 56300467,
+      "inputBytes": 44520,
+      "frames": 8467200,
+      "loopSetupMs": [
+        501.89999997615814, 537.2999999523163, 485.60000002384186, 504, 445.7999999523163, 421,
+        457.2999999523163, 441.7999999523163, 446.1999999284744, 470.89999997615814,
+        471.10000002384186, 457.5, 485.10000002384186, 464.59999990463257, 433.8000000715256, 475,
+        499.60000002384186, 505.10000002384186, 513.6000000238419, 547.3999999761581,
+        480.3000000715256, 473.60000002384186, 450.60000002384186, 428.39999997615814
+      ],
+      "passHeap": [
+        16105711, 9807366, 26527760, 9818422, 26529616, 43241602, 3467632, 20230202, 36847784,
+        9780122, 26487200, 43229998, 13848430, 19743597, 36430603, 9803774, 26510980, 9810966,
+        26518060, 9809890, 26516848, 9810950, 26518372, 9812070
+      ],
+      "rate": 44100,
+      "channels": 1,
+      "elapsedMs": 13815.5,
+      "afterFreeHeap": 9813650
+    }
+  },
+  "comparisons": {
+    "music": {
+      "actualSamples": 17280000,
+      "expectedSamples": 17280000,
+      "maxAbsoluteError": 2.384185791015625e-7,
+      "rmsError": 3.561063152324968e-8,
+      "nonfinite": 0,
+      "pass": true
+    },
+    "music-reference": {
+      "actualSamples": 17280000,
+      "expectedSamples": 17280000,
+      "maxAbsoluteError": 2.421438694000244e-7,
+      "rmsError": 3.821110426793646e-8,
+      "nonfinite": 0,
+      "pass": true
+    },
+    "mono": {
+      "actualSamples": 352800,
+      "expectedSamples": 352800,
+      "maxAbsoluteError": 2.384185791015625e-7,
+      "rmsError": 3.9547189574039966e-8,
+      "nonfinite": 0,
+      "pass": true
+    },
+    "mono-reference": {
+      "actualSamples": 352800,
+      "expectedSamples": 352800,
+      "maxAbsoluteError": 2.1047890186309814e-7,
+      "rmsError": 4.1252594483708496e-8,
+      "nonfinite": 0,
+      "pass": true
+    },
+    "music-loop": {
+      "actualSamples": 960000,
+      "expectedSamples": 960000,
+      "maxAbsoluteError": 1.7881393432617188e-7,
+      "rmsError": 3.522951827767888e-8,
+      "nonfinite": 0,
+      "pass": true
+    },
+    "nativeLoop": {
+      "actualSamples": 960000,
+      "expectedSamples": 960000,
+      "maxAbsoluteError": 0,
+      "rmsError": 0,
+      "nonfinite": 0,
+      "pass": true
+    },
+    "nativePlayback": {
+      "actualSamples": 765952,
+      "expectedSamples": 765952,
+      "maxAbsoluteError": 0,
+      "rmsError": 0,
+      "nonfinite": 0,
+      "pass": true
+    },
+    "play-stream-0-8192": {
+      "actualSamples": 768000,
+      "expectedSamples": 768000,
+      "maxAbsoluteError": 2.086162567138672e-7,
+      "rmsError": 3.552989299114947e-8,
+      "nonfinite": 0,
+      "pass": true
+    },
+    "play-stream-0-32768": {
+      "actualSamples": 768000,
+      "expectedSamples": 768000,
+      "maxAbsoluteError": 2.086162567138672e-7,
+      "rmsError": 3.552989299114947e-8,
+      "nonfinite": 0,
+      "pass": true
+    },
+    "play-loop-0-32768": {
+      "actualSamples": 768000,
+      "expectedSamples": 768000,
+      "maxAbsoluteError": 0.7346571683883667,
+      "rmsError": 0.18939573216424588,
+      "nonfinite": 0,
+      "pass": false
+    },
+    "play-loop-0-8192-cached": {
+      "actualSamples": 768000,
+      "expectedSamples": 768000,
+      "maxAbsoluteError": 1.7881393432617188e-7,
+      "rmsError": 3.5334164453905504e-8,
+      "nonfinite": 0,
+      "pass": true
+    }
+  },
+  "playback": {
+    "stream-0-8192": {
+      "maxDecodeMs": 221.60000002384186,
+      "maxChunkFrames": 48000,
+      "peakJsHeap": 84330762,
+      "loop": false,
+      "stallMs": 0,
+      "cacheLoop": false,
+      "loopSetupMs": [423.8000000715256],
+      "ringCapacityFrames": 8192,
+      "captureBytes": 3072000,
+      "startupMs": 424,
+      "loopCacheBytes": 0,
+      "type": "done",
+      "underruns": 0,
+      "overflows": 0,
+      "maxQueue": 7040,
+      "frames": 384000
+    },
+    "stream-250-8192": {
+      "maxDecodeMs": 214.5,
+      "maxChunkFrames": 48000,
+      "peakJsHeap": 32092611,
+      "loop": false,
+      "stallMs": 250,
+      "cacheLoop": false,
+      "loopSetupMs": [417.7999999523163],
+      "ringCapacityFrames": 8192,
+      "captureBytes": 3072000,
+      "startupMs": 418,
+      "loopCacheBytes": 0,
+      "type": "done",
+      "underruns": 5888,
+      "overflows": 0,
+      "maxQueue": 7040,
+      "frames": 384000
+    },
+    "stream-0-32768": {
+      "maxDecodeMs": 208.39999997615814,
+      "maxChunkFrames": 48000,
+      "peakJsHeap": 52228560,
+      "loop": false,
+      "stallMs": 0,
+      "cacheLoop": false,
+      "loopSetupMs": [405],
+      "ringCapacityFrames": 32768,
+      "captureBytes": 3072000,
+      "startupMs": 405.1999999284744,
+      "loopCacheBytes": 0,
+      "type": "done",
+      "underruns": 0,
+      "overflows": 0,
+      "maxQueue": 25472,
+      "frames": 384000
+    },
+    "loop-0-32768": {
+      "maxDecodeMs": 261.2999999523163,
+      "maxChunkFrames": 48000,
+      "peakJsHeap": 51229695,
+      "loop": true,
+      "stallMs": 0,
+      "cacheLoop": false,
+      "loopSetupMs": [870.5, 817.6999999284744, 789.5999999046326],
+      "ringCapacityFrames": 32768,
+      "captureBytes": 3072000,
+      "startupMs": 870.6999999284744,
+      "loopCacheBytes": 0,
+      "type": "done",
+      "underruns": 28288,
+      "overflows": 0,
+      "maxQueue": 25504,
+      "frames": 384000
+    },
+    "loop-0-8192-cached": {
+      "maxDecodeMs": 236,
+      "maxChunkFrames": 48000,
+      "peakJsHeap": 55159676,
+      "loop": true,
+      "stallMs": 0,
+      "cacheLoop": true,
+      "loopSetupMs": [808.1999999284744, 0, 0, 0],
+      "ringCapacityFrames": 8192,
+      "captureBytes": 3072000,
+      "startupMs": 808.2999999523163,
+      "loopCacheBytes": 960000,
+      "type": "done",
+      "underruns": 0,
+      "overflows": 0,
+      "maxQueue": 7072,
+      "frames": 384000
+    },
+    "stream-250-32768": {
+      "maxDecodeMs": 243.19999992847443,
+      "maxChunkFrames": 48000,
+      "peakJsHeap": 15967150,
+      "loop": false,
+      "stallMs": 250,
+      "cacheLoop": false,
+      "loopSetupMs": [450.89999997615814],
+      "ringCapacityFrames": 32768,
+      "captureBytes": 3072000,
+      "startupMs": 451.1999999284744,
+      "loopCacheBytes": 0,
+      "type": "done",
+      "underruns": 0,
+      "overflows": 0,
+      "maxQueue": 25472,
+      "frames": 384000
+    },
+    "stream-1000-32768": {
+      "maxDecodeMs": 273.6999999284744,
+      "maxChunkFrames": 48000,
+      "peakJsHeap": 15284736,
+      "loop": false,
+      "stallMs": 1000,
+      "cacheLoop": false,
+      "loopSetupMs": [525.0999999046326],
+      "ringCapacityFrames": 32768,
+      "captureBytes": 3072000,
+      "startupMs": 525.3999999761581,
+      "loopCacheBytes": 0,
+      "type": "done",
+      "underruns": 23424,
+      "overflows": 0,
+      "maxQueue": 25472,
+      "frames": 384000
+    }
+  },
+  "memory": [
+    {
+      "label": "baseline",
+      "privateBytes": 82026496,
+      "workingSetBytes": 217141248,
+      "processes": 4
+    },
+    {
+      "label": "sample",
+      "privateBytes": 258797568,
+      "workingSetBytes": 371081216,
+      "processes": 4
+    },
+    {
+      "label": "sample",
+      "privateBytes": 289980416,
+      "workingSetBytes": 398626816,
+      "processes": 4
+    },
+    {
+      "label": "sample",
+      "privateBytes": 328044544,
+      "workingSetBytes": 436199424,
+      "processes": 4
+    },
+    {
+      "label": "sample",
+      "privateBytes": 238649344,
+      "workingSetBytes": 374636544,
+      "processes": 4
+    },
+    {
+      "label": "sample",
+      "privateBytes": 327286784,
+      "workingSetBytes": 424710144,
+      "processes": 4
+    },
+    {
+      "label": "sample",
+      "privateBytes": 383987712,
+      "workingSetBytes": 481906688,
+      "processes": 4
+    },
+    {
+      "label": "sample",
+      "privateBytes": 422891520,
+      "workingSetBytes": 518860800,
+      "processes": 4
+    },
+    {
+      "label": "sample",
+      "privateBytes": 425127936,
+      "workingSetBytes": 519131136,
+      "processes": 4
+    },
+    {
+      "label": "sample",
+      "privateBytes": 363745280,
+      "workingSetBytes": 544391168,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 364793856,
+      "workingSetBytes": 544993280,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 366010368,
+      "workingSetBytes": 546598912,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 367247360,
+      "workingSetBytes": 548245504,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 369364992,
+      "workingSetBytes": 549658624,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 369762304,
+      "workingSetBytes": 549081088,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 371843072,
+      "workingSetBytes": 551665664,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 373145600,
+      "workingSetBytes": 553320448,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 404848640,
+      "workingSetBytes": 566984704,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 406294528,
+      "workingSetBytes": 568922112,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 407707648,
+      "workingSetBytes": 570310656,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 409096192,
+      "workingSetBytes": 572248064,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 410394624,
+      "workingSetBytes": 574021632,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 411693056,
+      "workingSetBytes": 573964288,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 413065216,
+      "workingSetBytes": 574050304,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 414343168,
+      "workingSetBytes": 575660032,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 446459904,
+      "workingSetBytes": 607850496,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 474234880,
+      "workingSetBytes": 615358464,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 475746304,
+      "workingSetBytes": 617328640,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 477290496,
+      "workingSetBytes": 619167744,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 478384128,
+      "workingSetBytes": 620969984,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 319729664,
+      "workingSetBytes": 501403648,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 320512000,
+      "workingSetBytes": 500023296,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 321560576,
+      "workingSetBytes": 501420032,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 323162112,
+      "workingSetBytes": 503422976,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 326483968,
+      "workingSetBytes": 506716160,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 380121088,
+      "workingSetBytes": 558043136,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 381591552,
+      "workingSetBytes": 559833088,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 384143360,
+      "workingSetBytes": 546127872,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 399634432,
+      "workingSetBytes": 563314688,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 400822272,
+      "workingSetBytes": 563417088,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 395747328,
+      "workingSetBytes": 558288896,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 415584256,
+      "workingSetBytes": 578052096,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 416804864,
+      "workingSetBytes": 579670016,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 376356864,
+      "workingSetBytes": 539955200,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 380760064,
+      "workingSetBytes": 560226304,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 382357504,
+      "workingSetBytes": 562249728,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 383864832,
+      "workingSetBytes": 564117504,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 384253952,
+      "workingSetBytes": 564908032,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 384638976,
+      "workingSetBytes": 564154368,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 385036288,
+      "workingSetBytes": 564240384,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 385433600,
+      "workingSetBytes": 565043200,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 385904640,
+      "workingSetBytes": 565989376,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 290291712,
+      "workingSetBytes": 495304704,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 359006208,
+      "workingSetBytes": 538275840,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 359313408,
+      "workingSetBytes": 539029504,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 369963008,
+      "workingSetBytes": 549158912,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 372293632,
+      "workingSetBytes": 551882752,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 373547008,
+      "workingSetBytes": 552099840,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 375054336,
+      "workingSetBytes": 552706048,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 372068352,
+      "workingSetBytes": 550899712,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 373100544,
+      "workingSetBytes": 552316928,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 345128960,
+      "workingSetBytes": 526553088,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 357281792,
+      "workingSetBytes": 538132480,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 357232640,
+      "workingSetBytes": 538513408,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 370401280,
+      "workingSetBytes": 549781504,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 371957760,
+      "workingSetBytes": 551755776,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 370429952,
+      "workingSetBytes": 549363712,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 371720192,
+      "workingSetBytes": 549961728,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 373075968,
+      "workingSetBytes": 551596032,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 374374400,
+      "workingSetBytes": 553259008,
+      "processes": 5
+    },
+    {
+      "label": "before-reset-stress",
+      "privateBytes": 284356608,
+      "workingSetBytes": 489353216,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 417239040,
+      "workingSetBytes": 565407744,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 434851840,
+      "workingSetBytes": 583483392,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 451043328,
+      "workingSetBytes": 614010880,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 538615808,
+      "workingSetBytes": 698458112,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 500396032,
+      "workingSetBytes": 660336640,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 494567424,
+      "workingSetBytes": 653201408,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 569307136,
+      "workingSetBytes": 692789248,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 541192192,
+      "workingSetBytes": 665706496,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 518610944,
+      "workingSetBytes": 675586048,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 523407360,
+      "workingSetBytes": 680849408,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 568516608,
+      "workingSetBytes": 690831360,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 511733760,
+      "workingSetBytes": 669163520,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 510951424,
+      "workingSetBytes": 667987968,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 321200128,
+      "workingSetBytes": 522964992,
+      "processes": 5
+    },
+    {
+      "label": "after-reset-stress-and-gc",
+      "privateBytes": 320675840,
+      "workingSetBytes": 522571776,
+      "processes": 5
+    },
+    {
+      "label": "sample",
+      "privateBytes": 329670656,
+      "workingSetBytes": 532697088,
+      "processes": 5
+    }
+  ],
+  "parityPassed": false,
+  "decoderParityPassed": true,
+  "streamPlaybackPassed": true,
+  "loopPlaybackPassed": false,
+  "cachedLoopPlaybackPassed": true
+}

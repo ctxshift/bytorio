@@ -106,6 +106,7 @@ export async function syncEditor(project) {
     "resources.luau",
     "math3d.luau",
     "billboard.luau",
+    "ogg.luau",
     "resource_schema.luau",
     "constants.luau",
     "content.luau",

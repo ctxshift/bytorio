@@ -25,6 +25,11 @@ audio_submit :: proc "c" (bytes: u32) -> u32 {
     return u32(audio.import_batch(engine, packet[:bytes]))
 }
 @(export)
+audio_consume :: proc "c" () {
+    context = runtime.default_context()
+    audio.consume(engine)
+}
+@(export)
 audio_render :: proc "c" (frames, rate: u32) -> u32 {
     context = runtime.default_context()
     if frames == 0 ||

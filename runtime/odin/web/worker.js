@@ -3,6 +3,7 @@ import {
   BUTTON_WHEEL_UP,
   BUTTON_WHEEL_DOWN,
   resourceSchema as audioLimits,
+  PROFILE_OGG,
 } from "./constants.js";
 import {
   inspectGuest,
@@ -19,6 +20,7 @@ import {
 import { loadCartridge, contentImports } from "./cartridge.js";
 import { openSaveSlot } from "./save.js";
 import { normalizeGraphics, createGpu } from "./gpu.js";
+import { createOggPump } from "./ogg.js";
 
 let game, runtime;
 let saveSlot;
@@ -38,8 +40,60 @@ const audioTransfers = Array.from({ length: audioLimits.maxAudioTransfers }, () 
   capacity: 0,
 }));
 let pendingAudioBytes = 0;
+let audioPort;
+let audioPrimed = false;
+let oggPump, oggTimer, oggLoading;
+async function initializeOgg() {
+  if (oggPump || oggLoading || game?.game_profile?.() !== PROFILE_OGG) {
+    return;
+  }
+  let needed = false;
+  for (let index = 0; index < audioLimits.maxOggStreams; index++) {
+    const pointer = runtime.runtime_ogg_request(index);
+    needed ||=
+      new Uint32Array(runtime.memory.buffer, pointer, audioLimits.oggRequestWords)[0] !== 0;
+  }
+  if (!needed) {
+    return;
+  }
+  const current = runtime;
+  oggLoading = createOggPump(current);
+  try {
+    const pump = await oggLoading;
+    if (current !== runtime) {
+      pump.close();
+      return;
+    }
+    oggPump = pump;
+  } finally {
+    oggLoading = null;
+  }
+}
+async function pumpOgg() {
+  await initializeOgg();
+  oggPump?.pump();
+  const drained = drainAudio();
+  if (!audioPrimed && drained) {
+    for (let index = 0; index < audioLimits.maxOggStreams; index++) {
+      const pointer = runtime.runtime_ogg_request(index);
+      const request = new Uint32Array(runtime.memory.buffer, pointer, audioLimits.oggRequestWords);
+      if (request[0] && request[6]) {
+        return;
+      }
+    }
+    audioPrimed = true;
+    // Ordered behind every initial packet on the same port. The worklet may
+    // consume batches to return credits, but holds its clock until this arrives.
+    audioPort.postMessage({ type: "start" });
+  }
+}
+function closeOgg() {
+  clearInterval(oggTimer);
+  oggPump?.close();
+  oggPump = null;
+}
 function drainAudio() {
-  if (!runtime?.runtime_audio_enabled?.()) {
+  if (!audioPort || !runtime?.runtime_audio_enabled?.()) {
     return;
   }
   for (let id = 0; id < audioTransfers.length; id++) {
@@ -49,7 +103,7 @@ function drainAudio() {
     }
     const bytes = pendingAudioBytes || runtime.runtime_audio_export();
     if (!bytes) {
-      break;
+      return true;
     }
     if (bytes < 0) {
       throw new Error("Audio packet exceeds transfer capacity.");
@@ -76,7 +130,7 @@ function drainAudio() {
     new Uint8Array(slot.buffer, 0, bytes).set(
       new Uint8Array(runtime.memory.buffer, runtime.runtime_audio_packet(), bytes),
     );
-    self.postMessage({ type: "audio-packet", id, bytes, buffer: slot.buffer }, [slot.buffer]);
+    audioPort.postMessage({ type: "packet", id, bytes, buffer: slot.buffer }, [slot.buffer]);
     slot.buffer = null;
     slot.busy = true;
     pendingAudioBytes = 0;
@@ -216,6 +270,25 @@ function frame(present = true, diagnostics = true) {
 
 self.onmessage = async ({ data }) => {
   try {
+    if (data.type === "audio-connect") {
+      audioPort?.close();
+      audioPrimed = false;
+      const port = data.port;
+      port.onmessage = ({ data: message }) => {
+        if (message.type === "ready") {
+          audioPort = port;
+          self.onmessage({ data: { type: "audio-prime" } });
+        } else {
+          self.onmessage({ data: { ...message, type: `audio-${message.type}` } });
+        }
+      };
+      port.start();
+      return;
+    }
+    if (data.type === "audio-prime") {
+      await pumpOgg();
+      return;
+    }
     if (data.presentationSize) {
       if (
         !Array.isArray(data.presentationSize) ||
@@ -236,7 +309,7 @@ self.onmessage = async ({ data }) => {
       }
       slot.buffer = data.buffer;
       slot.busy = false;
-      drainAudio();
+      await pumpOgg();
       return;
     }
     if (data.type === "audio-feedback") {
@@ -248,10 +321,23 @@ self.onmessage = async ({ data }) => {
       if (runtime.runtime_audio_feedback(data.bytes) !== 1) {
         throw new Error("Invalid audio feedback.");
       }
-      self.postMessage({ type: "audio-feedback-recycle", id: data.id, buffer: data.buffer }, [
+      const view = new DataView(data.buffer, 0, data.bytes);
+      const wide = (at) => view.getUint32(at, true) + view.getUint32(at + 4, true) * 2 ** 32;
+      self.postMessage({
+        type: "audio-status",
+        status: {
+          frame: wide(16),
+          epoch: view.getUint32(12, true),
+          lateEvents: wide(32),
+          underrunFrames: wide(40),
+          rejectedWrites: wide(48),
+          completed: wide(56),
+        },
+      });
+      audioPort.postMessage({ type: "feedback-recycle", id: data.id, buffer: data.buffer }, [
         data.buffer,
       ]);
-      drainAudio();
+      await pumpOgg();
       return;
     }
     if (data.type === "executor" && executorRequest) {
@@ -261,6 +347,7 @@ self.onmessage = async ({ data }) => {
       return;
     }
     if (data.type === "load") {
+      closeOgg();
       const graphics = normalizeGraphics(data.graphics);
       gpu?.close();
       gpu = null;
@@ -363,6 +450,18 @@ self.onmessage = async ({ data }) => {
       game.game_init();
       checkExecutor(game);
       submitResources(game, runtime);
+      if (cartridge?.profile === PROFILE_OGG) {
+        await initializeOgg();
+        oggPump?.pump();
+        oggTimer = setInterval(async () => {
+          try {
+            await pumpOgg();
+          } catch (error) {
+            closeOgg();
+            self.postMessage({ type: "error", error: error.message || String(error) });
+          }
+        }, 10);
+      }
       if (cartridge && game.game_display_mode?.() !== cartridge.display) {
         throw new Error("Cartridge initial display does not match its metadata.");
       }
@@ -571,6 +670,7 @@ self.onmessage = async ({ data }) => {
       throw new Error("Unknown player request.");
     }
   } catch (error) {
+    closeOgg();
     gpu?.close();
     gpu = null;
     runtime?.runtime_resource_close?.();
@@ -584,6 +684,7 @@ function memoryReport() {
     initialLinear: initialMemory,
     currentLinear: game.memory.buffer.byteLength,
     runtimeLinear: runtime.memory.buffer.byteLength,
+    vorbisLinear: oggPump?.memoryBytes || 0,
     heapBytes: game.game_heap_bytes?.() ?? null,
     heapPeak: game.game_heap_peak?.() ?? null,
   };

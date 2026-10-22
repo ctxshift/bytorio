@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.16)
+project(bytorio_vorbis C)
+find_package(Ogg REQUIRED)
+find_package(Vorbis REQUIRED)
+add_library(bytorio-vorbis STATIC decoder.c)
+target_link_libraries(bytorio-vorbis PRIVATE Vorbis::vorbisfile Vorbis::vorbis Ogg::ogg)

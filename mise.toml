@@ -4,7 +4,7 @@ min_version = "2026.10.8"
 monorepo_root = true
 
 [monorepo]
-config_roots = ["examples/*", "experiments/voxel-resolution"]
+config_roots = ["examples/*", "experiments/voxel-resolution", "experiments/vorbis-prototype"]
 
 [env]
 MISE_BIN = "{{ mise_bin }}"
@@ -68,6 +68,15 @@ outputs = [
   "build/odin-player/native/wasmtime.dll",
   "build/odin-player/web/audio-worklet.js",
   "build/odin-player/web/audio.wasm",
+  "build/odin-player/web/ogg.js",
+  "build/odin-player/web/vorbis.js",
+  "build/odin-player/web/vorbis.wasm",
+  "build/odin-player/web/licenses/ogg.txt",
+  "build/odin-player/web/licenses/emscripten.txt",
+  "build/odin-player/web/licenses/musl.txt",
+  "build/odin-player/web/licenses/vorbis.txt",
+  "build/odin-player/native/licenses/ogg.txt",
+  "build/odin-player/native/licenses/vorbis.txt",
   "build/odin-player/web/cartridge.js",
   "build/odin-player/web/save.js",
   "build/odin-player/web/constants.js",
@@ -102,6 +111,9 @@ outputs = [
 ]
 run = [{task = "deps:player:all"}]
 sources = [
+  ".mise/tasks/vorbis.toml",
+  "runtime/vorbis/**",
+  "tools/vorbis-build.mjs",
   ".mise/tasks/player.toml",
   ".mise/toolchain.toml",
   "examples/hello/odin/**/*.odin",
@@ -220,6 +232,7 @@ run = [
   {task = "//examples/kart3d:test"},
   {task = "test:riverside:geometry"},
   {task = "test:audio"},
+  {task = "test:ogg"},
   {task = "test:synthesis"},
   {task = "test:profile"},
   {task = "test:odin"},

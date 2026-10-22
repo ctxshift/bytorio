@@ -12,6 +12,7 @@ import "core:strings"
 import "core:time"
 
 Game :: struct {
+    ogg:                                       [w.maxOggStreams]Ogg_Decoder,
     engine:                                    Engine,
     store:                                     Store,
     ctx:                                       Context,
@@ -45,6 +46,7 @@ Game :: struct {
 resource_session: u32
 
 close :: proc(game: ^Game) {
+    close_ogg(game)
     delete(game.save.directory)
     delete(game.save.path)
     resources.close(&game.resources)
@@ -480,7 +482,8 @@ negotiate_profile :: proc(game: ^Game, expected: u32) -> bool {
            profile != abi.PROFILE_3D &&
            profile != abi.PROFILE_TEXTURED_3D &&
            profile != abi.PROFILE_ALPHA_3D &&
-           profile != abi.PROFILE_EFFECTS_3D) ||
+           profile != abi.PROFILE_EFFECTS_3D &&
+           profile != abi.PROFILE_OGG) ||
        (expected != 0 && expected != profile) {
         return fail(game, "unsupported or mismatched cartridge profile")
     }
@@ -533,6 +536,9 @@ negotiate_profile :: proc(game: ^Game, expected: u32) -> bool {
     if profile == abi.PROFILE_EFFECTS_3D {
         values[1], values[2], values[3] =
             abi.EFFECTS_3D_SDK, abi.EFFECTS_3D_PROTOCOL, abi.EFFECTS_3D_FEATURES
+    }
+    if profile == abi.PROFILE_OGG {
+        values[1], values[2], values[3] = abi.OGG_SDK, abi.OGG_PROTOCOL, abi.OGG_FEATURES
     }
     if profile == abi.PROFILE_ALPHA_3D {
         values[1], values[2], values[3] =
@@ -655,6 +661,7 @@ initialize :: proc(game: ^Game) -> bool {
            game.profile != abi.PROFILE_TEXTURED_3D &&
            game.profile != abi.PROFILE_ALPHA_3D &&
            game.profile != abi.PROFILE_EFFECTS_3D &&
+           game.profile != abi.PROFILE_OGG &&
            game.resource_protocol > abi.RESOURCE_PROTOCOL {
             return fail(game, "experimental 3D requires its explicit cartridge profile")
         }
@@ -690,6 +697,7 @@ initialize :: proc(game: ^Game) -> bool {
             return fail(game, "resource session counter exhausted")
         }
         resource_session += 1
+        game.resources.content = game.content
         if !resources.reset(&game.resources, resource_session, game.resource_protocol) {
 
             return fail(game, game.resources.error)

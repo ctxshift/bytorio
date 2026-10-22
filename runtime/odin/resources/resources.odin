@@ -2,6 +2,7 @@ package resources
 
 import abi "../abi"
 import audio "../audio"
+import cartridge "../cartridge"
 import w "../resource_protocol"
 import "core:encoding/endian"
 import "core:math"
@@ -39,6 +40,9 @@ Slot :: struct {
     volume_depth, vertex_count, index_count, mesh_offset: u32,
 }
 Registry :: struct {
+    content:                     cartridge.Content,
+    ogg:                         [w.maxOggStreams]Ogg_Stream,
+    ogg_reserved:                bool,
     frame_device:                Frame_Proc,
     gpu_frame:                   Committed_Frame,
     gpu_lazy:                    bool,
@@ -107,11 +111,13 @@ close :: proc(r: ^Registry) {
     r^ = {}
 }
 reset :: proc(r: ^Registry, session: u32, protocol: u32 = w.version) -> bool {
+    content := r.content
     rasterizer, pixel_snap, smooth_pan := r.rasterizer, r.pixel_snap, r.smooth_pan
     resident_meshes, gpu_serial := r.resident_meshes, r.gpu_serial
     deferred_raster := r.deferred_raster
     frame_device := r.frame_device
     close(r)
+    r.content = content
     r.rasterizer, r.pixel_snap = rasterizer, pixel_snap
     r.smooth_pan = smooth_pan
     r.resident_meshes, r.gpu_serial = resident_meshes, gpu_serial
@@ -223,6 +229,8 @@ submit :: proc(
         screen.height = display & abi.DISPLAY_DIMENSION_MASK
     }
     txn := Transaction {
+        ogg          = r.ogg,
+        ogg_reserved = r.ogg_reserved,
         draw_phase   = phase == 2,
         registry     = r,
         slots        = &shadow,
@@ -574,6 +582,8 @@ submit :: proc(
     if raw_data(txn.audio_master.data) !=
        raw_data(r.audio_master.data) { delete(r.audio_master.data) }
     r.audio_master = txn.audio_master
+    r.ogg, r.ogg_reserved = txn.ogg, txn.ogg_reserved
+    if r.ogg_reserved { r.bytes += w.maxOggDecoderBytes }
     if r.audio != nil { r.bytes += audio.RESERVED_BYTES }
     audio.publish(&txn.audio)
     for slot, i in shadow {

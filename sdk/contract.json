@@ -9,7 +9,8 @@
     {"id": 3, "name": "compact-3d-preview-1", "sdk": "0.3.0", "sdkWord": 768, "abi": 2, "protocol": 5, "features": 15},
     {"id": 4, "name": "textured-3d-preview-1", "sdk": "0.4.0", "sdkWord": 1024, "abi": 2, "protocol": 6, "features": 31},
     {"id": 5, "name": "alpha-3d-preview-1", "sdk": "0.5.0", "sdkWord": 1280, "abi": 2, "protocol": 7, "features": 63},
-    {"id": 6, "name": "effects-3d-preview-1", "sdk": "0.6.0", "sdkWord": 1536, "abi": 2, "protocol": 8, "features": 127}
+    {"id": 6, "name": "effects-3d-preview-1", "sdk": "0.6.0", "sdkWord": 1536, "abi": 2, "protocol": 8, "features": 127},
+    {"id": 7, "name": "ogg-streaming-preview-1", "sdk": "0.7.0", "sdkWord": 1792, "abi": 2, "protocol": 9, "features": 255}
   ],
   "tickRate": 60,
   "inputVersion": 2,

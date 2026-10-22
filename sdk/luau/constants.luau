@@ -106,5 +106,6 @@ return table.freeze({
         [4] = table.freeze({ version = "0.4.0", sdk = 1024, features = 31, protocol = 6 }),
         [5] = table.freeze({ version = "0.5.0", sdk = 1280, features = 63, protocol = 7 }),
         [6] = table.freeze({ version = "0.6.0", sdk = 1536, features = 127, protocol = 8 }),
+        [7] = table.freeze({ version = "0.7.0", sdk = 1792, features = 255, protocol = 9 }),
     }),
 })

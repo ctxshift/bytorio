@@ -3,7 +3,7 @@ import globals from "globals";
 import html from "eslint-plugin-html";
 
 export default [
-  { ignores: ["**/build/**", ".tools/**", "node_modules/**"] },
+  { ignores: ["**/build/**", ".tools/**", "**/node_modules/**"] },
   {
     files: ["**/*.js", "**/*.mjs", "**/*.html"],
     ...js.configs.recommended,
@@ -37,11 +37,20 @@ export default [
     languageOptions: { globals: globals.node },
   },
   {
-    files: ["runtime/**/web/*.js", "examples/**/shared/*.js", "site/**/*.js"],
+    files: [
+      "runtime/**/web/*.js",
+      "examples/**/shared/*.js",
+      "site/**/*.js",
+      "experiments/vorbis-prototype/*.js",
+    ],
     languageOptions: { globals: { ...globals.browser, ...globals.worker } },
   },
   {
-    files: ["runtime/odin/web/audio-worklet.js", "tests/audio/web/capture-worklet.js"],
+    files: [
+      "runtime/odin/web/audio-worklet.js",
+      "tests/audio/web/capture-worklet.js",
+      "experiments/vorbis-prototype/worklet.js",
+    ],
     languageOptions: {
       globals: {
         AudioWorkletProcessor: "readonly",
@@ -51,7 +60,7 @@ export default [
     },
   },
   {
-    files: ["tests/audio/web/*.js"],
+    files: ["tests/audio/web/*.js", "tests/ogg/worker.js"],
     languageOptions: { globals: globals.worker },
   },
   {

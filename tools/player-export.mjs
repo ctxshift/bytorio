@@ -9,6 +9,7 @@ const webScripts = [
   "worker.js",
   "policy.js",
   "audio-worklet.js",
+  "ogg.js",
   "constants.js",
   "cartridge.js",
   "save.js",
@@ -36,6 +37,12 @@ function supportFiles(platform) {
   if (platform === "web") {
     return [
       ...webScripts.map((name) => [name, "web", name]),
+      ["vorbis.js", "vorbis", "vorbis.js"],
+      ["vorbis.wasm", "vorbis", "vorbis.wasm"],
+      ["licenses/vorbis.txt", "vorbis", "libvorbis-1.3.7/COPYING"],
+      ["licenses/ogg.txt", "vorbis", "libogg-1.3.5/COPYING"],
+      ["licenses/emscripten.txt", "emscripten", "LICENSE"],
+      ["licenses/musl.txt", "emscripten", "system/lib/libc/musl/COPYRIGHT"],
       ...shaders.map((name) => [`gpu-shaders/${name}`, "shaders", name]),
       ["licenses/odin.txt", "compiler", "LICENSE"],
     ];
@@ -44,6 +51,8 @@ function supportFiles(platform) {
     throw new Error("Player export platform must be web or native");
   }
   return [
+    ["licenses/vorbis.txt", "vorbis", "libvorbis-1.3.7/COPYING"],
+    ["licenses/ogg.txt", "vorbis", "libogg-1.3.5/COPYING"],
     ["SDL3.dll", "compiler", "vendor/sdl3/SDL3.dll"],
     ["wasmtime.dll", "dependency", "wasmtime.dll"],
     ["licenses/wasmtime.txt", "dependency", "../LICENSE"],
@@ -79,6 +88,8 @@ export async function stagePlayerSupport({ platform, target, compilerRoot, depen
     shaders: resolve(repo, "runtime/odin/gpu"),
     compiler: compilerRoot,
     dependency,
+    vorbis: resolve(repo, "build/vorbis"),
+    emscripten: emscriptenRoot(),
   };
   const entries = supportFiles(platform).map(([name, origin, path]) => [
     name,
