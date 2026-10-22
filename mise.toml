@@ -262,10 +262,12 @@ run = "node experiments/luau-executor/verify-cache.mjs"
 
 [tasks."test:build-tasks"]
 description = "Check build input coverage and artifact invalidation"
+depends = ["deps:vorbis"]
 run = "node --test tools/build-tasks.test.mjs"
 
 [tasks."test:player-staging"]
 description = "Check real copied support outputs become current without losing invalidation"
+depends = ["deps:vorbis"]
 run = 'node --test --test-name-pattern="copied support" tools/build-tasks.test.mjs'
 
 [tasks."bench:build-tasks"]
