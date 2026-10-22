@@ -140,10 +140,10 @@ run = ["node tools/verify-sdk.mjs", "node tools/verify-sdk-cli.mjs"]
 run = ["node --test tools/save.test.mjs", "node tools/verify-save.mjs"]
 
 [tasks."test:cartridge"]
-run = ["node tools/verify-cartridge.mjs", "node tools/verify-content.mjs"]
+run = ["node --test tools/cartridge-load.test.mjs", "node tools/verify-cartridge.mjs", "node tools/verify-content.mjs"]
 
 [tasks."test:content"]
-run = "node tools/verify-content.mjs"
+run = ["node --test tools/cartridge-load.test.mjs", "node tools/verify-content.mjs"]
 
 [tasks."test:resources"]
 run = "node tools/verify-resources.mjs"

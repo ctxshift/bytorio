@@ -14,6 +14,14 @@ init :: proc() {
     assert(content.size(9) == 0)
     assert(content.size(7) == 3 * 1024 * 1024)
     assert(content.size(0xffffffff) == 4)
+    if content.size(8) != 0 {
+        assert(content.size(8) == 65 * 1024 * 1024)
+        high: [4]u8
+        assert(content.read(8, 64 * 1024 * 1024 + 1023, high[:]))
+        assert(high == [4]u8{255, 0, 1, 2})
+        assert(content.read(8, content.size(8) - 4, high[:]))
+        assert(high == [4]u8{252, 253, 254, 255})
+    }
     bytes := [4]u8{91, 91, 91, 91}
     assert(content.read(7, 1023, bytes[:]))
     assert(bytes == [4]u8{255, 0, 1, 2})

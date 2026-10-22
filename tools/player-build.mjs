@@ -1,6 +1,6 @@
 import { copyFile, mkdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import { resourceSchema as limits } from "../runtime/odin/web/constants.js";
+import { MAX_CARTRIDGE_BYTES, resourceSchema as limits } from "../runtime/odin/web/constants.js";
 import { dependencyRoot, repo, run, tool } from "./toolchain.mjs";
 
 const artifact = process.argv[2];
@@ -20,6 +20,9 @@ const guest = [
   "-source-code-locations:filename",
   `-collection:sdk=${resolve(repo, "sdk/odin")}`,
 ];
+// Immutable cartridge backing is separate from the existing renderer/resource
+// allowance. This host memory ceiling does not alter any guest or resource quota.
+const hostMemoryBytes = Math.ceil((limits.maxRuntimeBytes + MAX_CARTRIDGE_BYTES) / 65536) * 65536;
 
 if (!run(odin, ["version"]).includes("84bc3fc")) {
   throw new Error("Odin dev-2026-10 (84bc3fc) is required");
@@ -38,7 +41,7 @@ switch (artifact) {
       [
         ...wasm,
         ...(artifact === "web-gpu" ? ["-define:GPU_RASTER=true"] : []),
-        `-extra-linker-flags:--max-memory=${limits.maxRuntimeBytes}`,
+        `-extra-linker-flags:--max-memory=${hostMemoryBytes}`,
       ],
       resolve(web, artifact === "web-gpu" ? "runtime-gpu.wasm" : "runtime.wasm"),
     );

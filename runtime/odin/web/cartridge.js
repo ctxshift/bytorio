@@ -12,7 +12,11 @@ export function decodeCartridge(runtime, bytes) {
     throw new Error("Cannot allocate cartridge input");
   }
   new Uint8Array(runtime.memory.buffer, pointer, input.length).set(input);
-  const language = runtime.runtime_cartridge_parse(input.length);
+  return parseReservedCartridge(runtime, input.length);
+}
+
+function parseReservedCartridge(runtime, length) {
+  const language = runtime.runtime_cartridge_parse(length);
   const read = (offset, length) => new Uint8Array(runtime.memory.buffer, offset, length);
   const text = new TextDecoder("utf-8", { fatal: true });
   if (!language) {
@@ -31,6 +35,97 @@ export function decodeCartridge(runtime, bytes) {
     display: runtime.runtime_cartridge_display(),
     code: read(runtime.runtime_cartridge_code(), runtime.runtime_cartridge_code_size()).slice(),
   };
+}
+
+// Blob/File messages share immutable browser storage. Known-length HTTP bodies
+// and files stream directly into the one runtime-owned cartridge allocation.
+export async function loadCartridge(runtime, source) {
+  if (source instanceof ArrayBuffer || source instanceof Uint8Array) {
+    const cartridge = decodeCartridge(runtime, source);
+    return { ...cartridge, length: source.byteLength };
+  }
+  const limit = runtime.runtime_cartridge_capacity();
+  let stream, length;
+  if (source instanceof Blob) {
+    length = source.size;
+    stream = source.stream();
+  } else if (source instanceof Response) {
+    if (!source.ok || !source.body) {
+      await source.body?.cancel().catch(() => {});
+      runtime.runtime_cartridge_reserve(0);
+      throw new Error("Could not load PNG cartridge.");
+    }
+    const header = source.headers.get("content-length");
+    const encoding = source.headers.get("content-encoding");
+    if (header !== null && /^\d+$/.test(header) && (!encoding || encoding === "identity")) {
+      length = Number(header);
+      stream = source.body;
+    } else {
+      // A compressed or chunked response has no reliable decoded length.
+      // Retain bounded chunks as a Blob, avoiding a second contiguous JS array.
+      const reader = source.body.getReader(),
+        parts = [];
+      let size = 0;
+      try {
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) {
+            break;
+          }
+          size += value.byteLength;
+          if (size > limit) {
+            throw new Error("Invalid PNG cartridge size");
+          }
+          parts.push(value);
+        }
+      } catch (error) {
+        await reader.cancel().catch(() => {});
+        runtime.runtime_cartridge_reserve(0);
+        throw error;
+      } finally {
+        reader.releaseLock();
+      }
+      return loadCartridge(runtime, new Blob(parts));
+    }
+  } else {
+    runtime.runtime_cartridge_reserve(0);
+    throw new Error("Invalid PNG cartridge input");
+  }
+  if (!Number.isSafeInteger(length) || length < 1 || length > limit) {
+    await stream.cancel().catch(() => {});
+    runtime.runtime_cartridge_reserve(0);
+    throw new Error("Invalid PNG cartridge size");
+  }
+  const pointer = runtime.runtime_cartridge_reserve(length);
+  if (!pointer) {
+    await stream.cancel().catch(() => {});
+    throw new Error("Cannot allocate cartridge input");
+  }
+  const reader = stream.getReader();
+  let offset = 0;
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) {
+        break;
+      }
+      if (value.byteLength > length - offset) {
+        throw new Error("PNG cartridge length mismatch");
+      }
+      new Uint8Array(runtime.memory.buffer, pointer + offset, value.byteLength).set(value);
+      offset += value.byteLength;
+    }
+    if (offset !== length) {
+      throw new Error("PNG cartridge length mismatch");
+    }
+    return { ...parseReservedCartridge(runtime, length), length };
+  } catch (error) {
+    await reader.cancel().catch(() => {});
+    runtime.runtime_cartridge_reserve(0);
+    throw error;
+  } finally {
+    reader.releaseLock();
+  }
 }
 
 // The runtime owns the parsed content. Resolve views afresh after memory growth.

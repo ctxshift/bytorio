@@ -559,11 +559,10 @@ async function openCartridge(file) {
     return;
   }
   try {
-    const bytes = await file.arrayBuffer();
     if (currentSelection !== selection) {
       return;
     }
-    selectedCartridge = bytes;
+    selectedCartridge = file;
     await load();
   } catch (error) {
     if (currentSelection === selection) {

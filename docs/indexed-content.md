@@ -41,7 +41,7 @@ offsets are relative to the blob area and must describe contiguous nonempty
 regions covering it exactly. Duplicate chunks, overlaps, gaps, unsorted IDs,
 overflow, unsupported versions and trailing unindexed bytes are rejected before
 publication. PNG CRC validation covers the complete chunk. Index and blobs
-together are capped at 64 MiB and 65,536 entries. The cover and code retain their
+together are capped at 512 MiB and 65,536 entries. The cover and code retain their
 separate 2 MiB PNG budget. These limits live in `sdk/contract.json`.
 
 The host imports `env.content_size(i32)->i32` and
@@ -49,6 +49,22 @@ The host imports `env.content_size(i32)->i32` and
 source offset, guest destination pointer and length; return 1 indicates success.
 The host checks the complete guest-memory range before copying. Existing
 cartridges remain valid; content-using cartridges require an updated player.
+The content format and API remain version 1. Files within the former 64 MiB
+bound are unchanged; older players still reject files above their former bound.
+
+Native parsing borrows the index and blobs from one cartridge allocation.
+Browser file selection retains an immutable File/Blob instead of cloning a
+complete ArrayBuffer into its worker. Files and uncompressed HTTP responses
+with a declared length stream directly into one runtime allocation; only the
+small executable is copied separately. Chunked or compressed HTTP responses
+first collect bounded chunks into a Blob because their decoded length is not
+known. Save identity still hashes the exact complete cartridge bytes. Content
+capacity does not change the 1 MiB read bound, guest memory, module/cover limits,
+runtime resource quotas, display profiles, or content lifetime.
+The browser renderer's Wasm memory ceiling adds the bounded cartridge allocation
+to its existing runtime allowance, rounded up to a Wasm page. This ceiling permits
+the host backing storage; it does not preallocate the maximum or enlarge guest
+memory or the resource registry's quota.
 
 `mise run validate test:content` checks independent byte expectations through
 both SDKs and native/browser players, malformed indexes, overflow, destination

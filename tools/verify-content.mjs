@@ -5,7 +5,16 @@ import { randomUUID } from "node:crypto";
 import { once } from "node:events";
 import { timedSpawnSync as spawnSync } from "./command-timing.mjs";
 import { createProject, buildProject } from "./sdk/project.mjs";
-import { chunks, chunk, signature, encodeContent } from "./sdk/cartridge.mjs";
+import {
+  chunks,
+  chunk,
+  signature,
+  encodeContent,
+  crc32,
+  CONTENT_LIMIT,
+  PNG_LIMIT,
+} from "./sdk/cartridge.mjs";
+import { MAX_GAME_BYTES, MAX_CONTENT_READ_BYTES } from "../runtime/odin/web/constants.js";
 import { decodeCartridge, contentImports } from "../runtime/odin/web/cartridge.js";
 import { chromium } from "./browser-timing.mjs";
 import { serve } from "./serve.mjs";
@@ -19,6 +28,10 @@ for (let i = 0; i < asset.length; i++) {
 const projects = {};
 const images = {};
 const reports = {};
+assert.equal(CONTENT_LIMIT, 512 * 1024 * 1024);
+assert.equal(PNG_LIMIT, 2 * 1024 * 1024);
+assert.equal(MAX_GAME_BYTES, 1024 * 1024);
+assert.equal(MAX_CONTENT_READ_BYTES, 1024 * 1024);
 function native(project, path, expected = 0) {
   const result = spawnSync(resolve(project, "build/native/player.exe"), [path, "--smoke"], {
     encoding: "utf8",
@@ -51,6 +64,27 @@ for (const language of ["odin", "luau"]) {
   const path = resolve(project, "build/game.png");
   images[language] = await readFile(path);
   reports[language] = JSON.parse(native(project, path).stdout);
+}
+// Retain the original small cartridges and add a second fixture above the old
+// 64 MiB bound. Both guests independently check bytes at a high source offset.
+const highAsset = Buffer.alloc(65 * 1024 * 1024);
+for (let i = 0; i < highAsset.length; i++) {
+  highAsset[i] = i & 255;
+}
+for (const language of ["odin", "luau"]) {
+  const parts = chunks(images[language]);
+  const content = encodeContent([
+    { id: 7, bytes: asset },
+    { id: 8, bytes: highAsset },
+    { id: 0xffffffff, bytes: Buffer.from([17, 23, 41, 89]) },
+  ]);
+  const image = Buffer.concat([
+    signature,
+    ...parts.map((part) => chunk(part.type, part.type === "coNt" ? content : part.data)),
+  ]);
+  const path = resolve(projects[language], "build/web/large.png");
+  await writeFile(path, image);
+  assert.deepEqual(JSON.parse(native(projects[language], path).stdout), reports[language]);
 }
 const runtime = (
   await WebAssembly.instantiate(await readFile(resolve(projects.odin, "build/web/runtime.wasm")), {
@@ -145,20 +179,89 @@ const browser = await chromium.launch({
 try {
   const page = await browser.newPage();
   for (const language of ["odin", "luau"]) {
-    await page.goto(
-      `http://127.0.0.1:${server.address().port}/${language}/build/web/player.html?game=./game.png&smoke`,
-    );
-    await page.waitForFunction(() => playerStatus.ready || playerStatus.error);
-    assert.equal(await page.evaluate(() => playerStatus.error), "");
-    await page.locator("#start").click();
-    await page.waitForFunction(() => playerStatus.ticks >= 120 || playerStatus.error);
-    assert.equal(await page.evaluate(() => playerStatus.error), "");
-    assert.equal(await page.evaluate(() => playerStatus.hash), reports[language].hash);
+    for (const file of ["game.png", "large.png"]) {
+      await page.goto(
+        `http://127.0.0.1:${server.address().port}/${language}/build/web/player.html?game=./${file}&smoke`,
+      );
+      await page.waitForFunction(() => playerStatus.ready || playerStatus.error);
+      assert.equal(await page.evaluate(() => playerStatus.error), "");
+      await page.locator("#start").click();
+      await page.waitForFunction(() => playerStatus.ticks >= 120 || playerStatus.error);
+      assert.equal(await page.evaluate(() => playerStatus.error), "");
+      assert.equal(await page.evaluate(() => playerStatus.hash), reports[language].hash);
+      if (file === "large.png") {
+        await page
+          .locator('input[type="file"]')
+          .setInputFiles(resolve(projects[language], "build/web/large.png"));
+        await page.waitForFunction(() => playerStatus.ready || playerStatus.error);
+        assert.equal(await page.evaluate(() => playerStatus.error), "");
+        assert.equal(await page.evaluate(() => playerStatus.hash), reports[language].hash);
+      }
+    }
   }
 } finally {
   await browser.close();
   await new Promise((done) => server.close(done));
 }
+
+// Exercise the exact 512 MiB parser bound without allocating a second complete
+// JS cartridge. The index and blobs must borrow the reserved runtime buffer.
+const base = stripped.subarray(0, -12),
+  ending = stripped.subarray(-12);
+const maximumFile = base.length + CONTENT_LIMIT + 13 + ending.length;
+const pointer = runtime.runtime_cartridge_reserve(maximumFile);
+assert.ok(pointer);
+const bytes = new Uint8Array(runtime.memory.buffer, pointer, maximumFile);
+bytes.set(base);
+const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+const at = base.length,
+  payload = at + 8;
+bytes.set(Buffer.from("coNt"), at + 4);
+view.setUint32(payload, 0x544e5443, true);
+view.setUint32(payload + 4, 1, true);
+view.setUint32(payload + 8, 1, true);
+view.setUint32(payload + 12, 11, true);
+view.setUint32(payload + 16, 0, true);
+for (const length of [CONTENT_LIMIT + 1, CONTENT_LIMIT]) {
+  view.setUint32(at, length);
+  view.setUint32(payload + 20, length - 24, true);
+  bytes[payload + 24] = 37;
+  bytes[payload + length - 1] = 91;
+  view.setUint32(payload + length, crc32(bytes.subarray(at + 4, payload + length)));
+  bytes.set(ending, payload + length + 4);
+  const result = runtime.runtime_cartridge_parse(base.length + length + 12 + ending.length);
+  assert.equal(result, length === CONTENT_LIMIT ? 2 : 0);
+}
+assert.equal(runtime.runtime_content_size(11), CONTENT_LIMIT - 24);
+assert.equal(runtime.runtime_content_pointer(11), pointer + payload + 24);
+assert.equal(access.content_read(11, 0, 128, 1), 1);
+assert.equal(destination[0], 37);
+assert.equal(access.content_read(11, CONTENT_LIMIT - 25, 128, 1), 1);
+assert.equal(destination[0], 91);
+await writeFile(
+  resolve(root, "report.json"),
+  JSON.stringify(
+    {
+      status: "passed",
+      contentLimit: CONTENT_LIMIT,
+      moduleLimit: MAX_GAME_BYTES,
+      previewLimit: PNG_LIMIT,
+      readLimit: MAX_CONTENT_READ_BYTES,
+      legacyPayloadBytes: asset.length,
+      largePayloadBytes: asset.length + highAsset.length,
+      maximumIndexedBytes: CONTENT_LIMIT,
+      maximumRejectedIndexedBytes: CONTENT_LIMIT + 1,
+      runtimeMemoryBytesAtMaximum: runtime.memory.buffer.byteLength,
+      parsedContentBorrowsBacking: true,
+      nativeLanguages: ["odin", "luau"],
+      browserLanguages: ["odin", "luau"],
+      browserLoadPaths: ["http", "file"],
+    },
+    null,
+    2,
+  ) + "\n",
+);
+runtime.runtime_cartridge_reserve(0);
 console.log(
-  `Indexed content passed: exact bytes and bounded reads through both SDKs/native/browser, ${malformed.length} malformed indexes, failed-parse rollback and reload clearing.`,
+  `Indexed content passed: legacy and >64 MiB files through both SDKs/native/browser, exact 512 MiB boundary, oversized rejection, borrowed backing storage, ${malformed.length} malformed indexes, bounded reads, failed-parse rollback and reload clearing.`,
 );

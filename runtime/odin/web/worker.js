@@ -1,6 +1,5 @@
 import {
   INPUT_BUTTON_MASK,
-  MAX_CARTRIDGE_BYTES,
   BUTTON_WHEEL_UP,
   BUTTON_WHEEL_DOWN,
   resourceSchema as audioLimits,
@@ -17,7 +16,7 @@ import {
   submitResources,
   deliverResources,
 } from "./policy.js";
-import { decodeCartridge, contentImports } from "./cartridge.js";
+import { loadCartridge, contentImports } from "./cartridge.js";
 import { openSaveSlot } from "./save.js";
 import { normalizeGraphics, createGpu } from "./gpu.js";
 
@@ -292,7 +291,7 @@ self.onmessage = async ({ data }) => {
       const isSource = url.pathname.endsWith(".luau");
       const isPNG = !!data.cartridge || url.pathname.toLowerCase().endsWith(".png");
       const [input, runtimeBytes] = await Promise.all([
-        data.cartridge || fetchBytes(url, isPNG ? MAX_CARTRIDGE_BYTES : 1024 * 1024),
+        data.cartridge || (isPNG ? fetch(url) : fetchBytes(url)),
         fetchBytes(gpu ? "./runtime-gpu.wasm" : "./runtime.wasm"),
       ]);
       runtime = (await WebAssembly.instantiate(runtimeBytes, imports)).instance.exports;
@@ -316,7 +315,7 @@ self.onmessage = async ({ data }) => {
       ) {
         throw new Error("Runtime does not support GPU execution.");
       }
-      const cartridge = isPNG ? decodeCartridge(runtime, input) : null;
+      const cartridge = isPNG ? await loadCartridge(runtime, input) : null;
       let executor = isSource ? data.executor : null;
       let gameBytes = cartridge ? cartridge.code : input;
       let source = null;
@@ -334,7 +333,14 @@ self.onmessage = async ({ data }) => {
       await saveSlot?.settled();
       saveSlot?.close();
       game = undefined;
-      saveSlot = await openSaveSlot(input, () => game);
+      const identity = cartridge
+        ? new Uint8Array(
+            runtime.memory.buffer,
+            runtime.runtime_cartridge_buffer(),
+            cartridge.length,
+          )
+        : input;
+      saveSlot = await openSaveSlot(identity, () => game);
       game = (
         await WebAssembly.instantiate(gameModule, {
           env: {

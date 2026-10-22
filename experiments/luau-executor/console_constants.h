@@ -4,7 +4,7 @@
 
 namespace console_constants {
 constexpr auto MAX_CARTRIDGE_BASE_BYTES = 2097152u;
-constexpr auto MAX_CARTRIDGE_BYTES = 69206028u;
+constexpr auto MAX_CARTRIDGE_BYTES = 538968076u;
 constexpr auto CONTENT_VERSION = 1u;
 constexpr auto CONTENT_MAGIC = 1414419523u;
 constexpr auto CONTENT_HEADER_MAGIC = 0u;
@@ -16,7 +16,7 @@ constexpr auto CONTENT_RECORD_LENGTH = 8u;
 constexpr auto CONTENT_HEADER_BYTES = 12u;
 constexpr auto CONTENT_RECORD_BYTES = 12u;
 constexpr auto MAX_CONTENT_ENTRIES = 65536u;
-constexpr auto MAX_CONTENT_BYTES = 67108864u;
+constexpr auto MAX_CONTENT_BYTES = 536870912u;
 constexpr auto MAX_CONTENT_READ_BYTES = 1048576u;
 constexpr auto PROFILE_EFFECTS_3D = 6u;
 constexpr auto EFFECTS_3D_SDK = 1536u;

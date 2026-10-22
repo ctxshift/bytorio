@@ -52,7 +52,7 @@ big-endian chunk lengths and CRC-32 follow the
 [W3C PNG specification](https://www.w3.org/TR/png-3/#5Chunk-layout).
 The game payload is not stored in pixel colors or appended after `IEND`.
 
-The implemented preview accepts a **2 MiB** base PNG plus an optional **64 MiB**
+The implemented preview accepts a **2 MiB** base PNG plus an optional **512 MiB**
 indexed-content payload and its 12-byte PNG chunk envelope, covers from 1×1 through
 1024×1024, at most 4,096 chunks, and a single static image. Standard grayscale,
 RGB, indexed and alpha PNG header encodings are accepted. The cartridge parser

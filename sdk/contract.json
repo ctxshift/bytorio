@@ -24,7 +24,7 @@
     "profileId": 2,
     "headerBytes": 32,
     "maxPngBytes": 2097152,
-    "content": {"magic": 1414419523, "version": 1, "headerBytes": 12, "recordBytes": 12, "maxEntries": 65536, "maxBytes": 67108864, "maxReadBytes": 1048576, "headerFields": {"magic": 0, "version": 4, "count": 8}, "recordFields": {"id": 0, "offset": 4, "length": 8}},
+    "content": {"magic": 1414419523, "version": 1, "headerBytes": 12, "recordBytes": 12, "maxEntries": 65536, "maxBytes": 536870912, "maxReadBytes": 1048576, "headerFields": {"magic": 0, "version": 4, "count": 8}, "recordFields": {"id": 0, "offset": 4, "length": 8}},
     "maxCoverWidth": 1024,
     "maxCoverHeight": 1024,
     "maxTitleBytes": 128,
