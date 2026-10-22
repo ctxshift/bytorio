@@ -198,6 +198,28 @@ masks or versioned `v2:mask:leftHeld:x:y` tokens. For example,
 equivalent `{buttons, pointer, x, y}` input snapshot. Old SDKs ignore the added
 bits and continue to receive their original pointer semantics.
 
+## Browser cartridge cache
+
+Built web players reference `game.png?revision=<SHA-256>` using the exact
+cartridge bytes. The browser stores these versioned downloads in CacheStorage;
+refreshing the same export can load without another cartridge HTTP request.
+A new cartridge produces a new revision and downloads fresh bytes. HTML must
+still be served with an appropriate revalidation policy so browsers see new
+exports.
+
+The cache uses no service worker. It streams the download into browser storage
+with loading progress, then streams the stored response into the player. It
+does not tee a large response into an unbounded JavaScript queue. Each transfer
+retains the ordinary cartridge size limit; successful writes prune older entries
+to keep two revisions when browser storage operations succeed. Browsers can
+evict cached data, and unavailable storage or quota errors fall back to network
+loading. Local files and URLs without an exported revision bypass this cache.
+
+Run `mise run validate test:cartridge-cache` to check real browser refreshes,
+revision changes, local files, and storage-failure fallback. Cached bytes are
+still checked by the ordinary cartridge parser; the URL revision selects an
+export version and does not replace its format validation.
+
 ## Verify
 
 Both SDKs also provide a versioned [persistent save slot](save.md), with a

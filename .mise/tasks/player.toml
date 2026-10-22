@@ -160,6 +160,7 @@ outputs = [
   "build/odin-player/web/licenses/vorbis.txt",
   "build/odin-player/web/constants.js",
   "build/odin-player/web/cartridge.js",
+  "build/odin-player/web/cartridge-cache.js",
   "build/odin-player/web/save.js",
   "build/odin-player/web/executor-cache.js",
   "build/odin-player/web/executor-cache-core.js",

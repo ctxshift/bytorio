@@ -18,6 +18,7 @@ import {
   deliverResources,
 } from "./policy.js";
 import { loadCartridge, contentImports } from "./cartridge.js";
+import { fetchCartridge, discardCachedCartridge } from "./cartridge-cache.js";
 import { openSaveSlot } from "./save.js";
 import { normalizeGraphics, createGpu } from "./gpu.js";
 import { createOggPump, prepareOggDecoder } from "./ogg.js";
@@ -417,7 +418,10 @@ self.onmessage = async ({ data }) => {
         self.postMessage({ type: "loading", received, total });
       };
       const [input, runtimeBytes] = await Promise.all([
-        data.cartridge || (isPNG ? fetch(url) : fetchBytes(url, undefined, reportProgress)),
+        data.cartridge ||
+          (isPNG
+            ? fetchCartridge(url, { onProgress: reportProgress })
+            : fetchBytes(url, undefined, reportProgress)),
         fetchBytes(gpu ? "./runtime-gpu.wasm" : "./runtime.wasm", undefined, reportProgress),
       ]);
       runtime = (await WebAssembly.instantiate(runtimeBytes, imports)).instance.exports;
@@ -441,9 +445,17 @@ self.onmessage = async ({ data }) => {
       ) {
         throw new Error("Runtime does not support GPU execution.");
       }
-      const cartridge = isPNG
-        ? await loadCartridge(runtime, input, { onProgress: reportProgress })
-        : null;
+      let cartridge = null;
+      if (isPNG) {
+        try {
+          cartridge = await loadCartridge(runtime, input, { onProgress: reportProgress });
+        } catch (error) {
+          if (!data.cartridge) {
+            await discardCachedCartridge(url);
+          }
+          throw error;
+        }
+      }
       let executor = isSource ? data.executor : null;
       let gameBytes = cartridge ? cartridge.code : input;
       let source = null;

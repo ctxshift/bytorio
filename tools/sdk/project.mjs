@@ -3,6 +3,7 @@ import { resolve, dirname, relative, sep } from "node:path";
 import { timedSpawnSync as spawnSync } from "../command-timing.mjs";
 import { fileURLToPath } from "node:url";
 import { Worker } from "node:worker_threads";
+import { createHash } from "node:crypto";
 import { readGraphics } from "./assets.mjs";
 import { bundleLuau, odinEntry } from "./bundle.mjs";
 import { inspectGuest } from "../../runtime/odin/web/policy.js";
@@ -396,6 +397,7 @@ export async function buildProject(path, options = {}) {
     luau = spec.language === "luau";
   const coverPath = options.cover ? resolve(options.cover) : spec.cover;
   const png = await projectCartridge(spec, coverPath);
+  const cartridgeRevision = createHash("sha256").update(png).digest("hex");
   // Validate generated and user-provided covers with the actual player parser.
   const runtime = (
     await WebAssembly.instantiate(
@@ -472,7 +474,7 @@ export async function buildProject(path, options = {}) {
           .replace(/<title>.*?<\/title>/, () => `<title>${title}</title>`)
           .replace(
             '<script type="module"',
-            '<script>globalThis.playerCartridge="./game.png"</script>\n<script type="module"',
+            `<script>globalThis.playerCartridge="./game.png?revision=${cartridgeRevision}"</script>\n<script type="module"`,
           ),
       );
     }

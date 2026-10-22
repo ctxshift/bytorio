@@ -12,6 +12,7 @@ const webScripts = [
   "ogg.js",
   "constants.js",
   "cartridge.js",
+  "cartridge-cache.js",
   "save.js",
   "executor-cache.js",
   "executor-cache-core.js",
