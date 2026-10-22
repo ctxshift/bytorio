@@ -214,6 +214,11 @@ depends = ["build:odin"]
 description = "Verify actual browser loading progress and stalled-download watchdog"
 run = "node tools/verify-player-loading.mjs"
 
+[tasks."test:audio-admission"]
+depends = ["build:odin"]
+description = "Verify actual browser guest admission under saturated audio credits"
+run = "node tools/verify-audio-admission.mjs"
+
 [tasks."test:display"]
 depends = ["//examples/rpg:build"]
 run = "node tools/verify-display.mjs"
@@ -242,6 +247,7 @@ run = [
   {task = "test:profile"},
   {task = "test:odin"},
   {task = "test:player-loading"},
+  {task = "test:audio-admission"},
   {task = "test:display"},
   {task = "//examples/rpg:test"},
   {task = "//examples/racing:test"},

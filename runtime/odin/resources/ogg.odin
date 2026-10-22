@@ -133,6 +133,9 @@ ogg_request :: proc(r: ^Registry, index: u32) -> [w.oggRequestWords]u32 {
 
 ogg_feed :: proc(r: ^Registry, index, id: u32, at: u64, pcm: []f32) -> bool {
     if id == 0 || index >= w.maxOggStreams || r.audio == nil || len(pcm) % 2 != 0 { return false }
+    // Decoder prefetch is opportunistic. Keep the final producer batch for a
+    // game transaction; the host retries this same PCM range after egress.
+    if audio.producer_batches_available(r.audio) <= 1 { return false }
     request := ogg_request(r, index)
     if request[0] != id || at != (u64(request[4]) | u64(request[5]) << 32) { return false }
     frames := u32(len(pcm) / 2)

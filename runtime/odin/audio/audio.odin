@@ -185,10 +185,17 @@ reclaim :: proc(e: ^Engine) {
     }
     store(&e.done_tail, tail)
 }
+// Producer-side admission query. Reading the consumer's tail does not reclaim
+// snapshots or change transaction ownership.
+producer_batches_available :: proc(e: ^Engine) -> u32 {
+    if e == nil { return 0 }
+    pending := e.head - load(&e.tail)
+    return w.maxAudioBatches - pending if pending < w.maxAudioBatches else 0
+}
 begin :: proc(e: ^Engine) -> (Transaction, bool) {
     reclaim(e)
     head := e.head
-    if head - load(&e.tail) == w.maxAudioBatches { return {}, false }
+    if producer_batches_available(e) == 0 { return {}, false }
     batch := &e.batches[head % w.maxAudioBatches]
     batch.count = 0
     return {engine = e, batch = batch, model = e.model, head = head, active = true}, true

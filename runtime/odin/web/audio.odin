@@ -10,6 +10,12 @@ audio_feedback_buffer: [w.maxAudioFeedbackBytes]u8
 @(export)
 runtime_audio_enabled :: proc "c" () -> u32 { return u32(resource_registry.audio != nil) }
 @(export)
+runtime_audio_batches_available :: proc "c" () -> u32 {
+    context = runtime.default_context()
+    if resource_registry.audio == nil { return w.maxAudioBatches }
+    return audio.producer_batches_available(resource_registry.audio)
+}
+@(export)
 runtime_audio_packet :: proc "c" () -> u32 { return u32(uintptr(&audio_packet)) }
 @(export)
 runtime_audio_export :: proc "c" () -> i32 {

@@ -42,6 +42,8 @@ const audioTransfers = Array.from({ length: audioLimits.maxAudioTransfers }, () 
 let pendingAudioBytes = 0;
 let audioPort;
 let audioPrimed = false;
+let audioConnected = false;
+let audioCapacityWaiter;
 let oggPump, oggTimer, oggLoading;
 async function initializeOgg() {
   if (oggPump || oggLoading || game?.game_profile?.() !== PROFILE_OGG) {
@@ -73,6 +75,11 @@ async function pumpOgg() {
   await initializeOgg();
   oggPump?.pump();
   const drained = drainAudio();
+  if (audioCapacityWaiter && audioBatchAvailable()) {
+    const resume = audioCapacityWaiter;
+    audioCapacityWaiter = null;
+    resume();
+  }
   if (!audioPrimed && drained) {
     for (let index = 0; index < audioLimits.maxOggStreams; index++) {
       const pointer = runtime.runtime_ogg_request(index);
@@ -91,6 +98,20 @@ function closeOgg() {
   clearInterval(oggTimer);
   oggPump?.close();
   oggPump = null;
+}
+function audioBatchAvailable() {
+  return !runtime?.runtime_audio_batches_available || runtime.runtime_audio_batches_available() > 0;
+}
+async function waitForAudioCapacity() {
+  if (!audioConnected) {
+    return;
+  }
+  drainAudio();
+  if (!audioBatchAvailable()) {
+    await new Promise((resolve) => {
+      audioCapacityWaiter = resolve;
+    });
+  }
 }
 function drainAudio() {
   if (!audioPort || !runtime?.runtime_audio_enabled?.()) {
@@ -272,6 +293,7 @@ function frame(present = true, diagnostics = true) {
 self.onmessage = async ({ data }) => {
   try {
     if (data.type === "audio-connect") {
+      audioConnected = true;
       audioPort?.close();
       audioPrimed = false;
       const port = data.port;
@@ -532,6 +554,7 @@ self.onmessage = async ({ data }) => {
       let output;
       const uploadsBefore = gpu ? gpu.metrics.uploadBytes + gpu.metrics.textureUploadBytes : 0;
       for (let i = 0; i < data.steps && (!smoke || lastTick < 120); i++) {
+        await waitForAudioCapacity();
         let buttons = smoke ? (lastTick < 60 ? 2 : lastTick === 60 ? 16 : 0) : data.input.buttons;
         if (i > 0) {
           buttons = (buttons & ~(BUTTON_WHEEL_UP | BUTTON_WHEEL_DOWN)) >>> 0;
