@@ -44,26 +44,39 @@ SDK 0.6.0 / `effects-3d-preview-1` adds
 independent depth-test/write controls. Both SDKs use `gfx3d.effect_material`;
 CPU rendering remains the default. See `examples/effects` and `examples/kart3d`.
 
-## Start a game
+## Install byt
 
-Run from the SDK repository root:
+Install the Bytorio CLI once, then use `byt` from your terminal. The planned
+installer script will select the right tools for Windows, macOS or Linux and
+add `byt` to your PATH. You will not need a console source checkout to create games.
 
-```text
-mise install
-mise exec -- npm ci
-mise exec -- npm run byt -- new my-game
-mise exec -- npm run byt -- check my-game
-mise exec -- npm run byt -- run my-game --web
+If you use mise, the planned global installation is:
+
+```sh
+mise use --global npm:bytorio@latest
 ```
 
-The command is `byt`; the npm package is named `bytorio`. From this checkout,
-`mise run byt -- <command>` and `mise exec -- npm run byt -- <command>` run the
-local CLI with the pinned tools. Product name, website and command metadata are
-in the root `package.json`.
+The installer script and published package are planned distribution options;
+they are not available yet. These guides use the installed `byt` command as the
+intended workflow. For development from source today, follow the
+[development setup](../docs/development.md) and run the local CLI through the
+repository's mise task.
+
+## Start a game
+
+From the folder where you keep your projects:
+
+```sh
+byt new my-game
+byt check my-game
+byt run my-game --web
+```
+
+The command is `byt`; the package is named `bytorio`.
 
 For Odin, create with `new my-game --language odin`. Projects are ordinary folders;
 they may live outside this repository. The `new` command refuses existing folders.
-The CLI currently supports **Windows x64** native development and browser builds
+The current source toolchain supports **Windows x64** native development and browser builds
 from Windows, using the repository's pinned Odin, Wasmtime and Emscripten toolchains.
 See [toolchain setup](../docs/odin-development.md); Luau executor builds additionally
 require the [Luau CMake/C++ setup](../docs/development.md). Odin-only SDK projects

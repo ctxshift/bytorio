@@ -9,11 +9,11 @@ Luau executor, renderer and audio; these are runtime components, not game data.
 
 ## Package and play
 
-From the repository root:
+With `byt` installed, from the folder containing your game project:
 
 ```text
-npm run byt -- pack my-game
-npm run byt -- pack my-game --output dist/my-game.png --cover art/cover.png
+byt pack my-game
+byt pack my-game --output dist/my-game.png --cover art/cover.png
 ```
 
 `build`, `run` and `watch` also produce `build/game.png`, with identical copies

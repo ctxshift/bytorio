@@ -112,3 +112,16 @@ if (launchScreen) {
     }
   });
 }
+
+const gameFilters = document.querySelectorAll("[data-filter]");
+for (const button of gameFilters) {
+  button.addEventListener("click", () => {
+    for (const option of gameFilters) {
+      option.setAttribute("aria-pressed", String(option === button));
+    }
+    for (const card of document.querySelectorAll(".game-card")) {
+      card.hidden =
+        button.dataset.filter !== "all" && card.dataset.category !== button.dataset.filter;
+    }
+  });
+}

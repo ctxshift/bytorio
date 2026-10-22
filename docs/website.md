@@ -1,8 +1,8 @@
 # Console website
 
 The site lives in `site/` alongside the console source. It is a static landing
-page, searchable documentation library, and playable demo showcase. The neutral
-“fantasy console” label is intentional while the product name is undecided.
+page, searchable documentation library, and playable demo showcase. The Bytorio brand uses a charcoal palette, red accents, voxel illustrations, and
+a fox mascot.
 
 ## Build and preview
 
@@ -38,11 +38,11 @@ source files. References to ignored local build artifacts are labeled rather tha
 published as broken links. Source files linked from guides receive readable code
 pages. Search is local, loads its index on demand, and searches full document text.
 
-`site/site.css` provides layout and responsive structure; `site/retro.css` provides
-the retro console theme: pixel headings, cartridge panels, colored face buttons,
-CRT scanlines on the decorative hero screen, and a dark arcade palette. Body copy
-and reference material retain readable text fonts. The decorative scanlines do
-not overlay playable game canvases or documentation. `site/player.css` styles the
+`site/site.css` owns the responsive dark brand theme: pixel headings, red buttons,
+illustrated handheld and cartridge frames, and the fox logo. Body copy and
+reference material use readable text fonts. Documentation has a desktop table
+of contents, while the showcase filters the real games by category. Brand artwork
+lives in `site/assets/brand/`; the decorative handheld shows a real game capture. `site/player.css` styles the
 embedded player and large mobile controls to match.
 
 Game images in `site/assets/` are captures of the real cartridges. When gameplay

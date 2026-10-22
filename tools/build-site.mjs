@@ -9,7 +9,7 @@ import { escape, shell, home, showcase, gamePage } from "../site/templates.mjs";
 
 // Sequential builds keep compiler jobs from competing with browser checks.
 if (!process.argv.includes("--staged")) {
-  for (const task of ["build:rpg", "build:racing"]) {
+  for (const task of ["//examples/rpg:build", "//examples/racing:build"]) {
     console.log(`Preparing showcase: ${task}`);
     run(process.env.MISE_BIN || "mise", ["run", task], { timeout: 1800000 });
   }
@@ -24,11 +24,11 @@ async function emit(path, content) {
 }
 
 await cp(resolve(repo, "site/assets"), resolve(output, "assets"), { recursive: true });
-for (const file of ["site.css", "retro.css", "site.js"]) {
+for (const file of ["site.css", "site.js"]) {
   await cp(resolve(repo, "site", file), resolve(output, file));
 }
 for (const game of games) {
-  const source = resolve(repo, "build", game.build, "web");
+  const source = resolve(repo, game.build, "web");
   for (const language of ["luau", "odin"]) {
     if (!existsSync(resolve(source, `${game.cartridge}-${language}.png`))) {
       throw new Error(
@@ -44,10 +44,7 @@ for (const game of games) {
   await writeFile(
     resolve(target, "player.html"),
     player
-      .replace(
-        "<title>Console player — Odin</title>",
-        `<title>${escape(game.title)} · Bytorio</title>`,
-      )
+      .replace("<title>Game player</title>", `<title>${escape(game.title)} · Bytorio</title>`)
       .replace("</head>", '<link rel="stylesheet" href="./showcase-player.css"></head>')
       .replace(
         "<body>",
@@ -89,14 +86,14 @@ const slug = (value) =>
 function sidebar(root, current) {
   return `<aside class="docs-sidebar"><label class="search-label" for="docs-search">Search documentation</label><input id="docs-search" type="search" placeholder="Try ‘sprites’ or ‘audio’" autocomplete="off"><p id="search-status" class="small" role="status"></p><ul id="search-results"></ul><nav aria-label="Documentation">${sections.map(([title, links]) => `<h2>${title}</h2>${links.map(([path, label]) => `<a href="${root}${documents.get(path).url}" ${path === current ? 'aria-current="page"' : ""}>${label}</a>`).join("")}`).join("")}<h2>More to explore</h2><a href="${root}docs/index.html#all-guides">All guides & specifications</a><a href="${root}showcase/index.html">Playable demos ↗</a></nav></aside>`;
 }
-function docShell(title, content, url, current = "") {
+function docShell(title, content, url, current = "", toc = "") {
   const root = "../".repeat(url.split("/").length - 1);
   return shell({
     title,
     description: `${title} — Bytorio documentation and developer reference.`,
     active: "docs",
     root,
-    body: `<main id="main" class="docs-layout">${sidebar(root, current)}<article class="doc-content">${content}</article></main>`,
+    body: `<main id="main" class="docs-layout">${sidebar(root, current)}<article class="doc-content">${content}</article>${toc}</main>`,
   });
 }
 
@@ -166,15 +163,16 @@ for (const [path, doc] of documents) {
     .replaceAll("<table>", '<div class="table-scroll"><table>')
     .replaceAll("</table>", "</table></div>");
   const toc = headings.length
-    ? `<details><summary>On this page</summary>${headings.map((heading) => `<a href="#${heading.id}">${heading.text}</a>`).join("")}</details>`
+    ? `<aside class="doc-toc"><nav aria-label="On this page"><h2>On this page</h2>${headings.map((heading) => `<a href="#${heading.id}">${heading.text}</a>`).join("")}</nav></aside>`
     : "";
   await emit(
     doc.url,
     docShell(
       doc.title,
-      `<p class="doc-kicker">DOCUMENTATION / ${escape(path)}</p>${toc}${content}`,
+      `<p class="doc-kicker">DOCUMENTATION / ${escape(path)}</p>${content}`,
       doc.url,
       path,
+      toc,
     ),
   );
 }

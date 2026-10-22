@@ -57,6 +57,19 @@ try {
   await page.screenshot({ path: resolve(artifacts, "docs-desktop.png"), fullPage: true });
   report.checks.push("Full-text search, no-results state, clearing search");
   await page.goto(`${base}/showcase/`);
+  for (const [label, expected] of [
+    ["Racing", "Copper Circuit"],
+    ["Adventure", "Mossglen"],
+  ]) {
+    const filter = page.getByRole("button", { name: label, exact: true });
+    await filter.click();
+    assert.equal(await filter.getAttribute("aria-pressed"), "true");
+    assert.equal(await page.locator(".game-card:visible").count(), 1);
+    assert.match(await page.locator(".game-card:visible").innerText(), new RegExp(expected));
+  }
+  await page.getByRole("button", { name: "All games", exact: true }).click();
+  assert.equal(await page.locator(".game-card:visible").count(), games.length);
+  report.checks.push("Game category filters select and restore playable cartridges");
   await page.screenshot({ path: resolve(artifacts, "showcase-desktop.png"), fullPage: true });
   await page.close();
 

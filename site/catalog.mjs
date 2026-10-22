@@ -7,7 +7,7 @@ export const games = [
       "Six rivals. Three laps. One well-timed boost. Take the racing line through a winding, sprite-built circuit.",
     detail:
       "Accelerate into a three-lap race, manage your rechargeable boost, and keep your kart on the road. Cross the finish line, then press Boost to race again.",
-    build: "racing-player",
+    build: "examples/racing/build/player",
     cartridge: "racing",
     guide: "docs/racing-demo.md",
     resolution: "320 × 180",
@@ -24,7 +24,7 @@ export const games = [
       "A village, a missing sunleaf, and a slime in your way. A little quest with a whole lot of heart.",
     detail:
       "Find the healer by the red house, accept the quest, and cross the eastern bridge. Defeat the moss slime, collect the sunleaf, and bring it home. In battle, choose Attack, Guard, or a healing potion.",
-    build: "unified-player",
+    build: "examples/rpg/build/player",
     cartridge: "rpg",
     guide: "docs/rpg-comparison.md",
     resolution: "640 × 360",

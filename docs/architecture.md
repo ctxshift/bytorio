@@ -195,7 +195,7 @@ The implemented `byt` CLI supports:
 | `byt run` | Build and launch a native or browser game project |
 | `byt watch` | Rebuild after edits; restart native games or serve browser exports |
 
-Run the CLI from this checkout with `mise run byt` or `npm run byt --`.
+Install the CLI once and run it as `byt`; see the [SDK setup](../sdk/README.md#install-byt).
 The player supports opening/dropping a PNG cartridge directly; using the SDK is
 not a requirement for players. Indexed asset exports and game-authored headless
 test scenarios remain future work.

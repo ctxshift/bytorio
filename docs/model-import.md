@@ -5,11 +5,11 @@ model plus readable Luau and Odin modules. Games use existing typed textures,
 materials and immutable textured meshes. No glTF parser runs in the cartridge,
 no runtime ABI changes, and CPU rendering remains the default.
 
-From the repository root:
+With `byt` installed, from the folder containing your assets and game project:
 
 ```text
-mise run byt -- import art/kart.glb --output my-game/src/imported
-mise run byt -- build my-game
+byt import art/kart.glb --output my-game/src/imported
+byt build my-game
 ```
 
 The generated directory contains `model.json`, `model.luau` and `model.odin`.

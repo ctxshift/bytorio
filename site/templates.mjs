@@ -1,5 +1,4 @@
 import { games } from "./catalog.mjs";
-
 export const escape = (value) =>
   String(value)
     .replaceAll("&", "&amp;")
@@ -7,53 +6,70 @@ export const escape = (value) =>
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;");
 
+function scenery(root) {
+  return (
+    '<div class="scenery" aria-hidden="true">' +
+    ["heart", "coin", "mushroom", "stone", "tree", "gem_teal", "bush", "star"]
+      .map(
+        (name, i) =>
+          '<img class="scenery-item item-' +
+          i +
+          '" src="' +
+          root +
+          "assets/brand/" +
+          name +
+          '.png" alt="">',
+      )
+      .join("") +
+    "</div>"
+  );
+}
+
 export function shell({ title, description, active, body, root = "./" }) {
   const nav = [
-    ["Home", "index.html", "home"],
+    ["Games", "showcase/index.html", "showcase"],
     ["Documentation", "docs/index.html", "docs"],
-    ["Showcase", "showcase/index.html", "showcase"],
+    ["SDK", "docs/sdk/README.html", "sdk"],
   ];
-  return `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="${escape(description)}"><meta name="theme-color" content="#161426">
-<title>${escape(title)} · Bytorio</title><link rel="icon" href="${root}assets/icon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="${root}site.css"><link rel="stylesheet" href="${root}retro.css"><script type="module" src="${root}site.js"></script></head>
-<body data-root="${root}"><a class="skip" href="#main">Skip to content</a>
-<header class="header"><a class="brand" href="${root}index.html" aria-label="Bytorio home"><span class="brand-icon" aria-hidden="true">✳</span> Bytorio<span class="preview-label">PREVIEW</span></a>
-<nav aria-label="Main navigation">${nav.map(([label, href, key]) => `<a href="${root}${href}" ${active === key ? 'aria-current="page"' : ""}>${label}</a>`).join("")}</nav>
-<a class="header-cta" href="${root}docs/sdk/README.html">Start creating <span aria-hidden="true">↗</span></a></header>
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="${escape(description)}"><meta name="theme-color" content="#11151d"><title>${escape(title)} · Bytorio</title><link rel="icon" href="${root}assets/brand/fox.png"><link rel="stylesheet" href="${root}site.css"><script type="module" src="${root}site.js"></script></head>
+<body data-root="${root}" class="page-${active}"><a class="skip" href="#main">Skip to content</a>
+<svg class="asset-filters" aria-hidden="true"><defs><filter id="clean-alpha"><feMorphology in="SourceAlpha" operator="erode" radius="0.7" result="edge"/><feComposite in="SourceGraphic" in2="edge" operator="in"/></filter><filter id="blue-key" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 6 -6 0 2"/><feComposite in2="SourceAlpha" operator="in"/></filter><filter id="green-key" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  12 -24 12 0 1"/></filter></defs></svg>
+<header class="header"><a class="brand" href="${root}index.html" aria-label="Bytorio home"><img src="${root}assets/brand/logo.png" alt="Bytorio" width="400" height="105"></a><nav aria-label="Main navigation">${nav.map(([label, href, key]) => '<a href="' + root + href + '" ' + (active === key ? 'aria-current="page"' : "") + ">" + label + "</a>").join("")}</nav><a class="header-cta" href="${root}docs/sdk/README.html#install-byt">Get started <span aria-hidden="true">↗</span></a></header>
 ${body}
-<footer><a class="brand" href="${root}index.html"><span class="brand-icon" aria-hidden="true">✳</span> Bytorio</a><p>Small games. Big possibilities.</p><a href="${root}docs/index.html">Read the docs ↗</a><span class="mono">BYTOR.IO / A CONSOLE IN THE MAKING</span></footer></body></html>`;
+<footer><a class="brand" href="${root}index.html"><img src="${root}assets/brand/logo.png" alt="Bytorio" width="260" height="68" loading="lazy"></a><p>A tiny console for big adventures.</p><a href="${root}docs/index.html">Documentation ↗</a><span>bytor.io</span></footer></body></html>`;
 }
 
 export function card(game, root) {
-  return `<article class="game-card ${game.color}"><a class="game-image" href="${root}showcase/${game.id}/index.html"><img src="${root}assets/${game.id}.png" alt="${escape(game.title)} gameplay" width="640" height="360" loading="lazy"><span class="play-badge" aria-hidden="true">↗</span></a><div class="game-meta mono">${game.category} <span>${game.resolution}</span></div><h3><a href="${root}showcase/${game.id}/index.html">${game.title}</a></h3><p>${game.description}</p><div class="card-bottom"><span class="compatibility">${game.requiresGpu ? "GPU required" : "Desktop + mobile · Touch ready"}</span><a href="${root}showcase/${game.id}/index.html">Play game <span aria-hidden="true">→</span></a></div></article>`;
+  return `<article class="game-card" data-category="${game.category}"><a class="game-image" href="${root}showcase/${game.id}/index.html"><img src="${root}assets/${game.id}.png" alt="${escape(game.title)} gameplay" width="640" height="360" loading="lazy"></a><div class="card-content"><h3><a href="${root}showcase/${game.id}/index.html">${game.title}</a></h3><p>${game.description}</p><div class="tags"><span>2D</span><span>${game.category}</span></div><a class="text-link" href="${root}showcase/${game.id}/index.html">Play game →</a></div></article>`;
 }
 
 export function home() {
   return shell({
-    title: "Small machine. Big imagination.",
+    title: "A tiny console for big adventures",
     description:
-      "Bytorio is a fantasy console for making small games with Luau and Odin. Play browser demos, explore the SDK, and build your own PNG cartridge.",
+      "Make and play small games with Bytorio. A fantasy console with Luau and Odin, PNG cartridges, and browser-ready adventures.",
     active: "home",
     body: `<main id="main">
-<section class="hero"><div class="hero-copy"><p class="eyebrow"><span class="status-dot"></span> SYSTEM READY. IMAGINATION REQUIRED.</p><h1>Small machine.<br>Big <em>imagination.</em></h1><p class="hero-description">For the worlds you sketched in your school notebook. The boss fights you dreamed up on the bus. Meet Bytorio, a little fantasy console for making them real.</p><div class="actions"><a class="button primary" href="showcase/index.html"><span aria-hidden="true">▶</span> PRESS START</a><a class="text-link" href="docs/sdk/README.html">I want to make a game →</a></div><p class="hero-note mono">LUAU + ODIN <span> / </span> NATIVE + WEB <span> / </span> ALL YOU</p></div>
-<div class="hero-art"><div class="orbit-label mono">★ NO QUARTERS NEEDED ★</div><a class="console" href="showcase/copper-circuit/index.html" aria-label="Play Copper Circuit"><div class="console-top mono"><span>BYTORIO / PLAYER 01</span><span><i class="status-dot"></i> SYSTEM ONLINE</span></div><div class="screen-bezel"><img src="assets/copper-circuit.png" alt="Copper Circuit running on Bytorio" width="640" height="360"><span class="screen-play">▶ PLAY COPPER CIRCUIT</span></div><div class="console-bottom"><div class="dpad" aria-hidden="true">✚</div><div class="speaker" aria-hidden="true"></div><div class="console-buttons" aria-hidden="true"><i>Y</i><i>X</i><i>B</i><i>A</i></div></div></a><span class="art-sticker">100%<br>PLAYABLE!</span><p class="art-caption mono">↑ ↑ GOOD TIMES AHEAD ↓ ↓</p></div></section>
-<div class="spec-strip"><span><b>2D first.</b> A little 3D, too.</span><span><b>Two languages.</b> One machine.</span><span><b>One PNG.</b> Your whole game.</span><span><b>Made to play.</b> Built to tinker.</span></div>
-<section class="section"><div class="section-heading"><div><p class="eyebrow">THE GOOD KIND OF LIMITS</p><h2>A little console.<br>A lot to play with.</h2></div><p>Skip the sprawling engine. Find your idea, open your favorite editor, and bring a small world to life.</p></div><div class="feature-grid"><article><span class="feature-symbol">▦</span><span class="mono">01 / PICTURE</span><h3>Pixels with personality.</h3><p>Sprites, textures, and crisp 640 × 360 or 320 × 180 displays. Start in 2D, then explore the experimental low-poly 3D profile.</p><a href="docs/sdk/graphics.html">Explore graphics ↗</a></article><article><span class="feature-symbol">⌘</span><span class="mono">02 / PROCESS</span><h3>Your editor. Your rhythm.</h3><p>Write in typed Luau or Odin. Check, build, and watch through one CLI, with the same cartridge running on native and web players.</p><a href="docs/sdk/README.html">Meet the SDK ↗</a></article><article><span class="feature-symbol">▣</span><span class="mono">03 / PLAY</span><h3>A game you can pass around.</h3><p>Pack your creation into a viewable PNG cartridge. Load the original file in a compatible player and let someone else take a turn.</p><a href="docs/docs/png-cartridges.html">Inside a cartridge ↗</a></article></div></section>
-<section class="section games-section"><div class="section-heading"><div><p class="eyebrow">SELECT CARTRIDGE / PRESS PLAY</p><h2>Your next high score awaits.</h2></div><a class="text-link" href="showcase/index.html">Visit the showcase ↗</a></div><div class="game-grid">${games.map((game) => card(game, "./")).join("")}</div></section>
-<section class="make-section"><div><p class="eyebrow">FROM “WHAT IF” TO FIRST FRAME</p><h2>Your next game<br>starts small.</h2><p>A folder, a few lines of code, and something that moves.<br>The docs will take it from there.</p><a class="button dark" href="docs/sdk/README.html">Let’s make a game ↗</a></div><div class="terminal"><div class="terminal-bar"><span>● ● ●</span><span>YOUR NEXT PROJECT</span></div><pre><span class="comment"># Make a little room for a big idea</span>\nmise exec -- npm run console -- new my-game\n\n<span class="comment"># Bring it to the browser</span>\nmise exec -- npm run console -- run my-game --web</pre><p>Windows x64 development · Pinned toolchain via mise</p></div></section></main>`,
+<section class="hero">${scenery("./")}<div class="hero-copy"><p class="eyebrow">MEET YOUR NEXT LITTLE WORLD</p><h1>A tiny console<br>for <em>big adventures.</em></h1><p>Make something small. Go somewhere extraordinary.<br>Build your own games in Luau or Odin, then share the whole adventure in a cartridge.</p><div class="actions"><a class="button primary" href="showcase/index.html">Play the games</a><a class="text-link" href="docs/sdk/README.html">Start creating ↗</a></div><p class="hero-note">Native + browser · Keyboard + touch</p></div>
+<a class="hero-console" href="showcase/copper-circuit/index.html" aria-label="Play Copper Circuit"><img class="handheld-body" src="assets/brand/handheld.png" alt="Gray Bytorio handheld with a black direction pad and red buttons" width="670" height="953"><div class="handheld-screen"><img src="assets/copper-circuit.png" alt="Copper Circuit gameplay"><span>▶ PLAY COPPER CIRCUIT</span></div></a></section>
+<section class="capabilities" aria-label="Create with Bytorio"><a href="docs/sdk/graphics.html"><img class="clean-asset" src="assets/brand/sword.png" alt="" width="110" height="110"><div><h2>2D</h2><p>Every pixel, a possibility.</p></div></a><a href="docs/docs/compact-3d.html"><img class="clean-asset" src="assets/brand/hero.png" alt="" width="110" height="110"><div><h2>3D</h2><p>Little worlds with depth.</p></div></a><a href="docs/docs/resource-profile.html"><img src="assets/brand/fox.png" alt="" width="110" height="110"><div><h2>Your rules.</h2><p>Small machine. Big ideas.</p></div></a></section>
+<section class="section cartridge-section"><div class="section-heading"><div><p class="eyebrow">PICK UP & PLAY</p><h2>Good things come in cartridges.</h2></div><a class="text-link" href="showcase/index.html">All games ↗</a></div><div class="cartridge-shelf">${games.map((game) => '<a class="cartridge-link" href="showcase/' + game.id + '/index.html"><div class="cartridge"><img class="cartridge-frame" src="assets/brand/cartridge.png" alt=""><div class="cartridge-label"><img src="assets/' + game.id + '.png" alt="' + game.title + ' gameplay"><strong>' + game.title + "</strong><span>BYTORIO · " + game.category.toUpperCase() + "</span></div></div><h3>" + game.title + '</h3><span class="text-link">Play in your browser →</span></a>').join("")}<div class="create-cartridge"><img src="assets/brand/fox.png" alt="Bytorio’s red fox mascot" width="180" height="190" loading="lazy"><h3>The next one could be yours.</h3><p>A few lines of code. A spark of an idea.<br>A world only you could make.</p><a class="text-link" href="docs/sdk/README.html">Make your first game ↗</a></div></div></section>
+<section class="make-section"><div><p class="eyebrow">FROM FIRST LINE TO FIRST ADVENTURE</p><h2>A little code.<br>A whole lot of play.</h2><p>Your editor, your language, your imagination. Typed Luau and Odin share one console, with graphics, audio, input, and portable PNG cartridges.</p><a class="button primary" href="docs/sdk/README.html">Explore the SDK</a></div><div class="terminal"><div class="terminal-bar">YOUR NEXT ADVENTURE</div><pre><span># Start with an idea</span>
+byt new my-game
+
+<span># Bring it to life</span>
+byt run my-game --web</pre><p><a href="docs/sdk/README.html#install-byt">Install byt</a> · Native and web players</p></div></section></main>`,
   });
 }
 
 export function showcase() {
   return shell({
-    title: "The showcase",
+    title: "Games",
     description:
-      "Play complete Bytorio demos in your browser, with keyboard and mobile touch controls.",
+      "Play complete Bytorio games in your browser. Desktop and mobile adventures, with keyboard and touch controls.",
     active: "showcase",
     root: "../",
-    body: `<main id="main"><section class="page-intro"><p class="eyebrow">WELCOME TO THE CARTRIDGE CLUB</p><h1>Choose your<br><em>next adventure.</em></h1><p>Small games. Big “one more go” energy.<br>Pick a cartridge, press start, and get wonderfully sidetracked.</p></section><section class="section showcase-list"><div class="shelf-bar"><span class="mono">02 CARTRIDGES / ALL SYSTEMS GO</span><span>Keyboard or touch. No install needed.</span></div><div class="game-grid">${games.map((game) => card(game, "../")).join("")}</div><aside class="note">Both demos use the CPU renderer and do not require WebGPU. Browser performance varies by device. Experimental GPU features are documented separately.</aside></section></main>`,
+    body: `<main id="main" class="showcase-page"><section class="page-intro">${scenery("../")}<h1>Games</h1><p>Small cartridges. Whole worlds to explore.</p></section><a class="featured-game" href="mossglen/index.html"><img src="../assets/mossglen.png" alt="Mossglen village and forest"><div><span class="eyebrow">FEATURED ADVENTURE</span><h2>Mossglen:<br>The Sunleaf</h2><p>A missing sunleaf. A village counting on you.</p><span class="button primary">Play</span></div></a><div class="game-filters" role="group" aria-label="Filter games"><button aria-pressed="true" data-filter="all">All games</button><button aria-pressed="false" data-filter="Arcade racing">Racing</button><button aria-pressed="false" data-filter="Tiny adventure">Adventure</button><span>Desktop + mobile · Touch ready</span></div><div class="game-grid">${games.map((game) => card(game, "../")).join("")}</div><p class="note">Both games run in your browser with keyboard or touch controls. No install or WebGPU required. Choose Luau or Odin on the game page, or download a PNG cartridge to keep.</p></main>`,
   });
 }
 

@@ -5,8 +5,8 @@
 body {
   min-height: 0;
   display: block;
-  background: #161426;
-  color: #f3f0dd;
+  background: #11151d;
+  color: #f5f0ed;
 }
 main {
   padding: 14px;
@@ -29,18 +29,18 @@ main > fieldset,
 }
 button {
   font-size: 13px;
-  background: #c4f45d;
-  color: #161426;
+  background: #be292e;
+  color: #fff5ee;
   margin: 6px 3px;
   padding: 12px 18px;
   border-radius: 0;
-  border: 2px solid #e2ffaf;
+  border: 2px solid #ed6c68;
   box-shadow: 3px 3px #080712;
 }
 #status {
   font-size: 11px;
   margin: 10px auto 0;
-  color: #c7bada;
+  color: #c5c5cc;
 }
 .touch-controls {
   display: flex;
@@ -66,9 +66,9 @@ button {
   padding: 0;
   min-width: 48px;
   min-height: 48px;
-  border: 2px solid #8d7ca5;
-  background: #342a48;
-  color: #f3f0dd;
+  border: 2px solid #666671;
+  background: #252832;
+  color: #f5f0ed;
   font-size: 21px;
 }
 .touch-key.up {
@@ -84,17 +84,17 @@ button {
   grid-area: 2 / 3;
 }
 .touch-key.action {
-  background: #b69aef;
-  border-color: #d9c7ff;
-  color: #191126;
+  background: #b82a2e;
+  border-color: #f0726a;
+  color: #fff5ee;
   border-radius: 50%;
   width: 95px;
   height: 75px;
   font-size: 12px;
 }
 .touch-key.pressed {
-  background: #c4f45d;
-  color: #161426;
+  background: #be292e;
+  color: #11151d;
 }
 #screen:fullscreen {
   display: flex;

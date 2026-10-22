@@ -25,9 +25,18 @@ try {
       await page.waitForFunction(() => globalThis.playerStatus?.ticks > 420);
       await page.keyboard.up("ArrowUp");
     }
-    await page
-      .locator("#canvas")
-      .screenshot({ path: resolve(repo, "site/assets", `${game.id}.png`) });
+    const canvas = page.locator("#canvas");
+    const path = resolve(repo, "site/assets", `${game.id}.png`);
+    if (game.id === "mossglen") {
+      // The RPG draws its 384 × 216 viewport into the 640 × 360 display.
+      const bounds = await canvas.boundingBox();
+      await page.screenshot({
+        path,
+        clip: { ...bounds, width: (bounds.width * 384) / 640, height: (bounds.height * 216) / 360 },
+      });
+    } else {
+      await canvas.screenshot({ path });
+    }
     await page.close();
   }
 } finally {
