@@ -291,7 +291,10 @@ advance :: proc(r: ^Ramp) {
     }
 }
 before :: proc(a, b: Command) -> bool { return a.at < b.at || (a.at == b.at && a.order < b.order) }
-push :: proc(e: ^Engine, c: Command) {
+push :: proc(e: ^Engine, command: Command) {
+    // Large read-only parameters may alias the caller's heap slot. Preserve the
+    // incoming event before percolation overwrites that slot during a rebuild.
+    c := command
     at := e.event_count
     e.event_count += 1
     for at > 0 {
