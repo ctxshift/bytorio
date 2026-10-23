@@ -1,8 +1,10 @@
 # Ogg streaming integration
 
-The selected decoder is libvorbisfile on native and our own build of the same
-library for browser WASM. The package comparison remains under
-`experiments/vorbis-prototype/` as evidence.
+The [decoder decision](adr/0012-use-libvorbisfile-on-both-hosts.md) selects
+libvorbisfile on native and our own build of the same library for browser WASM.
+The [audio production decision](adr/0011-separate-audio-production-from-device-delivery.md)
+separately defines responsibility for refill and device delivery. The package
+comparison remains under `experiments/vorbis-prototype/` as evidence.
 
 The first integration slice uses SDK 0.7.0, the explicit experimental profile
 `ogg-streaming-preview-1` (ID 7, resource protocol 9), and immutable

@@ -4,7 +4,7 @@ Historical evaluation: the current [architecture](architecture.md) supports both
 Luau and Odin cartridges through one Odin player. The C++ reference player has
 been removed; the implementation discussion below records the earlier decision.
 
-Date: 2026-10-19. Status: supporting evaluation; the subsequent [accepted decision](adr/0001-use-odin-for-games-and-runtime.md) selects Odin for the runtime while retaining both Odin and Luau for games.
+Date: 2026-10-19. Status: supporting evaluation. The accepted choices are recorded separately: [Odin for the runtime](adr/0001-use-odin-for-games-and-runtime.md), [Luau and Odin for games](adr/0002-support-luau-and-odin-cartridges.md), and [portable WebAssembly execution](adr/0003-execute-cartridges-through-a-wasm-boundary.md).
 
 The working Luau/C++ implementation remains unchanged as a reference. A subsequent [Odin reproduction](odin-development.md) now runs real sprite/sound behavior on native and browser; the scalar probe below remains the original evaluation evidence, not the integration result. This report evaluates the two language roles separately to explain their tradeoffs. The display, mostly 2D scope, standalone native player, browser player, and full PNG cartridge requirement remain fixed.
 

@@ -9,6 +9,11 @@ C++ and JavaScript constants are checked with `mise run generate:check`.
 
 ## Compatibility
 
+The [profile decision](adr/0006-negotiate-explicit-portable-profiles.md) records
+why capability negotiation is explicit. The table below covers the base profiles
+and first 3D preview; the machine-readable [contract](../sdk/contract.json) and
+individual feature guides define the complete set of supported preview tuples.
+
 | Profile | PNG identifier | SDK word | ABI | Resource protocol | Required feature mask |
 | --- | --- | --- | --- | --- | --- |
 | `2d-preview-1` | 1 | 256 (0.1.0) | 1 | Legacy / optional experimental transport | 0 |
@@ -68,8 +73,9 @@ and waveform controls. Their checked-in sources live under
 New CLI projects request SDK 0.2.0 and `profile: "resource-av-1"`. Existing
 `sdk: "0.1.0"` manifests remain supported. Declaring a contradictory profile is
 an error. `build` and `pack` produce the same self-contained PNG on both hosts.
-The PNG container remains version 1 with its 32-byte header and **2 MiB** limit;
-this does not enable indexed large ROMs. Distributions include `profile.json`,
+The PNG container remains version 1 with its 32-byte header and **2 MiB** base
+envelope limit; optional [indexed content](indexed-content.md) has a separate
+capacity bound. Distributions include `profile.json`,
 the public profile and wire schema alongside their player, licenses and modules.
 Bundled profile descriptors reference their local schema and omit checkout-only
 documentation links; the SDK's canonical profile retains those references.

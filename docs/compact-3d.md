@@ -1,5 +1,7 @@
 # Compact 3D and voxel prototype
 
+Design rationale: [CPU rendering with optional GPU execution](adr/0013-keep-gpu-rendering-optional.md).
+
 Milestone 4f implements an experimental software rendering foundation shared by
 the standalone native player and browser player. Both SDKs expose indexed meshes,
 explicit cameras, depth attachments and cached voxel surfaces. This is an original

@@ -1,5 +1,7 @@
 # Frame pacing
 
+Design rationale: [simulation independent of render cadence](adr/0009-separate-simulation-from-render-cadence.md).
+
 Both Luau and Odin cartridges use the same three player policies:
 
 | Policy | Behavior |

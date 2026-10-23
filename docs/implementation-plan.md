@@ -1,5 +1,10 @@
 # Bytorio implementation plan
 
+This document retains milestone planning and implementation evidence, including
+historical status statements. Use the [architecture overview](architecture.md)
+and [decision records](adr/README.md) for current architectural choices, and the
+area specifications for current contracts and supported capabilities.
+
 Status: updated 2026-10-19. **Luau is the default cartridge language; Odin cartridges are also supported.** The runtime remains Odin. [SDK 0.2.0](../sdk/README.md) publishes the shared [resource profile](resource-profile.md), retaining the [ABI 1 adapter](cartridge-spec.md). The C++ reference player is retired; C++ remains only for Luau support. Larger indexed ROMs and 3D remain later work.
 
 Keep the standalone native requirement, browser target, single display with 640×360 and 320×180 modes, mostly 2D scope, approximate 128/512 MB package goals, and complete PNG cartridges. The [DS/3DS comparison](target-comparison.md) is advisory; the language change does not expand fidelity scope. The product is Bytorio, its website is https://bytor.io, and its developer CLI is `byt`. Product metadata lives in `package.json`; protocol and SDK names remain compatible.
@@ -17,7 +22,7 @@ default authoring language alongside Odin. Both SDKs provide lifecycle handling,
 drawing, input, timing, deterministic random numbers, typed graphics resources,
 PCM playback and synthesis/effects. The shared CLI
 creates, checks, builds, packages, runs and watches projects; see [the SDK guide](../sdk/README.md).
-Both cartridge languages remain supported, as recorded in the [language decision](adr/0001-use-odin-for-games-and-runtime.md). The runtime remains Odin.
+Both cartridge languages remain supported, as recorded in the [authoring-language decision](adr/0002-support-luau-and-odin-cartridges.md). The [runtime language decision](adr/0001-use-odin-for-games-and-runtime.md) selects Odin independently.
 
 - The removed Luau/C++ reference established the original sprite, sound, input and replay baseline. Its RPG golden traces remain in tests; current checks run both languages through the Odin player.
 - The [Odin probe](../experiments/odin/README.md) compiles scalar game-state logic to Windows native code and an identical import-free Wasm module executed in Node and Chrome. It verifies movement, sound-event counts, and one bounds trap.

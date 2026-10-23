@@ -1,5 +1,8 @@
 # Save slot version 1
 
+Design rationale: [opaque save snapshots](../docs/adr/0015-persist-opaque-save-snapshots.md)
+and [explicit stable save identity](../docs/adr/0016-declare-stable-save-identity.md).
+
 Each cartridge has one persistent slot containing 1–65536 bytes (64 KiB). Luau uses
 `byt.save`; Odin imports `save "sdk:save"`. Games own their record format,
 versioning, checksums and migrations. The host stores opaque bytes.

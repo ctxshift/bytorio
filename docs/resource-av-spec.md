@@ -1,5 +1,7 @@
 # Typed graphics and audio resources
 
+Design rationale: [transactional typed resources](adr/0008-publish-resource-changes-transactionally.md).
+
 Status: **published resource profile**, 2026-10-19. SDK 0.2.0,
 ABI 2, profile `resource-av-1` (identifier 2). The SDK 0.1.0 / ABI 1 compatibility
 contract remains supported. [The profile](../sdk/profiles/resource-av-1.json),

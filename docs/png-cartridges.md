@@ -1,5 +1,7 @@
 # PNG cartridges, container version 1
 
+Design rationale: [complete games in viewable PNG cartridges](adr/0005-distribute-complete-games-as-png-cartridges.md).
+
 Both cartridge languages can be distributed as one ordinary, viewable `.png`
 file. The PNG carries the complete bundled game: Luau source and its embedded
 assets, or an Odin Wasm module and its embedded assets. Optional

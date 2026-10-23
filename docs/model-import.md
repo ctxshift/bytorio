@@ -1,5 +1,7 @@
 # Static model import
 
+Design rationale: [import artist formats during development](adr/0014-import-model-formats-during-development.md).
+
 `byt import` converts a bounded glTF 2.0 JSON or GLB asset into one normalized
 model plus readable Luau and Odin modules. Games use existing typed textures,
 materials and immutable textured meshes. No glTF parser runs in the cartridge,
