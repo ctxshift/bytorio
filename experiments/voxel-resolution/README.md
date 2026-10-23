@@ -1,6 +1,15 @@
 # Voxel resolution study
 
-The riverside scene also has [console GPU qualification cartridges](../../docs/riverside-console-measurements.md)
+## Research and measurements
+
+- [Console GPU qualification](docs/riverside-console-measurements.md)
+- [Viewer and console pipeline comparison](docs/riverside-pipeline-analysis.md)
+- [Pixel stability during 3D motion](docs/pixel-stability-research.md)
+- [Pixel stability under rotation](docs/rotating-pixel-art-research.md)
+
+## Scenes and controls
+
+The riverside scene also has [console GPU qualification cartridges](docs/riverside-console-measurements.md)
 in both SDKs. Use `mise run //experiments/voxel-resolution:build:console` to package them and
 `mise run //experiments/voxel-resolution:benchmark:console` to verify and measure native/browser execution.
 
@@ -79,7 +88,7 @@ per-sample transparency/intersection handling. The sprite is not a flat overlay.
 These modes target translation stability. Orbiting the camera or turning the
 rabbit changes the projected shapes and can still change pixel clusters. They
 do not reproduce an undisclosed external renderer. The separate
-[rotation research note](../../docs/rotating-pixel-art-research.md) evaluates
+[rotation research note](docs/rotating-pixel-art-research.md) evaluates
 persistent surface sampling and its limitations.
 
 **Smooth pan presentation** is independent of these modes and available for

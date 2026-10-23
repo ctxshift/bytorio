@@ -71,6 +71,6 @@ and do not imply that Luau uses less guest memory.
   mesh-based 3D renderer, large RPG, pathfinding system or larger asset set.
 
 Full race and handling replays match across languages and hosts. See the
-[demo guide](../../docs/racing-demo.md) for checks and reproduction commands.
+[demo guide](../../examples/racing/docs/racing-demo.md) for checks and reproduction commands.
 The portable [measurement summary](results.json) is checked in; raw samples and
 traces remain under `build/racing-player/benchmark/`.

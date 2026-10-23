@@ -56,6 +56,6 @@ GPU acceleration remains optional and CPU remains the default backend.
 
 For example, append `&fps=native` or `&fps=uncapped` to a browser launch with
 `?renderer=gpu&ssaa=1080p&pixel-snap&smooth-pan&gpu-meshes`.
-See [the measured pipeline limits](riverside-console-measurements.md): matching
+See [the measured pipeline limits](../experiments/voxel-resolution/docs/riverside-console-measurements.md): matching
 GPU capabilities does not imply identical overhead or guarantee 60 FPS on every
 device.

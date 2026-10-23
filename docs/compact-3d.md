@@ -130,7 +130,7 @@ boundaries and row copies, preserving shifted world pixels and unshifted opaque
 HUD coverage. Interactive hosts perform all pending fixed updates and then draw
 once, avoiding repeated full rendering during catch-up. Browser frame dispatch
 also uses response/tick deadlines instead of waiting for a second display refresh.
-See [CPU measurements](riverside-console-measurements.md#cpu-smooth-pan-regression-and-interactive-measurements)
+See [CPU measurements](../experiments/voxel-resolution/docs/riverside-console-measurements.md#cpu-smooth-pan-regression-and-interactive-measurements)
 for the remaining software supersampling costs.
 
 Live browser overlays show delivered FPS, GPU upload traffic, resident geometry,
@@ -210,7 +210,7 @@ are bounded by the display modes (plus smooth-pan overscan), independent of SSAA
 working storage. Diagnostic hashes intentionally synchronize; ordinary browser
 player steps omit hashes and explicit diagnostic steps retain them. CPU hashes
 and captures continue to represent logical game pixels.
-Use [riverside measurements](riverside-console-measurements.md) for qualified
+Use [riverside measurements](../experiments/voxel-resolution/docs/riverside-console-measurements.md) for qualified
 costs; this experimental integration does not guarantee 60 fps on every device.
 
 ### Quality and presentation semantics
@@ -273,7 +273,7 @@ Use `mise run //examples/models:benchmark` for the rotating imported-model proxy
 `odin/build/` and `luau/build/` layout against current builds. The verifier checks
 identical PNG bytes, direct-render output, native/browser output and geometry reuse;
 it retains raw phase timings and transfer/allocation counters under
-`build/attachment-benchmarks/`. See [the measured comparison](gpu-attachment-measurements.md).
+`build/attachment-benchmarks/`. See [the measured comparison](../examples/models/docs/gpu-attachment-measurements.md).
 
 ## Profile and compatibility
 
@@ -454,7 +454,7 @@ linear memory and resource-budget bytes describe different things. No full audio
 DSP stress workload is included in this 3D benchmark.
 
 See [measurements](compact-3d-measurements.md) for observed results and remaining
-work. The [riverside cartridge qualification](riverside-console-measurements.md)
+work. The [riverside cartridge qualification](../experiments/voxel-resolution/docs/riverside-console-measurements.md)
 measures resident meshes and GPU presentation on a larger preserved surface
 field. Physics, streaming, a scene editor and persistent GPU attachments remain
 separate extensions.

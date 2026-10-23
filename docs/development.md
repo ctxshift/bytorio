@@ -54,7 +54,7 @@ npm run build:racing
 npm run serve:racing
 ```
 
-See the [RPG guide](rpg-comparison.md) and [racing guide](racing-demo.md) for
+See the [RPG guide](../examples/rpg/docs/rpg-comparison.md) and [racing guide](../examples/racing/docs/racing-demo.md) for
 controls, standalone launch commands, and cartridge sources. `build:unified`
 and `serve:unified` remain aliases for the shared RPG setup.
 
@@ -64,7 +64,7 @@ from the root. Each project owns its sources, tooling and local ignored exports.
 Root quality gates aggregate their integration coverage with SDK/runtime checks.
 
 The true 3D eight-kart baseline uses `mise run //examples/kart3d:build` and
-`mise run //examples/kart3d:serve`. Its [guide](kart-racing.md) covers controls, both SDKs,
+`mise run //examples/kart3d:serve`. Its [guide](../examples/kart3d/docs/kart-racing.md) covers controls, both SDKs,
 CPU-default and opt-in GPU execution, and benchmark limits. `test:kart3d` is
 part of the full gate; `test:kart3d:gpu` additionally requires a usable GPU.
 
@@ -105,7 +105,7 @@ Hardware GPU checks and riverside interactive controls have separate opt-in
 gates: `mise run validate test:gpu test:riverside:controls`. The latter verifies
 WASD walking, Q/E orbit, arrow panning, reset, counters and native/browser CPU
 quality replays for both SDKs. `mise run validate //experiments/voxel-resolution:benchmark:console` retains the
-resident GPU qualification report; see [measurements](riverside-console-measurements.md).
+resident GPU qualification report; see [measurements](../experiments/voxel-resolution/docs/riverside-console-measurements.md).
 `mise run validate test:textured3d:gpu` additionally qualifies the experimental
 textured mesh/material path across native/browser GPU hosts, both SDKs, display
 modes and SSAA/residency settings; ordinary `test:textured3d` remains CPU-capable.
@@ -120,7 +120,7 @@ resident GPU execution. See [the import subset and authoring workflow](model-imp
 `//examples/models:benchmark` measures a rotating imported-model proxy through both SDKs
 on native/browser GPU, optionally comparing preserved exports. It records raw
 phase timings and separate attachment transfer/allocation counters; see
-[attachment measurements](gpu-attachment-measurements.md).
+[attachment measurements](../examples/models/docs/gpu-attachment-measurements.md).
 `mise run validate //experiments/voxel-resolution:benchmark:startup` measures PNG sizes, player readiness
 and the first complete scene through native/browser CPU/GPU paths, including
 fresh, reload and same-page executor cache behavior. It retains its observer

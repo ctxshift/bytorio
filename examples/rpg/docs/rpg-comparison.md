@@ -11,7 +11,7 @@ Attack, Guard, and one healing potion. Defeat restores the player in the village
 
 ## Build and play
 
-Install the [development prerequisites](development.md), then from the repository root:
+Install the [development prerequisites](../../../docs/development.md), then from the repository root:
 
 ```text
 npm ci
@@ -41,21 +41,21 @@ removed. C++ remains in the Luau executor and development analyzer only.
 
 | Concern | Luau | Odin |
 | --- | --- | --- |
-| Gameplay and presentation | [main.luau](../examples/rpg/luau/main.luau) | [main.odin](../examples/rpg/odin/main.odin) |
-| Bytorio API | [Luau SDK](../sdk/luau/bytorio.luau) | [Odin SDK](../sdk/odin/bytorio/bytorio.odin) |
-| Lifecycle | SDK game callbacks | SDK-generated [entry point](../examples/rpg/odin/cartridge.odin) |
+| Gameplay and presentation | [main.luau](../luau/main.luau) | [main.odin](../odin/main.odin) |
+| Bytorio API | [Luau SDK](../../../sdk/luau/bytorio.luau) | [Odin SDK](../../../sdk/odin/bytorio/bytorio.odin) |
+| Lifecycle | SDK game callbacks | SDK-generated [entry point](../odin/cartridge.odin) |
 | Assets | Bundled graphics packet | Compiled graphics packet |
 
-[Shared assets](../examples/rpg/shared/assets.json) define the palette, sprites,
+[Shared assets](../shared/assets.json) define the palette, sprites,
 map, and bitmap font. `examples/rpg/tools/assets.mjs` generates checked-in asset
 modules and `build/rpg/batched.luau`. Gameplay implementations are handwritten;
 asset generation does not translate rules between languages.
 
 Both use explicit state machines, tile collision, input edges, eight-tick held
 movement, and matching turn resolution. Sprites and text use bounded commands
-expanded by the shared Odin renderer. The [cartridge specification](cartridge-spec.md)
-and [SDK API](../sdk/api.md) define the current contract. The
-[executor guide](../experiments/luau-executor/README.md) documents integration and
+expanded by the shared Odin renderer. The [cartridge specification](../../../docs/cartridge-spec.md)
+and [SDK API](../../../sdk/api.md) define the current contract. The
+[executor guide](../../../experiments/luau-executor/README.md) documents integration and
 historical performance measurements.
 
 ## Verification

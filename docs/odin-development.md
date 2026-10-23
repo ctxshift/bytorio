@@ -69,7 +69,7 @@ The native executable is approximately 636 KiB, bundled Wasmtime DLL 21.4 MiB, a
 
 ## Prototype guest ABI
 
-[The ABI package](../runtime/odin/abi/abi.odin) defines a 40-byte little-endian frame record. Its fields are version, clear RGBA, sprite x/y, tick count, cumulative sound count, and logical x/y. The frame preserves the initial one-sprite prototype. The [RPG display-list extension](rpg-comparison.md) adds optional `game_commands()` and `game_command_count()` exports for general rectangle drawing, with sprites and text supplied by guest helpers.
+[The ABI package](../runtime/odin/abi/abi.odin) defines a 40-byte little-endian frame record. Its fields are version, clear RGBA, sprite x/y, tick count, cumulative sound count, and logical x/y. The frame preserves the initial one-sprite prototype. The [RPG display-list extension](../examples/rpg/docs/rpg-comparison.md) adds optional `game_commands()` and `game_command_count()` exports for general rectangle drawing, with sprites and text supplied by guest helpers.
 
 Required exports:
 
@@ -86,4 +86,4 @@ The native adapter validates function calls through Wasmtime's typed API. The br
 
 ## Remaining work
 
-The [RPG comparison](rpg-comparison.md) adds guest-owned palette sprites, a tile map, text, a bounded rectangle display list, and matching Luau gameplay. [PNG cartridge loading](png-cartridges.md) is implemented for both languages. Indexed large ROMs, general texture imports, allocation-heavy games, full Wasm feature policy, runtime source-line diagnostics, state-preserving reload, streaming audio, and other desktop platforms remain later milestones. The C++ reference player has been removed; both cartridge languages use this Odin player. The Odin reproduction is not a claim that the whole machine profile or untrusted-cartridge security review is complete.
+The [RPG comparison](../examples/rpg/docs/rpg-comparison.md) adds guest-owned palette sprites, a tile map, text, a bounded rectangle display list, and matching Luau gameplay. [PNG cartridge loading](png-cartridges.md) is implemented for both languages. Indexed large ROMs, general texture imports, allocation-heavy games, full Wasm feature policy, runtime source-line diagnostics, state-preserving reload, streaming audio, and other desktop platforms remain later milestones. The C++ reference player has been removed; both cartridge languages use this Odin player. The Odin reproduction is not a claim that the whole machine profile or untrusted-cartridge security review is complete.

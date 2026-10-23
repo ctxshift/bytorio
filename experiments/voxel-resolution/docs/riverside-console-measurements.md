@@ -51,7 +51,7 @@ The same option also works with the Luau cartridge. Existing triangle, CPU and
 GPU quality modes remain available. The full scene has 687,432 fixed sample
 identities at 0.5-unit spacing, represented by 171,858 resident patches using
 8,249,184 bytes (7.87 MiB). These figures exclude textures, source meshes, temporary
-generation storage and driver overhead. See the [mode's limits](compact-3d.md#experimental-whole-scene-surface-samples).
+generation storage and driver overhead. See the [mode's limits](../../../docs/compact-3d.md#experimental-whole-scene-surface-samples).
 The GPU verification covers both display sizes, SSAA off/2×/1080p, walking,
 rotation, pan and cache reuse; its local report is `surface-report.json` beside
 the generated cartridges. Existing timing results below describe triangle modes,

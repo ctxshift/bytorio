@@ -5,7 +5,7 @@ It compares the independent JavaScript/WebGL viewer with the
 shared Odin console renderer. The retained measurements describe the streamed
 GPU console backend before the in-progress resident-mesh and GPU-presentation
 changes. The implementation and later qualification are described in
-[the graphics specification](compact-3d.md) and
+[the graphics specification](../../../docs/compact-3d.md) and
 [the console measurement report](riverside-console-measurements.md).
 
 ## Finding
@@ -40,7 +40,7 @@ sample counts, stage definitions, correctness checks and exclusions.
 
 ## Confirmed costs
 
-The [CPU presenter](../runtime/odin/presentation/presentation.odin) visits all
+The [CPU presenter](../../../runtime/odin/presentation/presentation.odin) visits all
 2,073,600 output pixels when constructing a 1080p smooth presentation. That loop
 calculates source coordinates, reads the HUD mask and composes colors. Browser
 raster/composition/presentation p95 reached approximately 43.8 ms. This stage
@@ -48,14 +48,14 @@ contains multiple operations, so that measurement does not isolate the presenter
 alone. Moving final presentation onto the GPU removes the enlarged CPU loop and
 its explicit pixel extraction.
 
-The [streamed mesh path](../runtime/odin/resources/mesh.odin) transforms 101,418
+The [streamed mesh path](../../../runtime/odin/resources/mesh.odin) transforms 101,418
 triangle corners through model and view matrices for this scene. It computes
 face normals and lighting, serializes transformed vertices, clips triangles and
 calculates projected bounds for resource work accounting. Its measured draw
 commit stage includes that CPU processing and GPU synchronization; approximately
 29 ms browser p95 is not a GPU-only timing.
 
-The [browser GPU backend](../runtime/odin/web/gpu.js) uploads existing logical
+The [browser GPU backend](../../../runtime/odin/web/gpu.js) uploads existing logical
 color and depth, initializes supersampled attachments, draws geometry, resolves
 color/depth, reads both logical results back and copies them into Wasm memory.
 Readbacks use logical dimensions plus overscan, rather than the full 1080p
@@ -70,7 +70,7 @@ conversion and nearest-depth selection. Both console display modes use roughly
 2.1 million internal supersampled pixels with the measured settings, so lowering
 logical resolution alone saves little.
 
-The [worker](../runtime/odin/web/worker.js) explicitly copies presentation pixels
+The [worker](../../../runtime/odin/web/worker.js) explicitly copies presentation pixels
 out of Wasm with `.slice()`. Its subsequent transferable `postMessage` hands over
 buffer ownership; that handoff is not a second full structured-clone copy.
 Main-thread canvas delivery, compositor work and scanout are excluded from the
@@ -83,7 +83,7 @@ ImageBitmaps produced by a GPU presenter must be closed when discarded.
 
 ## What residency changes, and what remains
 
-The in-progress [resident mesh path](../runtime/odin/resources/resident_mesh.odin)
+The in-progress [resident mesh path](../../../runtime/odin/resources/resident_mesh.odin)
 removes repeated CPU lighting and transformed-vertex staging. Exact work
 accounting still transforms each unique vertex and evaluates clipping and
 projected bounds. For these four-vertex quads, this reduces transformed vertices
@@ -91,9 +91,9 @@ from 101,418 triangle corners to 67,612 unique vertices; it does not eliminate
 CPU geometry work. Residency also introduces approximately 33 mesh draws in
 place of one streamed geometry draw, so submission overhead needs measurement.
 
-At inspection time, [raster preparation](../runtime/odin/resources/raster_device.odin)
+At inspection time, [raster preparation](../../../runtime/odin/resources/raster_device.odin)
 still allocated a 5,505,024-byte legacy staging arena for resident transactions.
-The [transaction allocator](../runtime/odin/resources/graphics.odin) explicitly
+The [transaction allocator](../../../runtime/odin/resources/graphics.odin) explicitly
 zeroes its allocations. Resident accounting separately allocates and clears
 32 bytes per unique vertex. Reducing this scratch work is a concrete candidate,
 but its elapsed cost has not been isolated.
@@ -125,10 +125,10 @@ There is no steady-state voxel generation or meshing in this fixture. It uses
 ordinary meshes produced by the loading code. The accurate diagnosis is repeated
 transformed draw-stream generation and attachment/output reconstruction.
 
-Relevant implementations are the [cartridge lifecycle](../experiments/voxel-resolution/console-game.odin),
-[mesh submission](../runtime/odin/resources/mesh.odin),
-[native backend](../runtime/odin/gpu/native/backend_windows.odin), and
-[browser backend](../runtime/odin/web/gpu.js).
+Relevant implementations are the [cartridge lifecycle](../console-game.odin),
+[mesh submission](../../../runtime/odin/resources/mesh.odin),
+[native backend](../../../runtime/odin/gpu/native/backend_windows.odin), and
+[browser backend](../../../runtime/odin/web/gpu.js).
 Both GPU backends use texture-image redefinition rather than subimage updates.
 This confirms the API calls, not that a particular driver physically allocates
 fresh GPU memory each time. Their high/low render attachments are dimension-cached.

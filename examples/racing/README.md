@@ -8,4 +8,4 @@ and launcher. `tools/` owns asset generation, replay verification and benchmarks
 Use `mise run generate`, `mise run test` or `mise run benchmark` as needed.
 The benchmark runs its replay check first to produce the required input trace.
 Exports live in `build/player/{native,web}`. See the
-[racing guide](../../docs/racing-demo.md).
+[racing guide](docs/racing-demo.md).

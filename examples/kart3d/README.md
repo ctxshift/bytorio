@@ -15,7 +15,7 @@ independent of CPU/GPU selection. See [asset authoring](assets/README.md).
 
 Use `mise run test`, `mise run test:gpu`, `mise run generate` or
 `mise run benchmark` for the corresponding project tasks. See the
-[game guide](../../docs/kart-racing.md) for controls, measurements and limits.
+[game guide](docs/kart-racing.md) for controls, measurements and limits.
 
 `mise run benchmark:quality` measures moving karts through both SDKs and hosts,
 at both display sizes with SSAA off, 2× and up to 1080p. CPU and explicitly

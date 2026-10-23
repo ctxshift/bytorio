@@ -1,11 +1,11 @@
 # Copper Circuit
 
-For the newer depth-tested mesh racer, see [Sunline Sprint](kart-racing.md).
+For the newer depth-tested mesh racer, see [Sunline Sprint](../../kart3d/docs/kart-racing.md).
 
 A small original kart-racing demo, independently written in Luau and Odin.
 Both cartridges run at **320×180** through the same Odin player on native
 Windows and in the browser. The console's other supported mode is 640×360;
-see [display modes](display-modes.md).
+see [display modes](../../../docs/display-modes.md).
 
 The demo includes a countdown, steering, acceleration and braking, winding road,
 six AI karts, collisions, off-road slowdown, a rechargeable boost, position display,
@@ -14,7 +14,7 @@ and the existing bitmap font are packed into one shared atlas by the build tool.
 
 ## Build and play
 
-From the repository root, with the [Odin toolchain prerequisites](odin-development.md):
+From the repository root, with the [Odin toolchain prerequisites](../../../docs/odin-development.md):
 
 ```text
 npm run build:racing
@@ -34,10 +34,10 @@ is F11. Native builds are standalone applications without a webview.
 
 Sources:
 
-- [Odin gameplay](../examples/racing/odin/main.odin) and [cartridge interface](../examples/racing/odin/cartridge.odin).
-- [Luau gameplay](../examples/racing/luau/main.luau).
-- [Shared artwork generator](../examples/racing/tools/assets.mjs).
-- [Browser launcher](../examples/racing/shared/launcher.html).
+- [Odin gameplay](../odin/main.odin) and [cartridge interface](../odin/cartridge.odin).
+- [Luau gameplay](../luau/main.luau).
+- [Shared artwork generator](../tools/assets.mjs).
+- [Browser launcher](../shared/launcher.html).
 
 Both games use fixed 60 Hz simulation and integer arithmetic for state and
 projection. Odin explicitly uses floor division where Luau's floating-point
@@ -80,7 +80,7 @@ per sample, and three serial samples per variant. It reports update, command
 submission, shared rasterization, browser pixel-copy cost, startup and memory.
 Frame times exclude hashes, window presentation, audio and browser canvas painting;
 the browser pixel copy is reported separately. Startup ends at the first rendered
-frame before opening a native window. Results are in the [benchmark report](../experiments/racing/RESULTS.md).
+frame before opening a native window. Results are in the [benchmark report](../../../experiments/racing/RESULTS.md).
 
 For display regression checks, build the RPG runtime and executor first, then run:
 
@@ -95,4 +95,4 @@ Artifacts, replays, screenshots and complete measurement logs are under ignored
 `examples/racing/build/player/`. Builds also produce `racing-luau.png` and `racing-odin.png`
 for both hosts; the comparison launcher loads these self-contained PNGs.
 Loose source/module files remain available for development benchmarks. See
-[PNG cartridges](png-cartridges.md) for packaging and loading other games.
+[PNG cartridges](../../../docs/png-cartridges.md) for packaging and loading other games.

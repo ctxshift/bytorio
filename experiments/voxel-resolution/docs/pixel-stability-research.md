@@ -37,7 +37,7 @@ go beyond the evidence. The interview explicitly defers the detailed breakdown.
 ## Relevance to this experiment
 
 Local code inspection: `RESOLVE_FRAGMENT` in
-[`river-live.js`](../experiments/voxel-resolution/river-live.js) averages current-frame
+[`river-live.js`](../river-live.js) averages current-frame
 samples in fixed output-pixel blocks. Rabbit translation and camera target remain
 continuous. There is no history-buffer accumulation or temporal anti-aliasing.
 Consequently, an edge crossing the output grid changes its coverage and filtered

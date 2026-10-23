@@ -2,13 +2,13 @@
 
 An original eight-kart, three-lap perspective racer, implemented separately in
 Luau and Odin. It is the true 3D successor to the [earlier span-rendered
-demo](racing-demo.md). The course, hills, wheels, drivers and scenery use actual
+demo](../../racing/docs/racing-demo.md). The course, hills, wheels, drivers and scenery use actual
 depth-tested triangle meshes. The supplied grassland concept guides the red
 kart, purple-haired driver, bright palette and single-screen HUD.
 
 ## Build and play
 
-Use the pinned tools described in [development](development.md):
+Use the pinned tools described in [development](../../../docs/development.md):
 
 ```text
 mise run //examples/kart3d:build
@@ -49,13 +49,13 @@ Countdown, contact, boost and lap events use the existing sound cue.
 
 ## Implementation and limits
 
-- [Odin game](../examples/kart3d/odin/main.odin),
-  [simulation](../examples/kart3d/odin/race/race.odin) and
-  [scene](../examples/kart3d/odin/scene.odin).
-- [Luau game](../examples/kart3d/luau/main.luau),
-  [simulation](../examples/kart3d/luau/race.luau) and
-  [scene](../examples/kart3d/luau/scene.luau).
-- [Course generator](../examples/kart3d/tools/course.mjs) emits the same closed, elevated
+- [Odin game](../odin/main.odin),
+  [simulation](../odin/race/race.odin) and
+  [scene](../odin/scene.odin).
+- [Luau game](../luau/main.luau),
+  [simulation](../luau/race.luau) and
+  [scene](../luau/scene.luau).
+- [Course generator](../tools/course.mjs) emits the same closed, elevated
   course for both games. `mise run //examples/kart3d:generate` regenerates checked data.
 - [Reference research](kart-racing-reference-research.md) separates documented
   controls and feedback from original tuning choices.
@@ -63,7 +63,7 @@ Countdown, contact, boost and lap events use the existing sound cue.
 Static meshes are created once. Frames update the camera and kart transforms,
 draw nearby road chunks and cull distant opponents. Both paths use the same
 camera, fog, meshes and HUD; GPU residency is optional. Original glTF kart and
-tree assets use the [model importer](model-import.md). The red kart, sculpted
+tree assets use the [model importer](../../../docs/model-import.md). The red kart, sculpted
 purple hair and cape follow the supplied grassland mockup. Wheels roll around
 their imported pivots, front wheels steer, and the rigid cape moves independently.
 Eight paint variants share the same geometry. Textured asphalt, cutout flowers,
@@ -82,9 +82,9 @@ visual target or a frame-rate guarantee.
 The 48-slot particle pool expires particles after 30 simulation ticks, reuses
 geometry/textures/materials, sorts far-to-near and clears on restart. Resources
 are created once. GPU acceleration and residency remain opt-in. See the
-[effects contract](3d-effects.md) for blending and depth behavior.
+[effects contract](../../../docs/3d-effects.md) for blending and depth behavior.
 
-Edit [the original assets](../examples/kart3d/assets/README.md), then run
+Edit [the original assets](../assets/README.md), then run
 `mise run //examples/kart3d:generate` to regenerate original asset files, the course
 and checked SDK imports. Builds check imports against source assets. The original
 asset generator owns its glTF files; adopt edited glTF inputs deliberately if

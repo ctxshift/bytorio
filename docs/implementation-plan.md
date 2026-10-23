@@ -325,7 +325,7 @@ Next slices:
 - Expand layered presentation beyond the initial single orthographic screen
   batch, including translucent HUD composition and explicit pass/camera hints.
 - The representative riverside field is now packaged through both SDKs;
-  [console qualification](riverside-console-measurements.md) measures update,
+  [console qualification](../experiments/voxel-resolution/docs/riverside-console-measurements.md) measures update,
   rendering and presentation on native and browser. Use those results to gate
   60 fps claims, GPU residency and later integrated/mobile qualification.
 - Add a native settings menu/persistence after the runtime options and capability
@@ -336,7 +336,7 @@ The perspective racer now integrates original imported kart LODs and scenery,
 textured road surfaces, cutout decorations, translucent ground shadows and bounded
 smoke/boost effects in both SDKs. The [effects contract](3d-effects.md) defines
 experimental SDK 0.6.0 and protocol 8; CPU stays the default. The
-[racing guide](kart-racing.md) records controls, authoring and verification.
+[racing guide](../examples/kart3d/docs/kart-racing.md) records controls, authoring and verification.
 Distance LOD and manual detail are independent of the renderer. Broader device
 qualification, advanced racing physics and full indexed asset delivery remain
 separate work.

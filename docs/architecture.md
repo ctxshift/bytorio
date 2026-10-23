@@ -109,5 +109,5 @@ themselves establish cross-platform deterministic replay or rollback networking.
 The [implementation plan](implementation-plan.md) contains milestone planning and
 completion evidence, rather than compatibility guarantees. Research such as
 [DS versus 3DS targets](target-comparison.md) and
-[pixel-stability experiments](pixel-stability-research.md) explores possibilities;
+[pixel-stability experiments](../experiments/voxel-resolution/docs/pixel-stability-research.md) explores possibilities;
 it does not change accepted architecture or a published profile.

@@ -8,4 +8,5 @@ SDK examples and checked generated model modules. `tools/` owns importing,
 building and measurement. Use `mise run generate` after editing the model and
 `mise run benchmark` to measure the attachment workload. Exports live in `build/`.
 The SDK's model-import conformance remains in `mise run //:test:models`.
-See the [model authoring guide](../../docs/model-import.md).
+See the [model authoring guide](../../docs/model-import.md) and the
+[attachment measurement report](docs/gpu-attachment-measurements.md).

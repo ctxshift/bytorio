@@ -156,7 +156,7 @@ the excluded/disoccluded fraction so a method cannot win by discarding hard area
 
 The existing native/browser player shares Odin, and its mesh path already has
 transforms, depth resources and a work budget. See
-[development](development.md) and [mesh implementation](../runtime/odin/resources/mesh.odin).
+[development](../../../docs/development.md) and [mesh implementation](../../../runtime/odin/resources/mesh.odin).
 A bounded CPU reference can transform samples and stamp into a logical color,
 depth and ID buffer. This tests the algorithm without requiring a new GPU API.
 Reserve explicit sample counts, memory, covered-pixel work and cache lifetimes;
@@ -168,7 +168,7 @@ with precomputed static samples and simple fragment lighting; compute shaders
 are not necessary for this proof. Keep a current-view mesh rendering as the
 visibility reference. GPU/browser capability checks and timings are still needed.
 
-The current [riverside comparison](../experiments/voxel-resolution/README.md)
+The current [riverside comparison](../README.md)
 now includes snapped 3D and a separate color/depth rabbit sprite as translation
 controls. Its orbit option deliberately exposes their limits; it does not
 implement the persistent-surface or probe experiments described here.

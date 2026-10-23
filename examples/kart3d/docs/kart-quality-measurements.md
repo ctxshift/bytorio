@@ -86,7 +86,7 @@ completed measurements. Raw timings remain in their original local reports.
 
 ## Moving-scene results
 
-Measured on 2026-10-21. Cells show **p50 / p95 / p99 milliseconds**; missed budgets count frames above 16.67 ms out of 300 measured frames. These are work timings, not delivered frame rates. The [portable summary](kart-quality-measurements.json) retains each startup, memory, traffic and artifact identity field; full timing arrays remain in the local benchmark reports.
+Measured on 2026-10-21. Cells show **p50 / p95 / p99 milliseconds**; missed budgets count frames above 16.67 ms out of 300 measured frames. These are work timings, not delivered frame rates. The [portable summary](../../../docs/kart-quality-measurements.json) retains each startup, memory, traffic and artifact identity field; full timing arrays remain in the local benchmark reports.
 
 ### CPU
 
