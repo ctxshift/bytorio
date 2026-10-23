@@ -1,54 +1,78 @@
 # Bytorio
 
-The [console website](docs/website.md) includes a landing page, searchable documentation,
-and browser-playable demo games with touch controls. Build it with `mise run build:site`
-and preview it with `mise run serve:site`.
+**A tiny console for big adventures.**
 
-[Bytorio](https://bytor.io) is a fantasy game console focused on small, mostly 2D games with occasional low-poly 3D, a fast development loop, and modern editors and AI tooling.
+[Bytorio](https://bytor.io/) is a fantasy game console: a small game system made
+in software. You can make your own games, play them on your computer or in a web
+browser, and share them with friends. No special console hardware needed.
 
-**[SDK 0.2.0](sdk/README.md)** provides typed Luau and Odin authoring APIs,
-generated cartridge entry points, validated sprite/font assets, and a common
-`new` / `check` / `build` / `run` / `watch` CLI. Start with
-`npm run byt -- new my-game`, then `npm run byt -- run my-game --web`.
-The [resource profile](docs/resource-profile.md) publishes typed resources,
-explicit graphics passes and scheduled audio/synthesis on both hosts.
-The [API reference](sdk/api.md) and `mise run test` cover both SDKs, with ABI 1
-compatibility retained for existing games.
+Think pixel-art adventures, arcade racers, little puzzles, and experiments that
+start with “what if?” Bytorio focuses on 2D games, with experimental 3D tools to
+explore when you're ready.
 
-The developer CLI is `byt`, available from this checkout with `mise run byt`
-or `npm run byt --`. Product branding is defined in `package.json` and shared
-with the native/browser players through generated metadata. Existing SDK imports,
-`console.json` project manifests and PNG cartridge formats remain compatible.
-Run `mise run generate` after editing the branding metadata.
+**[Play some games](https://bytor.io/showcase/)** ·
+**[Get started](https://bytor.io/docs/sdk/README.html#install-byt)** ·
+**[Browse the docs](https://bytor.io/docs/)**
 
-**Luau is the default cartridge language; Odin is also supported.** The runtime is Odin. The standalone native player has no webview; the browser player uses **WebAssembly**. Odin games compile into portable Wasm cartridge modules; Luau games run in the player-supplied Wasm executor. The display supports **640×360** (default) and **320×180**, with runtime switching and crisp scaling. See [display modes](docs/display-modes.md) for the cartridge interface. Games should generally fit around **128 MB**, with a maximum around **512 MB**; the implemented preview profile has smaller limits documented in the specification.
+## Try it first
 
-Distribution includes **self-contained PNG cartridges**: a viewable cartridge image carrying the complete game. Native and browser players load the original PNG file. The version-1 encoding uses a private PNG chunk; image resizing or re-encoding may discard the payload.
+You don't need to install the development tools to play:
 
-The native Odin player and browser Odin/Wasm runtime load the identical game module with a movable sprite and sound. Use arrows/WASD to move and Space or click/tap for sound. The browser requires **Start game** to unlock audio. Both cartridge languages use this player; C++ is limited to the Luau compiler/VM executor and development analyzer. The original C++ reference player has been removed.
+- **[Copper Circuit](https://bytor.io/showcase/copper-circuit/)** — race six
+  rivals, find your line, and use your boost to reach the finish.
+- **[Mossglen: The Sunleaf](https://bytor.io/showcase/mossglen/)** — explore a
+  village, take on a quest, and battle a slime.
 
-See [building and running Odin](docs/odin-development.md) for prerequisites, build commands, and verification. **[PNG cartridges](docs/png-cartridges.md) are implemented** for both languages: `npm run byt -- pack my-game`. Native and browser players load the same viewable PNG; both published profiles have a 2 MiB container limit. Larger indexed ROMs remain planned.
+Choose **Load game**, then **Start game** to enable sound. Use your keyboard or
+on-screen touch controls. Both games include Luau and Odin versions, so you can
+see how the same idea works in either language.
 
-**The sprite RPG comparison is playable in both Luau and Odin.** Explore a village, accept a quest, fight a slime, and return a sunleaf. See [the RPG guide](docs/rpg-comparison.md) for builds, the comparison launcher, both game sources, and replay verification. Build both with `mise run //examples/rpg:build`.
+## Make your first game
 
-An [experimental Luau Wasm executor](experiments/luau-executor/README.md) runs both cartridges through the same Odin native/browser player. Its [RPG benchmark results](experiments/luau-executor/BATCHED-RESULTS.md) describe the earlier 384×216 prototype. The original RPG layout and historical comparison checks predate the two display modes.
+You don't need to understand how the console works inside to make a game for it.
+Start small: move a character, change a color, or add a sound.
 
-**[Copper Circuit](docs/racing-demo.md) is the current racing comparison**, with independent Luau and Odin cartridges at 320×180, six rivals, boost, collisions and three-lap races. Build with `npm run build:racing`, verify with `npm run test:racing`, and measure with `npm run bench:racing`. See the [native/browser performance results](experiments/racing/RESULTS.md).
+1. **Set up your tools.** Follow the [getting-started guide on the website](https://bytor.io/docs/sdk/README.html#install-byt)
+   or [read it in this repository](sdk/README.md#install-byt).
+2. **Create and run the starter game.** Follow [Start a game](sdk/README.md#start-a-game).
+   `byt` is Bytorio's command-line tool: you type its commands into a terminal
+   to create, check, and run a project.
+3. **Make one small change.** Open the game in your code editor, change something,
+   and run it again. The [language examples](docs/language-examples.md) show what
+   game code looks like.
+4. **Build from there.** Try adding a goal, a new obstacle, or your own artwork.
+   The [game examples](examples/README.md) are there to learn from.
 
-- [Architecture](docs/architecture.md): accepted decisions, proposed machine profile, runtime boundaries, and open questions.
-- [Implementation plan](docs/implementation-plan.md): milestones, acceptance criteria, and validation.
-- [Odin development guide](docs/odin-development.md): build, run, controls, tests, and prototype limitations.
-- [Development guide](docs/development.md): current player, SDK, and Luau toolchain commands.
-- [DS versus 3DS target](docs/target-comparison.md): recommendation and supporting research.
-- [Language decision](docs/adr/0001-use-odin-for-games-and-runtime.md): Odin for the console runtime; Odin or Luau for cartridges.
-- [Odin evaluation](docs/odin-evaluation.md): supporting research, an isolated compiler probe, and remaining integration risks.
+**New to coding? Start with Luau**, the default language for new games. Odin is
+also supported. Both languages can make games for the same console.
 
-The current recommendation is to retain the agreed 2D-first scope while leaving room for richer 3D later. A move to a 3DS-level fidelity target remains an open product decision.
+**Bytorio is still in development.** The standalone installer isn't available
+yet; creating games currently requires the [source development setup](docs/development.md)
+on Windows x64. You can still play the browser demos without that setup.
 
-Run `mise install` and `mise exec -- npm ci` to prepare the pinned development tools.
-`mise run format` formats JavaScript/HTML with Prettier, Odin with odinfmt, Luau
-with StyLua, and C++ with clang-format. `mise run lint` runs ESLint, `odin check -vet`,
-`luau-analyze`, and clang-tidy.
-CI enforces both lint and `mise run format:check`. Dependency build tasks live in
-`.mise/tasks/`; project commands live in `mise.toml`. Project scripts use JavaScript.
-See [development](docs/development.md) for setup, editor settings and task details.
+## Learn as you go
+
+You can look things up as you need them:
+
+- [Drawing and graphics](sdk/graphics.md) — put your game on the screen.
+- [Audio](sdk/audio.md) — add sound effects and music.
+- [Game API reference](sdk/api.md) — look up the tools available to your code.
+- [Sharing your game](docs/png-cartridges.md) — package a game as a PNG cartridge:
+  an image file that also contains the game. Share the original file, because
+  resizing or re-saving it can remove the game data.
+- [All documentation](https://bytor.io/docs/) — search for a topic or explore
+  the full collection of guides.
+
+## Work on the console itself
+
+Want to help build Bytorio, or just curious about how it works? Start with the
+[development guide](docs/development.md) for tool installation, builds, and tests.
+The console runtime uses Odin; games can use **Luau or Odin**.
+
+The deeper details live in their own guides:
+
+- [Architecture](docs/architecture.md) and [implementation plan](docs/implementation-plan.md).
+- [Supported features and limits](docs/resource-profile.md), [display modes](docs/display-modes.md),
+  and the [cartridge specification](docs/cartridge-spec.md).
+- [Experimental 3D](docs/compact-3d.md) and [model importing](docs/model-import.md).
+- [Website development and deployment](docs/website.md).
