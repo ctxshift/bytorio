@@ -32,6 +32,13 @@ function parseReservedCartridge(runtime, length) {
     title: text.decode(
       read(runtime.runtime_cartridge_title(), runtime.runtime_cartridge_title_size()),
     ),
+    saveId: text.decode(
+      read(runtime.runtime_cartridge_save_id(), runtime.runtime_cartridge_save_id_size()),
+    ),
+    saveLegacy: read(
+      runtime.runtime_cartridge_save_legacy(),
+      runtime.runtime_cartridge_save_legacy_size(),
+    ).slice(),
     display: runtime.runtime_cartridge_display(),
     code: read(runtime.runtime_cartridge_code(), runtime.runtime_cartridge_code_size()).slice(),
   };

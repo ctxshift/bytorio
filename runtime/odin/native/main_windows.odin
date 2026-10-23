@@ -526,6 +526,8 @@ run :: proc() -> int {
         cart.profile,
         cart.content,
         file_bytes if packaged || len(source) == 0 else source,
+        cart.save_id,
+        cart.save_legacy,
     ) {
 
         return error(app.game.error)

@@ -1,22 +1,36 @@
 package guest
 
 import abi "../abi"
+import cartridge "../cartridge"
 import "base:runtime"
 import "core:crypto/hash"
 import "core:fmt"
 import "core:os"
+import win "core:sys/windows"
 
 Save_State :: struct {
     write_allowed:   bool,
+    unavailable:     bool,
     bytes:           [abi.MAX_SAVE_BYTES]u8,
     length, status:  u32,
     directory, path: string,
 }
 
-save_open :: proc(state: ^Save_State, identity: []u8) {
+save_open :: proc(
+    state: ^Save_State,
+    identity: []u8,
+    declared_id: []u8 = nil,
+    declared_legacy: []u8 = nil,
+) {
     state.write_allowed = true
     state.status = abi.SAVE_ERROR
     if len(identity) == 0 { return }
+    id, legacy := declared_id, declared_legacy
+    if len(id) == 0 && cartridge.is_png(identity) {
+        cart, error := cartridge.parse(identity)
+        if error != "" { state.unavailable = true; return }
+        id, legacy = cart.save_id, cart.save_legacy
+    }
     directory := os.get_env("BYTORIO_SAVE_DIRECTORY", context.allocator)
     if directory == "" {
         base := os.get_env("LOCALAPPDATA", context.allocator)
@@ -26,7 +40,13 @@ save_open :: proc(state: ^Save_State, identity: []u8) {
     }
     state.directory = directory
     digest: [32]u8
-    hash.hash_bytes_to_buffer(.SHA256, identity, digest[:])
+    if len(id) > 0 {
+        namespaced := fmt.aprintf("%s%s", abi.SAVE_IDENTITY_PREFIX, string(id))
+        defer delete(namespaced)
+        hash.hash_bytes_to_buffer(.SHA256, transmute([]u8)namespaced, digest[:])
+    } else {
+        hash.hash_bytes_to_buffer(.SHA256, identity, digest[:])
+    }
     name: [64]u8
     digits := "0123456789abcdef"
     for byte, i in digest {
@@ -35,8 +55,55 @@ save_open :: proc(state: ^Save_State, identity: []u8) {
     }
     state.path = fmt.aprintf("%s/%s.sav", directory, string(name[:]))
     state.status = abi.SAVE_EMPTY
-    if !os.exists(state.path) { return }
-    file, open_error := os.open(state.path)
+    if !os.exists(state.path) {
+        for offset := 0; offset < len(legacy); offset += abi.SAVE_DIGEST_BYTES {
+            for byte, i in legacy[offset:offset + abi.SAVE_DIGEST_BYTES] {
+                name[i * 2] = digits[byte >> 4]
+                name[i * 2 + 1] = digits[byte & 15]
+            }
+            old_path := fmt.aprintf("%s/%s.sav", directory, string(name[:]))
+            exists := os.exists(old_path)
+            if exists {
+                save_read_path(state, old_path)
+                delete(old_path)
+                if state.status != abi.SAVE_READY { state.unavailable = true; return }
+                temporary := fmt.aprintf("%s.%d.migrate.tmp", state.path, os.get_pid())
+                defer delete(temporary)
+                defer os.remove(temporary)
+                if os.write_entire_file(temporary, state.bytes[:state.length]) != nil {
+                    state.length, state.status, state.unavailable = 0, abi.SAVE_ERROR, true
+                    return
+                }
+                from, to :=
+                    win.utf8_to_utf16(temporary, context.allocator),
+                    win.utf8_to_utf16(state.path, context.allocator)
+                defer delete(from)
+                defer delete(to)
+                if from == nil || to == nil {
+                    state.length, state.status, state.unavailable = 0, abi.SAVE_ERROR, true
+                    return
+                }
+                // No replace flag: a concurrent canonical writer always wins.
+                moved := win.MoveFileExW(cstring16(raw_data(from)), cstring16(raw_data(to)), 0)
+                state.length = 0
+                if !moved && !os.exists(state.path) {
+                    state.status, state.unavailable = abi.SAVE_ERROR, true
+                    return
+                }
+                save_read_path(state, state.path)
+                state.unavailable = state.status == abi.SAVE_ERROR
+                return
+            }
+            delete(old_path)
+        }
+        return
+    }
+    save_read_path(state, state.path)
+    state.unavailable = len(id) > 0 && state.status == abi.SAVE_ERROR
+}
+
+save_read_path :: proc(state: ^Save_State, path: string) {
+    file, open_error := os.open(path)
     if open_error != nil { state.status = abi.SAVE_ERROR; return }
     defer os.close(file)
     length, size_error := os.file_size(file)
@@ -52,6 +119,7 @@ save_open :: proc(state: ^Save_State, identity: []u8) {
 save_write_bytes :: proc(state: ^Save_State, bytes: []u8) -> u32 {
     if len(bytes) == 0 ||
        len(bytes) > abi.MAX_SAVE_BYTES ||
+       state.unavailable ||
        state.path == "" { return abi.SAVE_ERROR }
     if os.mkdir_all(state.directory) != nil { state.status = abi.SAVE_ERROR; return state.status }
     temporary := fmt.aprintf("%s.%d.tmp", state.path, os.get_pid())

@@ -227,9 +227,11 @@ load :: proc(
     expected_profile: u32 = 0,
     content: cartridge.Content = {},
     save_identity: []u8 = nil,
+    save_id: []u8 = nil,
+    save_legacy: []u8 = nil,
 ) -> bool {
     game.content = content
-    save_open(&game.save, save_identity)
+    save_open(&game.save, save_identity, save_id, save_legacy)
     game.text_input.read_allowed = true
     if len(bytes) == 0 || len(bytes) > abi.MAX_GAME_BYTES {
 

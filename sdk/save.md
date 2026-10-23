@@ -48,11 +48,38 @@ The game may reuse its staging buffer immediately after `write` returns. The
 host rejects oversized input before copying and cannot expose arbitrary files.
 There is no filename argument, directory access, or placeholder success result.
 
-The slot key is the SHA-256 digest of the complete packaged cartridge bytes.
-Development runs of unpackaged games use the raw guest module or Luau source.
-Copies of identical bytes share a slot on the same host. Modified cartridge
-bytes, including a new package build, select a different slot; version 1 has no
-cross-build identity or migration service. Native saves live in the operating
+Declare a stable identity in `console.json` to retain saves across compatible
+rebuilds, cover/assets/code changes and file renames in either SDK:
+
+```json
+"save": {"id": "org.example.game.compat-v1", "legacy": []}
+```
+
+IDs contain 1–128 lowercase ASCII letters/digits, with single dot or hyphen
+separators. Choose a distinct ID for unrelated games or incompatible save formats.
+The slot key is SHA-256 of UTF-8 `bytorio-save-v1\0` followed by the ID (the
+separator is one NUL byte). Titles and file paths never determine sharing.
+Without a declaration, the key remains SHA-256 of the complete PNG. Unpackaged
+development games retain their raw module/source hash identity.
+
+The optional `legacy` array lists up to 16 unique lowercase 64-digit SHA-256
+keys of older complete cartridges, in priority order. Only when the stable slot
+is absent does the host adopt the first existing legacy record. It preserves the
+old copy and atomically creates the canonical slot; a concurrent canonical writer
+wins. A corrupt canonical or first existing legacy record reports Error without
+fallback or overwrite. Failed adoption leaves the legacy data intact and reports
+Error. This migrates storage keys only: the game owns record-format compatibility.
+
+The SDK stores this declaration in one optional private ancillary PNG `saVe`
+chunk after `caRt`. Its four-byte header is version (1), ASCII ID byte count,
+legacy digest count and reserved zero; ID bytes precede ordered 32-byte raw SHA-256
+digests. Duplicate, misplaced, malformed or unsupported metadata rejects loading.
+Both hosts use the same bounded Odin parser and borrow metadata from the retained
+PNG; browser callers copy metadata before growing runtime memory. Older players
+ignore this optional chunk and continue using the whole-PNG key. The cartridge
+profile, guest ABI and save interface version are unchanged.
+
+Native saves live in the operating
 system's local application-data directory under `Bytorio/saves`. Host tooling may
 override that directory with `BYTORIO_SAVE_DIRECTORY`. Browser saves belong to
 the player origin and are independent from native saves. Storage is local to the

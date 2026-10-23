@@ -179,6 +179,41 @@ export function encodeContent(entries) {
   return result;
 }
 
+export function encodeSaveIdentity(save) {
+  if (save === undefined) {
+    return null;
+  }
+  const limits = contract.save;
+  if (
+    !save ||
+    typeof save !== "object" ||
+    Array.isArray(save) ||
+    Object.keys(save).some((key) => !["id", "legacy"].includes(key)) ||
+    typeof save.id !== "string" ||
+    save.id.length > limits.maxIdentityBytes ||
+    !/^[a-z0-9]+(?:[.-][a-z0-9]+)*$/.test(save.id)
+  ) {
+    throw new Error(
+      "save.id must be 1..128 lowercase ASCII letters/digits with dot or hyphen separators",
+    );
+  }
+  const legacy = save.legacy === undefined ? [] : save.legacy;
+  if (
+    !Array.isArray(legacy) ||
+    legacy.length > limits.maxLegacyKeys ||
+    legacy.some((key) => typeof key !== "string" || !/^[0-9a-f]{64}$/.test(key)) ||
+    new Set(legacy).size !== legacy.length
+  ) {
+    throw new Error("save.legacy must contain at most 16 unique lowercase SHA-256 hex keys");
+  }
+  const header = Buffer.from([limits.identityVersion, save.id.length, legacy.length, 0]);
+  return Buffer.concat([
+    header,
+    Buffer.from(save.id, "ascii"),
+    ...legacy.map((key) => Buffer.from(key, "hex")),
+  ]);
+}
+
 export function encodeCartridge({
   title,
   language,
@@ -187,6 +222,7 @@ export function encodeCartridge({
   cover,
   assets,
   content = [],
+  save,
   profile = "2d-preview-1",
 }) {
   const requirements = contract.profiles.find((item) => item.name === profile);
@@ -232,14 +268,20 @@ export function encodeCartridge({
   header.writeUInt32LE(code.length, 24);
   const image = cover || defaultCover({ title, language, assets });
   const parts = chunks(image);
-  if (parts.some(({ type }) => type === "caRt" || type === "coNt")) {
+  if (
+    parts.some(
+      ({ type }) => type === "caRt" || type === "coNt" || type === contract.save.identityChunk,
+    )
+  ) {
     throw new Error("Cover already contains a cartridge");
   }
   const end = parts.at(-1).offset;
   const contentBytes = encodeContent(content);
+  const saveBytes = encodeSaveIdentity(save);
   const png = Buffer.concat([
     image.subarray(0, end),
     chunk("caRt", Buffer.concat([header, name, code])),
+    ...(saveBytes ? [chunk(contract.save.identityChunk, saveBytes)] : []),
     ...(contentBytes ? [chunk("coNt", contentBytes)] : []),
     image.subarray(end),
   ]);

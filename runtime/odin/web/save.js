@@ -1,4 +1,12 @@
-import { MAX_SAVE_BYTES, SAVE_EMPTY, SAVE_READY, SAVE_PENDING, SAVE_ERROR } from "./constants.js";
+import {
+  MAX_SAVE_BYTES,
+  SAVE_EMPTY,
+  SAVE_READY,
+  SAVE_PENDING,
+  SAVE_ERROR,
+  SAVE_DIGEST_BYTES,
+  SAVE_IDENTITY_PREFIX,
+} from "./constants.js";
 
 export const unavailableSaveImports = Object.freeze({
   save_size: () => 0,
@@ -64,13 +72,18 @@ export function createSaveSlot(getGame, { initial = new Uint8Array(), commit } =
   };
 }
 
-export async function openSaveSlot(identity, getGame) {
+export async function saveStorageKey(identity, metadata) {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    metadata?.saveId ? new TextEncoder().encode(SAVE_IDENTITY_PREFIX + metadata.saveId) : identity,
+  );
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+export async function openSaveSlot(identity, getGame, metadata) {
   let database;
   try {
-    const digest = await crypto.subtle.digest("SHA-256", identity);
-    const key = [...new Uint8Array(digest)]
-      .map((byte) => byte.toString(16).padStart(2, "0"))
-      .join("");
+    const key = await saveStorageKey(identity, metadata);
     database = await new Promise((resolve, reject) => {
       const request = indexedDB.open("bytorio-saves-v1", 1);
       request.onupgradeneeded = () => request.result.createObjectStore("slots");
@@ -79,18 +92,47 @@ export async function openSaveSlot(identity, getGame) {
       request.onblocked = () => reject(new Error("Save database is blocked"));
     });
     const initial = await new Promise((resolve, reject) => {
-      const transaction = database.transaction("slots", "readonly");
-      const request = transaction.objectStore("slots").get(key);
-      transaction.oncomplete = () =>
-        resolve(
-          request.result === undefined
-            ? new Uint8Array()
-            : request.result?.length === 0
-              ? null
-              : request.result,
-        );
+      // One read/write transaction serializes absence, adoption and concurrent opens.
+      const transaction = database.transaction("slots", "readwrite");
+      const store = transaction.objectStore("slots");
+      let initial;
+      const valid = (value) =>
+        value instanceof Uint8Array && value.length > 0 && value.length <= MAX_SAVE_BYTES;
+      const legacy = metadata?.saveLegacy ?? new Uint8Array();
+      const findLegacy = (offset) => {
+        if (offset >= legacy.length) {
+          initial = new Uint8Array();
+          return;
+        }
+        const oldKey = [...legacy.subarray(offset, offset + SAVE_DIGEST_BYTES)]
+          .map((byte) => byte.toString(16).padStart(2, "0"))
+          .join("");
+        const request = store.openCursor(oldKey);
+        request.onsuccess = () => {
+          if (request.result === null) {
+            findLegacy(offset + SAVE_DIGEST_BYTES);
+            return;
+          }
+          initial = valid(request.result.value) ? request.result.value : null;
+          if (initial) {
+            store.add(initial, key);
+          }
+        };
+      };
+      const request = store.openCursor(key);
+      request.onsuccess = () => {
+        if (request.result === null) {
+          findLegacy(0);
+        } else {
+          initial = valid(request.result.value) ? request.result.value : null;
+        }
+      };
+      transaction.oncomplete = () => resolve(initial);
       transaction.onerror = transaction.onabort = () => reject(transaction.error);
     });
+    if (initial === null && metadata?.saveId) {
+      throw new Error("Invalid stored save");
+    }
     const slot = createSaveSlot(getGame, {
       initial,
       commit: (snapshot) =>

@@ -111,3 +111,29 @@ test("64 KiB pending snapshots retain legacy records and own their complete payl
   assert.equal(host.save_read(65536, 65536), 65536);
   assert.deepEqual(destination, expected);
 });
+
+test("save identity encoding validates bounded portable declarations", async () => {
+  const { encodeSaveIdentity } = await import("./sdk/cartridge.mjs");
+  assert.equal(encodeSaveIdentity(undefined), null);
+  assert.deepEqual(encodeSaveIdentity({ id: "a" }), Buffer.from([1, 1, 0, 0, 97]));
+  const legacy = "ab".repeat(32);
+  const bytes = encodeSaveIdentity({ id: "org.example.game-v1", legacy: [legacy] });
+  assert.equal(bytes[2], 1);
+  assert.equal(bytes.subarray(-32).toString("hex"), legacy);
+  assert.equal(encodeSaveIdentity({ id: "a".repeat(128) }).length, 132);
+  for (const save of [
+    null,
+    [],
+    {},
+    { id: "" },
+    { id: "a".repeat(129) },
+    ...["../save", "A", "a..b", "a-", "a/b", "é", "a\0b", "a_b"].map((id) => ({ id })),
+    { id: "a", extra: true },
+    { id: "a", legacy: null },
+    { id: "a", legacy: ["AA".repeat(32)] },
+    { id: "a", legacy: [legacy, legacy] },
+    { id: "a", legacy: Array.from({ length: 17 }, (_, i) => i.toString(16).padStart(64, "0")) },
+  ]) {
+    assert.throws(() => encodeSaveIdentity(save), /save\./);
+  }
+});

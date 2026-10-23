@@ -7,7 +7,7 @@ import { createHash } from "node:crypto";
 import { readGraphics } from "./assets.mjs";
 import { bundleLuau, odinEntry } from "./bundle.mjs";
 import { inspectGuest } from "../../runtime/odin/web/policy.js";
-import { encodeCartridge } from "./cartridge.mjs";
+import { encodeCartridge, encodeSaveIdentity } from "./cartridge.mjs";
 import { decodeCartridge } from "../../runtime/odin/web/cartridge.js";
 import { formatSource } from "../code-tools.mjs";
 import { exportPlayer } from "../player-export.mjs";
@@ -73,6 +73,7 @@ async function inside(project, path) {
 export async function manifest(path) {
   const project = await realpath(resolve(path));
   const value = JSON.parse(await readFile(resolve(project, "console.json"), "utf8"));
+  encodeSaveIdentity(value.save);
   const profile = contract.profiles.find((item) => item.sdk === value.sdk);
   if (!profile || (value.profile !== undefined && value.profile !== profile.name)) {
     throw new Error("Unsupported SDK or profile requirements");
@@ -331,6 +332,7 @@ async function projectCartridge(spec, coverPath = spec.cover) {
     assets: JSON.parse(await readFile(spec.assets, "utf8")),
     cover: coverPath ? await readFile(coverPath) : null,
     content,
+    save: spec.save,
   });
 }
 

@@ -17,6 +17,8 @@ Cartridge :: struct {
     title:                     string,
     code:                      []u8,
     content:                   Content,
+    save_id:                   []u8,
+    save_legacy:               []u8,
 }
 
 be32 :: proc(b: []u8) -> u32 {
@@ -110,6 +112,7 @@ parse :: proc(b: []u8) -> (cart: Cartridge, error: string) {
     header, palette, idat, idat_ended, found := false, false, false, false, false
     color, depth: u8
     image_bytes: u64
+    save_found := false
     content_found := false
     content_bytes: u64
     for count := 0; offset < len(b) && count < 4096; count += 1 {
@@ -209,6 +212,43 @@ parse :: proc(b: []u8) -> (cart: Cartridge, error: string) {
                 return {}, error
             }
             found = true
+        case abi.SAVE_IDENTITY_CHUNK:
+            if save_found || !found { return {}, "duplicate or misplaced save identity" }
+            if len(data) < abi.SAVE_IDENTITY_HEADER_BYTES ||
+               data[0] != abi.SAVE_IDENTITY_VERSION ||
+               data[3] != 0 ||
+               data[1] == 0 ||
+               int(data[1]) > abi.MAX_SAVE_IDENTITY_BYTES ||
+               int(data[2]) > abi.MAX_SAVE_LEGACY_KEYS ||
+               len(data) !=
+                   abi.SAVE_IDENTITY_HEADER_BYTES +
+                       int(data[1]) +
+                       int(data[2]) * abi.SAVE_DIGEST_BYTES {
+                return {}, "invalid save identity metadata"
+            }
+            cart.save_id = data[abi.SAVE_IDENTITY_HEADER_BYTES:abi.SAVE_IDENTITY_HEADER_BYTES +
+            int(data[1])]
+            separator := true
+            for c in cart.save_id {
+                if (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') {
+                    separator = false
+                } else if (c == '.' || c == '-') && !separator {
+                    separator = true
+                } else {
+                    return {}, "invalid save identity"
+                }
+            }
+            if separator { return {}, "invalid save identity" }
+            cart.save_legacy = data[abi.SAVE_IDENTITY_HEADER_BYTES + int(data[1]):]
+            for i := 0; i < len(cart.save_legacy); i += abi.SAVE_DIGEST_BYTES {
+                for j := 0; j < i; j += abi.SAVE_DIGEST_BYTES {
+                    if string(cart.save_legacy[i:i + abi.SAVE_DIGEST_BYTES]) ==
+                       string(cart.save_legacy[j:j + abi.SAVE_DIGEST_BYTES]) {
+                        return {}, "duplicate legacy save key"
+                    }
+                }
+            }
+            save_found = true
         case "coNt":
             if content_found || !found {
                 return {}, "duplicate or misplaced cartridge content"

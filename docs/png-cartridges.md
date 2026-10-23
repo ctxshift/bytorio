@@ -62,6 +62,12 @@ render image data; the console needs only the private payload. Ordinary image
 decoders display the cover independently. APNG covers and unknown critical chunks
 are rejected. CRC-32 detects accidental damage; it does not authenticate authors.
 
+An optional private ancillary `saVe` chunk after `caRt` declares a stable save
+identity and explicit legacy keys. It counts toward the base PNG size bound.
+See [save identity and migration](../sdk/save.md) for its bounded binary layout,
+validation and authoring contract. Older players ignore this chunk; no container,
+profile or guest ABI version changes are required.
+
 ## Private chunk payload
 
 The first 32 bytes are a fixed header. All multibyte fields inside this private

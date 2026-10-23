@@ -485,7 +485,7 @@ self.onmessage = async ({ data }) => {
             cartridge.length,
           )
         : input;
-      saveSlot = await openSaveSlot(identity, () => game);
+      saveSlot = await openSaveSlot(identity, () => game, cartridge);
       textSession?.close();
       textSession = createTextInputSession(() => game, {
         onConfigure: (state) => self.postMessage({ type: "text-state", state }),

@@ -360,6 +360,20 @@ runtime_cartridge_code_size :: proc "c" () -> u32 {
     return u32(len(cartridge_info.code))
 }
 @(export)
+runtime_cartridge_save_id :: proc "c" () -> u32 {
+    return u32(uintptr(raw_data(cartridge_info.save_id)))
+}
+@(export)
+runtime_cartridge_save_id_size :: proc "c" () -> u32 { return u32(len(cartridge_info.save_id)) }
+@(export)
+runtime_cartridge_save_legacy :: proc "c" () -> u32 {
+    return u32(uintptr(raw_data(cartridge_info.save_legacy)))
+}
+@(export)
+runtime_cartridge_save_legacy_size :: proc "c" () -> u32 {
+    return u32(len(cartridge_info.save_legacy))
+}
+@(export)
 runtime_cartridge_title :: proc "c" () -> u32 {
     return u32(uintptr(raw_data(cartridge_info.title)))
 }
