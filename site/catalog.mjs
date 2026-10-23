@@ -63,7 +63,21 @@ export const sections = [
       ["docs/compact-3d.md", "Experimental 3D"],
       ["docs/resource-profile.md", "Profiles & limits"],
       ["docs/cartridge-spec.md", "Cartridge specification"],
-      ["docs/architecture.md", "Architecture"],
+      ["docs/model-import.md", "Import models"],
     ],
   ],
+];
+
+// Publication is opt-in. Repository notes, ADRs and benchmark reports are not
+// part of the game developer handbook, even when a public guide links to them.
+export const publicDocuments = [
+  ...sections.flatMap(([, links]) => links.map(([path]) => path)),
+  ...games.map((game) => game.guide),
+  "sdk/save.md",
+  "sdk/text-input.md",
+  "docs/3d-effects.md",
+  "docs/billboards.md",
+  "docs/indexed-content.md",
+  "docs/resource-av-spec.md",
+  "docs/textured-3d.md",
 ];

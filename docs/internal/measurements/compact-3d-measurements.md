@@ -2,7 +2,7 @@
 
 Run `mise run test:3d` to reproduce the native/browser comparison and regenerate
 `build/compact-3d/report.json`, per-workload raw samples and player captures.
-See the [implementation and SDK contract](compact-3d.md) for supported scope.
+See the [implementation and SDK contract](../../compact-3d.md) for supported scope.
 
 ## Method
 

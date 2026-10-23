@@ -201,7 +201,7 @@ same regression is included in `test:build-tasks` during full validation.
 Run `mise run bench:build-tasks -- --label comparison` in an idle isolated
 checkout to retain cold, warm and representative edit timings. It temporarily
 adds comments to source files and restores their original bytes and timestamps.
-See [build iteration measurements](build-iteration-measurements.md) for results,
+See [build iteration measurements](internal/measurements/build-iteration-measurements.md) for results,
 methodology and limits.
 
 ```text

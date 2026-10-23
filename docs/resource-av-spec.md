@@ -24,7 +24,7 @@ conservative reservation and 50 ms lead are frozen for this profile; device
 latency and minimum hardware remain unqualified. Delivery uses
 SDL callbacks and transferable AudioWorklet buffers, with a maximum 2,048-frame
 render call; larger native callback requests are split. See the
-[measurement method and remaining gates](audio-measurements.md).
+[measurement method and remaining gates](internal/measurements/audio-measurements.md).
 
 Protocol 4 implements the synthesis slice with fixed typed DAGs and one mutable
 source store shared by instrument instances. Explicit `edit_sample` opts PCM

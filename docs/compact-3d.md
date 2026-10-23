@@ -453,7 +453,7 @@ surface rebuilding, not just the mesher. Native process working set, browser/gue
 linear memory and resource-budget bytes describe different things. No full audio
 DSP stress workload is included in this 3D benchmark.
 
-See [measurements](compact-3d-measurements.md) for observed results and remaining
+See [measurements](internal/measurements/compact-3d-measurements.md) for observed results and remaining
 work. The [riverside cartridge qualification](../experiments/voxel-resolution/docs/riverside-console-measurements.md)
 measures resident meshes and GPU presentation on a larger preserved surface
 field. Physics, streaming, a scene editor and persistent GPU attachments remain

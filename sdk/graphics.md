@@ -174,5 +174,5 @@ The verifier compares complete pixel buffers for 13 frames per language on
 native and browser, tests failure/reload and pointer/mode transitions, checks
 independent reference pixels with allocation tracking, and measures a full-frame
 upload. It writes raw captures, `composition.png` and `report.json` beneath the
-ignored `build/graphics-verification/`. [Measurement notes](../docs/graphics-measurements.md)
+ignored `build/graphics-verification/`. [Measurement notes](../docs/internal/measurements/graphics-measurements.md)
 describe what the timings and copy counters include.

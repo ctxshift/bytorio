@@ -1,10 +1,10 @@
-import { cp, mkdir, readFile, writeFile } from "node:fs/promises";
+import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, posix, resolve } from "node:path";
 import { execFileSync } from "node:child_process";
 import { Marked } from "marked";
 import { repo, run } from "./toolchain.mjs";
-import { games, sections } from "../site/catalog.mjs";
+import { games, sections, publicDocuments } from "../site/catalog.mjs";
 import { escape, shell, home, showcase, gamePage } from "../site/templates.mjs";
 
 // Sequential builds keep compiler jobs from competing with browser checks.
@@ -17,6 +17,10 @@ if (!process.argv.includes("--staged")) {
 
 const output = resolve(repo, "build/site");
 await mkdir(output, { recursive: true });
+// These generated trees must not retain pages removed from the public catalog.
+for (const directory of ["docs", "source"]) {
+  await rm(resolve(output, directory), { recursive: true, force: true });
+}
 async function emit(path, content) {
   const target = resolve(output, path);
   await mkdir(dirname(target), { recursive: true });
@@ -62,11 +66,7 @@ await emit("showcase/index.html", showcase());
 const tracked = execFileSync("git", ["ls-files", "-z"], { cwd: repo, encoding: "utf8" })
   .split("\0")
   .filter(Boolean);
-const markdown = tracked.filter((path) => path.endsWith(".md") && !path.endsWith("AGENTS.md"));
-// The site guide is available before the new file is first committed, too.
-if (!markdown.includes("docs/website.md")) {
-  markdown.push("docs/website.md");
-}
+const markdown = [...new Set(publicDocuments)];
 const documents = new Map(
   markdown.map((path) => {
     const text = readFileSync(resolve(repo, path), "utf8");
@@ -117,6 +117,10 @@ for (const [path, doc] of documents) {
       return `${root}${documents.get(target).url}${fragment ? `#${fragment}` : ""}`;
     }
     if (!tracked.includes(target)) {
+      return null;
+    }
+    // Do not republish internal documents as source pages through incoming links.
+    if (target.endsWith(".md") || target.startsWith("docs/internal/")) {
       return null;
     }
     if (image && /\.(png|svg|jpe?g|webp)$/i.test(target)) {

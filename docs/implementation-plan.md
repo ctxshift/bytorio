@@ -142,7 +142,7 @@ including typed targets/palettes/tables/pipelines, masks and stencil, affine qua
 ordered passes, screen resolution, readback and sprite/text conveniences in passes.
 `npm run test:graphics` compares complete native/browser frames from both SDKs,
 checks independent reference pixels, rollback and completion bounds, and records
-the full-frame upload workload. See [measurement method](graphics-measurements.md).
+the full-frame upload workload. See [measurement method](internal/measurements/graphics-measurements.md).
 The accelerated adapter remains deferred; full-profile publication still waits
 for 4c-4e rather than inferring support from these experimental SDK calls.
 
@@ -171,7 +171,7 @@ SDL callback delivery and an independent AudioWorklet with bounded recyclable
 transfers. `mise run test:audio` compares both SDKs/native/browser at three device
 rates, independent PCM references, malformed packets, queue pressure, completion
 delivery, 500 ms stalls, pause/resume and player PNG reload. A muted WASAPI probe
-also verified a physical output device. See [measurements](audio-measurements.md).
+also verified a physical output device. See [measurements](internal/measurements/audio-measurements.md).
 Audible listening, acoustic latency and minimum-device guarantees remain open;
 the 50 ms lead remains provisional. Publication/negotiation stays in 4e.
 
@@ -202,7 +202,7 @@ edits, audio-rate modulation, ADSR/LFO, seeded noise, filters, delay and bus
 chains. `mise run test:synthesis` builds the matching interactive tone cartridges
 and full 320-node workload for native/browser capture, timing and memory checks.
 Independent source/envelope/effect references and malformed-packet rollback
-checks complement cross-host PCM comparisons. See [verification](synthesis-measurements.md).
+checks complement cross-host PCM comparisons. See [verification](internal/measurements/synthesis-measurements.md).
 Minimum-device budgets and public profile publication remain 4e gates.
 
 - Add partial sample/wavetable writes, independent voice state and live parameter
@@ -264,7 +264,7 @@ also prototypes typed voxel grids with cached visible-face meshes, bulk region
 edits and frame-resource animation. `mise run test:3d` verifies and benchmarks
 both SDKs through the standalone native player and browser Worker at both display
 modes. Chunked/merged voxel resources and voxel-texture mapping remain future
-work; [measurements](compact-3d-measurements.md) determine the next optimization.
+work; [measurements](internal/measurements/compact-3d-measurements.md) determine the next optimization.
 
 The separate textured and alpha previews now support a bounded
 [static glTF/GLB import path](model-import.md). It emits both SDK modules with

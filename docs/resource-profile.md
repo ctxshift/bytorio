@@ -116,8 +116,8 @@ Portable quotas are frozen; they are not promised frame times. The audio/control
 reservation is 55,463,952 bytes inside the 64 MiB resource budget, with an 8 MiB
 shared PCM/history arena and a reported 2,400-frame initial audio lead. Physical
 speaker latency and minimum hardware remain unqualified. Existing measurements
-cover [upload/rendering](graphics-measurements.md), [PCM delivery](audio-measurements.md),
-and [full synthesis load](synthesis-measurements.md), including copy volume, staging,
+cover [upload/rendering](internal/measurements/graphics-measurements.md), [PCM delivery](internal/measurements/audio-measurements.md),
+and [full synthesis load](internal/measurements/synthesis-measurements.md), including copy volume, staging,
 DSP timings and memory. Qualify a target device with these workloads before
 claiming 60 Hz or uninterrupted audio under its maximum supported load.
 

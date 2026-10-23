@@ -196,4 +196,4 @@ interface. After the opening phrase, arrows change pitch/filter and Space morphs
 the sustained waveform. The [stress cartridge](../tests/synthesis/stress/game.luau)
 uses all voice/bus/node slots with live edits and ramps. Run `mise run test:synthesis`
 to build both and retain playable PNG/native/web exports under
-`build/synthesis-verification/<run>/`. See [verification](../docs/synthesis-measurements.md).
+`build/synthesis-verification/<run>/`. See [verification](../docs/internal/measurements/synthesis-measurements.md).

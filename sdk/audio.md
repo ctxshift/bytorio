@@ -204,5 +204,5 @@ audio.play_sample(audio.voice(0), source)
 ```
 
 The Odin example additionally imports `math "core:math"`. Call sample destruction
-when its storage is no longer needed. See [verification](../docs/audio-measurements.md)
+when its storage is no longer needed. See [verification](../docs/internal/measurements/audio-measurements.md)
 for parity, delivery and pressure checks.

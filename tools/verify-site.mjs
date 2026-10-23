@@ -34,6 +34,25 @@ async function checkLinks(directory) {
 }
 await checkLinks(output);
 report.checks.push("All generated local page and asset links resolve");
+const searchIndex = JSON.parse(await readFile(resolve(output, "search.json"), "utf8"));
+assert.ok(searchIndex.some(({ url }) => url === "docs/sdk/README.html"));
+assert.ok(searchIndex.some(({ url }) => url === "docs/sdk/audio.html"));
+for (const { url } of searchIndex) {
+  assert.doesNotMatch(
+    url,
+    /internal\/|measurements|research|experiments\/|adr\/|implementation-plan/,
+  );
+}
+for (const path of [
+  "docs/docs/audio-measurements.html",
+  "docs/docs/implementation-plan.html",
+  "docs/docs/internal/measurements/audio-measurements.html",
+  "source/docs/internal/measurements/audio-measurements.md.html",
+  "docs/examples/kart3d/docs/kart-quality-measurements.html",
+]) {
+  assert.ok(!existsSync(resolve(output, path)), `Internal page still published: ${path}`);
+}
+report.checks.push("SDK guides are searchable; internal reports and stale pages are unpublished");
 const server = serveSite({ port: 0 });
 await once(server, "listening");
 const base = `http://127.0.0.1:${server.address().port}`;

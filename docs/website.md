@@ -58,13 +58,21 @@ and use the DNS records reported by Fly. Verify the certificate with
 
 ## Content and documentation
 
-`site/catalog.mjs` lists games and the primary documentation navigation.
+`site/catalog.mjs` lists games, the primary documentation navigation, and the
+explicit `publicDocuments` list. Add game-author guides and SDK/tool references
+there to publish them. Other tracked Markdown is not automatically published:
+ADRs, planning notes, research and benchmark reports stay in the source checkout.
+Shared measurement reports and their data live in `docs/internal/measurements/`;
+example and experiment reports belong beside their owning project.
+
 `site/templates.mjs` owns the site layout and editorial content. The build renders
-tracked Markdown, including the SDK reference and specifications, into HTML. It
+only the public Markdown selection into HTML. It
 preserves headings, tables, fenced code, and links to available documents and
-source files. References to ignored local build artifacts are labeled rather than
+source files. References to unpublished documents and ignored local build artifacts are labeled rather than
 published as broken links. Source files linked from guides receive readable code
-pages. Search is local, loads its index on demand, and searches full document text.
+pages. Search is local, loads its index on demand, and searches only public document
+text. Each build clears the generated documentation and source-page directories
+so removed pages cannot remain available from an earlier build.
 
 `site/site.css` owns the responsive dark brand theme: pixel headings, red buttons,
 illustrated handheld and cartridge frames, and the fox logo. Body copy and

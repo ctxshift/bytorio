@@ -147,5 +147,5 @@ Odin scene through the same native and browser player:
 
 Use these results to decide chunk sizes, geometry caps, edit budgets, profile
 memory and whether a GPU backend is necessary. The subsequent
-[prototype measurements](compact-3d-measurements.md) provide initial evidence;
+[prototype measurements](internal/measurements/compact-3d-measurements.md) provide initial evidence;
 minimum-device qualification and published voxel limits remain future work.

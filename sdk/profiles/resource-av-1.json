@@ -57,9 +57,9 @@
     "browser": "Chromium, WebAssembly and AudioWorklet",
     "timingGuarantee": "No universal frame time or device latency guarantee; qualify target devices with the conformance workloads.",
     "measurements": [
-      "../../docs/graphics-measurements.md",
-      "../../docs/audio-measurements.md",
-      "../../docs/synthesis-measurements.md"
+      "../../docs/internal/measurements/graphics-measurements.md",
+      "../../docs/internal/measurements/audio-measurements.md",
+      "../../docs/internal/measurements/synthesis-measurements.md"
     ]
   }
 }
