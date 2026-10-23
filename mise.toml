@@ -347,6 +347,14 @@ run = "node tools/build-site.mjs --staged"
 description = "Preview the console website on port 8088"
 run = "node tools/serve-site.mjs"
 
+[tasks."deploy:site"]
+description = "Build, check and deploy the website to Fly.io"
+run = [
+  { task = "build:site" },
+  { task = "test:site" },
+  "fly deploy . --config fly.site.toml --ignorefile site/deploy/Dockerfile.dockerignore --remote-only --ha=false",
+]
+
 [tasks."capture:site"]
 description = "Capture real showcase screenshots for site artwork"
 run = "node tools/capture-site.mjs"

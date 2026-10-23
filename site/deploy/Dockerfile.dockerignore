@@ -1,0 +1,11 @@
+**
+!site/
+site/*
+!site/deploy/
+site/deploy/*
+!site/deploy/Dockerfile
+!site/deploy/nginx.conf
+!build/
+build/*
+!build/site/
+!build/site/**

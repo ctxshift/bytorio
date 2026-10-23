@@ -28,6 +28,34 @@ network, bind `HOST` to `0.0.0.0` and open the machine’s LAN address. AudioWor
 requires a secure context: use an HTTPS preview for full audio testing on a phone.
 The server is for development, not production hosting.
 
+## Fly.io hosting
+
+Production uses the `bytorio` app in the `context-shift` Fly.io organization,
+with `bytor.io` as its custom domain. The container serves only the generated
+`build/site/` output using nginx, including the documentation and game exports.
+The Docker build context excludes other checkout files. HTTPS is enforced by
+Fly Proxy, and nginx serves WASM with `application/wasm`. Files revalidate on
+subsequent requests so updated game scripts and binaries stay consistent.
+
+After signing in with `fly auth login`, create the app once if it does not exist:
+
+```text
+fly apps create bytorio --org context-shift
+```
+
+Run releases from the repository root:
+
+```text
+mise run deploy:site
+```
+
+The task builds the current demo exports and site, runs the site checks, and
+deploys with `fly.site.toml`. The initial setup uses one shared CPU with
+256 MiB memory in Chicago; one machine stays running to avoid cold starts.
+Provision the custom-domain certificate with `fly certs add bytor.io -a bytorio`
+and use the DNS records reported by Fly. Verify the certificate with
+`fly certs check bytor.io -a bytorio` after updating DNS.
+
 ## Content and documentation
 
 `site/catalog.mjs` lists games and the primary documentation navigation.
