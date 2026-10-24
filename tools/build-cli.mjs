@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { createHash } from "node:crypto";
 import { branding } from "./branding.mjs";
 import { repo, run, tool } from "./toolchain.mjs";
+import { cliVersion } from "./release-config.mjs";
 
 if (process.platform !== "win32" || process.arch !== "x64") {
   throw new Error("Standalone CLI preview is currently qualified only for Windows x64");
@@ -23,7 +24,7 @@ const assets = Object.fromEntries(
     paths.sort().map(async (path) => [path, await readFile(resolve(repo, path), "utf8")]),
   ),
 );
-const version = "0.1.0-preview.1";
+const version = cliVersion(process.env.BYTORIO_RELEASE_TAG);
 await writeFile(
   resolve(output, "assets.ts"),
   `export const assets: Record<string, string> = ${JSON.stringify(assets)};\n` +

@@ -2,6 +2,8 @@ name: Build and verify Bytorio
 
 on:
   push:
+    branches:
+      - '**'
   pull_request:
 
 permissions:

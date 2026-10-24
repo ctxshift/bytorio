@@ -1,0 +1,63 @@
+name: Publish CLI or SDK release
+
+on:
+  push:
+    tags:
+      - "byt-v*"
+      - "sdk-v*"
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    env:
+      PLAYER_BROWSER_CHANNEL: chrome
+      BYTORIO_RELEASE_TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v4
+        with:
+          version: 2026.10.15
+      - run: npm ci
+      - name: Validate tagged source and binary
+        run: mise run validate
+      - name: Package release assets
+        run: mise run package:release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-assets
+          path: build/releases/${{ github.ref_name }}/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-validation
+          path: build/validation/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      BYTORIO_RELEASE_TAG: ${{ github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-assets
+          path: build/releases/${{ github.ref_name }}/
+      - name: Verify assets and publish release
+        run: node tools/publish-release.mjs

@@ -153,11 +153,30 @@ The CLI reads assets from a compressed JSON map rather than extracting arbitrary
 archive paths. Manifest protocol 1 defines the CLI/bundle compatibility boundary;
 unsupported protocols fail with an upgrade message.
 
-Push a reviewed `sdk-v<version>` tag to run `.github/workflows/sdk-release.yml`.
-The workflow runs the full validation gates and creates a **draft** GitHub release
-with the manifest and bundle. Review the assets and enable GitHub immutable
-releases before publishing. Published versions must never be replaced. This work
-does not push tags, publish releases or change repository release settings.
+Push a reviewed `byt-v<version>` or `sdk-v<version>` tag to run
+`.github/workflows/release.yml`. Tagging is the publication action: after the full
+validation gates pass, the workflow uploads and publishes the actual release
+assets. Versions containing a prerelease suffix are marked as prereleases.
+
+For CLI tags, `BYTORIO_RELEASE_TAG` sets the compiled version. The workflow
+publishes the exact executable exercised by `test:cli`, plus `release.json`.
+SDK tags package the bundle and `sdk-release.json`; CLI and SDK tags are
+independent. Publish a required SDK version before directing users to install it.
+The publish job verifies each asset's version, filename, size and SHA-256 again
+after downloading the build artifact. Only that job has release write permission;
+it uses GitHub's temporary token, not a stored personal access token.
+
+To inspect packaging locally, set `BYTORIO_RELEASE_TAG` to the intended tag, run
+`mise run validate`, then `mise run package:release`. That task only writes and
+verifies `build/releases/<tag>/`; it does not publish. Do not run the publisher
+without `--check` unless you intend to publish an existing remote tag.
+
+Published versions must never be replaced. Existing releases cause publication
+to fail instead of overwriting assets. If an interrupted upload leaves a draft,
+inspect it before removing the draft and rerunning the failed workflow; never
+delete a published release to retry. Validation logs and packaged assets are
+retained as workflow artifacts. Enable immutable releases in repository settings
+for additional protection; this workflow does not change that setting.
 
 Downloads use exact tagged URLs under the project's GitHub Releases, with bounded
 sizes, a timeout and SHA-256 verification against the HTTPS manifest. Checksums

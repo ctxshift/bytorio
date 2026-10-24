@@ -57,7 +57,18 @@ try {
   await writeFile(resolve(sandbox, ".env"), "NODE_OPTIONS=--invalid-byt-option\n");
   await writeFile(resolve(sandbox, "bunfig.toml"), 'preload = ["./missing.js"]\n');
   assert.match(invoke(["--help"]).stdout, /standalone CLI preview/);
-  assert.match(invoke(["--version"]).stdout, /^0\.1\.0-preview\.1\s*$/);
+  const expectedVersion = process.env.BYTORIO_RELEASE_TAG?.startsWith("byt-v")
+    ? process.env.BYTORIO_RELEASE_TAG.slice(5)
+    : "0.1.0-preview.1";
+  assert.equal(invoke(["--version"]).stdout.trim(), expectedVersion);
+  const release = JSON.parse(await readFile(resolve(repo, "build/cli/release.json"), "utf8"));
+  assert.equal(release.version, expectedVersion);
+  assert.equal(
+    release.sha256,
+    createHash("sha256")
+      .update(await readFile(executable))
+      .digest("hex"),
+  );
   const projects = [];
   for (const language of ["luau", "odin"]) {
     const name = `${language} game with spaces`;
