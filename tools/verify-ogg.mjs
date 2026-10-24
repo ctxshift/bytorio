@@ -54,6 +54,7 @@ function checkPcm(bytes) {
 }
 const report = {};
 const browser = await chromium.launch({
+  channel: process.env.PLAYER_BROWSER_CHANNEL || "chrome",
   headless: true,
   args: ["--autoplay-policy=no-user-gesture-required"],
 });
