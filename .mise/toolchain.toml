@@ -6,6 +6,7 @@ clang-tidy = "github:cpp-linter/clang-tools-static-binaries"
 "github:DanielGavin/ols" = {version = "dev-2026-10", rename_exe = {"ols-*" = "ols", "odinfmt-*" = "odinfmt"}}
 luau = "0.743"
 node = "24.19.0"
+bun = "1.3.6"
 odin = {version = "dev-2026-10", strip_components = 1, bin_path = "."}
 stylua = "2.6.0"
 # Used only by the upstream Emscripten SDK, not by project scripts.

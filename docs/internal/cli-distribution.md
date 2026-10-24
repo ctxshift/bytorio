@@ -5,6 +5,30 @@ The [standalone CLI decision](../adr/0017-distribute-a-standalone-authoring-cli.
 sets the user experience. This document describes the recommended implementation
 and the checks needed before publishing installation instructions.
 
+## Implemented foundation
+
+`mise run build:cli` compiles the Windows x64 scaffolding preview to
+`build/cli/byt.exe`, with its version, file size and SHA-256 in `release.json`.
+It uses pinned Bun and a type-checked TypeScript entry point. SDK templates,
+the contract and Luau editor modules are embedded; no source checkout or separate
+JavaScript runtime is needed to run `byt new`.
+
+The preview supports `new`, `--help` and `--version`. It explicitly rejects
+check/build/run/watch/pack/import: toolchain caching, project locks and prebuilt
+player resolution are not implemented yet. Continue using the source CLI for
+those operations. This is a local development artifact, not a public release.
+
+`mise run validate test:cli test:sdk` checks compiled/source scaffold parity for
+both languages, existing-directory protection, invalid arguments and operation
+without tools on PATH. The compiled binary is copied into a temporary directory
+outside the checkout for verification. This isolates working-directory and PATH
+dependencies; it does not substitute for release testing on a clean machine.
+The full validation suite includes `test:cli`.
+
+The next slice should introduce a versioned SDK/player bundle provider, retaining
+the source-build provider for contributors. After that, add verified toolchain
+cache entries and project locks before enabling build commands in the binary.
+
 ## Distribution shape
 
 Use TypeScript and Bun for the authoring CLI, compiling a separate standalone

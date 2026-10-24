@@ -26,6 +26,12 @@ project scripts are written in Python or require its packages.
 
 ## Build and run
 
+The standalone authoring CLI has a separate scaffolding preview:
+`mise run build:cli` produces `build/cli/byt.exe` using pinned Bun and TypeScript.
+It currently supports project creation only; the existing source CLI remains
+the complete authoring path. See the [distribution plan](internal/cli-distribution.md)
+for supported commands and remaining work.
+
 From the repository root:
 
 ```sh

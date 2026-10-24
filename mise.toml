@@ -251,6 +251,7 @@ run = [
   {task = "test:validation"},
   {task = "test:build-tasks"},
   {task = "test:player-export"},
+    {task = "test:cli"},
   {task = "test:sdk"},
   {task = "test:save"},
   {task = "test:text-input"},

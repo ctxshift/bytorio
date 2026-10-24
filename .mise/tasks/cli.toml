@@ -1,0 +1,7 @@
+["build:cli"]
+description = "Build the standalone Windows x64 CLI scaffolding preview"
+run = "node tools/build-cli.mjs"
+
+["test:cli"]
+description = "Verify the compiled CLI without a checkout or tools on PATH"
+run = ["node tools/build-cli.mjs", "node tools/verify-cli.mjs"]

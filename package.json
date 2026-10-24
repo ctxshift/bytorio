@@ -40,8 +40,8 @@
     "lint:cpp": "mise run lint:cpp",
     "format:cpp": "mise run format:cpp",
     "lint:luau": "mise exec -- node tools/lint-code.mjs luau",
-    "format:js": "prettier --write \"**/*.{js,mjs,html}\" \"site/*.css\" package.json .prettierrc.json",
-    "format:js:check": "prettier --check \"**/*.{js,mjs,html}\" \"site/*.css\" package.json .prettierrc.json",
+    "format:js": "prettier --write \"**/*.{js,mjs,ts,html}\" \"site/*.css\" package.json .prettierrc.json",
+    "format:js:check": "prettier --check \"**/*.{js,mjs,ts,html}\" \"site/*.css\" package.json .prettierrc.json",
     "format:odin": "mise exec -- node tools/format-code.mjs odin",
     "format:luau": "mise exec -- node tools/format-code.mjs luau",
     "build:odin": "mise run build:odin",
@@ -49,11 +49,13 @@
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@types/node": "24.19.2",
     "eslint": "10.13.0",
     "eslint-plugin-html": "8.2.1",
     "globals": "17.13.0",
     "marked": "17.0.1",
     "playwright": "1.64.1",
-    "prettier": "3.9.10"
+    "prettier": "3.9.10",
+    "typescript": "7.0.2"
   }
 }
