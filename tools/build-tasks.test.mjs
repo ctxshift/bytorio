@@ -148,6 +148,11 @@ function fixture() {
         mkdirSync(dirname(resolve(root, file)), { recursive: true });
       }
       const commands = task.outputs.map((file) => `echo fixture > "${file}"`);
+      if (task.name === "deps:vorbis") {
+        // Give concurrently scheduled outer and nested graphs time to observe
+        // a stale decoder, as happens with a real compiler on hosted runners.
+        commands.unshift('node -e "setTimeout(() => {}, 200)"');
+      }
       commands.push(`echo executed >> "${marker}"`);
       text += `run = ${JSON.stringify(commands.join(" && "))}\n`;
     }
@@ -206,13 +211,9 @@ test("mise rebuilds only the artifacts affected by edits and missing outputs", a
   const all = Object.keys(outputs).sort();
   assert.deepEqual(run(...targets), all);
   assert.deepEqual(run(...targets), [], "unchanged inputs reuse every artifact");
-  // The shared decoder is reached once by the outer traces and once by the
-  // explicitly forced nested player graph.
-  assert.deepEqual(
-    run("--force", ...targets),
-    [...all, "deps:vorbis"].sort(),
-    "force reaches the nested player graph",
-  );
+  // The outer graph finishes the shared decoder before the nested graph starts,
+  // including forced rebuilds. Every artifact should be built exactly once.
+  assert.deepEqual(run("--force", ...targets), all, "force reaches the nested player graph");
 
   async function edit(file, expected) {
     // Separate modification times on filesystems whose clock has millisecond precision.
@@ -251,7 +252,15 @@ test("mise rebuilds only the artifacts affected by edits and missing outputs", a
     unlinkSync(resolve(root, missing));
     const rebuilt =
       name === "deps:vorbis"
-        ? ["deps:trace:audio", "deps:trace:graphics", "deps:trace:resources", name]
+        ? [
+            "deps:player:native-binary",
+            "deps:player:native-support",
+            "deps:player:web-support",
+            "deps:trace:audio",
+            "deps:trace:graphics",
+            "deps:trace:resources",
+            name,
+          ]
         : [name];
     assert.deepEqual(run(...targets), rebuilt, `recover missing ${missing} through aggregate`);
     for (const file of files) {
