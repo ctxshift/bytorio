@@ -1,11 +1,15 @@
 import { createScaffolder } from "../sdk/scaffold.mjs";
 import { assets, branding, version } from "../../build/cli/assets";
+import { writeFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import { resolveSdk } from "./sdk-bundle";
 
 type Language = "luau" | "odin";
 
 const help = `${branding.name} standalone CLI preview ${version}
 
-Usage: byt new <directory> [--language luau|odin]
+Usage: byt new <directory> [--language luau|odin] [--sdk <version>] [--offline]
+       byt sdk install <version> [--offline]
        byt --help
        byt --version
 
@@ -27,31 +31,67 @@ async function main(args: string[]): Promise<void> {
       `${args[0]} is not available in this standalone preview. Use the source CLI until managed toolchains and player bundles are implemented.`,
     );
   }
+  if (args[0] === "sdk") {
+    if (
+      args[1] !== "install" ||
+      !args[2] ||
+      args.length > 4 ||
+      (args.length === 4 && args[3] !== "--offline")
+    ) {
+      throw new Error("Expected: byt sdk install <version> [--offline]");
+    }
+    await resolveSdk(args[2], { offline: args[3] === "--offline" });
+    console.log(`SDK ${args[2]} is cached and verified`);
+    return;
+  }
   if (args[0] !== "new" || !args[1] || args[1].startsWith("--")) {
     throw new Error(help);
   }
   let language: Language = "luau";
-  if (args.length !== 2) {
-    if (
-      args.length !== 4 ||
-      args[2] !== "--language" ||
-      (args[3] !== "luau" && args[3] !== "odin")
-    ) {
-      throw new Error("Expected: byt new <directory> [--language luau|odin]");
+  let sdk: string | undefined;
+  let offline = false;
+  const seen = new Set<string>();
+  for (let index = 2; index < args.length; index++) {
+    const flag = args[index];
+    if (seen.has(flag)) throw new Error(`Duplicate option: ${flag}`);
+    seen.add(flag);
+    if (flag === "--offline") {
+      offline = true;
+    } else if (flag === "--language" && ["luau", "odin"].includes(args[index + 1])) {
+      language = args[++index] as Language;
+    } else if (flag === "--sdk" && args[index + 1]) {
+      sdk = args[++index];
+    } else {
+      throw new Error(`Invalid option: ${flag}`);
     }
-    language = args[3];
   }
+  const release = sdk ? await resolveSdk(sdk, { offline }) : undefined;
+  const selectedAssets = release?.bundle.assets ?? assets;
   const { createProject } = await createScaffolder({
-    branding,
+    branding: release?.bundle.branding ?? branding,
     readAsset: async (path: string) => {
-      const contents = assets[path];
+      const contents = selectedAssets[path];
       if (contents === undefined) {
         throw new Error(`Missing embedded SDK asset: ${path}`);
       }
       return contents;
     },
   });
-  await createProject(args[1], language);
+  const project = await createProject(args[1], language);
+  if (release) {
+    await writeFile(
+      resolve(project, "byt.lock.json"),
+      JSON.stringify(
+        {
+          schema: 1,
+          sdk: { version: release.manifest.version, sha256: release.manifest.sha256 },
+        },
+        null,
+        2,
+      ) + "\n",
+      { flag: "wx" },
+    );
+  }
 }
 
 try {

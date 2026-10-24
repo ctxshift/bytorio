@@ -13,7 +13,7 @@ It uses pinned Bun and a type-checked TypeScript entry point. SDK templates,
 the contract and Luau editor modules are embedded; no source checkout or separate
 JavaScript runtime is needed to run `byt new`.
 
-The preview supports `new`, `--help` and `--version`. It explicitly rejects
+The preview supports `new`, `sdk install`, `--help` and `--version`. It explicitly rejects
 check/build/run/watch/pack/import: toolchain caching, project locks and prebuilt
 player resolution are not implemented yet. Continue using the source CLI for
 those operations. This is a local development artifact, not a public release.
@@ -25,9 +25,10 @@ outside the checkout for verification. This isolates working-directory and PATH
 dependencies; it does not substitute for release testing on a clean machine.
 The full validation suite includes `test:cli`.
 
-The next slice should introduce a versioned SDK/player bundle provider, retaining
-the source-build provider for contributors. After that, add verified toolchain
-cache entries and project locks before enabling build commands in the binary.
+Versioned SDK bundles now support release-based scaffolding and an SDK-only lock.
+The next slice should add prebuilt player bundles and verified toolchain cache
+entries, extending project locks before enabling build commands in the binary.
+Retain the source-build provider for contributors.
 
 ## Distribution shape
 
@@ -44,8 +45,9 @@ compiled unchanged. Preserve the CLI's timeout/isolation behavior when adapting
 its worker-based cartridge checks. Keep repository build orchestration in mise;
 this work does not require migrating every repository script to Bun.
 
-Embed small, release-specific SDK schemas, templates and authoring files. Obtain
-larger compiler and prebuilt player packages from a versioned release manifest.
+Keep an embedded starter for offline scaffolding and allow explicit SDK bundle
+selection independently of the CLI version. Obtain compiler and prebuilt player
+packages from a versioned release manifest in the later build integration.
 Native executables and libraries must be installed into real cache directories
 before execution or export; bundling the CLI does not eliminate those files.
 
@@ -125,3 +127,49 @@ Test project paths with spaces, concurrent dependency requests, interrupted and
 corrupt downloads, unsupported platforms, offline reuse and two projects pinned
 to different toolchains. Compile each target separately and test it on that target;
 cross-compilation alone does not establish platform support.
+
+## Versioned SDK release bundles
+
+The standalone preview supports `byt sdk install <version>` and
+`byt new my-game --sdk <version> [--language odin|luau]`. Add `--offline` to
+require a cached SDK. Without `--sdk`, project creation uses the embedded starter.
+No SDK release is published yet; these commands become usable online after a
+release is published from this repository.
+
+SDK bundle release versions are independent of the cartridge SDK/profile values
+in `console.json`. A single bundle contains the supported profiles and both
+language libraries. Downloaded projects record the bundle version and SHA-256 in
+`byt.lock.json`; commit this file with the game. This initial lock schema pins
+only the SDK bundle. Compiler/player locks and enforcement during builds remain
+unimplemented, as do standalone build commands.
+
+Run `mise run build:sdk-release -- 0.1.0-preview.1` to produce
+`build/sdk-release/0.1.0-preview.1/sdk-release.json` and its compressed SDK asset.
+The bundle contains SDK source, templates, schemas, documentation and available
+root license files. It contains no executable hooks, compilers or players.
+The CLI reads assets from a compressed JSON map rather than extracting arbitrary
+archive paths. Manifest protocol 1 defines the CLI/bundle compatibility boundary;
+unsupported protocols fail with an upgrade message.
+
+Push a reviewed `sdk-v<version>` tag to run `.github/workflows/sdk-release.yml`.
+The workflow runs the full validation gates and creates a **draft** GitHub release
+with the manifest and bundle. Review the assets and enable GitHub immutable
+releases before publishing. Published versions must never be replaced. This work
+does not push tags, publish releases or change repository release settings.
+
+Downloads use exact tagged URLs under the project's GitHub Releases, with bounded
+sizes, a timeout and SHA-256 verification against the HTTPS manifest. Checksums
+detect corruption; the manifest's authenticity currently relies on GitHub HTTPS
+and repository access controls, not an independently verified signature.
+
+The cache defaults to `~/.cache/bytorio/sdk/<version>`; `BYTORIO_CACHE_DIR`
+overrides its root. Cache entries contain both the manifest and compressed asset
+and are verified on each use. Installs publish one complete file atomically after
+validation, so partial downloads are never reused. Invalid entries fail with a
+path to remove explicitly; another cached version stays usable. Downloads are
+shared across projects and retained when projects are deleted.
+
+`test:cli` includes local HTTP release fixtures, two simultaneous SDK versions,
+concurrent requests, cache corruption, failed downloads, invalid metadata and
+compiled offline scaffolding for both languages. Live GitHub download validation
+still requires the first published release.

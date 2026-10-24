@@ -1,0 +1,39 @@
+name: Package SDK release
+
+on:
+  push:
+    tags:
+      - 'sdk-v*'
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: windows-latest
+    env:
+      PLAYER_BROWSER_CHANNEL: chrome
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v4
+        with:
+          version: 2026.10.15
+      - run: npm ci
+      - run: mise run validate
+      - name: Package tagged SDK
+        shell: pwsh
+        run: |
+          $sdkVersion = $env:GITHUB_REF_NAME.Substring(5)
+          mise run build:sdk-release -- $sdkVersion
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "SDK_VERSION=$sdkVersion" >> $env:GITHUB_ENV
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdk-release
+          path: build/sdk-release/${{ env.SDK_VERSION }}/
+      - name: Create draft release for review
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          gh release create $env:GITHUB_REF_NAME --verify-tag --draft --title "Bytorio SDK $env:SDK_VERSION" --notes "Versioned SDK assets for byt. Compiler installation and standalone game builds are not included in this preview." "build/sdk-release/$env:SDK_VERSION/sdk-release.json" "build/sdk-release/$env:SDK_VERSION/bytorio-sdk-$env:SDK_VERSION.json.gz"
