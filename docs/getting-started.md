@@ -9,14 +9,47 @@ development tools. Choose **Load game**, then **Start game** to enable sound.
 
 ## Installation status
 
-The standalone `byt` installer is not available yet. Creating games currently
-requires a source checkout on **Windows x64**, even for browser exports.
-The steps below describe that working development setup.
+The **Windows x64 CLI preview** is available as a single download. It creates
+Luau and Odin projects and downloads versioned SDK bundles without Node, Bun,
+mise or a source checkout. **It cannot build, check, run or pack games yet.**
+For a playable game, continue with the source setup below, which currently
+requires Windows x64 even for browser exports. macOS and Linux authoring
+packages and an automatic installer are not available yet.
 
-We plan to distribute `byt` as a standalone executable that manages its SDK and
-tool dependencies, with mise as an optional way to install it. That release will
-not require users to install Bun or Node separately. macOS and Linux authoring
-support will be listed when their release packages have been tested.
+## Download the CLI preview
+
+1. Open the [CLI preview release](https://github.com/ctxshift/bytorio/releases/tag/byt-v0.1.0-preview.1).
+2. Under **Assets**, download `byt.exe` and `release.json` into a folder you keep,
+   such as a `bytorio-tools` folder. The source-code archives are not the CLI.
+3. Open PowerShell in that folder. Optionally verify the download by running
+   `Get-FileHash .\byt.exe -Algorithm SHA256` and comparing it with `sha256` in
+   `release.json`.
+4. Run:
+
+```text
+.\byt.exe --version
+.\byt.exe sdk install 0.1.0-preview.1
+.\byt.exe new preview-game --sdk 0.1.0-preview.1 --offline
+```
+
+The version should be `0.1.0-preview.1`. The last command creates a Luau project
+and `byt.lock.json`, which pins the downloaded SDK bundle. Add `--language odin`
+to create an Odin project instead. Keep the lockfile with the game source.
+The SDK download needs internet once; subsequent use of that version works
+offline. The preview executable is currently unsigned.
+
+PowerShell uses `.\byt.exe` to run a program in the current folder. You can
+optionally add the folder containing the executable to your user PATH, reopen
+the terminal, and use `byt` from any folder. A mise installation route will be
+documented after it has been verified; mise is not required for this preview.
+
+Trying `check`, `build`, `run`, `watch`, `pack` or `import` in this preview gives
+an explicit unsupported-command message. These commands require the source CLI
+below. To use the project you just created, run `mise run byt -- check <project>`
+and `mise run byt -- run <project> --web` from that checkout, replacing `<project>`
+with its path. Do not run `new` over an existing project. The source CLI does not
+yet enforce the preview's SDK bundle lock; use the source revision identified
+in the release notes when trying this fallback.
 
 ## Install the development tools
 
@@ -30,8 +63,8 @@ not need them.
 Open a terminal in a folder where you keep projects, then run:
 
 ```text
-git clone https://github.com/ctxshift/free-machine.git
-cd free-machine
+git clone https://github.com/ctxshift/bytorio.git
+cd bytorio
 mise trust
 mise install
 mise exec -- npm ci
@@ -59,8 +92,9 @@ Open the player URL printed by the last command, then choose **Start game**.
 Use the arrow keys to move the sprite and Space to play a sound.
 Press Ctrl+C in the terminal to stop the local server.
 
-The rest of the guides use the intended installed command, `byt`. For this
-source setup, replace that command with `mise run byt --` and run it from the
+The rest of the guides use `byt` as shorthand for the full authoring CLI. The
+downloadable preview supports only the commands listed above. For this
+source setup, replace `byt` with `mise run byt --` and run it from the
 Bytorio checkout. Project paths remain relative to your terminal's folder.
 For example, `byt pack ../my-game` becomes `mise run byt -- pack ../my-game`.
 
@@ -100,7 +134,8 @@ See [PNG cartridges](png-cartridges.md) for cover art and player exports.
 | Symptom | What to check |
 | --- | --- |
 | `mise` is not recognized | Finish the mise installation and open a new terminal. |
-| `byt` is not recognized | The standalone installer is not released; use the source-checkout commands above. |
+| `byt` is not recognized | Use `.\byt.exe` from the download folder, or add that folder to your user PATH and reopen the terminal. |
+| Preview says a command is unsupported | Use the source CLI below for build/check/run/pack/import/watch. |
 | No mise task named `byt` | Run the command from the Bytorio checkout, not from `my-game`. |
 | Missing compiler or linker | Complete `mise install` and the Windows linker prerequisites above. |
 | Project folder already exists | `new` creates a fresh project; choose another folder or run the existing project. |

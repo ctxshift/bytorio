@@ -52,21 +52,18 @@ CPU rendering remains the default. See `examples/effects` and `examples/kart3d`.
 
 ## Install byt
 
-The standalone installer is not available yet. Follow
-[Getting started](../docs/getting-started.md) for the supported Windows x64 source
-setup and the exact command to run the current CLI.
-
-The planned distribution is a standalone `byt` executable with managed,
-versioned dependencies; mise will be an optional installation route. Game
-authors will not need a separate Bun or Node installation for that release.
-Download commands and additional supported operating systems will be published
-when release packages are available and tested.
+A [Windows x64 CLI preview](https://github.com/ctxshift/bytorio/releases/tag/byt-v0.1.0-preview.1)
+can create projects and download SDK bundles without Node, Bun or mise.
+**Build, check, run, pack, watch and import still require the source CLI.** Follow
+[Getting started](../docs/getting-started.md) for the download instructions,
+supported commands and complete source setup. There is no automatic installer
+or qualified macOS/Linux authoring package yet.
 
 ## Start a game
 
-With an installed `byt`, run these commands from the folder where you keep your
-projects. Until that distribution is available, use the
-[source-checkout equivalent](../docs/getting-started.md#create-and-run-a-game).
+The following commands describe the full authoring workflow. To run all three
+today, use the [source-checkout equivalent](../docs/getting-started.md#create-and-run-a-game);
+the downloadable preview supports `new` but not `check` or `run` yet.
 
 ```sh
 byt new my-game

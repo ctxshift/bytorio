@@ -46,9 +46,10 @@ Start small: move a character, change a color, or add a sound.
 **New to coding? Start with Luau**, the default language for new games. Odin is
 also supported. Both languages can make games for the same console.
 
-**Bytorio is still in development.** The standalone installer isn't available
-yet; creating games currently requires the [source development setup](docs/getting-started.md)
-on Windows x64. You can still play the browser demos without that setup.
+**Bytorio is still in development.** A [Windows x64 CLI preview](https://github.com/ctxshift/bytorio/releases/tag/byt-v0.1.0-preview.1)
+creates projects and downloads SDKs. Building and running games still requires
+the [source development setup](docs/getting-started.md) on Windows x64.
+You can play the browser demos without that setup.
 
 ## Learn as you go
 

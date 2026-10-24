@@ -1,6 +1,7 @@
 # Standalone CLI distribution plan
 
-Status: implementation plan; no public installer or standalone release exists yet.
+Status: Windows x64 scaffolding preview released; full authoring distribution is
+still being implemented. There is no automatic installer yet.
 The [standalone CLI decision](../adr/0017-distribute-a-standalone-authoring-cli.md)
 sets the user experience. This document describes the recommended implementation
 and the checks needed before publishing installation instructions.
@@ -16,7 +17,8 @@ JavaScript runtime is needed to run `byt new`.
 The preview supports `new`, `sdk install`, `--help` and `--version`. It explicitly rejects
 check/build/run/watch/pack/import: toolchain caching, project locks and prebuilt
 player resolution are not implemented yet. Continue using the source CLI for
-those operations. This is a local development artifact, not a public release.
+those operations. The preview is distributed as `byt.exe` in the
+[`byt-v0.1.0-preview.1` release](https://github.com/ctxshift/bytorio/releases/tag/byt-v0.1.0-preview.1).
 
 `mise run validate test:cli test:sdk` checks compiled/source scaffold parity for
 both languages, existing-directory protection, invalid arguments and operation
@@ -133,8 +135,8 @@ cross-compilation alone does not establish platform support.
 The standalone preview supports `byt sdk install <version>` and
 `byt new my-game --sdk <version> [--language odin|luau]`. Add `--offline` to
 require a cached SDK. Without `--sdk`, project creation uses the embedded starter.
-No SDK release is published yet; these commands become usable online after a
-release is published from this repository.
+The first SDK bundle is available in the
+[`sdk-v0.1.0-preview.1` release](https://github.com/ctxshift/bytorio/releases/tag/sdk-v0.1.0-preview.1).
 
 SDK bundle release versions are independent of the cartridge SDK/profile values
 in `console.json`. A single bundle contains the supported profiles and both
@@ -172,4 +174,4 @@ shared across projects and retained when projects are deleted.
 `test:cli` includes local HTTP release fixtures, two simultaneous SDK versions,
 concurrent requests, cache corruption, failed downloads, invalid metadata and
 compiled offline scaffolding for both languages. Live GitHub download validation
-still requires the first published release.
+is recorded separately from the fixture tests.
