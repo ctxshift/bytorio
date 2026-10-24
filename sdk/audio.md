@@ -123,8 +123,8 @@ Accepted sample playback owns a snapshot of the source **at the play command**.
 Later `audio.write` or destruction does not alter scheduled/playing sound.
 The [synthesis API](synthesis.md) explicitly opts samples into live shared source
 storage with scheduled edits; its lifetime rules then apply. Buffer reuse after
-a command is safe. Milestone 4d now implements live scheduled source edits,
-synthesis, instruments, modulation and effects.
+a command is safe. The synthesis API provides live scheduled source edits,
+instruments, modulation and effects.
 
 Streams contain stereo 48 kHz PCM. `write_stream(stream, at, pcm)` reserves a
 nonoverlapping absolute interval `[at, at+frames)`. Gaps produce silence while

@@ -60,7 +60,8 @@ and use the DNS records reported by Fly. Verify the certificate with
 
 `site/catalog.mjs` lists games, the primary documentation navigation, and the
 explicit `publicDocuments` list. Add game-author guides and SDK/tool references
-there to publish them. Other tracked Markdown is not automatically published:
+there to publish them. The sidebar separates game-author guides from selected
+low-level contributor references. Other tracked Markdown is not automatically published:
 ADRs, planning notes, research and benchmark reports stay in the source checkout.
 Shared measurement reports and their data live in `docs/internal/measurements/`;
 example and experiment reports belong beside their owning project.

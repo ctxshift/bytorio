@@ -61,6 +61,9 @@ Both SDKs stop the cartridge on invalid arguments or frame-capacity exhaustion.
 All limits, packet layouts, ordering and restart rules are defined in the
 [cartridge specification](../docs/cartridge-spec.md).
 
-This release has no custom sample playback, mixer voices, music, network,
-mesh API or general filesystem access. Those require future versioned features;
-there are no placeholder calls that silently succeed.
+The published resource profile supports custom PCM samples, mixer voices, streams
+and synthesis through the [audio APIs](audio.md). 3D and compressed Ogg music
+require their explicitly selected preview profiles; see the
+[SDK feature guide](README.md). Cartridges have no arbitrary network or filesystem
+access; use [indexed content](../docs/indexed-content.md) for packaged assets and
+the [save API](save.md) for persistent progress.

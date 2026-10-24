@@ -1,4 +1,8 @@
-# Readable language examples
+# Contributor examples: resource lifecycle and tests
+
+These examples teach console contributors how to exercise resource ownership
+and validation. For a playable starter and an introduction to game callbacks,
+use [Your first game](getting-started.md#make-your-first-change).
 
 The canonical resource lifecycle examples are
 [Luau](../examples/resources/lifecycle/luau/main.luau) and

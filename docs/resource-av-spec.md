@@ -1,4 +1,8 @@
-# Typed graphics and audio resources
+# Typed resources: contributor specification
+
+This is a low-level compatibility and implementation reference for console and
+SDK contributors. Game authors should use the [resource guide](../sdk/resources.md),
+[graphics guide](../sdk/graphics.md) and [audio guide](../sdk/audio.md).
 
 Design rationale: [transactional typed resources](adr/0008-publish-resource-changes-transactionally.md).
 
@@ -14,8 +18,8 @@ The [resource implementation](../sdk/resources.md),
 and [synthesis/effects](../sdk/synthesis.md) support both SDKs and hosts.
 Profile requirements are checked before initialization for loose payloads and PNGs.
 
-The 4c slice snapshots sample contents at each accepted play command. Source
-writes affect later plays; the explicit scheduled edits from 4d opt a source into
+Sample playback snapshots contents at each accepted play command. Source
+writes affect later plays; explicit scheduled edits opt a source into
 live storage. Its 8 MiB PCM/history arena is page allocated by the producer; rendering returns
 leases through a fixed queue. Streams allow 64 chunks / 8,192 frames each.
 Controller/DSP state, wire/transfer arenas and feedback reserve a portable
@@ -28,7 +32,7 @@ render call; larger native callback requests are split. See the
 
 Protocol 4 implements the synthesis slice with fixed typed DAGs and one mutable
 source store shared by instrument instances. Explicit `edit_sample` opts PCM
-playback into that live store; ordinary 4c snapshot playback otherwise remains
+playback into that live store; ordinary snapshot playback otherwise remains
 unchanged. Definitions retain sources; per-note and bus history is reserved in
 the same 8 MiB arena before publication. Effects topology changes use the current
 simulation frame, with future controls/edits scheduled independently. Note pitches

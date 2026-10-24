@@ -6,6 +6,9 @@ public guide list is maintained separately in [the site catalog](../../site/cata
 
 ## Shared measurements
 
+The [standalone CLI distribution plan](cli-distribution.md) tracks authoring-tool
+packaging and dependency management work separately from measurement evidence.
+
 - [Graphics upload and rendering](measurements/graphics-measurements.md)
 - [PCM audio delivery](measurements/audio-measurements.md)
 - [Synthesis and effects](measurements/synthesis-measurements.md)

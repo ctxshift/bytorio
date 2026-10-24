@@ -39,9 +39,9 @@ export const sections = [
   [
     "Start here",
     [
-      ["sdk/README.md", "Quick start"],
-      ["docs/development.md", "Development setup"],
-      ["docs/language-examples.md", "Language examples"],
+      ["docs/getting-started.md", "Getting started"],
+      ["sdk/README.md", "SDK & supported features"],
+      ["GLOSSARY.md", "Glossary"],
     ],
   ],
   [
@@ -52,18 +52,30 @@ export const sections = [
       ["sdk/graphics.md", "Graphics"],
       ["sdk/audio.md", "Audio"],
       ["sdk/synthesis.md", "Synthesis & effects"],
+      ["sdk/save.md", "Save progress"],
+      ["sdk/text-input.md", "Text input"],
       ["docs/display-modes.md", "Display modes"],
       ["docs/png-cartridges.md", "PNG cartridges"],
     ],
   ],
   [
-    "Explore the machine",
+    "Advanced game features",
     [
       ["docs/frame-pacing.md", "Frame pacing"],
-      ["docs/compact-3d.md", "Experimental 3D"],
-      ["docs/resource-profile.md", "Profiles & limits"],
-      ["docs/cartridge-spec.md", "Cartridge specification"],
       ["docs/model-import.md", "Import models"],
+      ["docs/indexed-content.md", "Packaged content"],
+    ],
+  ],
+  [
+    "For contributors",
+    [
+      ["docs/contributing.md", "Low-level documentation"],
+      ["docs/development.md", "Build & test the console"],
+      ["docs/language-examples.md", "Conformance examples"],
+      ["docs/resource-profile.md", "Profile contracts"],
+      ["docs/resource-av-spec.md", "Resource specification"],
+      ["docs/cartridge-spec.md", "Legacy cartridge ABI"],
+      ["docs/compact-3d.md", "3D renderer reference"],
     ],
   ],
 ];

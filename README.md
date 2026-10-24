@@ -11,7 +11,7 @@ start with “what if?” Bytorio focuses on 2D games, with experimental 3D tool
 explore when you're ready.
 
 **[Play some games](https://bytor.io/showcase/)** ·
-**[Get started](https://bytor.io/docs/sdk/README.html#install-byt)** ·
+**[Get started](https://bytor.io/docs/docs/getting-started.html)** ·
 **[Browse the docs](https://bytor.io/docs/)**
 
 ## Try it first
@@ -32,14 +32,14 @@ see how the same idea works in either language.
 You don't need to understand how the console works inside to make a game for it.
 Start small: move a character, change a color, or add a sound.
 
-1. **Set up your tools.** Follow the [getting-started guide on the website](https://bytor.io/docs/sdk/README.html#install-byt)
-   or [read it in this repository](sdk/README.md#install-byt).
-2. **Create and run the starter game.** Follow [Start a game](sdk/README.md#start-a-game).
+1. **Set up your tools.** Follow the [getting-started guide on the website](https://bytor.io/docs/docs/getting-started.html)
+   or [read it in this repository](docs/getting-started.md).
+2. **Create and run the starter game.** Follow [Create and run a game](docs/getting-started.md#create-and-run-a-game).
    `byt` is Bytorio's command-line tool: you type its commands into a terminal
    to create, check, and run a project.
 3. **Make one small change.** Open the game in your code editor, change something,
-   and run it again. The [language examples](docs/language-examples.md) show what
-   game code looks like.
+   and run it again. [Make your first change](docs/getting-started.md#make-your-first-change)
+   explains the starter's game callbacks.
 4. **Build from there.** Try adding a goal, a new obstacle, or your own artwork.
    The [game examples](examples/README.md) are there to learn from.
 
@@ -47,7 +47,7 @@ Start small: move a character, change a color, or add a sound.
 also supported. Both languages can make games for the same console.
 
 **Bytorio is still in development.** The standalone installer isn't available
-yet; creating games currently requires the [source development setup](docs/development.md)
+yet; creating games currently requires the [source development setup](docs/getting-started.md)
 on Windows x64. You can still play the browser demos without that setup.
 
 ## Learn as you go

@@ -75,8 +75,8 @@ Version 2 adds a session-checked readback mailbox before each update. Its 16-byt
 header carries magic, count, byte length and session; up to four 32-byte records
 describe copied pixel results. At most 1 MiB of result data is delivered per
 update. The mailbox reuses the acknowledged packet arena; SDKs consume/copy it
-before recording new commands. Full profile configuration negotiation remains
-later work. Version 3 inserts a 448-byte audio status/completion block after the
+before recording new commands. Current profile negotiation is defined in the
+[contributor profile reference](../docs/resource-profile.md). Version 3 inserts a 448-byte audio status/completion block after the
 readback records, moving payload data from byte 144 to byte 592. It carries up to
 16 voice completions per update. Input still uses the existing arguments.
 

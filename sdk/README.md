@@ -1,4 +1,10 @@
-# Bytorio SDK 0.2.0
+# Bytorio SDK guide
+
+Make games in Luau or Odin, run them in the native or browser player, and share
+them as PNG cartridges. **Start with [Getting started](../docs/getting-started.md)**
+for installation status, a working source setup and your first playable game.
+
+## Supported features
 
 Both players support three [frame-rate policies](../docs/frame-pacing.md):
 a custom render cap (60 FPS by default), uncapped rendering, and native display
@@ -46,25 +52,21 @@ CPU rendering remains the default. See `examples/effects` and `examples/kart3d`.
 
 ## Install byt
 
-Install the Bytorio CLI once, then use `byt` from your terminal. The planned
-installer script will select the right tools for Windows, macOS or Linux and
-add `byt` to your PATH. You will not need a console source checkout to create games.
+The standalone installer is not available yet. Follow
+[Getting started](../docs/getting-started.md) for the supported Windows x64 source
+setup and the exact command to run the current CLI.
 
-If you use mise, the planned global installation is:
-
-```sh
-mise use --global npm:bytorio@latest
-```
-
-The installer script and published package are planned distribution options;
-they are not available yet. These guides use the installed `byt` command as the
-intended workflow. For development from source today, follow the
-[development setup](../docs/development.md) and run the local CLI through the
-repository's mise task.
+The planned distribution is a standalone `byt` executable with managed,
+versioned dependencies; mise will be an optional installation route. Game
+authors will not need a separate Bun or Node installation for that release.
+Download commands and additional supported operating systems will be published
+when release packages are available and tested.
 
 ## Start a game
 
-From the folder where you keep your projects:
+With an installed `byt`, run these commands from the folder where you keep your
+projects. Until that distribution is available, use the
+[source-checkout equivalent](../docs/getting-started.md#create-and-run-a-game).
 
 ```sh
 byt new my-game
@@ -78,8 +80,8 @@ For Odin, create with `new my-game --language odin`. Projects are ordinary folde
 they may live outside this repository. The `new` command refuses existing folders.
 The current source toolchain supports **Windows x64** native development and browser builds
 from Windows, using the repository's pinned Odin, Wasmtime and Emscripten toolchains.
-See [toolchain setup](../docs/odin-development.md); Luau executor builds additionally
-require the [Luau CMake/C++ setup](../docs/development.md). Odin-only SDK projects
+See [source setup](../docs/getting-started.md#install-the-development-tools).
+Odin-only SDK projects
 do not build the Luau executor. For Luau projects, `check` uses the prebuilt Luau
 analyzer installed by mise, matching the executor's pinned Luau version. Preparing
 a fresh toolchain requires network access; subsequent builds reuse it.

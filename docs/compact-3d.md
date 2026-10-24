@@ -1,8 +1,12 @@
-# Compact 3D and voxel prototype
+# Compact 3D: contributor reference
+
+This low-level reference covers the experimental renderer, resource contracts
+and host quality controls. Game authors should start with
+[model importing](model-import.md) or the [SDK overview](../sdk/README.md).
 
 Design rationale: [CPU rendering with optional GPU execution](adr/0013-keep-gpu-rendering-optional.md).
 
-Milestone 4f implements an experimental software rendering foundation shared by
+The compact 3D profile provides an experimental software rendering foundation shared by
 the standalone native player and browser player. Both SDKs expose indexed meshes,
 explicit cameras, depth attachments and cached voxel surfaces. This is an original
 implementation using the existing resource ownership and transaction machinery.
@@ -292,7 +296,11 @@ version, while `stableVersion` identifies the published version. Protocols below
 See the [experimental profile](../sdk/profiles/compact-3d-preview-1.json) and
 [wire schema](../sdk/resource-protocol.json). The preview retains the 64 MiB
 resource budget, 8 MiB guest memory, 4 MiB Luau heap and 1 MiB commit payload.
-PNG cartridges remain capped at 2 MiB. Large asset streaming is still milestone 5.
+The base PNG envelope for cover art and code has a separate 2 MiB budget.
+[Indexed content](indexed-content.md) can additionally package up to 512 MiB,
+including its index, without increasing guest memory or decoded-resource budgets.
+These storage allowances do not guarantee rendering speed or permit arbitrary
+network streaming.
 
 ## SDK surface
 

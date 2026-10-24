@@ -1,4 +1,8 @@
-# Cartridge specification 0.1.0
+# Legacy cartridge ABI: contributor specification
+
+This low-level reference preserves the SDK 0.1.0 compatibility contract. It is
+not the feature list for new games. See the [SDK overview](../sdk/README.md)
+for current authoring features and [PNG cartridges](png-cartridges.md) to share games.
 
 This is the normative **2d-preview-1** profile shared by the Luau and Odin SDKs.
 Its machine-readable constants are in [the legacy contract](../sdk/profiles/2d-preview-1.json).
@@ -8,8 +12,9 @@ the Wasm Component Model are not used.
 
 The preview supplies two display modes, opaque rectangle/sprite/text rendering,
 one immutable sprite/font atlas, five buttons, a pointer, fixed ticks, deterministic
-random numbers and one sound cue. Meshes, a multi-voice mixer, music, saves,
-streamed assets and large ROMs remain future profiles. Both languages support
+random numbers and one sound cue. This document does not define the newer mesh,
+mixer, music, save or indexed-content interfaces; consult their current SDK guides.
+Both languages support
 the [version-1 PNG cartridge container](png-cartridges.md).
 An SDK release is complete for this profile without claiming those features.
 

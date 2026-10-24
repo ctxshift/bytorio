@@ -1,4 +1,8 @@
-# Resource profile: conformance and distribution
+# Capability profiles: contributor reference
+
+This low-level reference covers compatibility negotiation and conformance for
+console and SDK contributors. Game authors can choose supported features from
+the [SDK overview](../sdk/README.md); a profile's limits are not a hardware speed rating.
 
 `resource-av-1` is the published SDK 0.2.0 / ABI 2 profile for both authoring
 languages and both players. The machine-readable contract is

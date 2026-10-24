@@ -21,6 +21,7 @@ direction does not promote an experimental capability profile to stable.
 - [0008: Transactional typed resources](0008-publish-resource-changes-transactionally.md)
 - [0015: Opaque save snapshots](0015-persist-opaque-save-snapshots.md)
 - [0016: Explicit stable save identity](0016-declare-stable-save-identity.md)
+- [0017: Standalone authoring CLI](0017-distribute-a-standalone-authoring-cli.md)
 
 ## Timing, audio and graphics
 

@@ -1,4 +1,8 @@
-# Development
+# Console contributor setup
+
+This guide is for building and testing Bytorio itself. To make a game with the
+current development version, follow [Getting started](getting-started.md),
+which includes the required source setup and a first playable project.
 
 The console player and renderer are Odin on native and browser hosts. Luau and
 Odin cartridges share that player. The original C++ reference player and its
@@ -7,8 +11,7 @@ root CMake build have been removed; historical implementations remain in Git.
 ## Prerequisites
 
 Use [mise](https://mise.jdx.dev/) 2026.10.8 or newer and the pinned toolchain in
-`.mise/toolchain.toml`, included by `mise.toml` and also described in
-[Odin development](odin-development.md). The SDK CLI currently targets Windows
+`.mise/toolchain.toml`, included by `mise.toml`. The SDK CLI currently targets Windows
 x64 development. Players need neither a compiler nor Node.js to run.
 
 Mise installs Node.js, Odin (including SDL), the Wasmtime C API, odinfmt from OLS,
