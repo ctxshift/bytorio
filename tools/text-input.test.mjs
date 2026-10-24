@@ -153,8 +153,12 @@ test("real DOM input supports trusted phone focus, UTF8 edits, composition and s
   );
   const server = serve(repo, 0);
   await new Promise((accept) => server.once("listening", accept));
-  const browser = await chromium.launch({ headless: true });
+  let browser;
   try {
+    browser = await chromium.launch({
+      channel: process.env.PLAYER_BROWSER_CHANNEL || "chrome",
+      headless: true,
+    });
     for (const mobile of [false, true]) {
       const context = await browser.newContext({
         viewport: { width: 640, height: 480 },
@@ -265,7 +269,10 @@ test("real DOM input supports trusted phone focus, UTF8 edits, composition and s
       await context.close();
     }
   } finally {
-    await browser.close();
-    await new Promise((accept) => server.close(accept));
+    try {
+      await browser?.close();
+    } finally {
+      await new Promise((accept) => server.close(accept));
+    }
   }
 });
