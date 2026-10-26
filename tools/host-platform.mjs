@@ -3,7 +3,9 @@ export const cliPlatforms = ["windows-x64", "macos-arm64", "macos-x64"];
 
 export function hostPlatform(platform = process.platform, arch = process.arch) {
   const windows = platform === "win32";
-  const id = `${windows ? "windows" : platform === "darwin" ? "macos" : platform}-${arch}`;
+  const os = windows ? "windows" : platform === "darwin" ? "macos" : platform;
+  const id = `${os}-${arch}`;
+  const archiveArch = arch === "x64" ? "x86_64" : arch === "arm64" ? "aarch64" : arch;
   return {
     id,
     windows,
@@ -11,6 +13,7 @@ export function hostPlatform(platform = process.platform, arch = process.arch) {
     cliSupported: cliPlatforms.includes(id),
     executable: windows ? "byt.exe" : "byt",
     cliAsset: windows ? "byt.exe" : `byt-${id}`,
+    cliArchive: `byt-${os}-${archiveArch}.tar.gz`,
     cliManifest: windows ? "release.json" : `release-${id}.json`,
     player: windows ? "player.exe" : "player",
     sdlLibrary: windows ? "SDL3.dll" : "libSDL3.0.dylib",

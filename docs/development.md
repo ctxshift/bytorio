@@ -50,6 +50,12 @@ version or `byt-v...` tag; its default is `latest`, including previews.
 Windows, Apple Silicon and Intel Macs when installation guidance changes and
 after publishing each CLI release.
 
+`mise run test:cli-archive-install` additionally exercises mise 2025.12.0 by
+default; `BYTORIO_MISE_VERSION` selects another historical version. Before an
+archive release is published, it tests newly packaged candidate archives behind
+a local metadata fixture. After publication it tests the real short pinned
+entry against GitHub. CI covers 2025.12.0 and 2026.7.0 on all three platforms.
+
 From the repository root:
 
 ```sh

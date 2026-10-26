@@ -165,6 +165,14 @@ For CLI tags, `BYTORIO_RELEASE_TAG` sets the compiled version. The workflow
 publishes the exact executable exercised by `test:cli` on each architecture.
 Windows retains `byt.exe` and `release.json`; macOS uses `byt-macos-arm64` and
 `byt-macos-x64`, with `release-macos-arm64.json` and `release-macos-x64.json`.
+CLI releases also publish `byt-windows-x86_64.tar.gz`,
+`byt-macos-aarch64.tar.gz` and `byt-macos-x86_64.tar.gz`. Each contains only the
+tested executable, named `byt.exe` or `byt`, with neutral archive ownership.
+Mise prefers these platform-named archives, including historical versions that
+cannot detect the generic Windows executable or normalize raw binary names.
+Each existing platform manifest keeps its raw binary fields and adds an
+`archive` object with asset name, byte count and SHA-256. Publication verifies
+both forms, including archive membership and the extracted executable hash.
 Mac binaries are ad hoc signed before verification and hashing; distribution
 signing and notarization remain future work. Windows and Apple Silicon jobs run
 the complete validation suite, including native and browser conformance and

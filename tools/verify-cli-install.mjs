@@ -132,8 +132,9 @@ try {
     const section = lock.split(`[tools."${backend}"."platforms.${platform}"]`)[1]?.split(/\n\[/)[0];
     assert.ok(section, `Lock contains ${platform}`);
     const entry = await manifest(release, platform);
-    assert.ok(section.includes(`/releases/download/${release.tag}/${entry.asset}"`));
-    assert.ok(section.includes(`checksum = "sha256:${entry.sha256}"`));
+    const selected = entry.archive ?? entry;
+    assert.ok(section.includes(`/releases/download/${release.tag}/${selected.asset}"`));
+    assert.ok(section.includes(`checksum = "sha256:${selected.sha256}"`));
   }
   await writeFile(resolve(reportDirectory, "mise.lock"), lock);
   report.checks.push(

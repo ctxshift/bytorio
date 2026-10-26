@@ -41,3 +41,18 @@ export function verifyReleaseAsset(release, manifest, bytes, platform = manifest
     throw new Error("Release version, size, filename or checksum does not match its asset");
   }
 }
+
+export function verifyReleaseArchive(release, manifest, bytes, platform = manifest.platform) {
+  const host = cliReleasePlatform(platform);
+  const archive = manifest.archive;
+  if (
+    release.kind !== "byt" ||
+    manifest.version !== release.version ||
+    manifest.platform !== host.id ||
+    archive?.asset !== host.cliArchive ||
+    archive.bytes !== bytes.length ||
+    archive.sha256 !== createHash("sha256").update(bytes).digest("hex")
+  ) {
+    throw new Error("Release archive filename, version, platform, size or checksum does not match");
+  }
+}

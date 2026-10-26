@@ -32,8 +32,10 @@ Run `mise trust`, then `mise install github:ctxshift/bytorio` and
 includes previews. `minimum_release_age = "0d"` allows newly published releases
 immediately rather than applying mise's release-age delay. These options use
 mise's [built-in GitHub backend](https://mise.jdx.dev/dev-tools/backends/github.html).
-If an older mise release does not recognize an option or match an asset, update
-mise. The examples do not declare a minimum mise version.
+Choose a CLI release that includes the platform-named `.tar.gz` archives. They
+keep the executable name intact during extraction and support older mise asset
+detection. The short pinned entry needs none of the automatic-update options
+above. The examples do not declare a minimum mise version.
 
 For a CLI-only setup, this command installs the CLI and writes a pinned tool entry:
 

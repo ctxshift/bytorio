@@ -153,11 +153,11 @@ run `mise use github:ctxshift/bytorio@byt-v<version>` again with the new version
 For checksum locks, automatic `latest` selection and an optional SDK task, see
 [Advanced mise installation](mise-installation.md).
 
-Older mise releases can differ in asset detection. Windows installation failed
-with `No matching asset found` in compatibility checks using mise 2025.12 and
-2026.7. If that happens, update mise or use the manual download instructions
-above. The consumer example has no declared version floor; contributor-toolchain
-requirements are separate.
+Choose a CLI release containing platform archives: `byt-windows-x86_64.tar.gz`,
+`byt-macos-aarch64.tar.gz` or `byt-macos-x86_64.tar.gz`. Mise selects the matching
+archive, which contains `byt.exe` or `byt` at its root. These names support the
+short entry on older mise releases too. Releases predating the archives retain
+their manual raw-binary downloads. Contributor-toolchain requirements are separate.
 
 ## Use a versioned SDK bundle
 

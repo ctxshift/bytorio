@@ -3,14 +3,31 @@ import { test } from "node:test";
 import { hostPlatform, requireCliHost, requireNativeHost } from "./host-platform.mjs";
 
 test("hosts separate CLI assets from native compiler availability", () => {
-  for (const [os, arch, id, executable, player, library] of [
-    ["win32", "x64", "windows-x64", "byt.exe", "player.exe", "SDL3.dll"],
-    ["darwin", "arm64", "macos-arm64", "byt", "player", "libSDL3.0.dylib"],
-    ["darwin", "x64", "macos-x64", "byt", "player", "libSDL3.0.dylib"],
+  for (const [os, arch, id, executable, player, library, archive] of [
+    [
+      "win32",
+      "x64",
+      "windows-x64",
+      "byt.exe",
+      "player.exe",
+      "SDL3.dll",
+      "byt-windows-x86_64.tar.gz",
+    ],
+    [
+      "darwin",
+      "arm64",
+      "macos-arm64",
+      "byt",
+      "player",
+      "libSDL3.0.dylib",
+      "byt-macos-aarch64.tar.gz",
+    ],
+    ["darwin", "x64", "macos-x64", "byt", "player", "libSDL3.0.dylib", "byt-macos-x86_64.tar.gz"],
   ]) {
     const host = requireCliHost(os, arch);
     assert.equal(host.id, id);
     assert.equal(host.executable, executable);
+    assert.equal(host.cliArchive, archive);
     assert.equal(host.player, player);
     assert.equal(host.sdlLibrary, library);
     assert.equal(host.cliSupported, true);

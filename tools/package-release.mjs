@@ -1,8 +1,9 @@
-import { copyFile, mkdir, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { releaseConfig } from "./release-config.mjs";
 import { repo, script } from "./toolchain.mjs";
 import { requireCliHost } from "./host-platform.mjs";
+import { createCliArchive } from "./cli-release-archive.mjs";
 
 const release = releaseConfig(process.env.BYTORIO_RELEASE_TAG);
 const output = resolve(repo, "build/releases", release.tag);
@@ -25,9 +26,20 @@ if (release.kind === "byt") {
 for (const [sourceName, targetName = sourceName] of files) {
   await copyFile(resolve(source, sourceName), resolve(output, targetName));
 }
+if (release.kind === "byt") {
+  const host = requireCliHost();
+  const manifest = JSON.parse(await readFile(resolve(output, host.cliManifest), "utf8"));
+  const packaged = await createCliArchive(
+    release,
+    manifest,
+    resolve(output, host.cliAsset),
+    output,
+  );
+  await writeFile(resolve(output, host.cliManifest), JSON.stringify(packaged, null, 2) + "\n");
+}
 const notes =
   release.kind === "byt"
-    ? "Standalone scaffolding preview for Windows x64 and macOS Apple Silicon/Intel. Download byt.exe on Windows, byt-macos-arm64 on Apple Silicon, or byt-macos-x64 on Intel. Each binary has a platform-specific SHA-256 manifest. On macOS, rename the download to byt and run chmod +x byt. Supports new and sdk install without Node, Bun or mise. Mac binaries are ad hoc signed; these previews are not notarized or signed with a distribution identity."
+    ? "Standalone scaffolding preview for Windows x64 and macOS Apple Silicon/Intel. Platform archives contain byt.exe on Windows or byt on Mac and support the short pinned mise entry, including older mise versions. Download byt-windows-x86_64.tar.gz, byt-macos-aarch64.tar.gz, or byt-macos-x86_64.tar.gz. Existing raw binary names remain available. Platform manifests record SHA-256 and size for both forms. Supports new and sdk install without Node, Bun or mise. Mac binaries are ad hoc signed, not notarized."
     : "Versioned SDK libraries, templates, schemas and documentation for Luau and Odin. The manifest records the compressed bundle's SHA-256 and size.";
 await writeFile(
   resolve(output, "release-notes.md"),

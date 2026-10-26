@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { cliReleasePlatform, releaseConfig, verifyReleaseAsset } from "./release-config.mjs";
 import { repo, run } from "./toolchain.mjs";
 import { cliPlatforms } from "./host-platform.mjs";
+import { verifyCliArchive } from "./cli-release-archive.mjs";
 
 const release = releaseConfig(process.env.BYTORIO_RELEASE_TAG);
 const directory = resolve(repo, "build/releases", release.tag);
@@ -25,6 +26,11 @@ for (const entry of assets) {
   const bytes = await readFile(resolve(directory, entry.asset));
   verifyReleaseAsset(release, manifest, bytes, entry.platform);
   files.push(resolve(directory, entry.manifest), resolve(directory, entry.asset));
+  if (release.kind === "byt") {
+    const archive = resolve(directory, cliReleasePlatform(entry.platform).cliArchive);
+    await verifyCliArchive(release, manifest, archive);
+    files.push(archive);
+  }
 }
 if (check) {
   console.log(`Verified release assets for ${release.tag}`);

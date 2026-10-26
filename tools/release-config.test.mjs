@@ -8,7 +8,8 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { repo } from "./toolchain.mjs";
+import { repo, run } from "./toolchain.mjs";
+import { createCliArchive, verifyCliArchive } from "./cli-release-archive.mjs";
 
 test("release tags select independent versions and prerelease status", () => {
   assert.deepEqual(releaseConfig("byt-v1.2.3-rc.2"), {
@@ -46,16 +47,24 @@ test("publication requires every tested CLI platform and verifies each binary", 
   for (const id of cliPlatforms) {
     const host = cliReleasePlatform(id);
     await writeFile(resolve(directory, host.cliAsset), bytes);
+    const manifest = {
+      version: tag.slice(5),
+      platform: id,
+      executable: host.executable,
+      asset: host.cliAsset,
+      bytes: bytes.length,
+      sha256: createHash("sha256").update(bytes).digest("hex"),
+    };
     await writeFile(
       resolve(directory, host.cliManifest),
-      JSON.stringify({
-        version: tag.slice(5),
-        platform: id,
-        executable: host.executable,
-        asset: host.cliAsset,
-        bytes: bytes.length,
-        sha256: createHash("sha256").update(bytes).digest("hex"),
-      }),
+      JSON.stringify(
+        await createCliArchive(
+          releaseConfig(tag),
+          manifest,
+          resolve(directory, host.cliAsset),
+          directory,
+        ),
+      ),
     );
     const local = invoke(["--platform", id]);
     assert.ifError(local.error);
@@ -65,6 +74,12 @@ test("publication requires every tested CLI platform and verifies each binary", 
     }
   }
   assert.equal(invoke().status, 0);
+  const archiveHost = cliReleasePlatform("windows-x64");
+  const archive = resolve(directory, archiveHost.cliArchive);
+  const original = await readFile(archive);
+  await writeFile(archive, Buffer.from("invalid archive"));
+  assert.notEqual(invoke().status, 0, "corrupt archive blocks publication");
+  await writeFile(archive, original);
   const host = cliReleasePlatform("macos-arm64");
   const path = resolve(directory, host.cliAsset);
   await writeFile(path, Buffer.concat([await readFile(path), Buffer.from("corrupt")]));
@@ -103,4 +118,42 @@ test("publication refuses mismatched versions, filenames, size and corrupted byt
       assert.throws(() => verifyReleaseAsset(release, { ...manifest, asset: "wrong" }, bytes));
     }
   }
+});
+
+test("archive verification rejects extra files and a different executable despite a matching archive hash", async () => {
+  const release = releaseConfig(`byt-v0.0.0-test.${randomUUID()}`);
+  const host = cliReleasePlatform("windows-x64");
+  const directory = resolve(repo, "build/releases", release.tag);
+  await mkdir(directory, { recursive: true });
+  const executable = resolve(directory, host.executable);
+  const original = Buffer.from("tested CLI payload");
+  await writeFile(executable, original);
+  const manifest = {
+    version: release.version,
+    platform: host.id,
+    executable: host.executable,
+    asset: host.cliAsset,
+    bytes: original.length,
+    sha256: createHash("sha256").update(original).digest("hex"),
+  };
+  const packaged = await createCliArchive(release, manifest, executable, directory);
+  const archive = resolve(directory, host.cliArchive);
+  const check = async () => {
+    const bytes = await readFile(archive);
+    const changed = {
+      ...packaged,
+      archive: {
+        asset: host.cliArchive,
+        bytes: bytes.length,
+        sha256: createHash("sha256").update(bytes).digest("hex"),
+      },
+    };
+    await assert.rejects(verifyCliArchive(release, changed, archive));
+  };
+  await writeFile(resolve(directory, "extra.txt"), "extra payload");
+  run("tar", ["-czf", archive, "-C", directory, host.executable, "extra.txt"]);
+  await check();
+  await writeFile(executable, Buffer.from("different CLI payload"));
+  run("tar", ["-czf", archive, "-C", directory, host.executable]);
+  await check();
 });
