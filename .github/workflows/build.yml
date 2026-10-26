@@ -53,6 +53,12 @@ jobs:
       - run: npm ci
       - name: Run quality, conformance, drawing and cache gates
         run: mise run validate ${{ matrix.validation }}
+      - name: Retain validation logs separately
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sdk-validation-${{ matrix.platform }}
+          path: build/validation/
       - uses: actions/upload-artifact@v4
         if: always()
         with:
