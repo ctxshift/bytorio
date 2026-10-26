@@ -116,9 +116,33 @@ On Windows x64, Apple Silicon or Intel Mac, install
 [mise](https://mise.jdx.dev/getting-started) **2026.10.8 or newer**. No Node, Bun
 or compiler is needed to install or use the standalone preview.
 
-In your game folder or a new, empty tools folder, save the
+### Pin a release (recommended)
+
+Choose a **Bytorio CLI** release from the
+[releases page](https://github.com/ctxshift/bytorio/releases). Add this one line
+under `[tools]` in your own `mise.toml`, replacing `<version>` with the version
+from that release and keeping the full `byt-v` tag prefix:
+
+```toml
+[tools]
+"github:ctxshift/bytorio" = "byt-v<version>"
+```
+
+Then run `mise trust`, `mise install github:ctxshift/bytorio`, and
+`mise exec -- byt --version` from that folder. Mise selects the correct Windows
+or Mac asset, handles the raw executable, and exposes the command as `byt`.
+The exact tag selects the preview directly, so no extra tool options are needed.
+You can also install and write this pin with
+`mise use github:ctxshift/bytorio@byt-v<version>`.
+
+### Follow new releases automatically
+
+To select `latest` instead of an exact tag, mise needs to distinguish CLI and
+SDK releases and include previews. The optional
 [consumer mise.toml](https://raw.githubusercontent.com/ctxshift/bytorio/main/install/mise.toml)
-as `mise.toml`, or merge this configuration into your existing file:
+configures those choices and provides an SDK install task.
+In your game folder or a new, empty tools folder, save the
+file as `mise.toml`, or merge this configuration into your existing file:
 
 ```toml
 min_version = "2026.10.8"
@@ -127,13 +151,8 @@ min_version = "2026.10.8"
 version = "latest"
 version_prefix = "byt-v"
 prerelease = true
-version_order = "semver"
 # Include newly published previews; this applies only to this tool.
 minimum_release_age = "0d"
-matching = "byt"
-format = "raw"
-bin = "byt"
-os = ["windows", "macos"]
 
 [tasks."sdk:install"]
 description = "Cache an exact SDK bundle version: mise run sdk:install -- <version>"
@@ -159,7 +178,7 @@ For a CLI-only setup without copying the file, run this single command in your
 own tools or game folder; it installs the CLI and writes a pinned `[tools]` entry:
 
 ```sh
-mise use --pin 'github:ctxshift/bytorio[version_prefix=byt-v,prerelease=true,minimum_release_age=0d,version_order=semver,matching=byt,format=raw,bin=byt]@latest'
+mise use --pin 'github:ctxshift/bytorio[version_prefix=byt-v,prerelease=true,minimum_release_age=0d]@latest'
 mise exec -- byt --help
 ```
 
@@ -168,22 +187,23 @@ activation configured, use `byt` directly; `mise exec -- byt ...` also works
 without activation. Run these consumer commands outside the Bytorio source
 checkout, whose mise configuration manages the contributor toolchain.
 
-### Pin and update the installed CLI
+### Lock and update the installed CLI
 
-After installing the configuration above, record the chosen version and create a
-lockfile with download URLs and checksums for all three supported platforms:
+For either recipe, create a lockfile with download URLs and checksums for all
+three supported platforms:
 
 ```sh
-mise use --pin github:ctxshift/bytorio@latest
 mise lock --platform windows-x64,macos-arm64,macos-x64 github:ctxshift/bytorio
 mise install --locked github:ctxshift/bytorio
 ```
 
 Keep `mise.toml` and `mise.lock` with your project for repeatable installs. To
-update intentionally, rerun the first two commands, review the changed version
-and checksums, then install again. Use an exact version from a `byt-v...` tag in
-place of `latest` when you want a specific release, omitting the `byt-v` prefix.
-The CLI-only recipe uses the same backend options and can create the same lock.
+update a full-tag pin, choose a new `byt-v...` release and run
+`mise use github:ctxshift/bytorio@byt-v<version>`, then refresh the lock. For the
+`latest` recipe, use `mise lock --bump github:ctxshift/bytorio` to advance the
+locked version, review its checksums, then install again. To turn that recipe
+into an exact pin, run `mise use --pin github:ctxshift/bytorio@latest` and refresh
+the lock; the `version_prefix` option then lets mise store the numeric version.
 
 ## Use a versioned SDK bundle
 

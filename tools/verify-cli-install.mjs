@@ -9,9 +9,7 @@ import { cliReleasePlatform, releaseConfig, verifyReleaseAsset } from "./release
 import { repo } from "./toolchain.mjs";
 
 const backend = "github:ctxshift/bytorio";
-const inlineBackend =
-  `${backend}[version_prefix=byt-v,prerelease=true,minimum_release_age=0d,` +
-  "version_order=semver,matching=byt,format=raw,bin=byt]";
+const inlineBackend = `${backend}[version_prefix=byt-v,prerelease=true,minimum_release_age=0d]`;
 const requested = process.env.BYTORIO_CLI_VERSION ?? "latest";
 const expected =
   requested === "latest"
@@ -188,6 +186,14 @@ try {
   await invoke(["use", "--pin", `${inlineBackend}@${expected ?? "latest"}`], cli, cliEnvironment);
   await verifyInstalled(cli, cliEnvironment, release);
   report.checks.push("Documented mise use command installs and records the same release");
+
+  const pinned = resolve(sandbox, "pinned configuration");
+  await mkdir(pinned);
+  await writeFile(resolve(pinned, "mise.toml"), `[tools]\n"${backend}" = "${release.tag}"\n`);
+  const pinnedEnvironment = { ...environment, MISE_DATA_DIR: resolve(sandbox, "pinned-data") };
+  await invoke(["install", backend], pinned, pinnedEnvironment);
+  await verifyInstalled(pinned, pinnedEnvironment, release);
+  report.checks.push("One-line full-tag pin works with mise defaults and exposes the byt command");
   report.status = "passed";
 } catch (error) {
   report.status = "failed";

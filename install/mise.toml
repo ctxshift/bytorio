@@ -4,13 +4,8 @@ min_version = "2026.10.8"
 version = "latest"
 version_prefix = "byt-v"
 prerelease = true
-version_order = "semver"
 # Include newly published previews; this applies only to this tool.
 minimum_release_age = "0d"
-matching = "byt"
-format = "raw"
-bin = "byt"
-os = ["windows", "macos"]
 
 [tasks."sdk:install"]
 description = "Cache an exact SDK bundle version: mise run sdk:install -- <version>"
