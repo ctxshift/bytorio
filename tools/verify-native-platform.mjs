@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
 import { exportPlayer } from "./player-export.mjs";
 import { requireNativeHost } from "./host-platform.mjs";
+import { verifyMacLoaderPaths } from "./macos-loader.mjs";
 import { copyWasmtimeLibrary, dependencyRoot, repo, run, tool } from "./toolchain.mjs";
 
 const host = requireNativeHost();
@@ -53,7 +54,7 @@ if (process.platform === "darwin") {
     const path = resolve(target, name);
     run("codesign", ["--verify", "--strict", path]);
     const loads = run("otool", ["-l", path]);
-    assert.equal(loads.includes(repo), false, "shipped loader paths do not contain the checkout");
+    verifyMacLoaderPaths(loads, repo);
   }
 }
 await writeFile(

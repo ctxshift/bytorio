@@ -297,7 +297,7 @@ run = "node --test tools/validation-runner.test.mjs tools/frame-clock.test.mjs t
 [tasks."test:native-platform"]
 description = "Verify native filesystem behavior and relocated player dependencies"
 depends = ["build:odin"]
-run = "node tools/verify-native-platform.mjs"
+run = ["node --test tools/macos-loader.test.mjs", "node tools/verify-native-platform.mjs"]
 
 [tasks."test:player-export"]
 description = "Verify complete player exports and missing-dependency failures"
