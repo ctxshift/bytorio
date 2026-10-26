@@ -15,30 +15,50 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            platform: windows-x64
+            validation: --full
+            tools: ""
+          - runner: macos-15
+            platform: macos-arm64
+            validation: --full
+            tools: ""
+          - runner: macos-15-intel
+            platform: macos-x64
+            validation: test:cli
+            tools: node bun github:DanielGavin/ols stylua
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
     env:
       PLAYER_BROWSER_CHANNEL: chrome
+      MISE_TASK_RUN_AUTO_INSTALL: "false"
       BYTORIO_RELEASE_TAG: ${{ github.ref_name }}
     steps:
       - uses: actions/checkout@v4
       - uses: jdx/mise-action@v4
         with:
           version: 2026.10.15
+          install_args: ${{ matrix.tools }}
       - run: npm ci
       - name: Validate tagged source and binary
-        run: mise run validate
+        run: mise run validate ${{ matrix.validation }}
       - name: Package release assets
+        if: startsWith(github.ref_name, 'byt-v') || matrix.platform == 'windows-x64'
         run: mise run package:release
       - uses: actions/upload-artifact@v4
+        if: startsWith(github.ref_name, 'byt-v') || matrix.platform == 'windows-x64'
         with:
-          name: release-assets
+          name: release-assets-${{ matrix.platform }}
           path: build/releases/${{ github.ref_name }}/
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: release-validation
+          name: release-validation-${{ matrix.platform }}
           path: build/validation/
 
   publish:
@@ -57,7 +77,8 @@ jobs:
           node-version: 24
       - uses: actions/download-artifact@v4
         with:
-          name: release-assets
+          pattern: release-assets-*
+          merge-multiple: true
           path: build/releases/${{ github.ref_name }}/
       - name: Verify assets and publish release
         run: node tools/publish-release.mjs

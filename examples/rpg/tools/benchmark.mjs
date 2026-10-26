@@ -9,6 +9,7 @@ import { cpus, platform, arch, release } from "node:os";
 import { once } from "node:events";
 import { chromium } from "../../../tools/browser-timing.mjs";
 import { serve } from "../../../tools/serve.mjs";
+import { nativePlayer } from "../../../tools/toolchain.mjs";
 import {
   loadSource,
   checkExecutor,
@@ -178,7 +179,7 @@ function native(language, flags, cacheConfig) {
       ...(cacheConfig ? ["--executor-cache", cacheConfig] : ["--no-executor-cache"]),
     );
   }
-  const result = spawnSync(resolve(`${root}/native/player.exe`), [...args, ...flags], {
+  const result = spawnSync(resolve(`${root}/native/${nativePlayer}`), [...args, ...flags], {
     encoding: "utf8",
     timeout: 120000,
     maxBuffer: 4 * 1024 * 1024,
@@ -211,7 +212,7 @@ for (const language of ["odin", "luau"]) {
   if (language === "luau") {
     args.push("--source", `${root}/native/rpg.luau`);
   }
-  const smoke = spawnSync(resolve(`${root}/native/player.exe`), args, {
+  const smoke = spawnSync(resolve(`${root}/native/${nativePlayer}`), args, {
     env,
     encoding: "utf8",
     timeout: 30000,
@@ -285,7 +286,7 @@ for (const mode of ["metered", "unmetered"]) {
   }
 }
 const changed = spawnSync(
-  resolve(`${root}/native/player.exe`),
+  resolve(`${root}/native/${nativePlayer}`),
   [
     "--game",
     "examples/rpg/build/odin/web/fixtures/abi.wasm",
@@ -451,7 +452,7 @@ try {
     'return {init=function() error("prototype diagnostic") end, update=function() end, draw=function() end}';
   await writeFile(`${root}/web/diagnostic.luau`, bad);
   const failure = spawnSync(
-    resolve(`${root}/native/player.exe`),
+    resolve(`${root}/native/${nativePlayer}`),
     [
       "--game",
       `${root}/native/luau-executor.wasm`,
@@ -485,7 +486,7 @@ try {
       luauExecutor: wasm.luau.length,
       luauCartridge: source.length,
       runtime: runtimeBytes.length,
-      player: (await stat(`${root}/native/player.exe`)).size,
+      player: (await stat(`${root}/native/${nativePlayer}`)).size,
     },
     native: nativeResults,
     browser: browserResults,

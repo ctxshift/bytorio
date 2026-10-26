@@ -57,7 +57,9 @@ can create projects and download SDK bundles without Node, Bun or mise.
 **Build, check, run, pack, watch and import still require the source CLI.** Follow
 [Getting started](../docs/getting-started.md) for the download instructions,
 supported commands and complete source setup. There is no automatic installer
-or qualified macOS/Linux authoring package yet.
+yet. Source authoring supports Windows x64 and macOS on Apple Silicon.
+Tagged CLI releases also build a standalone preview for Intel Macs; see
+[Mac download availability](../docs/getting-started.md#download-the-cli-preview).
 
 ## Start a game
 

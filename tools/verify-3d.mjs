@@ -1,3 +1,4 @@
+import { nativePlayer } from "./toolchain.mjs";
 import assert from "node:assert/strict";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve, relative } from "node:path";
@@ -10,6 +11,8 @@ import { odinUnitTests } from "./odin-unit-tests.mjs";
 import { serve } from "./serve.mjs";
 import { negotiateProfile } from "../runtime/odin/web/policy.js";
 import { resourceSchema } from "../runtime/odin/web/constants.js";
+import { requireNativePlayer } from "./sdk/project.mjs";
+requireNativePlayer();
 
 const profile = JSON.parse(await readFile("sdk/profiles/compact-3d-preview-1.json"));
 const baseProfile = JSON.parse(await readFile("sdk/profiles/resource-av-1.json"));
@@ -97,7 +100,7 @@ function summary(measured) {
 try {
   browser = await chromium.launch({ channel: process.env.PLAYER_BROWSER_CHANNEL || undefined });
   for (const { language, project } of projects) {
-    const executable = resolve(project, "build/native/player.exe");
+    const executable = resolve(project, "build/native", nativePlayer);
     const native = (args) => JSON.parse(run(executable, args));
     const base = "/" + relative(process.cwd(), resolve(project, "build/web")).replaceAll("\\", "/");
     const page = await browser.newPage({ viewport: { width: 960, height: 650 } });

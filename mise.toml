@@ -57,18 +57,18 @@ run = "node tools/format-code.mjs cpp"
 description = "Build standalone native/browser players and fixtures"
 # Finish the shared decoder before entering a nested player graph. Trace tasks
 # can otherwise start the same decoder concurrently in the outer graph.
-depends = ["deps:vorbis"]
+depends = ["deps:vorbis", "deps:vorbis:native", "deps:sdl3:native"]
 # Skip the nested graph on unchanged builds; tests verify this aggregate contract.
 outputs = [
-  "build/odin-player/native/SDL3.dll",
+  "build/odin-player/native/{% if os() == 'windows' %}SDL3.dll{% else %}libSDL3.0.dylib{% endif %}",
   "build/odin-player/native/game.wasm",
   "build/odin-player/native/licenses/glad.txt",
   "build/odin-player/native/licenses/odin.txt",
   "build/odin-player/native/licenses/opengl.txt",
   "build/odin-player/native/licenses/sdl3.txt",
   "build/odin-player/native/licenses/wasmtime.txt",
-  "build/odin-player/native/player.exe",
-  "build/odin-player/native/wasmtime.dll",
+  "build/odin-player/native/{% if os() == 'windows' %}player.exe{% else %}player{% endif %}",
+  "build/odin-player/native/{% if os() == 'windows' %}wasmtime.dll{% else %}licenses/wasmtime.txt{% endif %}",
   "build/odin-player/web/audio-worklet.js",
   "build/odin-player/web/audio.wasm",
   "build/odin-player/web/ogg.js",
@@ -120,6 +120,7 @@ sources = [
   ".mise/tasks/vorbis.toml",
   "runtime/vorbis/**",
   "tools/vorbis-build.mjs",
+  "tools/sdl3-build.mjs",
   ".mise/tasks/player.toml",
   ".mise/toolchain.toml",
   "examples/hello/odin/**/*.odin",
@@ -149,6 +150,7 @@ sources = [
   "tools/player-export.mjs",
   "tools/stage-player.mjs",
   "tools/toolchain.mjs",
+  "tools/host-platform.mjs",
 ]
 
 [tasks."test:sdk"]
@@ -254,6 +256,7 @@ run = [
   {task = "test:validation"},
   {task = "test:build-tasks"},
   {task = "test:player-export"},
+  {task = "test:native-platform"},
     {task = "test:cli"},
   {task = "test:sdk"},
   {task = "test:save"},
@@ -289,7 +292,12 @@ run = "node tools/validate.mjs"
 
 [tasks."test:validation"]
 description = "Test validation failure reporting, deadlines and source tracking"
-run = "node --test tools/validation-runner.test.mjs tools/frame-clock.test.mjs tools/odin-unit-tests.test.mjs tools/browser-timing.test.mjs"
+run = "node --test tools/validation-runner.test.mjs tools/frame-clock.test.mjs tools/odin-unit-tests.test.mjs tools/browser-timing.test.mjs tools/host-platform.test.mjs tools/srgb.test.mjs"
+
+[tasks."test:native-platform"]
+description = "Verify native filesystem behavior and relocated player dependencies"
+depends = ["build:odin"]
+run = "node tools/verify-native-platform.mjs"
 
 [tasks."test:player-export"]
 description = "Verify complete player exports and missing-dependency failures"

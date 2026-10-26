@@ -14,6 +14,7 @@ import { exportPlayer } from "../player-export.mjs";
 import { tool, task } from "../toolchain.mjs";
 import { branding } from "../branding.mjs";
 import { createScaffolder } from "./scaffold.mjs";
+import { requireNativeHost, nativeHostNote } from "../host-platform.mjs";
 
 export const repo = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const contract = JSON.parse(await readFile(resolve(repo, "sdk/contract.json"), "utf8"));
@@ -202,6 +203,7 @@ async function prepare(path) {
   }
   return { ...spec, generated };
 }
+export { requireNativeHost as requireNativePlayer, nativeHostNote };
 async function player() {
   task("build:odin");
 }
@@ -292,6 +294,7 @@ async function smoke(spec) {
   });
 }
 export async function checkProject(path) {
+  requireNativeHost();
   const spec = await prepare(path);
   await player();
   if (spec.language === "luau") {

@@ -4,10 +4,9 @@ import { createHash } from "node:crypto";
 import { branding } from "./branding.mjs";
 import { repo, run, tool } from "./toolchain.mjs";
 import { cliVersion } from "./release-config.mjs";
+import { requireCliHost } from "./host-platform.mjs";
 
-if (process.platform !== "win32" || process.arch !== "x64") {
-  throw new Error("Standalone CLI preview is currently qualified only for Windows x64");
-}
+const host = requireCliHost();
 
 const output = resolve(repo, "build/cli");
 await mkdir(output, { recursive: true });
@@ -36,7 +35,7 @@ run(process.execPath, [
   "-p",
   "tools/cli/tsconfig.json",
 ]);
-const executable = resolve(output, "byt.exe");
+const executable = resolve(output, host.executable);
 run(tool("bun"), [
   "build",
   "--compile",
@@ -48,15 +47,20 @@ run(tool("bun"), [
   "--outfile",
   executable,
 ]);
+if (process.platform === "darwin") {
+  run("codesign", ["--force", "--sign", "-", executable]);
+  run("codesign", ["--verify", "--strict", executable]);
+}
 const bytes = await readFile(executable);
 await writeFile(
   resolve(output, "release.json"),
   JSON.stringify(
     {
       version,
-      platform: "windows-x64",
+      platform: host.id,
       status: "scaffolding-preview",
-      executable: "byt.exe",
+      executable: host.executable,
+      asset: host.cliAsset,
       bytes: bytes.length,
       sha256: createHash("sha256").update(bytes).digest("hex"),
       sdkAssets: paths.sort(),
@@ -65,4 +69,4 @@ await writeFile(
     2,
   ) + "\n",
 );
-console.log(`Built standalone CLI preview: build/cli/byt.exe (${bytes.length} bytes)`);
+console.log(`Built standalone CLI preview: build/cli/${host.executable} (${bytes.length} bytes)`);

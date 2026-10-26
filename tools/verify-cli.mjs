@@ -7,13 +7,15 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { createProject } from "./sdk/project.mjs";
 import { repo } from "./toolchain.mjs";
+import { requireCliHost } from "./host-platform.mjs";
 
 const temporaryRoot = resolve(tmpdir());
 const sandbox = await mkdtemp(join(temporaryRoot, "bytorio-cli-"));
 assert.ok(sandbox.startsWith(temporaryRoot + sep), "Unexpected verification directory");
 const reportDirectory = resolve(repo, "build/cli-verification");
 await mkdir(reportDirectory, { recursive: true });
-const executable = resolve(sandbox, "byt.exe");
+const host = requireCliHost();
+const executable = resolve(sandbox, host.executable);
 const environment = Object.fromEntries(
   Object.entries(process.env).filter(([name]) => !/^(path|mise.*|node.*|bun.*)$/i.test(name)),
 );
@@ -52,7 +54,7 @@ async function inventory(root, prefix = "") {
 }
 
 try {
-  await copyFile(resolve(repo, "build/cli/byt.exe"), executable);
+  await copyFile(resolve(repo, "build/cli", host.executable), executable);
   // Ambient project configuration must not redirect a compiled CLI's runtime.
   await writeFile(resolve(sandbox, ".env"), "NODE_OPTIONS=--invalid-byt-option\n");
   await writeFile(resolve(sandbox, "bunfig.toml"), 'preload = ["./missing.js"]\n');
@@ -63,6 +65,9 @@ try {
   assert.equal(invoke(["--version"]).stdout.trim(), expectedVersion);
   const release = JSON.parse(await readFile(resolve(repo, "build/cli/release.json"), "utf8"));
   assert.equal(release.version, expectedVersion);
+  assert.equal(release.platform, host.id);
+  assert.equal(release.executable, host.executable);
+  assert.equal(release.asset, host.cliAsset);
   assert.equal(
     release.sha256,
     createHash("sha256")

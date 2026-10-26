@@ -9,12 +9,15 @@ development tools. Choose **Load game**, then **Start game** to enable sound.
 
 ## Installation status
 
-The **Windows x64 CLI preview** is available as a single download. It creates
+The **standalone CLI preview** creates
 Luau and Odin projects and downloads versioned SDK bundles without Node, Bun,
 mise or a source checkout. **It cannot build, check, run or pack games yet.**
-For a playable game, continue with the source setup below, which currently
-requires Windows x64 even for browser exports. macOS and Linux authoring
-packages and an automatic installer are not available yet.
+For a playable game, continue with the source setup below on Windows x64 or
+macOS Apple Silicon. Tagged CLI builds publish a separate executable
+for Windows, Apple Silicon and Intel after validation. Intel Mac supports the
+standalone scaffolding preview; the pinned Odin release has no Intel compiler
+for source builds. An automatic installer and Linux
+authoring packages are not available yet.
 
 ## Download the CLI preview
 
@@ -36,7 +39,16 @@ The version should be `0.1.0-preview.1`. The last command creates a Luau project
 and `byt.lock.json`, which pins the downloaded SDK bundle. Add `--language odin`
 to create an Odin project instead. Keep the lockfile with the game source.
 The SDK download needs internet once; subsequent use of that version works
-offline. The preview executable is currently unsigned.
+offline. The Windows preview executable is currently unsigned.
+
+For a release that includes Mac assets, download `byt-macos-arm64` on Apple
+Silicon or `byt-macos-x64` on Intel, plus the matching
+`release-macos-arm64.json` or `release-macos-x64.json`. Compare `shasum -a 256`
+with the manifest, rename the executable to `byt`, and run `chmod +x byt`.
+Use `./byt` in place of `.\byt.exe` in the commands above. Mac previews are
+ad hoc signed for local execution and are not notarized. The existing Windows
+preview release linked above predates these Mac assets; use source setup until
+a release with the Mac binaries is published.
 
 PowerShell uses `.\byt.exe` to run a program in the current folder. You can
 optionally add the folder containing the executable to your user PATH, reopen
@@ -59,6 +71,11 @@ in [Odin's installation guide](https://odin-lang.org/docs/install/).
 The tested native setup uses Visual Studio's **Desktop development with C++**
 workload. These are development requirements; people playing exported games do
 not need them.
+
+On Apple Silicon macOS, install Xcode Command Line Tools with `xcode-select --install` in
+place of the Windows linker prerequisites. Use a native terminal and mise
+installation for your Mac's architecture. The project builds its pinned SDL3
+dependency; a separate Homebrew SDL installation is unnecessary.
 
 Open a terminal in a folder where you keep projects, then run:
 
@@ -134,10 +151,10 @@ See [PNG cartridges](png-cartridges.md) for cover art and player exports.
 | Symptom | What to check |
 | --- | --- |
 | `mise` is not recognized | Finish the mise installation and open a new terminal. |
-| `byt` is not recognized | Use `.\byt.exe` from the download folder, or add that folder to your user PATH and reopen the terminal. |
+| `byt` is not recognized | Use `.\byt.exe` on Windows or `./byt` on macOS from the download folder, or add that folder to your user PATH and reopen the terminal. |
 | Preview says a command is unsupported | Use the source CLI below for build/check/run/pack/import/watch. |
 | No mise task named `byt` | Run the command from the Bytorio checkout, not from `my-game`. |
-| Missing compiler or linker | Complete `mise install` and the Windows linker prerequisites above. |
+| Missing compiler or linker | Complete `mise install` and the platform prerequisites above. |
 | Project folder already exists | `new` creates a fresh project; choose another folder or run the existing project. |
 | Server port is already in use | Stop the previous server, or add `--port 8081`. |
 | No sound | Choose **Start game** and interact with the player; browsers require a gesture to enable audio. |

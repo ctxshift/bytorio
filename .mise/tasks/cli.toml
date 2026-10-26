@@ -1,5 +1,5 @@
 ["build:cli"]
-description = "Build the standalone Windows x64 CLI scaffolding preview"
+description = "Build the standalone Windows/macOS CLI scaffolding preview"
 run = "node tools/build-cli.mjs"
 
 ["test:cli"]
@@ -12,4 +12,4 @@ run = "node tools/build-sdk-release.mjs"
 
 ["package:release"]
 description = "Package tested CLI or SDK assets for BYTORIO_RELEASE_TAG"
-run = ["node tools/package-release.mjs", "node tools/publish-release.mjs --check"]
+run = ["node tools/package-release.mjs", "node tools/publish-release.mjs --check --platform {{ os() }}-{{ arch() }}"]

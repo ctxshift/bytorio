@@ -1,15 +1,17 @@
 # Standalone CLI distribution plan
 
-Status: Windows x64 scaffolding preview released; full authoring distribution is
-still being implemented. There is no automatic installer yet.
+Status: Windows x64 scaffolding preview released; macOS arm64/x64 build and
+release gates implemented. Full authoring distribution is still being
+implemented. There is no automatic installer yet.
 The [standalone CLI decision](../adr/0017-distribute-a-standalone-authoring-cli.md)
 sets the user experience. This document describes the recommended implementation
 and the checks needed before publishing installation instructions.
 
 ## Implemented foundation
 
-`mise run build:cli` compiles the Windows x64 scaffolding preview to
-`build/cli/byt.exe`, with its version, file size and SHA-256 in `release.json`.
+`mise run build:cli` compiles the host's scaffolding preview to
+`build/cli/byt.exe` on Windows or `build/cli/byt` on macOS, with its platform,
+version, file size and SHA-256 in `release.json`.
 It uses pinned Bun and a type-checked TypeScript entry point. SDK templates,
 the contract and Luau editor modules are embedded; no source checkout or separate
 JavaScript runtime is needed to run `byt new`.
@@ -159,7 +161,16 @@ validation gates pass, the workflow uploads and publishes the actual release
 assets. Versions containing a prerelease suffix are marked as prereleases.
 
 For CLI tags, `BYTORIO_RELEASE_TAG` sets the compiled version. The workflow
-publishes the exact executable exercised by `test:cli`, plus `release.json`.
+publishes the exact executable exercised by `test:cli` on each architecture.
+Windows retains `byt.exe` and `release.json`; macOS uses `byt-macos-arm64` and
+`byt-macos-x64`, with `release-macos-arm64.json` and `release-macos-x64.json`.
+Mac binaries are ad hoc signed before verification and hashing; distribution
+signing and notarization remain future work. Windows and Apple Silicon jobs run
+the complete validation suite, including native and browser conformance and
+Mac loader/signature checks. Intel Mac jobs install only the CLI's build tools
+and run `test:cli`; the pinned Odin release has no Intel compiler asset.
+Publishing requires every platform's binary and
+verifies all three manifests after artifact download.
 SDK tags package the bundle and `sdk-release.json`; CLI and SDK tags are
 independent. Publish a required SDK version before directing users to install it.
 The publish job verifies each asset's version, filename, size and SHA-256 again

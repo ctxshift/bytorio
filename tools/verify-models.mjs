@@ -6,7 +6,9 @@ import { relative, resolve } from "node:path";
 import { chromium } from "playwright";
 import { buildModels } from "../examples/models/tools/build.mjs";
 import { serve } from "./serve.mjs";
-import { run } from "./toolchain.mjs";
+import { run, nativePlayer } from "./toolchain.mjs";
+import { requireNativePlayer } from "./sdk/project.mjs";
+requireNativePlayer();
 
 const gpu = process.argv.includes("--gpu");
 const root = resolve("build/model-verification", randomUUID());
@@ -46,7 +48,7 @@ try {
         const inputs = resolve(root, `${name}.inputs`);
         await writeFile(inputs, masks.join("\n"));
         const native = JSON.parse(
-          run(resolve(project, "build/native/player.exe"), [
+          run(resolve(project, "build/native", nativePlayer), [
             "--benchmark",
             inputs,
             "--renderer",

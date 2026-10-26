@@ -1,5 +1,14 @@
 import { checkVersion } from "./cli/sdk-bundle.ts";
 import { createHash } from "node:crypto";
+import { cliPlatforms, hostPlatform } from "./host-platform.mjs";
+
+export function cliReleasePlatform(id) {
+  if (!cliPlatforms.includes(id)) {
+    throw new Error(`Unsupported CLI release platform: ${id}`);
+  }
+  const [platform, arch] = id.split("-");
+  return hostPlatform(platform === "windows" ? "win32" : "darwin", arch);
+}
 
 export function releaseConfig(tag) {
   const match = /^(byt|sdk)-v(.+)$/.exec(tag ?? "");
@@ -19,12 +28,14 @@ export function cliVersion(tag) {
   return release.kind === "byt" ? release.version : "0.1.0-preview.1";
 }
 
-export function verifyReleaseAsset(release, manifest, bytes) {
-  const filename = release.kind === "byt" ? "byt.exe" : `bytorio-sdk-${release.version}.json.gz`;
+export function verifyReleaseAsset(release, manifest, bytes, platform = manifest.platform) {
+  const host = release.kind === "byt" ? cliReleasePlatform(platform) : undefined;
+  const filename = host ? host.executable : `bytorio-sdk-${release.version}.json.gz`;
   if (
     manifest.version !== release.version ||
     manifest.bytes !== bytes.length ||
     manifest.sha256 !== createHash("sha256").update(bytes).digest("hex") ||
+    (host && (manifest.platform !== host.id || manifest.asset !== host.cliAsset)) ||
     (release.kind === "byt" ? manifest.executable !== filename : manifest.asset !== filename)
   ) {
     throw new Error("Release version, size, filename or checksum does not match its asset");

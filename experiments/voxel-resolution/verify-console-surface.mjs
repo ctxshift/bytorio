@@ -4,7 +4,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { chromium } from "playwright";
 import { serve } from "../../tools/serve.mjs";
-import { run } from "../../tools/toolchain.mjs";
+import { run, nativePlayer } from "../../tools/toolchain.mjs";
 import * as input from "../../runtime/odin/web/constants.js";
 
 const root = resolve("build/compact-3d/riverside");
@@ -98,7 +98,7 @@ try {
         const capture = resolve(root, `${language}-surface-${ssaa}-${width}.rgba`);
         await writeFile(replay, masks.join("\n") + "\n");
         const native = run(
-          resolve(root, `${language}/build/native/player.exe`),
+          resolve(root, `${language}/build/native/${nativePlayer}`),
           [
             "--replay",
             replay,

@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 import { once } from "node:events";
 import { chromium } from "../../../tools/browser-timing.mjs";
 import { serve } from "../../../tools/serve.mjs";
+import { nativePlayer } from "../../../tools/toolchain.mjs";
 import {
   loadSource,
   checkExecutor,
@@ -147,7 +148,7 @@ for (const language of ["odin", "luau"]) {
     if (language === "luau") {
       args.push("--source", `${root}/native/racing.luau`);
     }
-    const result = spawnSync(resolve(`${root}/native/player.exe`), args, {
+    const result = spawnSync(resolve(`${root}/native/${nativePlayer}`), args, {
       encoding: "utf8",
       timeout: 60000,
       maxBuffer: 2 * 1024 * 1024,
@@ -160,7 +161,7 @@ for (const language of ["odin", "luau"]) {
     );
   }
   const smoke = spawnSync(
-    resolve(`${root}/native/player.exe`),
+    resolve(`${root}/native/${nativePlayer}`),
     [
       "--game",
       `${root}/native/${language === "odin" ? "game" : "luau-executor"}.wasm`,

@@ -11,13 +11,15 @@ root CMake build have been removed; historical implementations remain in Git.
 ## Prerequisites
 
 Use [mise](https://mise.jdx.dev/) 2026.10.8 or newer and the pinned toolchain in
-`.mise/toolchain.toml`, included by `mise.toml`. The SDK CLI currently targets Windows
-x64 development. Players need neither a compiler nor Node.js to run.
+`.mise/toolchain.toml`, included by `mise.toml`. Source authoring targets Windows
+x64 and macOS on Apple Silicon. Players need neither a compiler nor Node.js to run.
 
 Mise installs Node.js, Odin (including SDL), the Wasmtime C API, odinfmt from OLS,
 StyLua, and the prebuilt Luau analyzer. It also installs CMake, Ninja and
 Emscripten 6.0.12. Native builds require the Windows linker prerequisites from
-Odin's installation guide. Emscripten builds the C++ Luau compiler/VM and its
+Odin's installation guide. On macOS, install Xcode Command Line Tools with
+`xcode-select --install`. The native build compiles pinned SDL3 sources and links
+the pinned Wasmtime C API statically. Emscripten builds the C++ Luau compiler/VM and its
 adapter into `luau-executor.wasm`; the Odin player runs this same module on both
 hosts. The executor uses pinned Luau sources under
 `build/luau-executor/_deps/luau-src`; the analyzer matches Luau 0.743.
@@ -27,7 +29,8 @@ project scripts are written in Python or require its packages.
 ## Build and run
 
 The standalone authoring CLI has a separate scaffolding preview:
-`mise run build:cli` produces `build/cli/byt.exe` using pinned Bun and TypeScript.
+`mise run build:cli` produces `build/cli/byt.exe` on Windows or `build/cli/byt` on
+macOS using pinned Bun and TypeScript.
 It currently supports project creation only; the existing source CLI remains
 the complete authoring path. See the [distribution plan](internal/cli-distribution.md)
 for supported commands and remaining work.
@@ -42,7 +45,17 @@ mise exec -- npm run serve
 ```
 
 Open `http://127.0.0.1:8080/player.html` and click **Start game**. Native:
-`./build/odin-player/native/player.exe`.
+`./build/odin-player/native/player.exe` on Windows or
+`./build/odin-player/native/player` on macOS.
+
+The complete CI and tagged-release gates run independently on Windows x64 and
+macOS arm64. Intel Mac jobs install only Node, Bun, OLS and StyLua and run
+`test:cli`; the pinned Odin release has no Intel Mac compiler asset.
+`test:native-platform` additionally checks directory
+reuse, no-replace save migration, default save locations, resident-memory
+reporting, and a relocated player in a path containing spaces. On macOS it also
+checks code signatures and ensures loader commands contain no checkout paths.
+Hardware GPU qualification remains a separate opt-in gate.
 
 For a cartridge already on the device, open `player.html?local` and use
 **Open cartridge** to select its PNG. This mode waits for file selection without
@@ -349,3 +362,7 @@ either contract. This updates the Odin, Luau, C++ bridge and browser constants;
 `mise run lint` checks that generated files are current. Keep unrelated meanings
 separate: a white tint, an integer limit and a checksum mask can have the same
 value without being the same constant.
+
+The software renderer's generated sRGB lookup tables use rational samples and
+integer fifth roots. This keeps their full-precision source text reproducible
+across hosts whose floating-point power functions differ in their last digits.

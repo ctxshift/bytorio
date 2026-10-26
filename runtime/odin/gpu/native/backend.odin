@@ -64,7 +64,13 @@ open :: proc(quality: int, surface_samples := false) -> bool {
     if !sdl.InitSubSystem({.VIDEO}) { return false }
     _ = sdl.GL_SetAttribute(.CONTEXT_MAJOR_VERSION, 3)
     _ = sdl.GL_SetAttribute(.CONTEXT_MINOR_VERSION, 3)
-    _ = sdl.GL_SetAttribute(.CONTEXT_PROFILE_MASK, i32(sdl.GLProfile.CORE))
+    _ = sdl.GL_SetAttribute(.CONTEXT_PROFILE_MASK, transmute(i32)sdl.GLProfile{.CORE})
+    when ODIN_OS == .Darwin {
+        _ = sdl.GL_SetAttribute(
+            .CONTEXT_FLAGS,
+            transmute(i32)sdl.GLContextFlag{.FORWARD_COMPATIBLE},
+        )
+    }
     device.window = sdl.CreateWindow("GPU execution device", 1, 1, {.OPENGL, .HIDDEN, .RESIZABLE})
     if device.window == nil { return false }
     device.gl_context = sdl.GL_CreateContext(device.window)

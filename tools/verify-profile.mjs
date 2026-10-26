@@ -1,3 +1,4 @@
+import { nativePlayer } from "./toolchain.mjs";
 import assert from "node:assert/strict";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { resolve, relative } from "node:path";
@@ -6,11 +7,12 @@ import { spawnSync } from "node:child_process";
 import { once } from "node:events";
 import { chromium } from "./browser-timing.mjs";
 import { buildResourceExamples } from "../examples/resources/tools/build.mjs";
-import { manifest } from "./sdk/project.mjs";
+import { manifest, requireNativePlayer } from "./sdk/project.mjs";
 import { chunks, chunk } from "./sdk/cartridge.mjs";
 import { negotiateProfile } from "../runtime/odin/web/policy.js";
 import { resourceSchema, RESOURCE_EXPORTS } from "../runtime/odin/web/constants.js";
 import { serve } from "./serve.mjs";
+requireNativePlayer();
 
 const root = resolve("build/profile-verification", randomUUID());
 await mkdir(root, { recursive: true });
@@ -83,7 +85,7 @@ const env = {
   SDL_RENDER_DRIVER: "software",
 };
 function native(project, args, status = 0) {
-  const result = spawnSync(resolve(project, "build/native/player.exe"), args, {
+  const result = spawnSync(resolve(project, "build/native", nativePlayer), args, {
     env,
     encoding: "utf8",
     timeout: 30000,
@@ -323,7 +325,7 @@ try {
     const nativeLoose = JSON.parse(native(project, [...loose, "--smoke"]).stdout);
     assert.equal(nativePng.hash, nativeLoose.hash);
     if (demo === "synthesis") {
-      const unavailable = spawnSync(resolve(project, "build/native/player.exe"), ["--smoke"], {
+      const unavailable = spawnSync(resolve(project, "build/native", nativePlayer), ["--smoke"], {
         env: { ...env, SDL_AUDIODRIVER: "unavailable-profile-test" },
         encoding: "utf8",
         timeout: 30000,
