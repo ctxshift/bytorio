@@ -1,8 +1,8 @@
 # Standalone CLI distribution plan
 
 Status: Windows x64 and macOS arm64/x64 scaffolding previews released.
-Full authoring distribution is still being implemented. There is no automatic
-installer yet.
+Full authoring distribution is still being implemented. The built-in mise GitHub
+backend installs the preview through the [consumer recipe](../../install/mise.toml).
 The [standalone CLI decision](../adr/0017-distribute-a-standalone-authoring-cli.md)
 sets the user experience. This document describes the recommended implementation
 and the checks needed before publishing installation instructions.
@@ -21,7 +21,7 @@ check/build/run/watch/pack/import: toolchain caching, project locks and prebuilt
 player resolution are not implemented yet. Continue using the source CLI for
 those operations. The preview is distributed as `byt.exe`, `byt-macos-arm64` and
 `byt-macos-x64` in the
-[`byt-v0.1.0-preview.5` release](https://github.com/ctxshift/bytorio/releases/tag/byt-v0.1.0-preview.5).
+[CLI releases](https://github.com/ctxshift/bytorio/releases).
 
 `mise run validate test:cli test:sdk` checks compiled/source scaffold parity for
 both languages, existing-directory protection, invalid arguments and operation

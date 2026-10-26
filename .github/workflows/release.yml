@@ -82,3 +82,10 @@ jobs:
           path: build/releases/${{ github.ref_name }}/
       - name: Verify assets and publish release
         run: node tools/publish-release.mjs
+
+  install:
+    needs: publish
+    if: startsWith(github.ref_name, 'byt-v')
+    uses: ./.github/workflows/cli-install.yml
+    with:
+      version: ${{ github.ref_name }}

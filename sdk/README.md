@@ -52,12 +52,13 @@ CPU rendering remains the default. See `examples/effects` and `examples/kart3d`.
 
 ## Install byt
 
-A [Windows and Mac CLI preview](https://github.com/ctxshift/bytorio/releases/tag/byt-v0.1.0-preview.5)
+A [Windows and Mac CLI preview](https://github.com/ctxshift/bytorio/releases)
 can create projects and download SDK bundles without Node, Bun or mise.
 **Build, check, run, pack, watch and import still require the source CLI.** Follow
 [Getting started](../docs/getting-started.md) for the download instructions,
-supported commands and complete source setup. There is no automatic installer
-yet. Source authoring supports Windows x64 and macOS on Apple Silicon.
+supported commands and complete source setup, including
+[installation through mise](../docs/getting-started.md#install-with-mise).
+Source authoring supports Windows x64 and macOS on Apple Silicon.
 The Mac preview supports Apple Silicon and Intel; follow the
 [Mac install and usage instructions](../docs/getting-started.md#macos-apple-silicon-or-intel).
 

@@ -13,17 +13,21 @@ The **standalone CLI preview** creates
 Luau and Odin projects and downloads versioned SDK bundles without Node, Bun,
 mise or a source checkout. **It cannot build, check, run or pack games yet.**
 For a playable game, continue with the source setup below on Windows x64 or
-macOS Apple Silicon. [CLI 0.1.0-preview.5](https://github.com/ctxshift/bytorio/releases/tag/byt-v0.1.0-preview.5)
-is available for Windows, Apple Silicon and Intel. Intel Mac supports the
+macOS Apple Silicon. The [CLI preview releases](https://github.com/ctxshift/bytorio/releases)
+are available for Windows, Apple Silicon and Intel. Intel Mac supports the
 standalone scaffolding preview; the pinned Odin release has no Intel compiler
-for source builds. An automatic installer and Linux
-authoring packages are not available yet.
+for source builds. Choose a manual download below or use the
+[mise installation workflow](#install-with-mise). Linux authoring packages are
+not available yet.
 
 ## Download the CLI preview
 
-The [CLI 0.1.0-preview.5 release](https://github.com/ctxshift/bytorio/releases/tag/byt-v0.1.0-preview.5)
-contains the executables and checksum manifests. The source-code archives are
-not the CLI. No Node, Bun or mise installation is needed for these downloads.
+Open the [releases page](https://github.com/ctxshift/bytorio/releases) and choose
+the newest **Bytorio CLI** release (`byt-v...`), including previews. SDK releases
+(`sdk-v...`) contain bundles rather than executables. Under **Assets**, download
+the executable and matching checksum manifest listed below. The source-code
+archives are not the CLI. No Node, Bun or mise installation is needed for a
+manual download.
 
 ### macOS (Apple Silicon or Intel)
 
@@ -33,8 +37,8 @@ See [Apple's chip identification guide](https://support.apple.com/en-us/116943).
 
 | Mac | Executable | SHA-256 manifest |
 | --- | --- | --- |
-| Apple Silicon | [byt-macos-arm64](https://github.com/ctxshift/bytorio/releases/download/byt-v0.1.0-preview.5/byt-macos-arm64) | [release-macos-arm64.json](https://github.com/ctxshift/bytorio/releases/download/byt-v0.1.0-preview.5/release-macos-arm64.json) |
-| Intel | [byt-macos-x64](https://github.com/ctxshift/bytorio/releases/download/byt-v0.1.0-preview.5/byt-macos-x64) | [release-macos-x64.json](https://github.com/ctxshift/bytorio/releases/download/byt-v0.1.0-preview.5/release-macos-x64.json) |
+| Apple Silicon | `byt-macos-arm64` | `release-macos-arm64.json` |
+| Intel | `byt-macos-x64` | `release-macos-x64.json` |
 
 Download the executable and its matching manifest to **Downloads**, then open
 **Terminal**. These commands use Apple Silicon; on Intel, replace
@@ -56,7 +60,7 @@ chmod +x byt
 ./byt new preview-game
 ```
 
-`--version` should print `0.1.0-preview.5`. The last command creates a Luau
+`--version` should match the selected release's version. The last command creates a Luau
 project using the embedded SDK, with no additional download. Add
 `--language odin` to create an Odin project in a different, nonexistent folder.
 Intel Macs can create projects with this preview; the complete source workflow
@@ -84,7 +88,7 @@ add it to that shell's startup file. No administrator access is needed.
 
 ### Windows x64
 
-1. Open the [CLI preview release](https://github.com/ctxshift/bytorio/releases/tag/byt-v0.1.0-preview.5).
+1. Choose a **Bytorio CLI** release from the [releases page](https://github.com/ctxshift/bytorio/releases).
 2. Under **Assets**, download `byt.exe` and `release.json` into a folder you keep,
    such as a `bytorio-tools` folder.
 3. Open PowerShell in that folder. Optionally verify the download by running
@@ -98,31 +102,114 @@ add it to that shell's startup file. No administrator access is needed.
 .\byt.exe new preview-game
 ```
 
-The version should be `0.1.0-preview.5`. The last command creates a Luau project
+The version should match the selected release. The last command creates a Luau project
 using the embedded SDK. Add `--language odin` to create an Odin project instead.
 The Windows preview executable is currently unsigned.
 
 PowerShell uses `.\byt.exe` to run a program in the current folder. You can
 optionally add the folder containing the executable to your user PATH, reopen
-the terminal, and use `byt` from any folder. A mise installation route will be
-documented after it has been verified; mise is not required for this preview.
+the terminal, and use `byt` from any folder.
 
-### Use a versioned SDK bundle
+## Install with mise
 
-CLI release versions and SDK bundle versions are independent. On either
-platform, the published [SDK 0.1.0-preview.1 bundle](https://github.com/ctxshift/bytorio/releases/tag/sdk-v0.1.0-preview.1)
-can be downloaded once and reused offline:
+On Windows x64, Apple Silicon or Intel Mac, install
+[mise](https://mise.jdx.dev/getting-started) **2026.10.8 or newer**. No Node, Bun
+or compiler is needed to install or use the standalone preview.
+
+In your game folder or a new, empty tools folder, save the
+[consumer mise.toml](https://raw.githubusercontent.com/ctxshift/bytorio/main/install/mise.toml)
+as `mise.toml`, or merge this configuration into your existing file:
+
+```toml
+min_version = "2026.10.8"
+
+[tools."github:ctxshift/bytorio"]
+version = "latest"
+version_prefix = "byt-v"
+prerelease = true
+version_order = "semver"
+# Include newly published previews; this applies only to this tool.
+minimum_release_age = "0d"
+matching = "byt"
+format = "raw"
+bin = "byt"
+os = ["windows", "macos"]
+
+[tasks."sdk:install"]
+description = "Cache an exact SDK bundle version: mise run sdk:install -- <version>"
+run = "byt sdk install"
+```
+
+Then run from that folder:
 
 ```sh
-byt sdk install 0.1.0-preview.1
-byt new pinned-game --sdk 0.1.0-preview.1 --offline
+mise trust
+mise install github:ctxshift/bytorio
+mise exec -- byt --version
+mise exec -- byt new preview-game
+```
+
+Mise downloads the matching architecture and exposes it as `byt` (`byt.exe` on
+Windows). `version_prefix` keeps SDK releases out of CLI selection, and
+`prerelease` includes previews. `minimum_release_age = "0d"` allows newly
+published releases immediately rather than applying mise's release-age delay.
+This recipe uses mise's [built-in GitHub backend](https://mise.jdx.dev/dev-tools/backends/github.html).
+
+For a CLI-only setup without copying the file, run this single command in your
+own tools or game folder; it installs the CLI and writes a pinned `[tools]` entry:
+
+```sh
+mise use --pin 'github:ctxshift/bytorio[version_prefix=byt-v,prerelease=true,minimum_release_age=0d,version_order=semver,matching=byt,format=raw,bin=byt]@latest'
+mise exec -- byt --help
+```
+
+Add `--global` to `mise use` if you want a personal default. With mise shell
+activation configured, use `byt` directly; `mise exec -- byt ...` also works
+without activation. Run these consumer commands outside the Bytorio source
+checkout, whose mise configuration manages the contributor toolchain.
+
+### Pin and update the installed CLI
+
+After installing the configuration above, record the chosen version and create a
+lockfile with download URLs and checksums for all three supported platforms:
+
+```sh
+mise use --pin github:ctxshift/bytorio@latest
+mise lock --platform windows-x64,macos-arm64,macos-x64 github:ctxshift/bytorio
+mise install --locked github:ctxshift/bytorio
+```
+
+Keep `mise.toml` and `mise.lock` with your project for repeatable installs. To
+update intentionally, rerun the first two commands, review the changed version
+and checksums, then install again. Use an exact version from a `byt-v...` tag in
+place of `latest` when you want a specific release, omitting the `byt-v` prefix.
+The CLI-only recipe uses the same backend options and can create the same lock.
+
+## Use a versioned SDK bundle
+
+CLI release versions and SDK bundle versions are independent. On either
+platform, choose an **SDK bundle** release (`sdk-v...`) from the
+[releases page](https://github.com/ctxshift/bytorio/releases). Replace
+`<sdk-version>` below with its version without the `sdk-v` prefix. Download it
+once and reuse it offline:
+
+```text
+byt sdk install <sdk-version>
+byt new pinned-game --sdk <sdk-version> --offline
 ```
 
 These examples assume `byt` is on PATH. Otherwise, use `./byt` on Mac or
 `.\byt.exe` on Windows from the folder containing the executable. Keep the
 generated `byt.lock.json` with the game source; it pins the downloaded bundle.
 
-### Build and run your preview project
+With the consumer mise configuration, `mise run sdk:install -- <sdk-version>`
+runs the same verified SDK installer. Then use
+`mise exec -- byt new pinned-game --sdk <sdk-version> --offline`.
+SDK bundles are data managed by `byt`, so they do not need another mise backend
+or a second `[tools]` entry. Use the embedded SDK by omitting `--sdk` when you
+do not need a separately pinned bundle.
+
+## Build and run your preview project
 
 Trying `check`, `build`, `run`, `watch`, `pack` or `import` in this preview gives
 an explicit unsupported-command message. These commands require the source CLI

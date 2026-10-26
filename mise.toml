@@ -374,3 +374,7 @@ run = "node tools/capture-site.mjs"
 [tasks."test:site"]
 description = "Check website links, search, responsive layout and playable touch controls"
 run = ["node tools/build-site.mjs --staged", "node tools/verify-site.mjs"]
+
+[tasks."test:cli-install"]
+description = "Install a published CLI with mise and verify locks and offline SDK use (network required)"
+run = "node tools/verify-cli-install.mjs"

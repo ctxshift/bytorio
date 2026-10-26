@@ -29,7 +29,7 @@ project scripts are written in Python or require its packages.
 ## Build and run
 
 The standalone authoring CLI has a separate scaffolding preview,
-[CLI 0.1.0-preview.5 for Windows and Mac](https://github.com/ctxshift/bytorio/releases/tag/byt-v0.1.0-preview.5).
+[available for Windows and Mac](https://github.com/ctxshift/bytorio/releases).
 See [Mac installation and usage](getting-started.md#macos-apple-silicon-or-intel)
 to use the published binary without a source toolchain.
 `mise run build:cli` produces `build/cli/byt.exe` on Windows or `build/cli/byt` on
@@ -37,6 +37,16 @@ macOS using pinned Bun and TypeScript.
 It currently supports project creation and SDK bundle downloads; the existing
 source CLI remains the complete authoring path. See the [distribution plan](internal/cli-distribution.md)
 for supported commands and remaining work.
+
+The consumer [mise recipe](../install/mise.toml) installs the published CLI
+without the contributor toolchain. `mise run test:cli-install` verifies fresh
+installation, pinned cross-platform locks, locked reinstall and offline SDK
+scaffolding against published assets. It needs network access and runs separately
+from deterministic conformance gates. `BYTORIO_CLI_VERSION` selects an exact
+version or `byt-v...` tag; its default is `latest`, including previews.
+`BYTORIO_SDK_VERSION` selects the SDK bundle fixture. CI runs this smoke test on
+Windows, Apple Silicon and Intel Macs when installation guidance changes and
+after publishing each CLI release.
 
 From the repository root:
 

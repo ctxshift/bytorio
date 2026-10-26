@@ -46,9 +46,10 @@ Start small: move a character, change a color, or add a sound.
 **New to coding? Start with Luau**, the default language for new games. Odin is
 also supported. Both languages can make games for the same console.
 
-**Bytorio is still in development.** [CLI 0.1.0-preview.5 for Windows and Mac](https://github.com/ctxshift/bytorio/releases/tag/byt-v0.1.0-preview.5)
+**Bytorio is still in development.** The [CLI preview for Windows and Mac](https://github.com/ctxshift/bytorio/releases)
 creates projects and downloads SDKs. Follow the [Mac install instructions](docs/getting-started.md#macos-apple-silicon-or-intel)
-for Apple Silicon or Intel. Building and running games still requires
+for Apple Silicon or Intel, or [install with mise](docs/getting-started.md#install-with-mise).
+Building and running games still requires
 the [source development setup](docs/getting-started.md) on Windows x64 or macOS
 Apple Silicon.
 You can play the browser demos without that setup.
