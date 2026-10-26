@@ -1,8 +1,8 @@
 # Standalone CLI distribution plan
 
-Status: Windows x64 scaffolding preview released; macOS arm64/x64 build and
-release gates implemented. Full authoring distribution is still being
-implemented. There is no automatic installer yet.
+Status: Windows x64 and macOS arm64/x64 scaffolding previews released.
+Full authoring distribution is still being implemented. There is no automatic
+installer yet.
 The [standalone CLI decision](../adr/0017-distribute-a-standalone-authoring-cli.md)
 sets the user experience. This document describes the recommended implementation
 and the checks needed before publishing installation instructions.
@@ -19,8 +19,9 @@ JavaScript runtime is needed to run `byt new`.
 The preview supports `new`, `sdk install`, `--help` and `--version`. It explicitly rejects
 check/build/run/watch/pack/import: toolchain caching, project locks and prebuilt
 player resolution are not implemented yet. Continue using the source CLI for
-those operations. The preview is distributed as `byt.exe` in the
-[`byt-v0.1.0-preview.1` release](https://github.com/ctxshift/bytorio/releases/tag/byt-v0.1.0-preview.1).
+those operations. The preview is distributed as `byt.exe`, `byt-macos-arm64` and
+`byt-macos-x64` in the
+[`byt-v0.1.0-preview.5` release](https://github.com/ctxshift/bytorio/releases/tag/byt-v0.1.0-preview.5).
 
 `mise run validate test:cli test:sdk` checks compiled/source scaffold parity for
 both languages, existing-directory protection, invalid arguments and operation

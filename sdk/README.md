@@ -52,14 +52,14 @@ CPU rendering remains the default. See `examples/effects` and `examples/kart3d`.
 
 ## Install byt
 
-A [Windows x64 CLI preview](https://github.com/ctxshift/bytorio/releases/tag/byt-v0.1.0-preview.1)
+A [Windows and Mac CLI preview](https://github.com/ctxshift/bytorio/releases/tag/byt-v0.1.0-preview.5)
 can create projects and download SDK bundles without Node, Bun or mise.
 **Build, check, run, pack, watch and import still require the source CLI.** Follow
 [Getting started](../docs/getting-started.md) for the download instructions,
 supported commands and complete source setup. There is no automatic installer
 yet. Source authoring supports Windows x64 and macOS on Apple Silicon.
-Tagged CLI releases also build a standalone preview for Intel Macs; see
-[Mac download availability](../docs/getting-started.md#download-the-cli-preview).
+The Mac preview supports Apple Silicon and Intel; follow the
+[Mac install and usage instructions](../docs/getting-started.md#macos-apple-silicon-or-intel).
 
 ## Start a game
 
@@ -77,8 +77,9 @@ The command is `byt`; the package is named `bytorio`.
 
 For Odin, create with `new my-game --language odin`. Projects are ordinary folders;
 they may live outside this repository. The `new` command refuses existing folders.
-The current source toolchain supports **Windows x64** native development and browser builds
-from Windows, using the repository's pinned Odin, Wasmtime and Emscripten toolchains.
+The current source toolchain supports native development and browser builds on
+**Windows x64 and macOS Apple Silicon**, using the repository's pinned Odin,
+Wasmtime and Emscripten toolchains.
 See [source setup](../docs/getting-started.md#install-the-development-tools).
 Odin-only SDK projects
 do not build the Luau executor. For Luau projects, `check` uses the prebuilt Luau
@@ -104,8 +105,9 @@ the settings load, run **Luau: Reload Language Server** in the command palette.
 
 `build/native` contains the executable, libraries, licenses and cartridge files.
 Copy that whole folder to run without Node.js, a compiler or a webview. Both
-languages launch with `player.exe`, loading `game.png` automatically. Share the
-single `build/game.png` file with another compatible player. `build/web` can be
+languages launch with `player.exe` on Windows or `player` on Mac, loading
+`game.png` automatically. Share the single `build/game.png` file with another
+compatible player. `build/web` can be
 served as static files; its configured player loads the same PNG. The browser
 also accepts local PNGs through **Open cartridge** or drag-and-drop. See
 [PNG cartridges](../docs/png-cartridges.md) for the format, custom artwork,

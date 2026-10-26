@@ -28,11 +28,14 @@ project scripts are written in Python or require its packages.
 
 ## Build and run
 
-The standalone authoring CLI has a separate scaffolding preview:
+The standalone authoring CLI has a separate scaffolding preview,
+[CLI 0.1.0-preview.5 for Windows and Mac](https://github.com/ctxshift/bytorio/releases/tag/byt-v0.1.0-preview.5).
+See [Mac installation and usage](getting-started.md#macos-apple-silicon-or-intel)
+to use the published binary without a source toolchain.
 `mise run build:cli` produces `build/cli/byt.exe` on Windows or `build/cli/byt` on
 macOS using pinned Bun and TypeScript.
-It currently supports project creation only; the existing source CLI remains
-the complete authoring path. See the [distribution plan](internal/cli-distribution.md)
+It currently supports project creation and SDK bundle downloads; the existing
+source CLI remains the complete authoring path. See the [distribution plan](internal/cli-distribution.md)
 for supported commands and remaining work.
 
 From the repository root:

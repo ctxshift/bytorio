@@ -104,15 +104,17 @@ it does not prove physical GPU/device-loss recovery.
 
 `mise run test` also runs SDK, PNG malformed-input, registry, graphics, PCM,
 synthesis/full-graph, display and ABI 1 RPG/racing regression suites. These
-exercise all four language/host combinations in Windows CI. Registry tests
+exercise both languages on native and browser hosts in Windows and Apple Silicon
+macOS CI. Registry tests
 cover invalid/stale handles, atomic rollback, budget/allocation failure and
 teardown; audio tests cover bounded queues, stalls, epochs and reload. PNG tests
 also remove loose game files to prove that packaged assets are self-contained.
 
-Supported development/runtime reference: Windows x64 with SDL3/Wasmtime;
+Supported development/runtime references: Windows x64 and macOS Apple Silicon
+with SDL3/Wasmtime;
 browser reference: Chromium with WebAssembly, Workers, Canvas2D and AudioWorklet,
-without shared memory or isolation headers. Native macOS/Linux and other browser
-engines are not certified by this suite. Canvas loss stops the worker and audio;
+without shared memory or isolation headers. Native Linux, Intel Mac players and
+other browser engines are not certified by this suite. Canvas loss stops the worker and audio;
 the user restarts into a new session after restoration. Allocation failure is a
 load/commit error, never permission to reduce limits silently.
 
