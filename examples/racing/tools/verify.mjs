@@ -197,6 +197,13 @@ const browser = await chromium.launch({
 });
 try {
   const page = await browser.newPage({ viewport: { width: 1100, height: 900 } });
+  // Exercise delayed audio startup without delaying the user-gesture call itself.
+  await page.addInitScript(() => {
+    const resume = AudioContext.prototype.resume;
+    AudioContext.prototype.resume = function (...args) {
+      return resume.apply(this, args).then(() => new Promise((done) => setTimeout(done, 200)));
+    };
+  });
   for (const language of ["odin", "luau"]) {
     await page.goto(
       `http://127.0.0.1:${server.address().port}/player.html${language === "luau" ? "?game=./racing.luau" : ""}`,
@@ -241,8 +248,11 @@ try {
       { race, handling, language },
     );
     assert.deepEqual(traces, [expected, handlingExpected], `${language} browser parity`);
-    await page.locator("#start").click();
+    // Hold gas before startup so every simulation tick has the replay's input,
+    // even while asynchronous audio setup has not returned focus to the canvas.
+    await page.locator("canvas").focus();
     await page.keyboard.down("ArrowUp");
+    await page.locator("#start").click();
     await page.waitForFunction(() => playerStatus.ticks >= 240);
     await page.evaluate(() => window.dispatchEvent(new Event("blur")));
     await page.waitForTimeout(100);
