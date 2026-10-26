@@ -37,7 +37,7 @@ if (check) {
     release.tag,
     "--verify-tag",
     "--title",
-    `Bytorio ${release.kind === "byt" ? "CLI (Windows and macOS)" : "SDK"} ${release.version}`,
+    `Bytorio ${release.kind === "byt" ? "CLI" : "SDK"} ${release.version}`,
     "--notes-file",
     resolve(directory, "release-notes.md"),
     ...files,
