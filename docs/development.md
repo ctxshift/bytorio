@@ -92,19 +92,29 @@ part of the full gate; `test:kart3d:gpu` additionally requires a usable GPU.
 
 ## Checks
 
-For changes affecting code, tests, build behavior or code generation, use
-`mise run validate` for the complete quality and conformance gates, including
-all existing suites, drawing batches, executor caching, and formatting after
-asset generation. CI runs the same command. For a focused iteration, pass task
-names, for example `mise run validate test:validation` or
-`mise run validate generate:check test:resources`. Existing `mise run test` and
-individual `test:*` tasks remain available with their original coverage.
+Choose local validation by behavioral risk, not file extension or whether a
+source file changed. For edits very unlikely to affect functionality or
+performance, review the diff and run only relevant focused checks. Examples
+include release titles and other display copy, comments, documentation and
+formatting. A title string inside a publishing script qualifies when release
+selection, assets, versions and publication behavior stay unchanged. Check
+formatting, syntax or links as applicable; verify changed external metadata and
+rebuild/inspect affected website pages when published there.
 
-Documentation-only prose changes do not require the full test suite. Review the
-diff, check relevant formatting and links, and rebuild/inspect affected website
-pages when published there. Executable examples, generated inputs, or documents
-consumed by tests or generators must be assessed for behavioral impact; a
-Markdown extension alone does not make a change documentation-only.
+For meaningful changes to runtime behavior, performance, compatibility, test
+expectations, dependencies, build behavior or code generation, finish edits and
+run `mise run validate` for the complete quality and conformance gates before
+completion. Assess executable examples, generated inputs and documents consumed
+by tests or generators by their actual impact. If the impact is unclear, inspect
+the consumers and broaden validation to cover the uncertainty.
+
+For focused checks, pass task names, for example
+`mise run validate test:validation` or
+`mise run validate generate:check test:resources`. Existing `mise run test` and
+individual `test:*` tasks remain available with their original coverage. CI keeps
+running the complete configured gates on pushes and pull requests, including main.
+Low-risk work can finish after focused local checks without waiting for CI unless
+requested; report those checks and any pending CI separately.
 
 The runner executes tasks sequentially and stops at the first failure. It prints
 one start/result line per task and retains complete output in unique
@@ -249,9 +259,10 @@ with multiple samples for performance measurement. Old C++-specific CTest and
 
 Use the smallest existing validation task that exercises the changed behavior.
 Let its declared dependencies select builds; run a separate build only when the
-task's documented setup requires it. Finish the implementation before the full
-completion run. After a valid pass, repeat checks only for new edits, a failure or
-an invalid report. Preserve test workloads and production optimization settings.
+task's documented setup requires it. Finish the implementation before the
+completion checks selected under [Checks](#checks). After a valid pass, repeat
+checks only for new edits, a failure or an invalid report. Preserve test workloads
+and production optimization settings.
 
 | Situation | Action |
 | --- | --- |
