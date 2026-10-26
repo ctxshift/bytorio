@@ -92,4 +92,5 @@ export const publicDocuments = [
   "docs/indexed-content.md",
   "docs/resource-av-spec.md",
   "docs/textured-3d.md",
+  "docs/mise-installation.md",
 ];

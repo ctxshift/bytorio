@@ -62,6 +62,14 @@ Source authoring supports Windows x64 and macOS on Apple Silicon.
 The Mac preview supports Apple Silicon and Intel; follow the
 [Mac install and usage instructions](../docs/getting-started.md#macos-apple-silicon-or-intel).
 
+With mise, add this short entry using the full CLI release tag in place of
+`byt-v<version>`, then run `mise install github:ctxshift/bytorio`:
+
+```toml
+[tools]
+"github:ctxshift/bytorio" = "byt-v<version>"
+```
+
 ## Start a game
 
 The following commands describe the full authoring workflow. To run all three

@@ -92,11 +92,17 @@ try {
   await mkdir(consumer);
   const recipe = await readFile(resolve(repo, "install/mise.toml"), "utf8");
   const guide = await readFile(resolve(repo, "docs/getting-started.md"), "utf8");
+  const advancedGuide = await readFile(resolve(repo, "docs/mise-installation.md"), "utf8");
   assert.ok(
-    guide.includes(`\`\`\`toml\n${recipe.trim()}\n\`\`\``),
-    "Docs contain the tested recipe",
+    advancedGuide.includes(`\`\`\`toml\n${recipe.trim()}\n\`\`\``),
+    "Advanced docs contain the tested automatic-update recipe",
   );
-  assert.ok(guide.includes(`${inlineBackend}@latest`), "Docs contain the tested CLI options");
+  assert.ok(
+    advancedGuide.includes(`${inlineBackend}@latest`),
+    "Advanced docs contain the tested CLI options",
+  );
+  const documentedPin = `[tools]\n"${backend}" = "byt-v<version>"\n`;
+  assert.ok(guide.includes(documentedPin.trim()), "Getting started uses the short pinned entry");
   await writeFile(
     resolve(consumer, "mise.toml"),
     expected ? recipe.replace('version = "latest"', `version = "${expected}"`) : recipe,
@@ -189,7 +195,10 @@ try {
 
   const pinned = resolve(sandbox, "pinned configuration");
   await mkdir(pinned);
-  await writeFile(resolve(pinned, "mise.toml"), `[tools]\n"${backend}" = "${release.tag}"\n`);
+  await writeFile(
+    resolve(pinned, "mise.toml"),
+    documentedPin.replace("byt-v<version>", release.tag),
+  );
   const pinnedEnvironment = { ...environment, MISE_DATA_DIR: resolve(sandbox, "pinned-data") };
   await invoke(["install", backend], pinned, pinnedEnvironment);
   await verifyInstalled(pinned, pinnedEnvironment, release);

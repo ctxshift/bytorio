@@ -38,8 +38,10 @@ It currently supports project creation and SDK bundle downloads; the existing
 source CLI remains the complete authoring path. See the [distribution plan](internal/cli-distribution.md)
 for supported commands and remaining work.
 
-The consumer [mise recipe](../install/mise.toml) installs the published CLI
-without the contributor toolchain. `mise run test:cli-install` verifies fresh
+The [short mise setup](getting-started.md#install-with-mise) installs the published
+CLI without the contributor toolchain. An optional
+[automatic-update recipe](mise-installation.md) covers `latest` and SDK tasks.
+`mise run test:cli-install` verifies fresh
 installation, pinned cross-platform locks, locked reinstall and offline SDK
 scaffolding against published assets. It needs network access and runs separately
 from deterministic conformance gates. `BYTORIO_CLI_VERSION` selects an exact

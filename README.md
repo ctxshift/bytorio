@@ -54,6 +54,10 @@ the [source development setup](docs/getting-started.md) on Windows x64 or macOS
 Apple Silicon.
 You can play the browser demos without that setup.
 
+For mise, add `"github:ctxshift/bytorio" = "byt-v<version>"` under `[tools]`,
+using the full tag from your chosen CLI release. The
+[mise quickstart](docs/getting-started.md#install-with-mise) covers installation and usage.
+
 ## Learn as you go
 
 You can look things up as you need them:
