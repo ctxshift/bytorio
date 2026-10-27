@@ -5,6 +5,7 @@ import { requireNativeHost } from "../host-platform.mjs";
 import { exportExecutor, exportPlayer } from "../player-export.mjs";
 import { emscriptenRoot, repo, run, tool, toolRoot } from "../toolchain.mjs";
 import { packComponent } from "./component.mjs";
+import { copyOdinDistribution } from "./compiler.mjs";
 import { parseSdkManifest, sdkReleaseVersion } from "../cli/sdk-manifest.mjs";
 
 // Produce a host-qualified candidate. Publishing and cross-host assembly are separate steps.
@@ -157,13 +158,7 @@ export async function produceHostSdk({ version, cliVersionRange, output }) {
     );
     const compilerRoot = toolRoot("odin");
     const compilerTarget = resolve(payloads, odinId);
-    for (const entry of await readdir(compilerRoot, { withFileTypes: true })) {
-      if (entry.isFile() || ["base", "core", "shared", "vendor"].includes(entry.name)) {
-        await cp(resolve(compilerRoot, entry.name), resolve(compilerTarget, entry.name), {
-          recursive: true,
-        });
-      }
-    }
+    await copyOdinDistribution(compilerRoot, compilerTarget);
     const linker = `bin/wasm-ld${host.windows ? ".exe" : ""}`;
     await mkdir(resolve(compilerTarget, "bin"));
     const linkerSource = host.windows

@@ -23,7 +23,7 @@ run = ["node --test tools/sdk/check.test.mjs tools/sdk/bundle-format.test.mjs", 
 ["test:sdk-authoring"]
 description = "Build and play from a versioned SDK without checkout or global tools"
 depends = ["build:odin", "deps:luau"]
-run = ["node --test tools/cli/released-sdk.test.mjs", "node tools/verify-sdk-authoring.mjs"]
+run = ["node --test tools/cli/released-sdk.test.mjs tools/sdk/compiler.test.mjs", "node tools/verify-sdk-authoring.mjs"]
 
 ["package:release"]
 description = "Package tested CLI or SDK assets for BYTORIO_RELEASE_TAG"
