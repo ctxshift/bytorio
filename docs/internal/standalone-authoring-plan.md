@@ -14,10 +14,11 @@ components offline, deletes that cache, then plays relocated exports in both
 languages. It also verifies copied Mac signatures and compares native/browser
 smoke output. Contributor source commands use the same authoring implementation.
 
-These are internal candidates, not a combined published SDK. The public CLI
-still exposes the scaffolding preview. Minimal project creation and command
-routing are next, following the pending project-format, preview-eligibility and
-build-default choices. Public browser runtime extraction, production player and
+These are internal candidates, not a combined published SDK. The development
+CLI now creates minimal TOML projects with exact SDK pins, installed-first
+preview selection and offline reuse. Public command routing is next. Confirmed
+defaults are `bytorio.toml` plus `bytorio.lock.toml`, previews eligible, and
+web-only builds with native selected explicitly. Public runtime extraction, production player and
 touch controls, development loop, migration, cross-host release assembly and
 published cutover remain later steps.
 

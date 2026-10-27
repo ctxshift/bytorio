@@ -4,7 +4,7 @@ import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { gunzipSync } from "node:zlib";
 
-const repository = "https://github.com/ctxshift/free-machine/releases/download";
+const repository = "https://github.com/ctxshift/bytorio/releases/download";
 const maxDownload = 16 * 1024 * 1024;
 const maxExpanded = 64 * 1024 * 1024;
 
@@ -143,7 +143,10 @@ export async function resolveSdk(
     }
   }
   if (options.offline)
-    throw new Error(`SDK ${version} is not cached; run byt sdk install ${version} online first`);
+    throw Object.assign(
+      new Error(`SDK ${version} is not cached; run byt sdk install ${version} online first`),
+      { code: "SDK_LEGACY_MISSING" },
+    );
   const base = `${root}/sdk-v${version}`;
   const manifest = parseManifest(await download(`${base}/sdk-release.json`, 65536), version);
   console.log(`Downloading SDK ${version} (${manifest.bytes} bytes)`);

@@ -45,7 +45,7 @@ await writeFile(
     {
       version,
       platform: host.id,
-      status: "scaffolding-preview",
+      status: "project-creation-preview",
       executable: host.executable,
       asset: host.cliAsset,
       bytes: bytes.length,

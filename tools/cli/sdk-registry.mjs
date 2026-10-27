@@ -51,7 +51,20 @@ async function metadataRequest(url, limit, options) {
 }
 
 function decodedRelease(bytes, version, expectedSha256) {
-  const manifest = parseSdkManifest(bytes, version);
+  let manifest;
+  try {
+    manifest = parseSdkManifest(bytes, version);
+  } catch (error) {
+    try {
+      const legacy = JSON.parse(Buffer.from(bytes).toString("utf8"));
+      if (legacy.schema === 1 && legacy.cliProtocol === 1) {
+        error.code = "SDK_LEGACY_PROTOCOL";
+      }
+    } catch {
+      // Preserve the bounded manifest parser's original diagnostic.
+    }
+    throw error;
+  }
   const sha256 = checksum(bytes);
   if (expectedSha256 !== undefined && sha256 !== expectedSha256) {
     throw new Error(`SDK ${version} metadata checksum differs from its exact dependency pin`);

@@ -250,7 +250,7 @@ export function parseSdkManifest(bytes, expectedVersion) {
   return value;
 }
 
-export function sdkCompatibility(manifest, { cliVersion, host, language, target }) {
+export function sdkCompatibility(manifest, { cliVersion, host, language, target, profile }) {
   if (manifest.cliProtocol !== sdkDistributionProtocol) {
     return "unsupported distribution protocol";
   }
@@ -259,6 +259,9 @@ export function sdkCompatibility(manifest, { cliVersion, host, language, target 
   }
   if (!manifest.languages[language]?.hosts[host]) {
     return `SDK does not support ${language} authoring on ${host}`;
+  }
+  if (profile !== undefined && !manifest.profiles.some((item) => item.name === profile)) {
+    return `SDK does not include cartridge profile ${profile}`;
   }
   if (target !== "web" && target !== "native") {
     return "unsupported player target";

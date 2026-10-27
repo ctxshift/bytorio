@@ -79,6 +79,10 @@ test("SDK compatibility covers CLI, language tools and requested player target",
     sdkCompatibility(manifest, { ...requirements, target: "unknown" }),
     /unsupported player/,
   );
+  assert.match(
+    sdkCompatibility(manifest, { ...requirements, profile: "unavailable-profile" }),
+    /cartridge profile/,
+  );
 });
 
 test("manifests reject incomplete capabilities, unsafe payload references and unsupported metadata", () => {

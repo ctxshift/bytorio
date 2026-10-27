@@ -1,21 +1,35 @@
 import { createScaffolder } from "../sdk/scaffold.mjs";
-import { assets, branding, version } from "../../build/cli/assets";
+import { branding, version } from "../../build/cli/assets";
 import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { resolveSdk } from "./sdk-bundle";
+import { hostPlatform } from "../host-platform.mjs";
+import { resolveDistribution } from "./distribution.mjs";
+import { assertNewProject, createGameProject, selectProjectSdk } from "./project-config.mjs";
 
 type Language = "luau" | "odin";
 
-const help = `${branding.name} standalone CLI preview ${version}
+const help = `${branding.name} CLI ${version}
 
 Usage: byt new <directory> [--language luau|odin] [--sdk <version>] [--offline]
        byt sdk install <version> [--offline]
        byt --help
        byt --version
 
-This preview creates projects offline using its embedded SDK.
-check, build, run, watch, pack and import still require the source CLI.
-Prebuilt player bundles and managed compiler installation are not available yet.`;
+New games use bytorio.toml and bytorio.lock.toml, with Luau by default.
+The newest compatible installed SDK is preferred; previews are eligible.
+Players and tools are downloaded only when needed.
+Other authoring commands are being connected in this development build.`;
+
+function sdkOptions(offline: boolean) {
+  return {
+    offline,
+    cliVersion: version,
+    host: hostPlatform().id,
+    cache: process.env.BYTORIO_CACHE_DIR,
+    releaseRoot: process.env.BYTORIO_SDK_RELEASE_ROOT,
+    catalogueRoot: process.env.BYTORIO_SDK_CATALOGUE_URL,
+  };
+}
 
 async function main(args: string[]): Promise<void> {
   if (args.length === 0 || (args.length === 1 && ["--help", "help"].includes(args[0]))) {
@@ -40,7 +54,7 @@ async function main(args: string[]): Promise<void> {
     ) {
       throw new Error("Expected: byt sdk install <version> [--offline]");
     }
-    await resolveSdk(args[2], { offline: args[3] === "--offline" });
+    await resolveDistribution(args[2], sdkOptions(args[3] === "--offline"));
     console.log(`SDK ${args[2]} is cached and verified`);
     return;
   }
@@ -65,33 +79,41 @@ async function main(args: string[]): Promise<void> {
       throw new Error(`Invalid option: ${flag}`);
     }
   }
-  const release = sdk ? await resolveSdk(sdk, { offline }) : undefined;
-  const selectedAssets = release?.bundle.assets ?? assets;
-  const { createProject } = await createScaffolder({
-    branding: release?.bundle.branding ?? branding,
-    readAsset: async (path: string) => {
-      const contents = selectedAssets[path];
-      if (contents === undefined) {
-        throw new Error(`Missing embedded SDK asset: ${path}`);
-      }
-      return contents;
-    },
-  });
-  const project = await createProject(args[1], language);
-  if (release) {
+  await assertNewProject(args[1]);
+  const options = sdkOptions(offline);
+  const distribution = sdk ? await resolveDistribution(sdk, options) : undefined;
+  if (distribution?.legacy) {
+    const legacy = distribution.legacy;
+    const { createProject } = await createScaffolder({
+      branding: { ...branding, ...legacy.bundle.branding },
+      readAsset: async (path: string) => {
+        const contents = legacy.bundle.assets[path];
+        if (contents === undefined) {
+          throw new Error(`Missing legacy SDK asset: ${path}`);
+        }
+        return contents;
+      },
+    });
+    const project = await createProject(args[1], language);
     await writeFile(
       resolve(project, "byt.lock.json"),
       JSON.stringify(
         {
           schema: 1,
-          sdk: { version: release.manifest.version, sha256: release.manifest.sha256 },
+          sdk: { version: legacy.manifest.version, sha256: legacy.manifest.sha256 },
         },
         null,
         2,
       ) + "\n",
       { flag: "wx" },
     );
+    console.log("Created a legacy scaffold. Full authoring requires a protocol-2 SDK project.");
+    return;
   }
+  const release = await selectProjectSdk(language, sdk, options);
+  const project = await createGameProject(args[1], language, release);
+  console.log(`Created ${language} game: ${project}`);
+  console.log(`Pinned SDK ${release.manifest.version}. Run byt run inside the project to play.`);
 }
 
 try {

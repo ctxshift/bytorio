@@ -22,10 +22,10 @@ export function releaseConfig(tag) {
 
 export function cliVersion(tag) {
   if (!tag) {
-    return "0.1.0-preview.1";
+    return "0.2.0-preview.1";
   }
   const release = releaseConfig(tag);
-  return release.kind === "byt" ? release.version : "0.1.0-preview.1";
+  return release.kind === "byt" ? release.version : "0.2.0-preview.1";
 }
 
 export function verifyReleaseAsset(release, manifest, bytes, platform = manifest.platform) {

@@ -99,7 +99,13 @@ Project creation must not copy the SDK implementation or player binaries into
 the authored source tree. Cache/build/editor metadata may be generated, but must
 be clearly distinguishable from files the author edits. Editor support must use
 portable project references, without committing cache paths from one machine.
-Exact config and lockfile shapes remain proposed work in section 12.
+New projects use `bytorio.toml` and `bytorio.lock.toml`. The author-maintained
+config has `schema = 1`, a title and language, with optional entry, profile,
+display, assets, cover, content and save overrides. Default language is Luau.
+The generated lock has `schema = 1` and an `[sdk]` table containing the exact
+distribution `version` and release-metadata `sha256`. That digest binds the
+component checksums in the manifest; the lock contains no cache or host paths.
+Explicit SDK upgrades change the lock without rewriting authored config.
 
 `byt new` must create a new directory exclusively and preserve existing user
 files. Creating an Odin project must not install its compiler yet.
@@ -123,9 +129,9 @@ A cached release listing alone does not register every listed SDK as installed.
 An explicit SDK version takes precedence. Compatibility includes the CLI's
 supported distribution protocol, selected language and advertised target
 capabilities. A supported component being uncached does not make the SDK
-incompatible: it is fetched on use. SemVer ordering and prerelease eligibility
-must be defined before this selector ships; eligibility is an open policy in
-section 12.
+incompatible: it is fetched on use. Versions are ordered by SemVer, and
+compatible preview releases are eligible by default. Exact project pins remain
+unchanged until an explicit upgrade.
 
 Default selection must support the complete create/build/play path for the
 selected language and host, not merely writing a template. A legacy source-only
@@ -449,17 +455,15 @@ These are not preferences already supplied by the author:
   must be able to embed the runtime. How `byt dev` serves a custom shell or
   launches/co-ordinates an external framework's dev server is still undecided.
   Basic runtime embedding must not depend on that decision.
-- **Project/dependency schemas:** retaining `console.json` and evolving
-  `byt.lock.json` are migration-friendly proposals. Final field names, schema
-  versions and which generated metadata is committed need review. Avoid adding
-  author-maintained boilerplate for internal tool/player details.
-- **Release eligibility:** define how preview SDKs participate in “newest
-  compatible,” including an explicit preview opt-in if that is selected.
-- **Build defaults and release scope:** select the default `build` targets and
-  publish a qualified host/language/target matrix. Resolve Intel Mac compiler
-  availability before promising the same Odin experience there.
+- **Target qualification:** plain `byt build` exports web; native is selected
+  explicitly with `--target native`. Publish the qualified host/language/target
+  matrix. Resolve Intel Mac compiler availability before promising Odin there.
 - **Player details:** approve the toolbar, preset catalogue, style extension
   points, and initial mobile layouts before implementing the production shell.
 
 Virtual sticks, runtime-engine replacement, automatic SDK upgrades, mandatory
 framework scaffolding and a new general plugin system are outside this scope.
+
+Release the working source-free CLI/SDK workflow with the existing player
+first. Continue the public runtime, production player and mobile-controls work
+afterward; those improvements do not block the initial authoring release.
