@@ -1,7 +1,7 @@
 # Standalone CLI distribution plan
 
-Status: the original scaffolding preview is superseded by the standalone
-authoring cutover described in the [current plan](standalone-authoring-plan.md).
+Status: the original scaffolding preview is superseded by the published
+standalone authoring release described in the [current plan](standalone-authoring-plan.md).
 The built-in mise GitHub backend installs the CLI through the [consumer recipe](../../install/mise.toml).
 The [standalone authoring specification](standalone-authoring-spec.md) records
 the agreed DX requirements, SDK-owned players and public browser runtime model;

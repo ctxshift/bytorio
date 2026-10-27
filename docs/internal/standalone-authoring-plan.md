@@ -1,9 +1,29 @@
 # Standalone authoring implementation plan
 
-Status: implementation in progress. Product requirements and acceptance
-criteria are in the [specification](standalone-authoring-spec.md). This plan does
-not claim that unreleased authoring or embedding functionality already exists.
-Current released behavior remains documented in [CLI distribution](cli-distribution.md).
+Status: the first source-free authoring release is published. The public runtime,
+production player and touch controls remain planned under the
+[specification](standalone-authoring-spec.md). Current installation and usage are
+in [Getting started](../getting-started.md); [CLI distribution](cli-distribution.md)
+retains the original scaffolding design for compatibility.
+
+[CLI 0.2.0-preview.1](https://github.com/ctxshift/bytorio/releases/tag/byt-v0.2.0-preview.1)
+and [SDK 0.2.0-preview.3](https://github.com/ctxshift/bytorio/releases/tag/sdk-v0.2.0-preview.3)
+provide new/check/build/pack/run/dev and explicit SDK upgrades without a source
+checkout or global compiler. The [SDK release qualification](https://github.com/ctxshift/bytorio/actions/runs/40535242300)
+passed all 39 gates on Windows and Apple Silicon, Intel CLI checks, and clean
+consumers using the exact assembled SDK on all three hosts. The
+[CLI release](https://github.com/ctxshift/bytorio/actions/runs/40542264014) passed
+its host gates and published matching binaries and archives.
+
+[Published installation qualification](https://github.com/ctxshift/bytorio/actions/runs/40546668003)
+passed all nine jobs: fresh mise installs and source-free authoring on Windows,
+Apple Silicon and Intel, plus mise 2025.12.0 and 2026.7.0 on each host. Both
+languages run on Windows and Apple Silicon; Intel supports Luau/browser play.
+The downstream installer guard now explicitly tolerates skipped SDK-only
+ancestors while requiring successful CLI publication. This release's installer
+was dispatched explicitly after publication. The
+[live getting-started guide](https://bytor.io/docs/docs/getting-started.html)
+uses evergreen release links and the short mise pin.
 
 The SDK backend now includes isolated compiled-CLI checking, verified component
 archives and shared cache, installed-first compatibility selection, SDK-owned
@@ -17,7 +37,7 @@ smoke output. Contributor source commands use the same authoring implementation.
 The release workflow now assembles host candidates and qualifies the exact
 result with the compiled CLI on each supported host before SDK publication.
 Intel Mac contributes a Luau analyzer and consumes canonical shared bytes;
-Odin/native support remains Windows and Apple Silicon. The development
+Odin/native support remains Windows and Apple Silicon. The released
 CLI now creates minimal TOML projects with exact SDK pins, installed-first
 preview selection and offline reuse. The compiled CLI routes check, build, pack,
 run and dev through the selected SDK. Builds publish complete owned outputs,
@@ -26,27 +46,30 @@ while retaining the working game after errors. Explicit SDK upgrades update the
 generated pin without rewriting authored configuration. Confirmed
 defaults are `bytorio.toml` plus `bytorio.lock.toml`, previews eligible, and
 web-only builds with native selected explicitly. Public runtime extraction, production player and
-touch controls, migration, cross-host release qualification and
-published cutover remain later steps.
+touch controls and automatic migration remain later steps. The first release
+deliberately ships the existing player, as agreed.
 
-Candidate production currently targets Windows x64 and macOS Apple Silicon.
-Intel Mac's CLI checks do not establish Odin or native-player support there.
-Before publication, assemble the host components with one canonical set of
-shared payloads and qualify consumers against that assembled manifest. Do not
-assume independently produced common archives have identical bytes.
+Full candidate production targets Windows x64 and macOS Apple Silicon. The Intel
+producer builds and signs its Luau analyzer from the executor's same immutable
+source revision; the upstream Mac analyzer download is ARM-only. Intel has no
+Odin/native capability. Assembly selects one canonical set of shared payloads;
+consumer qualification checks that assembled manifest rather than assuming
+independently produced common archives have identical bytes.
 
 `assemble:sdk-release` now merges verified host candidates, checks matching
 contracts and host ownership, selects canonical common bytes, and validates all
 published entrypoints and executable modes. It rejects conflicting assets or
 corrupt archives, reserves its output exclusively, and writes metadata last.
-The isolated SDK consumer test exercises this assembled output. Cross-host
-release qualification and publication are the remaining cutover gates.
+The isolated SDK consumer test exercises this assembled output. Published assets
+passed cross-host qualification, offline reuse, failed-edit recovery, automatic
+browser reload and relocated playback after cache removal.
 
 The [backend qualification run](https://github.com/ctxshift/bytorio/actions/runs/40472926173)
 passed all 39 gates on Windows x64 and Apple Silicon, plus the Intel Mac CLI
 gate. The complete local 39-gate validation also passed at that functional
-revision. This establishes the internal candidate pipeline described above;
-public command and embedding acceptance still belongs to the later milestones.
+revision. The later release and published-installation runs above establish the
+public authoring cutover. Public runtime/player embedding acceptance remains
+separate work.
 
 ## Working approach
 
