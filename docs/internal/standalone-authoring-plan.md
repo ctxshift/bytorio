@@ -16,10 +16,14 @@ smoke output. Contributor source commands use the same authoring implementation.
 
 These are internal candidates, not a combined published SDK. The development
 CLI now creates minimal TOML projects with exact SDK pins, installed-first
-preview selection and offline reuse. Public command routing is next. Confirmed
+preview selection and offline reuse. The compiled CLI routes check, build, pack,
+run and dev through the selected SDK. Builds publish complete owned outputs,
+browser previews use isolated snapshots, and dev reloads after successful edits
+while retaining the working game after errors. Explicit SDK upgrades update the
+generated pin without rewriting authored configuration. Confirmed
 defaults are `bytorio.toml` plus `bytorio.lock.toml`, previews eligible, and
 web-only builds with native selected explicitly. Public runtime extraction, production player and
-touch controls, development loop, migration, cross-host release assembly and
+touch controls, migration, cross-host release qualification and
 published cutover remain later steps.
 
 Candidate production currently targets Windows x64 and macOS Apple Silicon.

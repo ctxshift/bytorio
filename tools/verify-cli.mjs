@@ -186,7 +186,7 @@ try {
   ]) {
     await invoke(args, false);
   }
-  for (const action of ["dev", "watch", "import"]) {
+  for (const action of ["watch", "import"]) {
     assert.match((await invoke([action, "luau game with spaces"], false)).stderr, /not available/);
   }
   for (const action of ["check", "build", "pack", "run"]) {

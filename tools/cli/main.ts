@@ -4,10 +4,16 @@ import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { hostPlatform } from "../host-platform.mjs";
 import { resolveDistribution } from "./distribution.mjs";
-import { assertNewProject, createGameProject, selectProjectSdk } from "./project-config.mjs";
+import {
+  assertNewProject,
+  createGameProject,
+  selectProjectSdk,
+  upgradeGameSdk,
+} from "./project-config.mjs";
 import { authorOptions } from "./arguments.mjs";
 import { authorGame } from "./author.mjs";
 import { playGame } from "./play.mjs";
+import { developGame } from "./dev.mjs";
 import { runCheckProcess } from "../sdk/check-process.mjs";
 
 type Language = "luau" | "odin";
@@ -16,10 +22,12 @@ const help = `${branding.name} CLI ${version}
 
 Usage: byt new <directory> [--language luau|odin] [--sdk <version>] [--offline]
        byt sdk install <version> [--offline]
+       byt sdk upgrade [directory] [--sdk <version>] [--offline]
        byt check [directory] [--offline]
        byt build [directory] [--target web|native|all] [--offline]
        byt pack [directory] [--output game.png] [--cover cover.png] [--offline]
        byt run [directory] [--target web|native] [--port 0] [--no-open] [--offline]
+       byt dev [directory] [--port 0] [--no-open] [--offline]
        byt --help
        byt --version
 
@@ -62,21 +70,37 @@ async function main(args: string[]): Promise<void> {
     console.log(help);
     return;
   }
-  if (["check", "build", "pack", "run"].includes(args[0])) {
+  if (["check", "build", "pack", "run", "dev"].includes(args[0])) {
     const command = args[0];
     const parsed = authorOptions(args.slice(1), command);
     const options = { ...sdkOptions(parsed.offline), ...parsed };
-    if (command === "run") {
+    if (command === "dev") {
+      await developGame(parsed.directory, options);
+    } else if (command === "run") {
       await playGame(parsed.directory, options);
     } else {
       await authorGame(command, parsed.directory, options);
     }
     return;
   }
-  if (["dev", "watch", "import"].includes(args[0])) {
+  if (["watch", "import"].includes(args[0])) {
     throw new Error(`${args[0]} is not available in this development build.`);
   }
   if (args[0] === "sdk") {
+    if (args[1] === "upgrade") {
+      const rest = args.slice(2);
+      const sdkIndex = rest.indexOf("--sdk");
+      let sdk;
+      if (sdkIndex !== -1) {
+        sdk = rest[sdkIndex + 1];
+        if (!sdk || sdk.startsWith("--")) throw new Error("Expected --sdk <version>");
+        rest.splice(sdkIndex, 2);
+      }
+      const parsed = authorOptions(rest, "upgrade");
+      const release = await upgradeGameSdk(parsed.directory, sdk, sdkOptions(parsed.offline));
+      console.log(`Pinned SDK ${release.manifest.version}. Authored configuration is unchanged.`);
+      return;
+    }
     if (
       args[1] !== "install" ||
       !args[2] ||

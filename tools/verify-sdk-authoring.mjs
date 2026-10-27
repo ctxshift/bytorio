@@ -145,7 +145,7 @@ try {
   await assert.rejects(invoke("luau", "build", { offline: true }));
   assert.deepEqual(await readFile(resolve(luau, "build/web/game.png")), prior);
   await writeFile(resolve(luau, "src/main.luau"), manifest.starters.luau.source);
-  running = spawn(executable, ["run", luau, "--offline", "--no-open"], {
+  running = spawn(executable, ["dev", luau, "--offline", "--no-open"], {
     cwd: sandbox,
     env: cliEnvironment,
     windowsHide: true,
@@ -181,6 +181,26 @@ try {
   await preview.waitForFunction(() => playerStatus.ready || playerStatus.error);
   await preview.click("#start");
   await preview.waitForFunction(() => playerStatus.renderedTicks === 120 || playerStatus.error);
+  assert.equal(await preview.evaluate(() => playerStatus.error), "");
+  const initialUrl = preview.url();
+  await writeFile(resolve(luau, "src/main.luau"), "this is not valid Luau !");
+  // Wait for the failed build diagnostic, then recover through the same watcher.
+  await new Promise((done, reject) => {
+    const timer = setTimeout(() => reject(new Error("Dev did not report the failed edit")), 30000);
+    const receive = (chunk) => {
+      if (String(chunk).includes("Waiting for another edit")) {
+        clearTimeout(timer);
+        running.stderr.removeListener("data", receive);
+        done();
+      }
+    };
+    running.stderr.on("data", receive);
+  });
+  assert.equal(preview.url(), initialUrl);
+  const reloaded = preview.waitForURL((url) => url.href !== initialUrl, { timeout: 60000 });
+  await writeFile(resolve(luau, "src/main.luau"), manifest.starters.luau.source + "\n-- edited\n");
+  await reloaded;
+  await preview.waitForFunction(() => playerStatus.ready || playerStatus.error);
   assert.equal(await preview.evaluate(() => playerStatus.error), "");
   await preview.close();
   const stopped = new Promise((done) => running.once("exit", done));
@@ -275,7 +295,8 @@ try {
         offlinePack: true,
         offlineBuild: true,
         publicCli: true,
-        browserRun: true,
+        browserDev: true,
+        failedEditRecovery: true,
         nativeRun: true,
         failedBuildPreservesOutput: true,
         relocatedPlaybackWithoutCache: true,

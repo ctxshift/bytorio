@@ -1,4 +1,5 @@
-import { lstat, mkdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdir, readFile, realpath, rename, rm, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import { basename, dirname, resolve } from "node:path";
 import { parse, stringify } from "smol-toml";
 import { sdkCompatibility, sdkReleaseVersion } from "./sdk-manifest.mjs";
@@ -141,7 +142,7 @@ export async function createGameProject(directory, language, release) {
   }
 }
 
-export async function readGameProject(directory) {
+export async function readGameProject(directory, { allowMissingLock = false } = {}) {
   directory = await realpath(resolve(directory));
   let config;
   try {
@@ -157,11 +158,33 @@ export async function readGameProject(directory) {
     pin = parseLock(await readConfig(resolve(directory, lockFilename)));
   } catch (error) {
     if (error.code === "ENOENT") {
+      if (allowMissingLock) return { directory, config, pin: null };
       throw new Error(`Missing ${lockFilename}; use byt sdk upgrade to select an exact SDK`);
     }
     throw error;
   }
   return { directory, config, pin };
+}
+
+export async function upgradeGameSdk(directory, version, options) {
+  const project = await readGameProject(directory, { allowMissingLock: true });
+  const release = await selectProjectSdk(project.config.language, version, {
+    ...options,
+    profile: project.config.profile,
+    preferInstalled: options.offline,
+  });
+  const current = await readGameProject(project.directory, { allowMissingLock: true });
+  if (JSON.stringify(current) !== JSON.stringify(project)) {
+    throw new Error("Project configuration or SDK pin changed during upgrade; try again");
+  }
+  const temporary = resolve(project.directory, `.byt-lock-${randomUUID()}.tmp`);
+  try {
+    await writeFile(temporary, serializeLock(release), { flag: "wx" });
+    await rename(temporary, resolve(project.directory, lockFilename));
+  } finally {
+    await rm(temporary, { force: true });
+  }
+  return release;
 }
 
 export async function resolveGameProject(directory, options) {

@@ -243,7 +243,7 @@ async function availableVersions(options) {
 export async function selectSdkRelease(requirements, options) {
   // Preview eligibility belongs to the command's chosen policy, not a hidden resolver default.
   orderedSdkVersions([], options);
-  for (const version of await installedVersions(options)) {
+  for (const version of options.preferInstalled === false ? [] : await installedVersions(options)) {
     try {
       const installed = await cachedRelease(version, options);
       if (

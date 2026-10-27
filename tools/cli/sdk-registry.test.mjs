@@ -173,6 +173,18 @@ test("exact pinned SDKs reuse offline, reject mutation and never float to anothe
     );
   }));
 
+test("explicit online upgrades discover newer releases despite an installed SDK", async () =>
+  fixture(async ({ options, release }) => {
+    release("0.2.0");
+    await resolveSdkRelease("0.2.0", options);
+    release("0.3.0");
+    assert.equal(
+      (await selectSdkRelease(requirements, { ...options, preferInstalled: false })).manifest
+        .version,
+      "0.3.0",
+    );
+  }));
+
 test("offline misses, unsupported host capabilities and corruption recovery stay explicit", async () =>
   fixture(async ({ options, release, requests }) => {
     await assert.rejects(

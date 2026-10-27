@@ -3,7 +3,7 @@ export function authorOptions(args, action) {
   const seen = new Set();
   const values = new Set([
     ...(action === "build" || action === "run" ? ["--target"] : []),
-    ...(action === "run" ? ["--port"] : []),
+    ...(action === "run" || action === "dev" ? ["--port"] : []),
     ...(action === "pack" ? ["--output", "--cover"] : []),
   ]);
   let directory = false;
@@ -30,7 +30,7 @@ export function authorOptions(args, action) {
     seen.add(flag);
     if (flag === "--offline") {
       options.offline = true;
-    } else if (flag === "--no-open" && action === "run") {
+    } else if (flag === "--no-open" && ["run", "dev"].includes(action)) {
       options.open = false;
     } else if (values.has(flag) && args[index + 1] && !args[index + 1].startsWith("--")) {
       const value = args[++index];

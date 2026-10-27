@@ -8,6 +8,57 @@ import { createBuildStage, publishBuild, removeGenerated, snapshotWeb } from "./
 import { startPreview } from "./preview.mjs";
 import { createScaffolder } from "../sdk/scaffold.mjs";
 import { repo } from "../toolchain.mjs";
+import { watchesProjectFile } from "./dev.mjs";
+
+test("development watches authored inputs and excludes generated output", () => {
+  for (const path of [
+    "src/main.luau",
+    "assets/build/texture.png",
+    "bytorio.toml",
+    "bytorio.lock.toml",
+  ])
+    assert.equal(watchesProjectFile(path), true);
+  for (const path of ["build/web/game.png", ".bytorio/staging/output", ".git/index", ".luaurc"])
+    assert.equal(watchesProjectFile(path), false);
+});
+
+test("development preview reloads complete generations while preserving old asset URLs", async () =>
+  fixture(async (root) => {
+    await mkdir(resolve(root, "build/web"), { recursive: true });
+    await writeFile(
+      resolve(root, "build/web/player.html"),
+      "<html><head></head><body>First</body></html>",
+    );
+    const game = {
+      directory: root,
+      buildRoot: resolve(root, "build"),
+      release: { manifest: { web: { page: { path: "player.html" } } } },
+    };
+    const preview = await startPreview(game, { open: false, reload: true });
+    const abort = new AbortController();
+    try {
+      const initial = await fetch(preview.url);
+      const html = await initial.text();
+      const id = /data-generation="([^"]+)"/.exec(html)[1];
+      assert.match(html, /__byt\/client.js/);
+      const events = await fetch(`${preview.url}__byt/events?id=${id}`, { signal: abort.signal });
+      const reader = events.body.getReader();
+      assert.match(new TextDecoder().decode((await reader.read()).value), new RegExp(id));
+      await writeFile(
+        resolve(root, "build/web/player.html"),
+        "<html><head></head><body>Second</body></html>",
+      );
+      await preview.update(game);
+      assert.doesNotMatch(new TextDecoder().decode((await reader.read()).value), new RegExp(id));
+      assert.match(await (await fetch(preview.url)).text(), /Second/);
+      // Independent files in actual builds are replaced atomically; use a distinct asset here.
+      assert.equal((await fetch(initial.url)).status, 200);
+      await reader.cancel();
+    } finally {
+      abort.abort();
+      await preview.close();
+    }
+  }));
 
 test("author commands use web defaults and reject ambiguous or unsupported flags", () => {
   assert.equal(authorOptions([], "build").target, "web");

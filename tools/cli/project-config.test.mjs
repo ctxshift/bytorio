@@ -14,6 +14,7 @@ import {
   resolveGameProject,
   selectProjectSdk,
   serializeLock,
+  upgradeGameSdk,
 } from "./project-config.mjs";
 import { manifestFixture } from "./fixtures/sdk-manifest.mjs";
 import { resolveSdkRelease } from "./sdk-registry.mjs";
@@ -51,6 +52,22 @@ test("TOML config separates author settings from exact portable SDK pins", () =>
     assert.throws(() => parseLock(stringify(pin)));
   }
 });
+
+test("explicit upgrades preserve authored TOML and recover a missing lock offline", async () =>
+  fixture(async ({ root, options }) => {
+    const release = await selectProjectSdk("luau", "0.2.0-preview.1", options);
+    const directory = resolve(root, "upgrade game");
+    await createGameProject(directory, "luau", release);
+    const config = resolve(directory, "bytorio.toml");
+    const original = (await readFile(config, "utf8")) + "\n# Keep this comment\n";
+    await writeFile(config, original);
+    await upgradeGameSdk(directory, "0.3.0-preview.1", options);
+    assert.equal((await readGameProject(directory)).pin.version, "0.3.0-preview.1");
+    assert.equal(await readFile(config, "utf8"), original);
+    await rm(resolve(directory, "bytorio.lock.toml"));
+    await upgradeGameSdk(directory, undefined, { ...options, offline: true });
+    assert.equal((await readGameProject(directory)).pin.version, "0.3.0-preview.1");
+  }));
 
 async function fixture(run) {
   const root = await mkdtemp(resolve(tmpdir(), "byt-project-config-"));
