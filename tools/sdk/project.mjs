@@ -5,11 +5,10 @@ import { fileURLToPath } from "node:url";
 import { checkGame } from "./check.mjs";
 import { createHash } from "node:crypto";
 import { readGraphics } from "./assets.mjs";
-import { bundleLuau, odinEntry } from "./bundle.mjs";
+import { bundleLuau, odinEntry, odinGraphics } from "./bundle.mjs";
 import { inspectGuest } from "../../runtime/odin/web/policy.js";
 import { encodeCartridge, encodeSaveIdentity } from "./cartridge.mjs";
 import { decodeCartridge } from "../../runtime/odin/web/cartridge.js";
-import { formatSource } from "../code-tools.mjs";
 import { exportPlayer } from "../player-export.mjs";
 import { tool, task } from "../toolchain.mjs";
 import { branding } from "../branding.mjs";
@@ -163,10 +162,7 @@ async function prepare(path) {
     await mkdir(resolve(destination, "bytorio_assets"));
     await writeFile(
       resolve(destination, "bytorio_assets/assets.odin"),
-      formatSource(
-        `package assets\nraster := [${packet.length}]u8{${[...packet]}}\npalette := [16]u32{${palette}}\n`,
-        "assets.odin",
-      ),
+      odinGraphics({ packet, palette }),
     );
     await writeFile(
       resolve(destination, "bytorio_entry.odin"),

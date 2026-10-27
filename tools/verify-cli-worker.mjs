@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
-import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve, sep } from "node:path";
 import { spawnSync } from "node:child_process";
 import { compileCli } from "./compile-cli.mjs";
 import { requireCliHost } from "./host-platform.mjs";
 import { repo, run, tool } from "./toolchain.mjs";
-import { bundleLuau, odinEntry } from "./sdk/bundle.mjs";
+import { bundleLuau, odinEntry, odinGraphics } from "./sdk/bundle.mjs";
 import { readGraphics } from "./sdk/assets.mjs";
 import { encodeCartridge } from "./sdk/cartridge.mjs";
 import { checkGame } from "./sdk/check.mjs";
@@ -43,22 +43,48 @@ try {
   }
   const assetsPath = resolve(repo, "sdk/templates/assets.json");
   const assets = JSON.parse(await readFile(assetsPath, "utf8"));
-  const { packet } = await readGraphics(assetsPath);
+  const { packet, palette } = await readGraphics(assetsPath);
+  await cp(resolve(repo, "sdk/luau"), resolve(payloadRoot, "libraries"), { recursive: true });
+  await copyFile(resolve(repo, "tests/sdk/game.luau"), resolve(payloadRoot, "main.luau"));
+  const bundleRequest = {
+    entry: resolve(payloadRoot, "main.luau"),
+    project: payloadRoot,
+    sdkRoot: resolve(payloadRoot, "libraries"),
+    assets: packet.toString("base64"),
+    palette,
+    profile: 1,
+    output: resolve(payloadRoot, "game.luau"),
+    odinEntry: resolve(payloadRoot, "entry.odin"),
+    odinGraphics: resolve(payloadRoot, "assets.odin"),
+  };
+  const requestPath = resolve(sandbox, "bundle.json");
+  await writeFile(requestPath, JSON.stringify(bundleRequest));
+  const bundled = spawnSync(executable, ["--bundle", requestPath], {
+    cwd: sandbox,
+    env: environment,
+    encoding: "utf8",
+    timeout: 30000,
+    windowsHide: true,
+  });
+  assert.ifError(bundled.error);
+  assert.equal(bundled.status, 0, bundled.stderr);
+  assert.match(bundled.stdout, /Bundled SDK source/);
+  const source = await readFile(bundleRequest.output);
+  assert.deepEqual(source, await bundleLuau({ ...bundleRequest, assets: packet }));
+  assert.equal(
+    await readFile(bundleRequest.odinEntry, "utf8"),
+    odinEntry({ graphicsImport: 'assets "./assets"' }),
+  );
+  assert.equal(
+    await readFile(bundleRequest.odinGraphics, "utf8"),
+    odinGraphics({ packet, palette }),
+  );
   const contract = JSON.parse(await readFile(resolve(repo, "sdk/contract.json"), "utf8"));
   for (const name of ["game", "loop"]) {
     const sources = resolve(output, name);
     await mkdir(resolve(sources, "assets"), { recursive: true });
-    await writeFile(
-      resolve(sources, "entry.odin"),
-      odinEntry({
-        graphicsImport: 'assets "./assets"',
-        display: "High",
-      }),
-    );
-    await writeFile(
-      resolve(sources, "assets/assets.odin"),
-      `package assets\nraster := [${packet.length}]u8{${[...packet]}}\n`,
-    );
+    await copyFile(bundleRequest.odinEntry, resolve(sources, "entry.odin"));
+    await copyFile(bundleRequest.odinGraphics, resolve(sources, "assets/assets.odin"));
     await writeFile(
       resolve(sources, "game.odin"),
       name === "game"
@@ -78,14 +104,6 @@ try {
       `-extra-linker-flags:--max-memory=${contract.limits.guestMemoryBytes}`,
     ]);
   }
-  const source = await bundleLuau({
-    entry: resolve(repo, "tests/sdk/game.luau"),
-    project: repo,
-    sdkRoot: resolve(repo, "sdk/luau"),
-    assets: packet,
-    profile: 1,
-  });
-  await writeFile(resolve(payloadRoot, "game.luau"), source);
   await writeFile(resolve(payloadRoot, "invalid.luau"), "this is not valid Luau !");
   await writeFile(resolve(payloadRoot, "invalid.wasm"), "not wasm");
 
@@ -151,6 +169,7 @@ try {
         platform: host.id,
         isolatedCwd: true,
         emptyPath: true,
+        standaloneSourceGeneration: true,
         results,
       },
       null,

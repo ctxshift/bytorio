@@ -206,6 +206,13 @@ are read from disk rather than expanded into JSON messages. The worker and its
 policy imports belong to the SDK payload, so a CLI update cannot silently apply
 newer validation policies to an older game's SDK.
 
+Core Luau bundling and generated Odin entry/assets emit readable deterministic
+source directly, without invoking host formatters. Module source bodies retain
+their content rather than being reindented by string rewrites. The SDK's
+JavaScript bundles include their matching JSON contract snapshot, so these
+operations do not locate a loose contract through a repository-relative URL.
+Contributor formatting remains a separate development tool.
+
 Cache entries must be verified before use, published atomically, and safe under
 concurrent requests. Partial or corrupt downloads must not become usable SDKs.
 Downloading a component must not execute arbitrary SDK installation hooks.
