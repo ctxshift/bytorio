@@ -30,7 +30,7 @@ jobs:
           - runner: macos-15-intel
             platform: macos-x64
             validation: test:cli
-            tools: node bun luau github:DanielGavin/ols stylua
+            tools: node bun github:DanielGavin/ols stylua
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
     env:
@@ -80,6 +80,7 @@ jobs:
     needs: build
     if: startsWith(github.ref_name, 'sdk-v')
     runs-on: macos-15-intel
+    timeout-minutes: 20
     env:
       MISE_TASK_RUN_AUTO_INSTALL: "false"
       BYTORIO_RELEASE_TAG: ${{ github.ref_name }}
@@ -88,7 +89,7 @@ jobs:
       - uses: jdx/mise-action@v4
         with:
           version: 2026.10.15
-          install_args: node luau
+          install_args: node cmake ninja
       - run: npm ci
       - uses: actions/download-artifact@v4
         with:

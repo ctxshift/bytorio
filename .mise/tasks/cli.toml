@@ -26,6 +26,7 @@ run = "node tools/release-sdk.mjs candidate"
 
 ["package:sdk-intel"]
 description = "Package Intel Mac Luau tools against the canonical candidate"
+depends = ["deps:luau:analyzer"]
 run = "node tools/release-sdk.mjs intel"
 
 ["package:sdk-assemble"]

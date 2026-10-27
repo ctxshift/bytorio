@@ -2,6 +2,8 @@ name: Verify published CLI installation
 
 on:
   push:
+    branches:
+      - "**"
     paths:
       - "install/**"
       - "tools/verify-cli-install.mjs"

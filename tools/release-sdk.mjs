@@ -2,7 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { releaseConfig } from "./release-config.mjs";
 import { hostPlatform } from "./host-platform.mjs";
-import { repo, tool } from "./toolchain.mjs";
+import { repo, run } from "./toolchain.mjs";
 import { assembleSdk } from "./sdk/assemble.mjs";
 import { produceHostSdk } from "./sdk/produce.mjs";
 import { produceLuauHostSdk } from "./sdk/luau-host.mjs";
@@ -22,11 +22,17 @@ if (action === "candidate") {
     output: resolve(candidates, host),
   });
 } else if (action === "intel") {
+  if (host !== "macos-x64") {
+    throw new Error("The source-built analyzer candidate requires Intel Mac");
+  }
+  const analyzer = resolve(repo, "build/luau-analyzer/bin/luau-analyze");
+  run("/usr/bin/codesign", ["--force", "--sign", "-", analyzer]);
+  run("/usr/bin/codesign", ["--verify", "--strict", analyzer]);
   await produceLuauHostSdk({
     base: resolve(candidates, "windows-x64"),
     output: resolve(candidates, host),
     host,
-    analyzer: tool("luau-analyze"),
+    analyzer,
   });
 } else if (action === "assemble") {
   const output = resolve(repo, "build/releases", release.tag);

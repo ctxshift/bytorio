@@ -26,6 +26,12 @@ hosts. The executor uses pinned Luau sources under
 The upstream Emscripten SDK installer needs Python, which mise supplies; no
 project scripts are written in Python or require its packages.
 
+Release production builds the Intel Mac Luau analyzer from the same immutable
+source revision as the executor, shared in `experiments/luau-dependency.cmake`.
+The upstream Mac analyzer download is ARM-only. `deps:luau:analyzer` builds the
+native producer tool; game authors download its signed SDK component and do not
+need CMake, Ninja or a C++ compiler.
+
 ## Build and run
 
 The standalone authoring CLI is
