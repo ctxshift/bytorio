@@ -3,6 +3,11 @@
 Status: Windows x64 and macOS arm64/x64 scaffolding previews released.
 Full authoring distribution is still being implemented. The built-in mise GitHub
 backend installs the preview through the [consumer recipe](../../install/mise.toml).
+The [standalone authoring specification](standalone-authoring-spec.md) records
+the agreed DX requirements, SDK-owned players and public browser runtime model;
+the [implementation plan](standalone-authoring-plan.md) sequences that work.
+Those documents govern the proposed full-authoring behavior. The status and
+release details below describe the current scaffolding preview.
 The [standalone CLI decision](../adr/0017-distribute-a-standalone-authoring-cli.md)
 sets the user experience. This document describes the recommended implementation
 and the checks needed before publishing installation instructions.
@@ -109,19 +114,12 @@ the release repository, asset names and supported platforms are established.
 
 ## Work required in the current implementation
 
-1. Separate the authoring library from checkout paths in `tools/sdk/project.mjs`.
-   It currently reads SDK files relative to the repository and invokes
-   `build:odin` and `deps:luau` during game checks.
-2. Replace authoring-time runtime builds with a release-bundle resolver. Keep the
-   source-build provider available for console contributors.
-3. Introduce typed CLI interfaces, the toolchain manifest/lockfile and cache
-   management. Preserve existing manifest and cartridge compatibility.
-4. Embed assets and the smoke-check worker explicitly. Replace assumptions about
-   `import.meta.url`, executable paths and loose worker files where necessary.
-5. Build and test the standalone Windows x64 release first. Add other OS/CPU
-   targets only after their full authoring and export paths pass qualification.
-6. Add installer/download instructions and optional mise integration. Do not
-   publish an npm-install command for the current private repository package.
+The [standalone authoring plan](standalone-authoring-plan.md) supersedes the
+initial scaffolding rollout sequence. It covers selected-SDK authoring without
+checkout paths, prebuilt player/tool components, a public browser runtime,
+the production default player, project migration and clean consumer qualification.
+Keep the contributor source-build provider explicit. CLI scaffolding availability
+on a platform does not establish full SDK authoring support there.
 
 ## Release acceptance
 
