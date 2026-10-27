@@ -19,11 +19,12 @@ The standalone player accepts the corresponding `--fps 60`, `--fps 144`,
 `--fps uncapped`, and `--fps native` arguments. The SDK launcher supports them:
 
 ```sh
-byt run my-game --native --fps uncapped
-byt run my-game --web --fps native
+byt run my-game --target native -- --fps uncapped
+byt run my-game
 ```
 
-For web launches, the CLI prints a URL containing the selected policy. These are
+For browser play, add `?fps=native` or another policy to the printed player URL,
+or use the player's controls. These are
 host launch preferences, not new cartridge metadata or a game-side SDK API.
 Players opening an ordinary cartridge retain the default unless configured.
 

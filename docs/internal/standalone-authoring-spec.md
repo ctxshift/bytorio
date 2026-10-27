@@ -1,8 +1,8 @@
 # Standalone authoring and embeddable player specification
 
-Status: draft for review. This document records agreed product requirements and
-proposed technical contracts. It does not describe the capabilities of the
-currently released scaffolding preview. Implementation is tracked in the
+Status: agreed requirements, implementation in progress. Public runtime and
+production-player contracts remain planned work. The initial source-free
+CLI/SDK release uses the existing player. Implementation is tracked in the
 [implementation plan](standalone-authoring-plan.md); current release behavior is
 documented in [CLI distribution](cli-distribution.md).
 
@@ -291,7 +291,7 @@ records contain release/component identities, independently of cache locations.
 | `byt new <project> --language odin` | Create the equivalent Odin project, without fetching compiler/player payloads          |
 | `byt dev`                           | Resolve required components, build, open the browser, then watch/rebuild/reload        |
 | `byt run`                           | Resolve required components, perform one build and open the browser; no source watcher |
-| `byt run --native`                  | Run using the selected SDK's native player on a qualified host                         |
+| `byt run --target native`           | Run using the selected SDK's native player on a qualified host                         |
 | `byt check`                         | Check the game using the selected SDK and managed tools                                |
 | `byt build`                         | Produce requested export targets using that SDK; default target selection remains open |
 | `byt pack`                          | Produce a cartridge with the selected SDK's contracts and limits                       |

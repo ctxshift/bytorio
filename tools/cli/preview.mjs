@@ -77,13 +77,17 @@ export async function startPreview(project, { port = 0, open = true, reload = fa
     }
   }
   async function update(game) {
-    if (closed) throw new Error("Preview is closed");
-    const root = await snapshotWeb(game.directory, resolve(game.buildRoot, "web"));
+    if (closed) {
+      throw new Error("Preview is closed");
+    }
+    const root = await realpath(await snapshotWeb(game.directory, resolve(game.buildRoot, "web")));
     const id = basename(root);
     snapshots.set(id, { root, entry: game.release.manifest.web.page.path, readers: 0 });
     previous = current;
     current = id;
-    for (const response of clients.keys()) response.write(`data: ${current}\n\n`);
+    for (const response of clients.keys()) {
+      response.write(`data: ${current}\n\n`);
+    }
     await prune();
   }
   await update(project);
@@ -184,7 +188,9 @@ export async function startPreview(project, { port = 0, open = true, reload = fa
         response.writeHead(404).end("Not found");
       }
     } finally {
-      if (snapshot) snapshot.readers--;
+      if (snapshot) {
+        snapshot.readers--;
+      }
     }
   });
   try {
@@ -210,7 +216,9 @@ export async function startPreview(project, { port = 0, open = true, reload = fa
     update,
     async close() {
       closed = true;
-      for (const response of clients.keys()) response.end();
+      for (const response of clients.keys()) {
+        response.end();
+      }
       server.closeAllConnections();
       await new Promise((done) => server.close(done));
       await Promise.all([...snapshots.values()].map(({ root }) => removeGenerated(root)));

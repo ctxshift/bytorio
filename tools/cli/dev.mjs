@@ -5,7 +5,9 @@ import { authorGame } from "./author.mjs";
 import { startPreview } from "./preview.mjs";
 
 export function watchesProjectFile(filename) {
-  if (!filename) return true;
+  if (!filename) {
+    return true;
+  }
   const parts = String(filename).replaceAll("\\", "/").split("/");
   return (
     !["build", ".bytorio", ".git", ".luaurc", ".gitignore"].includes(parts[0]) &&
@@ -30,7 +32,9 @@ export async function developGame(directory, options) {
     notify();
   };
   const watcher = watch(directory, { recursive: true }, (_event, filename) => {
-    if (!watchesProjectFile(filename)) return;
+    if (!watchesProjectFile(filename)) {
+      return;
+    }
     clearTimeout(timer);
     timer = setTimeout(() => {
       dirty = true;
@@ -46,15 +50,20 @@ export async function developGame(directory, options) {
   console.log("Watching game sources. Press Ctrl+C to stop.");
   try {
     while (!stopped) {
-      if (!dirty)
+      if (!dirty) {
         await new Promise((done) => {
           wake = done;
         });
-      if (stopped) break;
+      }
+      if (stopped) {
+        break;
+      }
       dirty = false;
       try {
         const game = await authorGame("build", directory, { ...options, target: "web" });
-        if (stopped) break;
+        if (stopped) {
+          break;
+        }
         if (preview) {
           await preview.update(game);
           console.log("Rebuilt game; browser reloaded.");
@@ -65,7 +74,9 @@ export async function developGame(directory, options) {
         console.error(`Build failed: ${error.message}\nWaiting for another edit.`);
       }
     }
-    if (watchError) throw watchError;
+    if (watchError) {
+      throw watchError;
+    }
   } finally {
     clearTimeout(timer);
     watcher.close();

@@ -35,6 +35,19 @@ function entrypoints(manifest) {
   return entries;
 }
 
+export function verifySdkEntrypoints(manifest, inventories) {
+  for (const { ref, directory, executable } of entrypoints(manifest)) {
+    const files = inventories.get(ref.component).files;
+    const file = files.find((file) => file.path === ref.path);
+    if (
+      (directory ? !files.some((file) => file.path.startsWith(ref.path + "/")) : !file) ||
+      (executable && file?.mode !== 0o755)
+    ) {
+      throw new Error(`SDK entrypoint is missing or has the wrong mode: ${ref.path}`);
+    }
+  }
+}
+
 export async function assembleSdk({ candidates, canonicalHost, output }) {
   if (!Array.isArray(candidates) || !candidates.length || !output) {
     throw new Error("SDK assembly requires host candidates and a new output directory");
@@ -163,16 +176,7 @@ export async function assembleSdk({ candidates, canonicalHost, output }) {
       );
       await rm(destination, { recursive: true });
     }
-    for (const { ref, directory, executable } of entrypoints(manifest)) {
-      const files = inventories.get(ref.component).files;
-      const file = files.find((file) => file.path === ref.path);
-      if (
-        (directory ? !files.some((file) => file.path.startsWith(ref.path + "/")) : !file) ||
-        (executable && file?.mode !== 0o755)
-      ) {
-        throw new Error(`SDK entrypoint is missing or has the wrong mode: ${ref.path}`);
-      }
-    }
+    verifySdkEntrypoints(manifest, inventories);
     await rm(verification, { recursive: true });
     await writeFile(resolve(output, "sdk-release.json"), metadata, { flag: "wx" });
     return { manifest, metadata, output };

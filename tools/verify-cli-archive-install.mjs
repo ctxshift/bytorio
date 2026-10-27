@@ -180,7 +180,17 @@ try {
   for (const language of ["luau", "odin"]) {
     await invoke(
       installer,
-      ["exec", "--", "byt", "new", `${language} game`, "--language", language],
+      [
+        "exec",
+        "--",
+        "byt",
+        "new",
+        `${language} game`,
+        "--language",
+        language,
+        "--sdk",
+        "0.1.0-preview.1",
+      ],
       consumer,
       consumerEnvironment,
     );

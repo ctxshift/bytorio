@@ -12,6 +12,7 @@ import { produceHostSdk } from "./sdk/produce.mjs";
 import { assembleSdk } from "./sdk/assemble.mjs";
 import { chromium } from "./browser-timing.mjs";
 import { serve } from "./serve.mjs";
+import { parseSdkManifest } from "./cli/sdk-manifest.mjs";
 
 const host = requireCliHost();
 const output = resolve(repo, "build/sdk-authoring-verification");
@@ -25,31 +26,52 @@ const server = createServer();
 const execute = promisify(execFile);
 let browser, website, running;
 try {
-  const produced = await produceHostSdk({
-    version: "0.2.0-preview.1",
-    cliVersionRange: ">=0.1.0-0 <1.0.0",
-    output: resolve(sandbox, "SDK candidate"),
-  });
+  const external = process.env.BYTORIO_SDK_DIRECTORY;
+  const produced = external
+    ? null
+    : await produceHostSdk({
+        version: "0.2.0-preview.1",
+        cliVersionRange: ">=0.2.0-0 <0.3.0",
+        output: resolve(sandbox, "SDK candidate"),
+      });
   const {
     manifest,
     metadata,
     output: assembled,
-  } = await assembleSdk({
-    candidates: [{ host: host.id, directory: produced.output }],
-    canonicalHost: host.id,
-    output: resolve(sandbox, "assembled SDK release"),
-  });
+  } = external
+    ? {
+        output: resolve(external),
+        metadata: await readFile(resolve(external, "sdk-release.json")),
+        manifest: parseSdkManifest(await readFile(resolve(external, "sdk-release.json"))),
+      }
+    : await assembleSdk({
+        candidates: [{ host: host.id, directory: produced.output }],
+        canonicalHost: host.id,
+        output: resolve(sandbox, "assembled SDK release"),
+      });
   const archives = new Map(
     Object.values(manifest.components).map(({ asset }) => [asset, resolve(assembled, asset)]),
   );
-  await assert.rejects(
-    produceHostSdk({
-      version: manifest.version,
-      cliVersionRange: manifest.cliVersionRange,
-      output: resolve(sandbox, "SDK candidate"),
-    }),
-    { code: "EEXIST" },
+  const languages = Object.keys(manifest.languages).filter(
+    (language) => manifest.languages[language].hosts[host.id],
   );
+  const nativeSupported = Boolean(manifest.native[host.id]);
+  assert.ok(languages.includes("luau"));
+  if (host.supported) {
+    assert.ok(languages.includes("odin"));
+    assert.ok(nativeSupported);
+  }
+  const targets = nativeSupported ? ["web", "native"] : ["web"];
+  if (produced) {
+    await assert.rejects(
+      produceHostSdk({
+        version: manifest.version,
+        cliVersionRange: manifest.cliVersionRange,
+        output: resolve(sandbox, "SDK candidate"),
+      }),
+      { code: "EEXIST" },
+    );
+  }
   const metadataSha256 = createHash("sha256").update(metadata).digest("hex");
   const requests = [];
   server.on("request", async (request, response) => {
@@ -100,7 +122,7 @@ try {
     assert.match(result.stdout, /Checked|Built|Packed/);
     return result;
   }
-  for (const language of ["luau", "odin"]) {
+  for (const language of languages) {
     const project = resolve(sandbox, `${language} game`);
     await execute(executable, ["new", project, "--language", language, "--sdk", manifest.version], {
       cwd: sandbox,
@@ -117,25 +139,43 @@ try {
   );
   const odinId = `odin-${host.id}`;
   const nativeId = `native-${host.id}`;
-  assert.ok(!requests.some((path) => path.endsWith(manifest.components[odinId].asset)));
-  assert.ok(!requests.some((path) => path.endsWith(manifest.components[nativeId].asset)));
+  assert.ok(
+    !requests.some(
+      (path) => manifest.components[odinId] && path.endsWith(manifest.components[odinId].asset),
+    ),
+  );
+  assert.ok(
+    !requests.some(
+      (path) => manifest.components[nativeId] && path.endsWith(manifest.components[nativeId].asset),
+    ),
+  );
   const checkedRequests = requests.length;
   await invoke("luau", "pack", { offline: true });
   assert.equal(requests.length, checkedRequests);
   await invoke("luau", "build");
   assert.equal(requests.filter((path) => path.endsWith(manifest.components.web.asset)).length, 1);
-  assert.ok(!requests.some((path) => path.endsWith(manifest.components[odinId].asset)));
-  assert.ok(!requests.some((path) => path.endsWith(manifest.components[nativeId].asset)));
-  await invoke("odin", "check");
-  const odinCheckedRequests = requests.length;
-  await invoke("odin", "pack", { offline: true });
-  assert.equal(requests.length, odinCheckedRequests);
-  for (const language of ["luau", "odin"]) {
-    await invoke(language, "build", { targets: ["web", "native"] });
+  assert.ok(
+    !requests.some(
+      (path) => manifest.components[odinId] && path.endsWith(manifest.components[odinId].asset),
+    ),
+  );
+  assert.ok(
+    !requests.some(
+      (path) => manifest.components[nativeId] && path.endsWith(manifest.components[nativeId].asset),
+    ),
+  );
+  if (languages.includes("odin")) {
+    await invoke("odin", "check");
+    const odinCheckedRequests = requests.length;
+    await invoke("odin", "pack", { offline: true });
+    assert.equal(requests.length, odinCheckedRequests);
+  }
+  for (const language of languages) {
+    await invoke(language, "build", { targets });
   }
   const builtRequests = requests.length;
-  for (const language of ["luau", "odin"]) {
-    await invoke(language, "build", { offline: true, targets: ["web", "native"] });
+  for (const language of languages) {
+    await invoke(language, "build", { offline: true, targets });
   }
   assert.equal(requests.length, builtRequests);
   // An unsuccessful edit must leave the last complete public export intact.
@@ -208,7 +248,7 @@ try {
   await stopped;
   running = null;
   // Run exported native cartridges through the public CLI's explicit target.
-  for (const language of ["luau", "odin"]) {
+  for (const language of nativeSupported ? languages : []) {
     const result = await execute(
       executable,
       [
@@ -228,17 +268,19 @@ try {
     await invoke(language, "build", { offline: true, targets: ["web", "native"] });
   }
   await mkdir(resolve(sandbox, "site/nested"), { recursive: true });
-  for (const language of ["luau", "odin"]) {
+  for (const language of languages) {
     const project = resolve(sandbox, `${language} game`);
     await rename(resolve(project, "build/web"), resolve(sandbox, `site/nested/${language}`));
-    await rename(resolve(project, "build/native"), resolve(sandbox, `${language} native export`));
+    if (nativeSupported) {
+      await rename(resolve(project, "build/native"), resolve(sandbox, `${language} native export`));
+    }
   }
   assert.ok(cache.startsWith(sandbox + sep));
   await rm(cache, { recursive: true, force: true });
   website = serve(resolve(sandbox, "site"), 0);
   await new Promise((done) => website.once("listening", done));
   const played = {};
-  for (const language of ["luau", "odin"]) {
+  for (const language of languages) {
     const page = await browser.newPage();
     await page.goto(
       `http://127.0.0.1:${website.address().port}/nested/${language}/player.html?smoke`,
@@ -254,29 +296,36 @@ try {
     assert.equal(web.error, "");
     assert.equal(web.ticks, 120);
     await page.close();
-    const target = resolve(sandbox, `${language} native export`);
-    const result = await execute(resolve(target, host.player), ["--smoke", "--no-executor-cache"], {
-      cwd: sandbox,
-      env: {
-        ...environment,
-        SDL_VIDEODRIVER: "dummy",
-        SDL_AUDIODRIVER: "dummy",
-        SDL_RENDER_DRIVER: "software",
-      },
-      windowsHide: true,
-      timeout: 60000,
-    });
-    const native = JSON.parse(result.stdout);
-    assert.equal(native.ticks, 120);
-    assert.ok(native.audioQueuedFrames > 0);
-    assert.equal(native.hash, web.hash, `${language} relocated native/web starter image`);
-    if (process.platform === "darwin") {
-      for (const name of [host.player, host.sdlLibrary]) {
-        await execute("/usr/bin/codesign", ["--verify", "--strict", resolve(target, name)], {
+    let native;
+    if (nativeSupported) {
+      const target = resolve(sandbox, `${language} native export`);
+      const result = await execute(
+        resolve(target, host.player),
+        ["--smoke", "--no-executor-cache"],
+        {
           cwd: sandbox,
-          env: environment,
-          timeout: 30000,
-        });
+          env: {
+            ...environment,
+            SDL_VIDEODRIVER: "dummy",
+            SDL_AUDIODRIVER: "dummy",
+            SDL_RENDER_DRIVER: "software",
+          },
+          windowsHide: true,
+          timeout: 60000,
+        },
+      );
+      native = JSON.parse(result.stdout);
+      assert.equal(native.ticks, 120);
+      assert.ok(native.audioQueuedFrames > 0);
+      assert.equal(native.hash, web.hash, `${language} relocated native/web starter image`);
+      if (process.platform === "darwin") {
+        for (const name of [host.player, host.sdlLibrary]) {
+          await execute("/usr/bin/codesign", ["--verify", "--strict", resolve(target, name)], {
+            cwd: sandbox,
+            env: environment,
+            timeout: 30000,
+          });
+        }
       }
     }
     played[language] = { web, native };
@@ -297,7 +346,9 @@ try {
         publicCli: true,
         browserDev: true,
         failedEditRecovery: true,
-        nativeRun: true,
+        nativeRun: nativeSupported,
+        languages,
+        assembledRelease: Boolean(external),
         failedBuildPreservesOutput: true,
         relocatedPlaybackWithoutCache: true,
         played,

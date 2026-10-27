@@ -281,7 +281,8 @@ it retains raw phase timings and transfer/allocation counters under
 
 ## Profile and compatibility
 
-Opt in with SDK `0.3.0` and profile `compact-3d-preview-1` in `console.json`.
+Opt in with `profile = "compact-3d-preview-1"` in `bytorio.toml`. The pinned SDK
+must include that API profile (SDK/API `0.3.0`).
 The exact tuple is profile 3, ABI 2, SDK word 768, resource protocol 5 and feature
 mask 15. Bit 8 adds compact 3D to the three existing resource features. Native and
 browser loaders validate the complete tuple before game callbacks, including PNG

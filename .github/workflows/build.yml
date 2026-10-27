@@ -73,4 +73,6 @@ jobs:
             build/audio-verification/
             build/synthesis-verification/
             build/profile-verification/
+            build/cli-verification/report.json
+            build/sdk-authoring-verification/report.json
             build/odin-player/verification/

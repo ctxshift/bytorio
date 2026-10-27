@@ -1,5 +1,5 @@
 import { createScaffolder } from "../sdk/scaffold.mjs";
-import { branding, version } from "../../build/cli/assets";
+import { branding, version, notices } from "../../build/cli/assets";
 import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { hostPlatform } from "../host-platform.mjs";
@@ -30,6 +30,7 @@ Usage: byt new <directory> [--language luau|odin] [--sdk <version>] [--offline]
        byt dev [directory] [--port 0] [--no-open] [--offline]
        byt --help
        byt --version
+       byt --licenses
 
 New games use bytorio.toml and bytorio.lock.toml, with Luau by default.
 The newest compatible installed SDK is preferred; previews are eligible.
@@ -64,6 +65,10 @@ async function main(args: string[]): Promise<void> {
   }
   if (args.length === 1 && args[0] === "--version") {
     console.log(version);
+    return;
+  }
+  if (args.length === 1 && args[0] === "--licenses") {
+    console.log(notices);
     return;
   }
   if (args.length === 2 && args[1] === "--help") {

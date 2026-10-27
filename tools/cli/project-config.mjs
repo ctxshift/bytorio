@@ -149,7 +149,9 @@ export async function readGameProject(directory, { allowMissingLock = false } = 
     config = parseProject(await readConfig(resolve(directory, projectFilename)));
   } catch (error) {
     if (error.code === "ENOENT") {
-      throw new Error(`No ${projectFilename} found; run byt new <directory> to create a game`);
+      throw new Error(`No ${projectFilename} found; run byt new <directory> to create a game`, {
+        cause: error,
+      });
     }
     throw error;
   }
@@ -158,8 +160,12 @@ export async function readGameProject(directory, { allowMissingLock = false } = 
     pin = parseLock(await readConfig(resolve(directory, lockFilename)));
   } catch (error) {
     if (error.code === "ENOENT") {
-      if (allowMissingLock) return { directory, config, pin: null };
-      throw new Error(`Missing ${lockFilename}; use byt sdk upgrade to select an exact SDK`);
+      if (allowMissingLock) {
+        return { directory, config, pin: null };
+      }
+      throw new Error(`Missing ${lockFilename}; use byt sdk upgrade to select an exact SDK`, {
+        cause: error,
+      });
     }
     throw error;
   }

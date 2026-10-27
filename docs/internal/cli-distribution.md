@@ -1,13 +1,14 @@
 # Standalone CLI distribution plan
 
-Status: Windows x64 and macOS arm64/x64 scaffolding previews released.
-Full authoring distribution is still being implemented. The built-in mise GitHub
-backend installs the preview through the [consumer recipe](../../install/mise.toml).
+Status: the original scaffolding preview is superseded by the standalone
+authoring cutover described in the [current plan](standalone-authoring-plan.md).
+The built-in mise GitHub backend installs the CLI through the [consumer recipe](../../install/mise.toml).
 The [standalone authoring specification](standalone-authoring-spec.md) records
 the agreed DX requirements, SDK-owned players and public browser runtime model;
 the [implementation plan](standalone-authoring-plan.md) sequences that work.
-Those documents govern the proposed full-authoring behavior. The status and
-release details below describe the current scaffolding preview.
+Those documents govern full-authoring behavior. Details below retain the
+original protocol-1 scaffolding design for compatibility; current projects use
+TOML pins, component SDK releases and SDK-owned authoring and players.
 The [standalone CLI decision](../adr/0017-distribute-a-standalone-authoring-cli.md)
 sets the user experience. This document describes the recommended implementation
 and the checks needed before publishing installation instructions.

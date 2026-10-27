@@ -18,10 +18,11 @@ byt pack my-game
 byt pack my-game --output dist/my-game.png --cover art/cover.png
 ```
 
-`build`, `run` and `watch` also produce `build/game.png`, with identical copies
-in `build/native` and `build/web`. Without custom art, packaging creates a 256×256
+`build`, `run` and `dev` also produce `build/game.png`. Plain build exports web;
+`--target native` or `--target all` selects native output explicitly. Each selected
+player folder includes its cartridge. Without custom art, packaging creates a 256×256
 cover from the title, first sprite, palette and bitmap font. An optional `cover`
-path in `console.json` selects project-relative PNG artwork; `pack --cover`
+path in `bytorio.toml` selects project-relative PNG artwork; `pack --cover`
 overrides it. Custom covers retain their original image chunks. The packer rejects
 an existing cartridge as cover art rather than nesting another game.
 

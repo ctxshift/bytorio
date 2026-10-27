@@ -6,6 +6,7 @@ import { repo, run } from "./toolchain.mjs";
 import { compileCli } from "./compile-cli.mjs";
 import { cliVersion } from "./release-config.mjs";
 import { requireCliHost } from "./host-platform.mjs";
+import { dependencyNotices } from "./dependency-notices.mjs";
 
 const host = requireCliHost();
 
@@ -29,7 +30,8 @@ await writeFile(
   resolve(output, "assets.ts"),
   `export const assets: Record<string, string> = ${JSON.stringify(assets)};\n` +
     `export const branding = ${JSON.stringify(branding)};\n` +
-    `export const version = ${JSON.stringify(version)};\n`,
+    `export const version = ${JSON.stringify(version)};\n` +
+    `export const notices = ${JSON.stringify(await dependencyNotices())};\n`,
 );
 run(process.execPath, [
   resolve(repo, "node_modules/typescript/bin/tsc"),

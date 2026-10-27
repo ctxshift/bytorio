@@ -76,5 +76,8 @@ mise exec -- byt new pinned-game --sdk <sdk-version> --offline
 ```
 
 The CLI checks the bundle's manifest and SHA-256 and caches it for offline use.
-Keep the project's generated `byt.lock.json` with its source. SDK bundles are
-data managed by `byt`; they do not need another mise backend or tool entry.
+For current SDKs the task caches verified metadata; tools and players download
+on the first check/build/run that needs them. Keep `bytorio.toml` and the generated
+`bytorio.lock.toml` with the source. Normal creation selects a compatible installed
+SDK or discovers one online. Use `byt sdk upgrade` for an explicit pin change.
+SDKs are managed by `byt`; they need no other mise backend or tool entry.

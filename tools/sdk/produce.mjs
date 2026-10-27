@@ -7,6 +7,7 @@ import { emscriptenRoot, repo, run, tool, toolRoot } from "../toolchain.mjs";
 import { packComponent } from "./component.mjs";
 import { copyOdinDistribution } from "./compiler.mjs";
 import { parseSdkManifest, sdkReleaseVersion } from "../cli/sdk-manifest.mjs";
+import { dependencyNotices } from "../dependency-notices.mjs";
 
 // Produce a host-qualified candidate. Publishing and cross-host assembly are separate steps.
 export async function produceHostSdk({ version, cliVersionRange, output }) {
@@ -109,6 +110,7 @@ export async function produceHostSdk({ version, cliVersionRange, output }) {
       await mkdir(resolve(payloads, id), { recursive: true });
     }
     const core = resolve(payloads, "core");
+    await writeFile(resolve(core, "THIRD-PARTY-NOTICES.txt"), await dependencyNotices());
     await cp(resolve(repo, "sdk"), resolve(core, "sdk"), { recursive: true });
     // SDK libraries share these implementation packages with the runtime.
     // Preserve their relative imports without shipping the contributor checkout.
@@ -184,7 +186,7 @@ export async function produceHostSdk({ version, cliVersionRange, output }) {
       (name) => `licenses/${name}`,
     );
     const notices = {
-      core: ["sdk/NOTICE"],
+      core: ["sdk/NOTICE", "THIRD-PARTY-NOTICES.txt"],
       [toolsId]: ["licenses/luau.txt"],
       [odinId]: ["LICENSE", "base/runtime/LICENSE-compiler-rt.txt", "licenses/llvm.txt"],
       checks: ["licenses/odin.txt"],

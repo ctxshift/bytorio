@@ -8,13 +8,16 @@ guest memory is capped at 8 MiB. Luau has a separate 64 MiB executor-memory
 ceiling for its source and compiler, with a 4 MiB VM heap cap. Indexed content
 does not increase these budgets, display modes or profile tuples.
 
-Declare portable project-relative files in `console.json`:
+Declare portable project-relative files in `bytorio.toml`:
 
-```json
-"content": [
-  { "id": 1, "path": "assets/atlas.rgba" },
-  { "id": 2, "path": "assets/music.pcm" }
-]
+```toml
+[[content]]
+id = 1
+path = "assets/atlas.rgba"
+
+[[content]]
+id = 2
+path = "assets/music.pcm"
 ```
 
 The normal SDK check, build and pack commands include these entries. Direct

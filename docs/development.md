@@ -2,7 +2,7 @@
 
 This guide is for building and testing Bytorio itself. To make a game with the
 current development version, follow [Getting started](getting-started.md),
-which includes the required source setup and a first playable project.
+which uses the standalone CLI and managed SDK without this contributor toolchain.
 
 The console player and renderer are Odin on native and browser hosts. Luau and
 Odin cartridges share that player. The original C++ reference player and its
@@ -28,15 +28,16 @@ project scripts are written in Python or require its packages.
 
 ## Build and run
 
-The standalone authoring CLI has a separate scaffolding preview,
+The standalone authoring CLI is
 [available for Windows and Mac](https://github.com/ctxshift/bytorio/releases).
 See [Mac installation and usage](getting-started.md#macos-apple-silicon-or-intel)
 to use the published binary without a source toolchain.
 `mise run build:cli` produces `build/cli/byt.exe` on Windows or `build/cli/byt` on
 macOS using pinned Bun and TypeScript.
-It currently supports project creation and SDK bundle downloads; the existing
-source CLI remains the complete authoring path. See the [distribution plan](internal/cli-distribution.md)
-for supported commands and remaining work.
+It creates minimal TOML projects and provides check/build/pack/run/dev with
+SDK-managed tools and players. The source CLI retains contributor workflows for
+legacy `console.json` projects. See the [standalone plan](internal/standalone-authoring-plan.md)
+for the later public runtime and production-player work.
 
 The [short mise setup](getting-started.md#install-with-mise) installs the published
 CLI without the contributor toolchain. An optional

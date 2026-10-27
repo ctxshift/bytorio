@@ -16,10 +16,12 @@ test("development watches authored inputs and excludes generated output", () => 
     "assets/build/texture.png",
     "bytorio.toml",
     "bytorio.lock.toml",
-  ])
+  ]) {
     assert.equal(watchesProjectFile(path), true);
-  for (const path of ["build/web/game.png", ".bytorio/staging/output", ".git/index", ".luaurc"])
+  }
+  for (const path of ["build/web/game.png", ".bytorio/staging/output", ".git/index", ".luaurc"]) {
     assert.equal(watchesProjectFile(path), false);
+  }
 });
 
 test("development preview reloads complete generations while preserving old asset URLs", async () =>
@@ -150,6 +152,28 @@ test("preview serves only the exported snapshot, streams binaries and cleans up"
       await preview.close();
     }
     assert.deepEqual(await readdir(resolve(root, ".bytorio/sessions")), []);
+  }));
+
+test("preview canonicalizes a project directory alias before checking requested files", async () =>
+  fixture(async (root) => {
+    const game = resolve(root, "game");
+    const alias = resolve(root, "alias");
+    await mkdir(resolve(game, "build/web"), { recursive: true });
+    await writeFile(resolve(game, "build/web/player.html"), "Aliased game");
+    await symlink(game, alias, process.platform === "win32" ? "junction" : "dir");
+    const preview = await startPreview(
+      {
+        directory: alias,
+        buildRoot: resolve(alias, "build"),
+        release: { manifest: { web: { page: { path: "player.html" } } } },
+      },
+      { open: false },
+    );
+    try {
+      assert.equal(await (await fetch(preview.url)).text(), "Aliased game");
+    } finally {
+      await preview.close();
+    }
   }));
 
 test("generated directories cannot follow a project junction into another folder", async () =>

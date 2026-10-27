@@ -6,6 +6,8 @@ import { dirname, resolve } from "node:path";
 import { packComponent } from "./component.mjs";
 import { assembleSdk } from "./assemble.mjs";
 import { manifestFixture } from "../cli/fixtures/sdk-manifest.mjs";
+import { produceLuauHostSdk } from "./luau-host.mjs";
+import { verifySdkRelease } from "./release.mjs";
 
 async function fixture(run) {
   const root = await mkdtemp(resolve(tmpdir(), "byt-sdk-assembly-"));
@@ -52,7 +54,7 @@ async function fixture(run) {
           "sdk/odin/byt.odin": "package byt",
         },
         checks: { "runtime.wasm": `runtime built on ${host}`, "check.mjs": "checker" },
-        executor: { "luau-executor.wasm": "executor" },
+        executor: { "luau-executor.wasm": "executor", "licenses/luau.txt": "Luau license" },
         web: { "runtime.js": "runtime", "player.js": "player", "player.html": "page" },
         [tools]: { analyzer: "analyzer", compiler: "compiler", "bin/wasm-ld": "linker" },
         [native]: { player: `player for ${host}` },
@@ -175,6 +177,30 @@ test("assembly checks entrypoints against the verified archive inventory", async
       }),
       /entrypoint is missing/,
     );
+  }));
+
+test("a Luau-only Intel candidate joins the canonical shared release and is fully verified", async () =>
+  fixture(async ({ root, windows, mac }) => {
+    const analyzer = resolve(root, "luau-analyze");
+    await writeFile(analyzer, "Intel analyzer");
+    const intel = await produceLuauHostSdk({
+      base: windows.directory,
+      output: resolve(root, "intel"),
+      host: "macos-x64",
+      analyzer,
+    });
+    assert.deepEqual(Object.keys(intel.manifest.languages), ["luau"]);
+    const { output } = await assembleSdk({
+      candidates: [windows, mac, { host: "macos-x64", directory: intel.output }],
+      canonicalHost: windows.host,
+      output: resolve(root, "release"),
+    });
+    const release = await verifySdkRelease(output, windows.manifest.version);
+    assert.ok(release.languages.luau.hosts["macos-x64"]);
+    assert.equal(release.languages.odin.hosts["macos-x64"], undefined);
+    assert.equal(release.native["macos-x64"], undefined);
+    await writeFile(resolve(output, release.components["luau-macos-x64"].asset), "corrupt archive");
+    await assert.rejects(verifySdkRelease(output, release.version), /checksum|size/);
   }));
 
 test("assembly rejects asset collisions before copying release files", async () =>

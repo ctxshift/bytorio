@@ -53,6 +53,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 15
     env:
+      PLAYER_BROWSER_CHANNEL: chrome
       MISE_TASK_RUN_AUTO_INSTALL: "false"
       BYTORIO_CLI_VERSION: ${{ inputs.version || 'latest' }}
       GITHUB_TOKEN: ${{ github.token }}
@@ -62,13 +63,16 @@ jobs:
         with:
           version: 2026.10.8
           install_args: node
+      - run: npm ci
       - name: Verify the consumer installation workflow
         run: mise run test:cli-install
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: cli-install-${{ matrix.runner }}
-          path: build/cli-install-verification/
+          path: |
+            build/cli-install-verification/
+            build/published-authoring-verification/
 
   legacy:
     strategy:

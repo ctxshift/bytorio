@@ -47,11 +47,11 @@ Start small: move a character, change a color, or add a sound.
 also supported. Both languages can make games for the same console.
 
 **Bytorio is still in development.** The [CLI preview for Windows and Mac](https://github.com/ctxshift/bytorio/releases)
-creates projects and downloads SDKs. Follow the [Mac install instructions](docs/getting-started.md#macos-apple-silicon-or-intel)
+creates, checks, builds and plays games using downloaded SDK tools and players.
+No source checkout or contributor toolchain is required. Follow the [Mac install instructions](docs/getting-started.md#macos-apple-silicon-or-intel)
 for Apple Silicon or Intel, or [install with mise](docs/getting-started.md#install-with-mise).
-Building and running games still requires
-the [source development setup](docs/getting-started.md) on Windows x64 or macOS
-Apple Silicon.
+Luau/browser authoring supports Windows x64 and both Mac architectures; Odin and
+native players support Windows and Apple Silicon.
 You can play the browser demos without that setup.
 
 For mise, add `"github:ctxshift/bytorio" = "byt-v<version>"` under `[tools]`,

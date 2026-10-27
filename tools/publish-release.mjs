@@ -4,6 +4,7 @@ import { cliReleasePlatform, releaseConfig, verifyReleaseAsset } from "./release
 import { repo, run } from "./toolchain.mjs";
 import { cliPlatforms } from "./host-platform.mjs";
 import { verifyCliArchive } from "./cli-release-archive.mjs";
+import { verifySdkRelease } from "./sdk/release.mjs";
 
 const release = releaseConfig(process.env.BYTORIO_RELEASE_TAG);
 const directory = resolve(repo, "build/releases", release.tag);
@@ -14,13 +15,23 @@ if (platformIndex !== -1 && !check) {
 }
 const platforms = platformIndex === -1 ? cliPlatforms : [process.argv[platformIndex + 1]];
 const files = [];
+if (release.kind === "byt") {
+  files.push(resolve(directory, "THIRD-PARTY-NOTICES.txt"));
+}
 const assets =
   release.kind === "byt"
     ? platforms.map((id) => {
         const host = cliReleasePlatform(id);
         return { manifest: host.cliManifest, asset: host.cliAsset, platform: id };
       })
-    : [{ manifest: "sdk-release.json", asset: `bytorio-sdk-${release.version}.json.gz` }];
+    : [];
+if (release.kind === "sdk") {
+  const manifest = await verifySdkRelease(directory, release.version);
+  files.push(
+    resolve(directory, "sdk-release.json"),
+    ...Object.values(manifest.components).map(({ asset }) => resolve(directory, asset)),
+  );
+}
 for (const entry of assets) {
   const manifest = JSON.parse(await readFile(resolve(directory, entry.manifest), "utf8"));
   const bytes = await readFile(resolve(directory, entry.asset));

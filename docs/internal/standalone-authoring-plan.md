@@ -14,7 +14,10 @@ components offline, deletes that cache, then plays relocated exports in both
 languages. It also verifies copied Mac signatures and compares native/browser
 smoke output. Contributor source commands use the same authoring implementation.
 
-These are internal candidates, not a combined published SDK. The development
+The release workflow now assembles host candidates and qualifies the exact
+result with the compiled CLI on each supported host before SDK publication.
+Intel Mac contributes a Luau analyzer and consumes canonical shared bytes;
+Odin/native support remains Windows and Apple Silicon. The development
 CLI now creates minimal TOML projects with exact SDK pins, installed-first
 preview selection and offline reuse. The compiled CLI routes check, build, pack,
 run and dev through the selected SDK. Builds publish complete owned outputs,
@@ -37,7 +40,7 @@ contracts and host ownership, selects canonical common bytes, and validates all
 published entrypoints and executable modes. It rejects conflicting assets or
 corrupt archives, reserves its output exclusively, and writes metadata last.
 The isolated SDK consumer test exercises this assembled output. Cross-host
-release qualification and publication still require workflow integration.
+release qualification and publication are the remaining cutover gates.
 
 The [backend qualification run](https://github.com/ctxshift/bytorio/actions/runs/40472926173)
 passed all 39 gates on Windows x64 and Apple Silicon, plus the Intel Mac CLI

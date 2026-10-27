@@ -204,6 +204,30 @@ try {
   await invoke(["install", backend], pinned, pinnedEnvironment);
   await verifyInstalled(pinned, pinnedEnvironment, release);
   report.checks.push("One-line full-tag pin works with mise defaults and exposes the byt command");
+  if ((await manifest(release, host.id)).status === "standalone-authoring-preview") {
+    const installed = await invoke(["which", "byt"], consumer);
+    const result = spawnSync(
+      process.execPath,
+      [resolve(repo, "tools/verify-published-authoring.mjs"), installed],
+      {
+        cwd: sandbox,
+        env: environment,
+        encoding: "utf8",
+        timeout: 600000,
+        windowsHide: true,
+        maxBuffer: 1024 * 1024,
+      },
+    );
+    await writeFile(
+      resolve(reportDirectory, "published-authoring.log"),
+      `${result.stdout ?? ""}\n${result.stderr ?? ""}`,
+    );
+    assert.ifError(result.error);
+    assert.equal(result.status, 0, "Published authoring failed; see published-authoring.log");
+    report.checks.push(
+      "Installed CLI creates, checks, builds, packs and plays using published SDK components without source tools",
+    );
+  }
   report.status = "passed";
 } catch (error) {
   report.status = "failed";

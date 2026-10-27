@@ -21,9 +21,14 @@ function releaseDirectory(version, options) {
 }
 
 async function metadataRequest(url, limit, options) {
+  const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+  const headers = { "User-Agent": "byt", Accept: "application/json" };
+  if (new URL(url).origin === "https://api.github.com" && token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
   const response = await fetch(url, {
     signal: AbortSignal.timeout(options.timeoutMs ?? 60000),
-    headers: { "User-Agent": "byt", Accept: "application/json" },
+    headers,
   });
   if (!response.ok || !response.body) {
     await response.body?.cancel();
