@@ -4,7 +4,7 @@ run = "node tools/build-cli.mjs"
 
 ["test:cli"]
 description = "Verify the compiled CLI without a checkout or tools on PATH"
-run = ["node tools/build-cli.mjs", "node tools/verify-cli.mjs", "node tools/build-sdk-release.mjs", "node --test tools/cli/sdk-bundle.test.mjs tools/cli/sdk-manifest.test.mjs tools/cli/component-cache.test.mjs tools/release-config.test.mjs tools/sdk/component.test.mjs", "node tools/verify-sdk-component.mjs"]
+run = ["node tools/build-cli.mjs", "node tools/verify-cli.mjs", "node tools/build-sdk-release.mjs", "node --test tools/cli/sdk-bundle.test.mjs tools/cli/sdk-manifest.test.mjs tools/cli/sdk-registry.test.mjs tools/cli/component-cache.test.mjs tools/release-config.test.mjs tools/sdk/component.test.mjs", "node tools/verify-sdk-component.mjs"]
 
 ["build:sdk-release"]
 description = "Package a versioned SDK for a GitHub release"

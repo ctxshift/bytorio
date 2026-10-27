@@ -2,9 +2,18 @@ import { readFile } from "node:fs/promises";
 import { unpackComponent } from "../sdk/component.mjs";
 import { resolveComponent } from "./component-cache.mjs";
 import { parseSdkManifest, sdkCompatibility } from "./sdk-manifest.mjs";
+import { resolveSdkRelease, selectSdkRelease } from "./sdk-registry.mjs";
 
 try {
   const request = JSON.parse(await readFile(process.argv[2], "utf8"));
+  if (["select-sdk", "resolve-sdk"].includes(request.operation)) {
+    const release =
+      request.operation === "select-sdk"
+        ? await selectSdkRelease(request.requirements, request.options)
+        : await resolveSdkRelease(request.version, request.options);
+    console.log(JSON.stringify({ version: release.manifest.version, sha256: release.sha256 }));
+    process.exit(0);
+  }
   if (request.operation === "manifest") {
     const manifest = parseSdkManifest(
       Buffer.from(JSON.stringify(request.manifest)),

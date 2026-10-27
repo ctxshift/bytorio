@@ -63,7 +63,16 @@ try {
   let requests = 0;
   server.on("request", (request, response) => {
     requests++;
-    response.end(archiveBytes);
+    const path = new URL(request.url, "http://127.0.0.1").pathname;
+    if (path === "/releases") {
+      response.end(
+        JSON.stringify([{ tag_name: "sdk-v0.2.0-preview.1", draft: false, prerelease: true }]),
+      );
+    } else if (path.endsWith("/sdk-release.json")) {
+      response.end(JSON.stringify(manifestFixture()));
+    } else {
+      response.end(archiveBytes);
+    }
   });
   await new Promise((done) => server.listen(0, "127.0.0.1", done));
   const component = {
@@ -121,6 +130,48 @@ try {
     invoke(),
     (error) => error.code === 1 && /odin authoring on macos-x64/.test(error.stderr),
   );
+  const origin = `http://127.0.0.1:${server.address().port}`;
+  const sdkOptions = {
+    cache,
+    releaseRoot: origin,
+    catalogueRoot: `${origin}/releases`,
+    allowPrerelease: true,
+  };
+  await writeFile(
+    request,
+    JSON.stringify({
+      operation: "select-sdk",
+      options: sdkOptions,
+      requirements: { ...requirements, host: host.id },
+    }),
+  );
+  const beforeSelection = requests;
+  const selected = JSON.parse((await invoke()).stdout);
+  assert.equal(selected.version, "0.2.0-preview.1");
+  assert.equal(
+    requests,
+    beforeSelection + 2,
+    "Selection fetched more than catalogue and starter metadata",
+  );
+  await writeFile(
+    request,
+    JSON.stringify({
+      operation: "select-sdk",
+      options: { ...sdkOptions, offline: true },
+      requirements: { ...requirements, host: host.id },
+    }),
+  );
+  assert.deepEqual(JSON.parse((await invoke()).stdout), selected);
+  assert.equal(requests, beforeSelection + 2);
+  await writeFile(
+    request,
+    JSON.stringify({
+      operation: "resolve-sdk",
+      version: selected.version,
+      options: { ...sdkOptions, offline: true, expectedSha256: selected.sha256 },
+    }),
+  );
+  assert.deepEqual(JSON.parse((await invoke()).stdout), selected);
   await writeFile(
     resolve(output, "report.json"),
     JSON.stringify(
@@ -139,6 +190,8 @@ try {
           "offline reuse",
           "corruption repair",
           "SDK metadata and compatibility",
+          "installed-first SDK selection",
+          "exact SDK metadata pins",
         ],
       },
       null,
