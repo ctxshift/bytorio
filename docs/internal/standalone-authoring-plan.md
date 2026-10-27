@@ -1,9 +1,37 @@
 # Standalone authoring implementation plan
 
-Status: proposed implementation sequence. Product requirements and acceptance
+Status: implementation in progress. Product requirements and acceptance
 criteria are in the [specification](standalone-authoring-spec.md). This plan does
 not claim that unreleased authoring or embedding functionality already exists.
 Current released behavior remains documented in [CLI distribution](cli-distribution.md).
+
+The SDK backend now includes isolated compiled-CLI checking, verified component
+archives and shared cache, installed-first compatibility selection, SDK-owned
+authoring and explicit source/release adapters. Host-specific candidates contain
+managed Luau/Odin tools, check workers, executor and prebuilt web/native players.
+Their consumer check runs outside the checkout with an empty PATH, reuses cached
+components offline, deletes that cache, then plays relocated exports in both
+languages. It also verifies copied Mac signatures and compares native/browser
+smoke output. Contributor source commands use the same authoring implementation.
+
+These are internal candidates, not a combined published SDK. The public CLI
+still exposes the scaffolding preview. Minimal project creation and command
+routing are next, following the pending project-format, preview-eligibility and
+build-default choices. Public browser runtime extraction, production player and
+touch controls, development loop, migration, cross-host release assembly and
+published cutover remain later steps.
+
+Candidate production currently targets Windows x64 and macOS Apple Silicon.
+Intel Mac's CLI checks do not establish Odin or native-player support there.
+Before publication, assemble the host components with one canonical set of
+shared payloads and qualify consumers against that assembled manifest. Do not
+assume independently produced common archives have identical bytes.
+
+The [backend qualification run](https://github.com/ctxshift/bytorio/actions/runs/40472926173)
+passed all 39 gates on Windows x64 and Apple Silicon, plus the Intel Mac CLI
+gate. The complete local 39-gate validation also passed at that functional
+revision. This establishes the internal candidate pipeline described above;
+public command and embedding acceptance still belongs to the later milestones.
 
 ## Working approach
 
