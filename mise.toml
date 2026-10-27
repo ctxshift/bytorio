@@ -244,7 +244,7 @@ run = "node tools/verify-audio-admission.mjs"
 [tasks."test:ogg-startup"]
 depends = ["build:odin"]
 description = "Verify decoder code warmup before delayed real browser Ogg playback"
-run = "node tools/verify-ogg-startup.mjs"
+run = ["node --test tools/test-clock.test.mjs", "node tools/verify-ogg-startup.mjs"]
 
 [tasks."test:display"]
 depends = ["//examples/rpg:build"]
