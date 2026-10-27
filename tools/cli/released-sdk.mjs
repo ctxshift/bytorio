@@ -16,12 +16,21 @@ const reservedPlayerFiles = new Set([
   "profile.json",
 ]);
 
+async function settledValues(pending) {
+  const results = await Promise.allSettled(pending);
+  const failure = results.find((result) => result.status === "rejected");
+  if (failure) {
+    throw failure.reason;
+  }
+  return results.map((result) => result.value);
+}
+
 export function createReleasedSdk(release, options = {}) {
   const { manifest } = release;
   const host = options.host ?? hostPlatform().id;
   const root = (options.releaseRoot ?? defaultReleaseRoot).replace(/\/$/, "");
   const pending = new Map();
-  function component(id) {
+  async function component(id) {
     const descriptor = manifest.components[id];
     if (!descriptor) {
       throw new Error(`SDK ${manifest.version} is missing component ${id}`);
@@ -96,7 +105,7 @@ export function createReleasedSdk(release, options = {}) {
         return {};
       }
       const tools = manifest.languages.odin?.hosts[host];
-      const [compiler, linker] = await Promise.all([
+      const [compiler, linker] = await settledValues([
         reference(tools?.compiler, { executable: true }),
         reference(tools?.linker, { executable: true }),
       ]);
@@ -105,7 +114,7 @@ export function createReleasedSdk(release, options = {}) {
       return { ODIN_ROOT: dirname(compiler), PATH: dirname(linker) };
     },
     async checking(language) {
-      const [runtime, worker, executor] = await Promise.all([
+      const [runtime, worker, executor] = await settledValues([
         reference(manifest.check.runtime),
         reference(manifest.check.workers[language]),
         language === "luau" ? reference(manifest.check.luauExecutor) : null,
@@ -129,7 +138,7 @@ export function createReleasedSdk(release, options = {}) {
         refs.push(manifest.check.luauExecutor);
       }
       const ids = [...new Set(refs.map((ref) => ref.component))];
-      const components = await Promise.all(ids.map(component));
+      const components = await settledValues(ids.map(component));
       const byId = new Map(ids.map((id, index) => [id, components[index]]));
       for (const ref of refs) {
         if (!byId.get(ref.component).inventory.files.some((file) => file.path === ref.path)) {

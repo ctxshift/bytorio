@@ -11,11 +11,16 @@ async function fixture(run) {
   const root = await mkdtemp(resolve(tmpdir(), "byt-player-copy-"));
   const components = {};
   const archives = new Map();
+  const delays = new Map();
   const host = "test-host";
   const manifest = { version: "0.2.0", components, web: {}, native: {}, check: {} };
   const server = createServer(async (request, response) => {
     const archive = archives.get(request.url.split("/").at(-1));
     if (archive) {
+      const delay = delays.get(request.url.split("/").at(-1));
+      if (delay) {
+        await new Promise((done) => setTimeout(done, delay));
+      }
       response.end(await readFile(archive));
     } else {
       response.writeHead(404).end();
@@ -56,6 +61,7 @@ async function fixture(run) {
       manifest,
       options,
       add,
+      delays,
       sdk: () => createReleasedSdk({ manifest }, options),
     });
   } finally {
@@ -108,6 +114,30 @@ test("Odin uses its managed root and linker without inheriting a global PATH", a
     assert.deepEqual(await adapter.environment("luau"), {});
     delete manifest.languages.odin.hosts[host].linker;
     await assert.rejects(adapter.environment("odin"), /missing a required capability/);
+  }));
+
+test("failed parallel tool resolution finishes cache writes before returning an error", async () =>
+  fixture(async ({ root, host, manifest, add, sdk, delays }) => {
+    await add("linker", { "bin/wasm-ld": "linker" }, ["bin/wasm-ld"]);
+    delays.set("linker.tar.gz", 100);
+    manifest.languages = {
+      odin: {
+        hosts: {
+          [host]: {
+            compiler: { component: "unavailable", path: "compiler" },
+            linker: { component: "linker", path: "bin/wasm-ld" },
+          },
+        },
+      },
+    };
+    await assert.rejects(sdk().environment("odin"), /missing component/);
+    const pointer = resolve(
+      root,
+      "cache/sdk/components",
+      manifest.components.linker.sha256,
+      "current.json",
+    );
+    assert.ok((await lstat(pointer)).isFile(), "SDK work continued after the operation failed");
   }));
 
 test("player payloads cannot overwrite game outputs or merge conflicting files", async () =>
