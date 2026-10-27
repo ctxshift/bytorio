@@ -13,7 +13,7 @@ run = "node tools/build-sdk-release.mjs"
 ["test:cli-worker"]
 description = "Qualify compiled Worker/Wasm checking without a checkout or global tools"
 depends = ["deps:player:web-cpu", "deps:luau"]
-run = ["node --test tools/sdk/check.test.mjs", "node tools/verify-cli-worker.mjs"]
+run = ["node --test tools/sdk/check.test.mjs tools/sdk/bundle-format.test.mjs", "node tools/verify-cli-worker.mjs"]
 
 ["package:release"]
 description = "Package tested CLI or SDK assets for BYTORIO_RELEASE_TAG"

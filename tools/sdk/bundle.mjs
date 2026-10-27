@@ -241,11 +241,9 @@ export function odinEntry({ graphicsImport = '"assets"', display = "High" } = {}
   }
   return `// Generated SDK entry point.
 package main
-
+import ${graphicsImport}
 import "base:runtime"
 import byt "sdk:bytorio"
-import ${graphicsImport}
-
 @(export)
 game_init :: proc "c" () {
     context = runtime.default_context()
