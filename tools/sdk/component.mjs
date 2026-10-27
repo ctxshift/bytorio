@@ -78,7 +78,7 @@ async function fileDigest(path) {
   return digest.digest("hex");
 }
 
-function validatePaths(paths) {
+export function validateComponentPaths(paths) {
   const files = new Set();
   const directories = new Map();
   for (const path of paths) {
@@ -142,7 +142,7 @@ function validateInventory(bytes, descriptor) {
     throw new Error("Invalid SDK component inventory");
   }
   const names = new Map();
-  validatePaths(value.files.map((file) => file.path));
+  validateComponentPaths(value.files.map((file) => file.path));
   let expanded = bytes.length;
   for (const file of value.files) {
     componentPath(file.path);
@@ -341,7 +341,7 @@ export async function unpackComponent({ archive, destination, descriptor }) {
   if (invalid) {
     throw invalid;
   }
-  validatePaths(paths);
+  validateComponentPaths(paths);
   if (
     count !== descriptor.files + 1 ||
     fileBytes !== descriptor.expandedBytes ||

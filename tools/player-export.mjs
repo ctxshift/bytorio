@@ -148,6 +148,37 @@ async function adHocSign(target) {
   }
 }
 
+async function executorPayload() {
+  const root = resolve(repo, "build/luau-executor");
+  const emscripten = emscriptenRoot();
+  return {
+    bytes: await readFile(resolve(root, "luau-executor.wasm")),
+    notices: [
+      ["licenses/luau.txt", resolve(root, "_deps/luau-src/LICENSE.txt")],
+      ["licenses/emscripten.txt", resolve(emscripten, "LICENSE")],
+      ["licenses/libcxx.txt", resolve(emscripten, "system/lib/libcxx/LICENSE.TXT")],
+      ["licenses/libcxxabi.txt", resolve(emscripten, "system/lib/libcxxabi/LICENSE.TXT")],
+      ["licenses/musl.txt", resolve(emscripten, "system/lib/libc/musl/COPYRIGHT")],
+    ],
+  };
+}
+
+async function writeExecutor(target, payload) {
+  await writeFile(resolve(target, "luau-executor.wasm"), payload.bytes);
+  await writeFile(
+    resolve(target, "executor-version.json"),
+    JSON.stringify({ sha256: createHash("sha256").update(payload.bytes).digest("hex") }) + "\n",
+  );
+}
+
+export async function exportExecutor({ target }) {
+  const payload = await executorPayload();
+  await checkFiles(payload.notices);
+  await copyFiles(target, payload.notices);
+  await writeExecutor(target, payload);
+  return { notices: payload.notices.map(([name]) => name) };
+}
+
 // Export a built player. Game files, profiles and launcher customization belong
 // to the caller; the player inventory and optional executor belong here.
 export async function exportPlayer({ platform, source, target, luau = false, sign = adHocSign }) {
@@ -159,16 +190,8 @@ export async function exportPlayer({ platform, source, target, luau = false, sig
   const entries = [...names].map((name) => [name, resolve(source, name)]);
   let executor;
   if (luau) {
-    const executorRoot = resolve(repo, "build/luau-executor");
-    const emscripten = emscriptenRoot();
-    executor = await readFile(resolve(executorRoot, "luau-executor.wasm"));
-    entries.push(
-      ["licenses/luau.txt", resolve(executorRoot, "_deps/luau-src/LICENSE.txt")],
-      ["licenses/emscripten.txt", resolve(emscripten, "LICENSE")],
-      ["licenses/libcxx.txt", resolve(emscripten, "system/lib/libcxx/LICENSE.TXT")],
-      ["licenses/libcxxabi.txt", resolve(emscripten, "system/lib/libcxxabi/LICENSE.TXT")],
-      ["licenses/musl.txt", resolve(emscripten, "system/lib/libc/musl/COPYRIGHT")],
-    );
+    executor = await executorPayload();
+    entries.push(...executor.notices);
   }
   await checkFiles(entries);
   // Preserve additional notices, then let the selected dependencies' notices win.
@@ -178,10 +201,6 @@ export async function exportPlayer({ platform, source, target, luau = false, sig
     await sign(target);
   }
   if (executor) {
-    await writeFile(resolve(target, "luau-executor.wasm"), executor);
-    await writeFile(
-      resolve(target, "executor-version.json"),
-      JSON.stringify({ sha256: createHash("sha256").update(executor).digest("hex") }) + "\n",
-    );
+    await writeExecutor(target, executor);
   }
 }

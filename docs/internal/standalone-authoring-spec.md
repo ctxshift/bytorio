@@ -213,6 +213,24 @@ JavaScript bundles include their matching JSON contract snapshot, so these
 operations do not locate a loose contract through a repository-relative URL.
 Contributor formatting remains a separate development tool.
 
+The SDK-owned JavaScript authoring module exports an interface protocol,
+its bundled console contract and a constructor for project validation,
+checking, building and packing. The CLI checks its declared profiles/limits
+against the pinned release metadata; the module checks its full data contract.
+The constructor accepts explicit SDK asset/library/tool/checker/player adapters
+and the host's isolated-check driver. It receives parsed project configuration,
+so the authoring implementation does not choose a root config filename.
+
+Contributor commands supply source paths, pinned development tools and player
+builds through the source adapter. Released authoring supplies verified cached
+payloads and copies prebuilt player bytes and executable modes without a signing
+step. Both routes share the same authoring implementation. Export targets are
+explicit at this interface; cartridge packing can avoid player exports entirely.
+The standalone qualification builds a real Luau game from SDK HTTP fixtures with
+an empty PATH, reuses it offline, and plays a relocated web export after deleting
+the consumer's SDK cache. This does not qualify the public browser embedding
+interface or a new native target by itself.
+
 Cache entries must be verified before use, published atomically, and safe under
 concurrent requests. Partial or corrupt downloads must not become usable SDKs.
 Downloading a component must not execute arbitrary SDK installation hooks.

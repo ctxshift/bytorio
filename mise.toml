@@ -259,6 +259,7 @@ run = [
   {task = "test:native-platform"},
     {task = "test:cli"},
   {task = "test:cli-worker"},
+  {task = "test:sdk-authoring"},
   {task = "test:sdk"},
   {task = "test:save"},
   {task = "test:text-input"},

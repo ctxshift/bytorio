@@ -15,6 +15,11 @@ description = "Qualify compiled Worker/Wasm checking without a checkout or globa
 depends = ["deps:player:web-cpu", "deps:luau"]
 run = ["node --test tools/sdk/check.test.mjs tools/sdk/bundle-format.test.mjs", "node tools/verify-cli-worker.mjs"]
 
+["test:sdk-authoring"]
+description = "Build and play from a versioned SDK without checkout or global tools"
+depends = ["build:odin", "deps:luau"]
+run = ["node --test tools/cli/released-sdk.test.mjs", "node tools/verify-sdk-authoring.mjs"]
+
 ["package:release"]
 description = "Package tested CLI or SDK assets for BYTORIO_RELEASE_TAG"
 run = ["node tools/package-release.mjs", "node tools/publish-release.mjs --check --platform {{ os() }}-{{ arch() }}"]
