@@ -59,7 +59,7 @@ try {
       failures.push(message.text());
     }
   });
-  const url = `http://127.0.0.1:${server.address().port}/player.html`;
+  const url = `http://127.0.0.1:${server.address().port}/debug.html`;
   await page.goto(url);
   await page.waitForFunction(
     () => globalThis.playerStatus?.ready || globalThis.playerStatus?.error,

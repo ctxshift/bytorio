@@ -121,7 +121,7 @@ try {
     : [{ backend: "cpu", ssaa: "off" }];
   for (const { language, project } of projects) {
     const base = "/" + relative(process.cwd(), resolve(project, "build/web")).replaceAll("\\", "/");
-    await page.goto(`http://127.0.0.1:${server.address().port}${base}/player.html`);
+    await page.goto(`http://127.0.0.1:${server.address().port}${base}/debug.html`);
     if (effects && gpu) {
       await page.evaluate(browserEffectProbes);
     }
@@ -299,7 +299,7 @@ try {
         }
       }
     }
-    await page.goto(`http://127.0.0.1:${server.address().port}${base}/player.html?game=./game.png`);
+    await page.goto(`http://127.0.0.1:${server.address().port}${base}/debug.html?game=./game.png`);
     await page.waitForFunction(() => window.playerStatus?.ready || window.playerStatus?.error);
     assert.equal(await page.evaluate(() => window.playerStatus.error), "");
     await page.screenshot({ path: resolve(root, `${language}.png`) });

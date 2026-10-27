@@ -318,7 +318,7 @@ try {
   page.on("pageerror", (error) => errors.push(error.message));
   const base = `http://127.0.0.1:${server.address().port}`;
   for (const language of ["odin", "luau"]) {
-    await page.goto(`${base}/player.html${language === "luau" ? "?game=./rpg.luau" : ""}`);
+    await page.goto(`${base}/debug.html${language === "luau" ? "?game=./rpg.luau" : ""}`);
     await page.waitForFunction(() => playerStatus.ready || playerStatus.error);
     assert.equal(await page.evaluate(() => playerStatus.error), "");
     await page.getByRole("button", { name: "Start game" }).click();
@@ -464,7 +464,7 @@ try {
   );
   assert.equal(failure.status, 1);
   assert.match(failure.stderr, /prototype diagnostic/);
-  await page.goto(`${base}/player.html?game=./diagnostic.luau`);
+  await page.goto(`${base}/debug.html?game=./diagnostic.luau`);
   await page.waitForFunction(() => !!playerStatus.error);
   assert.match(await page.evaluate(() => playerStatus.error), /prototype diagnostic/);
   assert.deepEqual(errors, []);

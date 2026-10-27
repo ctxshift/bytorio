@@ -169,7 +169,7 @@ function fixture() {
   // build artifacts are used by this scheduler regression test.
   for (const file of [
     ".mise/toolchain.toml",
-    "runtime/odin/web/player.js",
+    "runtime/odin/web/debug-player.js",
     "runtime/odin/web/constants.js",
     "runtime/odin/web/main.odin",
     "runtime/odin/resources/resources.odin",
@@ -223,7 +223,7 @@ test("mise rebuilds only the artifacts affected by edits and missing outputs", a
     appendFileSync(resolve(root, file), "\n# changed\n");
     assert.deepEqual(run(...targets), expected.sort(), file);
   }
-  await edit("runtime/odin/web/player.js", ["deps:player:web-support"]);
+  await edit("runtime/odin/web/debug-player.js", ["deps:player:web-support"]);
   await edit("tests/3d/renderer_test.odin", []);
   await edit("mise.toml", []);
   await edit("runtime/odin/gpu/mesh.frag", [

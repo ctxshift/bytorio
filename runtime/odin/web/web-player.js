@@ -171,7 +171,9 @@ export function mountPlayer(
         ? "Loading game…"
         : state.state === "paused"
           ? "Paused"
-          : "";
+          : state.state === "idle"
+            ? "Open a PNG cartridge to begin."
+            : "";
     canvas.style.imageRendering = state.smoothPresentation ? "auto" : "pixelated";
     if (config.diagnostics && details.open) {
       find("pre").textContent = JSON.stringify(

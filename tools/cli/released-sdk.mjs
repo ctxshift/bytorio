@@ -14,6 +14,7 @@ const reservedPlayerFiles = new Set([
   "game.wasm",
   "console.json",
   "profile.json",
+  "player-config.json",
 ]);
 
 async function settledValues(pending) {

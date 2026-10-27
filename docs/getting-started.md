@@ -198,6 +198,39 @@ byt build --target all
 Share the entire `build/native/` folder for a standalone native game. Native
 exports target the authoring host. Plain `build` remains web only.
 
+## Embed and customize the web player
+
+The next CLI/SDK preview adds an embeddable production player and a separate runtime
+module. Existing SDK pins keep their previous player until explicitly upgraded.
+The player frames the game with Play/Pause, Mute and Fullscreen; Restart and Open
+cartridge are in its menu. Development diagnostics are off by default.
+
+Optional settings live in your existing `bytorio.toml`:
+
+```toml
+[player]
+instructions = "Arrows / WASD move. Space jumps."
+
+[player.controls]
+preset = "dpad"
+visibility = "auto"
+
+[player.controls.overrides.action]
+label = "Jump"
+bindings = ["action"]
+```
+
+`auto` shows controls on touch devices. Choose tap/drag with `preset = "pointer"`,
+override preset bindings and layout, or define an explicit layout. Build-time
+validation reports unsupported controls before export.
+
+Import `web-player.js` to mount the stock player in your own page, or import
+`runtime.js` to build your own player. Neither requires the Bytorio source,
+a framework or an npm install. Keep the complete exported web directory together.
+See [embedding and touch controls](../sdk/web-player.md) and the
+[runtime API](../sdk/web-runtime.md). Contributors can open `debug.html` for the
+separate diagnostic host.
+
 ## SDK versions and offline use
 
 The pinned SDK selects matching libraries, tools, check workers and players.

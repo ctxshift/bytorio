@@ -217,7 +217,7 @@ try {
       );
       const source =
         language === "luau" ? await readFile(resolve(project, "build/native/game.luau")) : null;
-      await page.goto(`${web}/player.html?smoke`);
+      await page.goto(`${web}/debug.html?smoke`);
       await page.waitForFunction(() => playerStatus.ready || playerStatus.error);
       for (const query of [
         "game_required_features",
@@ -344,7 +344,7 @@ try {
           }
         };
       });
-      await devicePage.goto(`${web}/player.html?game=./game.png&smoke`);
+      await devicePage.goto(`${web}/debug.html?game=./game.png&smoke`);
       await devicePage.waitForFunction(() => playerStatus.ready || playerStatus.error);
       assert.equal(await devicePage.evaluate(() => playerStatus.error), "");
       await devicePage.locator("#start").click();
@@ -404,7 +404,7 @@ try {
           .locator("#cartridge")
           .setInputFiles({ name: "warm.png", mimeType: "image/png", buffer: png });
       } else {
-        await page.goto(`${web}/player.html?game=./${game}&smoke`);
+        await page.goto(`${web}/debug.html?game=./${game}&smoke`);
       }
       await page.waitForFunction(() => playerStatus.ready || playerStatus.error);
       assert.equal(await page.evaluate(() => playerStatus.error), "");

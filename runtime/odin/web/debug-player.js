@@ -184,6 +184,11 @@ async function start() {
   canvas.focus();
 }
 async function load(resume = false) {
+  if (parameters.has("local") && !selectedCartridge) {
+    status.textContent = "Choose a PNG cartridge from your device to begin.";
+    button.disabled = true;
+    return;
+  }
   await session.runtime.load(
     selectedCartridge || parameters.get("game") || globalThis.playerCartridge || "./game.wasm",
     { graphics },

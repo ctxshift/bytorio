@@ -32,6 +32,9 @@ panel; it is off by default. Audio starts from a Play gesture.
 `ready` rejects on initial load failure and the player displays the error.
 `load(...)` and `runtime.on(...)` use the [public runtime](web-runtime.md) API.
 Dispose the mount before reusing its host element. Multiple mounts are independent.
+Omit `cartridge` to begin idle, then choose Open cartridge from the menu. The
+standalone `player.html?local` page provides the same mode, even if a game URL or
+generated cartridge is configured.
 
 `toolbar: false` lets you supply your own toolbar through `player.runtime`.
 `controls: { preset: "none", pointer: false }` disables the built-in game-surface
@@ -45,6 +48,9 @@ Controls default to `dpad`: four directions plus Action. Directional buttons bin
 both classic directions and extended movement bindings. Keyboard arrows also
 expose pan bindings; WASD exposes movement bindings. Space is Action. The standard
 gamepad D-pad/A button works while the game canvas owns focus.
+M opens the map binding; Tab navigates the player controls. Set `keyboard: false`
+or `gamepad: false` under `controls` to replace either adapter yourself. Custom
+input source names should be distinct from those owned by other adapters.
 
 `visibility` is `"auto"` (touch/coarse-pointer devices), `"always"`, or `"never"`.
 The `pointer` preset supplies tap/drag without buttons. `pointer: false` disables

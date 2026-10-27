@@ -464,7 +464,7 @@ try {
   const page = await browser.newPage();
   const base = `http://127.0.0.1:${server.address().port}`;
   for (const language of ["luau", "odin"]) {
-    await page.goto(`${base}/${language}/build/web/player.html?game=./game.png&smoke`);
+    await page.goto(`${base}/${language}/build/web/debug.html?game=./game.png&smoke`);
     await page.waitForFunction(() => playerStatus.ready || playerStatus.error);
     assert.equal(await page.evaluate(() => playerStatus.error), "");
     assert.equal(await page.title(), `PNG ${language} Ω`);
@@ -485,24 +485,24 @@ try {
     );
     await page.screenshot({ path: resolve(root, `${language}.png`) });
   }
-  await page.goto(`${base}/odin/build/web/player.html?game=./maximum.png&smoke`);
+  await page.goto(`${base}/odin/build/web/debug.html?game=./maximum.png&smoke`);
   await page.waitForFunction(() => playerStatus.ready || playerStatus.error);
   assert.equal(await page.evaluate(() => playerStatus.error), "");
   await page.locator("#start").click();
   await page.waitForFunction(() => playerStatus.ticks >= 120 || playerStatus.error);
   assert.equal(await page.evaluate(() => playerStatus.hash), reports.odin.hash);
   assert.equal(await page.evaluate(() => playerStatus.sounds), reports.odin.sounds);
-  await page.goto(`${base}/luau/build/web/player.html?game=./maximum.png&smoke`);
+  await page.goto(`${base}/luau/build/web/debug.html?game=./maximum.png&smoke`);
   await page.waitForFunction(() => playerStatus.ready || playerStatus.error);
   assert.equal(await page.evaluate(() => playerStatus.error), "");
   await page.locator("#start").click();
   await page.waitForFunction(() => playerStatus.ticks >= 120 || playerStatus.error);
   assert.equal(await page.evaluate(() => playerStatus.hash), reports.luau.hash);
   assert.equal(await page.evaluate(() => playerStatus.sounds), reports.luau.sounds);
-  await page.goto(`${base}/odin/build/web/player.html?game=./oversized.wasm&smoke`);
+  await page.goto(`${base}/odin/build/web/debug.html?game=./oversized.wasm&smoke`);
   await page.waitForFunction(() => !!playerStatus.error);
   assert.match(await page.evaluate(() => playerStatus.error), /Module or PNG exceeds/);
-  await page.goto(`${base}/luau/build/web/player.html?smoke`);
+  await page.goto(`${base}/luau/build/web/debug.html?smoke`);
   await page.waitForFunction(() => playerStatus.ready || playerStatus.error);
   for (const [name, bytes, message] of [
     ...malformed,

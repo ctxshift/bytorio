@@ -193,7 +193,7 @@ try {
   for (const language of ["odin", "luau"]) {
     for (const file of ["game.png", "large.png"]) {
       await page.goto(
-        `http://127.0.0.1:${server.address().port}/${language}/build/web/player.html?game=./${file}&smoke`,
+        `http://127.0.0.1:${server.address().port}/${language}/build/web/debug.html?game=./${file}&smoke`,
       );
       await page.waitForFunction(() => playerStatus.ready || playerStatus.error);
       assert.equal(await page.evaluate(() => playerStatus.error), "");

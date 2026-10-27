@@ -35,7 +35,7 @@ try {
     ...opaqueProjects.map((project) => ({ ...project, variant: "opaque" })),
   ]) {
     const base = "/" + relative(process.cwd(), resolve(project, "build/web")).replaceAll("\\", "/");
-    await page.goto(`http://127.0.0.1:${server.address().port}${base}/player.html`);
+    await page.goto(`http://127.0.0.1:${server.address().port}${base}/debug.html`);
     for (const residentMeshes of gpu ? [false, true] : [false]) {
       const graphics = { backend: gpu ? "gpu" : "cpu", ssaa: "off", residentMeshes };
       for (const [name, masks] of [
@@ -146,7 +146,7 @@ try {
         }
       }
     }
-    await page.goto(`http://127.0.0.1:${server.address().port}${base}/player.html?game=./game.png`);
+    await page.goto(`http://127.0.0.1:${server.address().port}${base}/debug.html?game=./game.png`);
     await page.waitForFunction(() => window.playerStatus?.ready || window.playerStatus?.error);
     assert.equal(await page.evaluate(() => window.playerStatus.error), "");
     await page.screenshot({ path: resolve(root, `${variant}-${language}.png`) });

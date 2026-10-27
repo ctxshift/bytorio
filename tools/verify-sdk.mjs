@@ -223,7 +223,7 @@ const browser = await chromium.launch({
 try {
   const page = await browser.newPage();
   for (const language of ["luau", "odin"]) {
-    await page.goto(`http://127.0.0.1:${server.address().port}/${language}/build/web/player.html`);
+    await page.goto(`http://127.0.0.1:${server.address().port}/${language}/build/web/debug.html`);
     await page.waitForFunction(() => playerStatus.ready || playerStatus.error);
     assert.equal(await page.evaluate(() => playerStatus.error), "");
     const frames = await page.evaluate(

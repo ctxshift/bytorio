@@ -383,7 +383,7 @@ try {
     const base = "/" + relative(process.cwd(), web).replaceAll("\\", "/");
     for (const gameFile of ["game.png", language === "luau" ? "game.luau" : "game.wasm"]) {
       await page.goto(
-        `http://127.0.0.1:${server.address().port}${base}/player.html?game=./${gameFile}&smoke`,
+        `http://127.0.0.1:${server.address().port}${base}/debug.html?game=./${gameFile}&smoke`,
       );
       await page.waitForFunction(() => window.playerStatus?.ready || window.playerStatus?.error);
       assert.equal(await page.evaluate(() => window.playerStatus.error), "");

@@ -52,6 +52,7 @@ export function createSession({
   const document = canvas.ownerDocument;
   const events = new EventTarget();
   const listeners = new AbortController();
+  const subscriptions = new AbortController();
   const inputs = createInputState();
   let view = freeze({
     state: "idle",
@@ -125,7 +126,7 @@ export function createSession({
       return mixerLoading;
     }
     const current = generation;
-    mixerLoading = (async () => {
+    const loading = (async () => {
       const context = audio.context;
       await context.audioWorklet.addModule(asset("./audio-worklet.js"));
       const response = await fetch(asset("./audio.wasm"));
@@ -192,14 +193,22 @@ export function createSession({
       }
       node.connect(output);
     })();
+    mixerLoading = loading;
     try {
-      await mixerLoading;
+      await loading;
+    } catch (error) {
+      if (current === generation) {
+        throw error;
+      }
     } finally {
-      mixerLoading = null;
+      if (mixerLoading === loading) {
+        mixerLoading = null;
+      }
     }
   }
 
   function closeMixer() {
+    mixerLoading = null;
     mixerGeneration = 0;
     if (mixerNode) {
       mixerNode.port.postMessage({ type: "close" });
@@ -251,10 +260,11 @@ export function createSession({
     const state = snapshot();
     inspect({ status: state, audio }, type);
     events.dispatchEvent(new CustomEvent(type, { detail: state }));
+    return state;
   }
   function update(fields, type = "state") {
     view = freeze({ ...view, ...fields });
-    publish(type);
+    return publish(type);
   }
   function clearInput() {
     inputs.clear();
@@ -421,7 +431,7 @@ export function createSession({
       source = new URL("game.png", document.baseURI);
     }
     const nextGraphics = normalizeGraphics(options.graphics ?? graphics);
-    selected = cartridge;
+    selected = file || source.href;
     const closing = stopWorker();
     const current = generation;
     graphics = nextGraphics;
@@ -439,10 +449,10 @@ export function createSession({
       renderFps: setting(),
       simulationHz: 60,
     });
-    publish("state");
     const result = new Promise((resolve, reject) => {
       loadOperation = { resolve, reject };
     });
+    publish("state");
     void (async () => {
       await closing;
       if (disposed || current !== generation) {
@@ -606,7 +616,11 @@ export function createSession({
         fields[name] = data[name];
       }
     }
-    update(
+    const operation = data.type === "ready" ? loadOperation : null;
+    if (operation) {
+      loadOperation = null;
+    }
+    const presented = update(
       {
         ...fields,
         state: started ? "running" : view.state === "paused" ? "paused" : "ready",
@@ -620,10 +634,10 @@ export function createSession({
       "frame",
     );
     if (data.type === "ready") {
-      const operation = loadOperation;
-      loadOperation = null;
-      publish("state");
-      operation?.resolve(snapshot());
+      if (current === generation) {
+        publish("state");
+      }
+      operation?.resolve(presented);
     }
     maybePlay();
     requestFrame();
@@ -706,7 +720,7 @@ export function createSession({
         throw new TypeError("Unsupported runtime event or listener");
       }
       const receive = (event) => listener(event.detail);
-      events.addEventListener(type, receive);
+      events.addEventListener(type, receive, { signal: subscriptions.signal });
       return () => events.removeEventListener(type, receive);
     },
     load,
@@ -763,6 +777,10 @@ export function createSession({
       if (disposal) {
         return disposal;
       }
+      let completion;
+      disposal = new Promise((resolve, reject) => {
+        completion = { resolve, reject };
+      });
       disposed = true;
       const closing = stopWorker();
       listeners.abort();
@@ -770,14 +788,18 @@ export function createSession({
       textInput.destroy();
       scope.cancelAnimationFrame(animation);
       update({ state: "disposed", ready: false });
-      disposal = (async () => {
-        await closing;
-        output?.disconnect();
-        if (ownsAudio && audio.context && audio.context.state !== "closed") {
-          await audio.context.close();
+      subscriptions.abort();
+      void (async () => {
+        try {
+          await closing;
+          output?.disconnect();
+          if (ownsAudio && audio.context && audio.context.state !== "closed") {
+            await audio.context.close();
+          }
+        } finally {
+          ownedCanvases.delete(canvas);
         }
-        ownedCanvases.delete(canvas);
-      })();
+      })().then(completion.resolve, completion.reject);
       return disposal;
     },
   };

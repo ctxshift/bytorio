@@ -45,7 +45,7 @@ const server = createServer(async (request, response) => {
     const pathname = new URL(request.url, "http://localhost").pathname;
     const [, mode, ...parts] = pathname.split("/");
     assert(["red", "green"].includes(mode));
-    const name = parts.join("/") || "player.html";
+    const name = parts.join("/") || "debug.html";
     const path = resolve(web, name);
     assert(path.startsWith(web + sep));
     let bytes = await readFile(path);
@@ -123,7 +123,7 @@ try {
         }
       };
     });
-    await page.goto(`http://127.0.0.1:${server.address().port}/${mode}/player.html`);
+    await page.goto(`http://127.0.0.1:${server.address().port}/${mode}/debug.html`);
     await page.waitForFunction(() => playerStatus.ready || playerStatus.error);
     const ready = await page.evaluate(() => ({
       ...startupObservation.ready,

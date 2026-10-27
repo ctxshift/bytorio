@@ -160,7 +160,7 @@ try {
         parityError,
         decoderMemoryBytes: result.memoryBytes,
       };
-      await page.goto(`${origin}/player.html`);
+      await page.goto(`${origin}/debug.html`);
       await page.waitForFunction(() => playerStatus.ready || playerStatus.error);
       assert.equal(await page.evaluate(() => playerStatus.error), "");
       await page.click("#start");

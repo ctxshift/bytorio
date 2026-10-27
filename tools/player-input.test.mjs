@@ -43,6 +43,7 @@ test("pointer selection preserves first held contact, clips hover and rejects in
 
 test("presets, binding overrides and explicit layouts use the same validated contract", () => {
   const defaults = normalizePlayerConfig();
+  assert.deepEqual(normalizePlayerConfig(JSON.parse(JSON.stringify(defaults))), defaults);
   assert.equal(defaults.controls.layout.length, 5);
   const custom = normalizePlayerConfig({
     controls: { overrides: { action: { label: "Jump", bindings: ["action", "reset"] } } },

@@ -42,22 +42,27 @@ for (const game of games) {
   }
   const target = resolve(output, "games", game.id);
   await cp(source, target, { recursive: true });
-  // Use the canonical player markup so required runtime controls stay in sync.
-  // Legacy demo control scripts are deliberately not included in this shell.
+  // Configure the SDK player through its public configuration contract.
   const player = await readFile(resolve(repo, "runtime/odin/web/player.html"), "utf8");
   await writeFile(
     resolve(target, "player.html"),
     player
       .replace("<title>Game player</title>", `<title>${escape(game.title)} · Bytorio</title>`)
-      .replace("</head>", '<link rel="stylesheet" href="./showcase-player.css"></head>')
-      .replace(
-        "<body>",
-        `<body data-action="${game.action}" data-instructions="${escape(game.controls)}">`,
-      )
-      .replace("</body>", '<script type="module" src="./showcase-controls.js"></script></body>'),
+      .replace("</head>", '<link rel="stylesheet" href="./showcase-player.css"></head>'),
+  );
+  await writeFile(
+    resolve(target, "player-config.json"),
+    JSON.stringify(
+      {
+        title: game.title,
+        instructions: game.controls,
+        controls: { visibility: "always", overrides: { action: { label: game.action } } },
+      },
+      null,
+      2,
+    ),
   );
   await cp(resolve(repo, "site/player.css"), resolve(target, "showcase-player.css"));
-  await cp(resolve(repo, "site/player-controls.js"), resolve(target, "showcase-controls.js"));
   await emit(`showcase/${game.id}/index.html`, gamePage(game));
 }
 await emit("index.html", home());

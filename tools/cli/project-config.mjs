@@ -19,6 +19,7 @@ const projectKeys = new Set([
   "display",
   "content",
   "save",
+  "player",
   "custom",
 ]);
 

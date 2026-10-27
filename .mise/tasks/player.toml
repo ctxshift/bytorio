@@ -154,7 +154,9 @@ sources = [
 ]
 outputs = [
   "build/odin-player/web/player.html",
-  "build/odin-player/web/player.js",
+  "build/odin-player/web/debug-player.js",
+  "build/odin-player/web/debug.html",
+  "build/odin-player/web/bootstrap.js",
   "build/odin-player/web/runtime.js",
   "build/odin-player/web/session.js",
   "build/odin-player/web/input.js",

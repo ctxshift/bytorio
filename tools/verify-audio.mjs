@@ -737,7 +737,7 @@ try {
     };
     await page.route("**/audio.wasm", delayMixer);
     await page.goto(
-      `http://127.0.0.1:${server.address().port}/startup-${language}/build/web/player.html`,
+      `http://127.0.0.1:${server.address().port}/startup-${language}/build/web/debug.html`,
     );
     await page.waitForFunction(() => playerStatus.ready || playerStatus.error);
     assert.equal(await page.evaluate(() => playerStatus.error), "");
@@ -776,7 +776,7 @@ try {
       "",
       "audio scheduling continues after startup",
     );
-    await page.goto(`http://127.0.0.1:${server.address().port}/${language}/build/web/player.html`);
+    await page.goto(`http://127.0.0.1:${server.address().port}/${language}/build/web/debug.html`);
     await page.waitForFunction(() => playerStatus.ready || playerStatus.error);
     assert.equal(await page.evaluate(() => playerStatus.error), "");
     await page.click("#start");

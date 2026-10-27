@@ -30,6 +30,7 @@ await writeFile(
 <canvas width="640" height="360"></canvas><canvas width="640" height="360"></canvas>
 <button>Play</button><script type="module">
 import {createRuntime, buttons} from './luau/build/web/runtime.js';
+window.createRuntime=createRuntime;
 const canvases = document.querySelectorAll('canvas');
 window.sessions = [...canvases].map(canvas => createRuntime({canvas, diagnostics:true}));
 window.bindings = buttons;
@@ -99,7 +100,30 @@ try {
       failed = session.state === "failed";
     }
     await session.load("./odin.png");
-    await Promise.all([session.dispose(), session.dispose()]);
+    let replacement;
+    const off = session.on("frame", () => {
+      off();
+      replacement = session.load("./luau.png");
+    });
+    const ready = await session.load("./odin.png");
+    if (!ready.ready || ready.state !== "ready") {
+      throw new Error("A ready listener must not resolve a replacement load");
+    }
+    await replacement;
+    history.replaceState(null, "", "/another/page.html");
+    await session.restart();
+    history.replaceState(null, "", "/index.html");
+    let reentrant;
+    session.on("state", (state) => {
+      if (state.state === "disposed") {
+        reentrant = session.dispose();
+      }
+    });
+    const disposing = session.dispose();
+    if (reentrant !== disposing) {
+      throw new Error("Disposal must share completion even inside lifecycle listeners");
+    }
+    await Promise.all([disposing, session.dispose()]);
     return { rejected, superseded, failed, state: session.state };
   });
   assert.deepEqual(lifecycle, {
@@ -114,6 +138,29 @@ try {
     secondTick,
   );
   await page.evaluate(() => window.sessions[1].dispose());
+  const borrowed = await page.evaluate(async () => {
+    const audioContext = new AudioContext();
+    const canvas = document.querySelector("canvas");
+    const session = window.createRuntime({ canvas, audioContext });
+    let disposing;
+    session.on("state", (state) => {
+      if (state.state === "loading") {
+        disposing = session.dispose();
+      }
+    });
+    const cancelled = await session.load("./odin.png").then(
+      () => false,
+      (error) => error.name === "AbortError",
+    );
+    if (!cancelled) {
+      throw new Error("Disposal from a loading listener must cancel its load");
+    }
+    await disposing;
+    const retained = audioContext.state !== "closed";
+    await audioContext.close();
+    return retained;
+  });
+  assert.equal(borrowed, true, "Disposal preserves a host-owned audio context");
   assert.deepEqual(errors, []);
   await page.close();
 } finally {

@@ -12,6 +12,7 @@ import { produceHostSdk } from "./sdk/produce.mjs";
 import { assembleSdk } from "./sdk/assemble.mjs";
 import { chromium } from "./browser-timing.mjs";
 import { serve } from "./serve.mjs";
+import { bindPlayer } from "./browser-player.mjs";
 import { parseSdkManifest } from "./cli/sdk-manifest.mjs";
 
 const host = requireCliHost();
@@ -132,6 +133,12 @@ try {
     });
   }
   assert.ok(!requests.some((path) => path.endsWith(".tar.gz")), "New downloaded SDK payloads");
+  const configuredProject = resolve(sandbox, "luau game/bytorio.toml");
+  await writeFile(
+    configuredProject,
+    (await readFile(configuredProject, "utf8")) +
+      '\n[player]\ninstructions="Arrows move. Space jumps."\n[player.controls]\nvisibility="always"\n[player.controls.overrides.action]\nlabel="Jump"\n',
+  );
   await invoke("luau", "check");
   assert.ok(
     !requests.some((path) => path.endsWith(manifest.components.web.asset)),
@@ -218,10 +225,18 @@ try {
   browser = await chromium.launch({ channel: process.env.PLAYER_BROWSER_CHANNEL || undefined });
   const preview = await browser.newPage();
   await preview.goto(`${playerUrl}?smoke`);
-  await preview.waitForFunction(() => playerStatus.ready || playerStatus.error);
-  await preview.click("#start");
-  await preview.waitForFunction(() => playerStatus.renderedTicks === 120 || playerStatus.error);
-  assert.equal(await preview.evaluate(() => playerStatus.error), "");
+  await bindPlayer(preview);
+  await preview.waitForFunction(() => window.hostedPlayer.runtime.getSnapshot().ready);
+  assert.equal(await preview.evaluate(() => "playerStatus" in window), false);
+  await preview.getByRole("button", { name: "Play game", exact: true }).click();
+  assert.equal(await preview.getByRole("button", { name: "Jump", exact: true }).isVisible(), true);
+  await preview.waitForFunction(
+    () => window.hostedPlayer.runtime.getSnapshot().renderedTicks >= 120,
+  );
+  assert.equal(
+    await preview.evaluate(async () => window.hostedPlayer.runtime.getSnapshot().error),
+    "",
+  );
   const initialUrl = preview.url();
   await writeFile(resolve(luau, "src/main.luau"), "this is not valid Luau !");
   // Wait for the failed build diagnostic, then recover through the same watcher.
@@ -240,8 +255,12 @@ try {
   const reloaded = preview.waitForURL((url) => url.href !== initialUrl, { timeout: 60000 });
   await writeFile(resolve(luau, "src/main.luau"), manifest.starters.luau.source + "\n-- edited\n");
   await reloaded;
-  await preview.waitForFunction(() => playerStatus.ready || playerStatus.error);
-  assert.equal(await preview.evaluate(() => playerStatus.error), "");
+  await bindPlayer(preview);
+  await preview.waitForFunction(() => window.hostedPlayer.runtime.getSnapshot().ready);
+  assert.equal(
+    await preview.evaluate(async () => window.hostedPlayer.runtime.getSnapshot().error),
+    "",
+  );
   await preview.close();
   const stopped = new Promise((done) => running.once("exit", done));
   running.kill("SIGTERM");
@@ -282,8 +301,14 @@ try {
   const played = {};
   for (const language of languages) {
     const page = await browser.newPage();
+    await page.goto(`http://127.0.0.1:${website.address().port}/nested/${language}/player.html`);
+    await bindPlayer(page);
+    await page.waitForFunction(() => window.hostedPlayer.runtime.getSnapshot().ready);
+    await page.getByRole("button", { name: "Play game", exact: true }).click();
+    await page.waitForFunction(() => window.hostedPlayer.runtime.getSnapshot().ticks > 5);
+    assert.equal(await page.evaluate(() => "playerStatus" in window), false);
     await page.goto(
-      `http://127.0.0.1:${website.address().port}/nested/${language}/player.html?smoke`,
+      `http://127.0.0.1:${website.address().port}/nested/${language}/debug.html?smoke`,
     );
     await page.waitForFunction(() => playerStatus.ready || playerStatus.error);
     await page.click("#start");

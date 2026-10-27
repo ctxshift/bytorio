@@ -65,10 +65,9 @@ export async function produceHostSdk({ version, cliVersionRange, output }) {
       },
       luauExecutor: ref("executor", "luau-executor.wasm"),
     },
-    // The candidate still uses the legacy shell until the public runtime extraction lands.
     web: {
-      runtime: ref("web", "player.js"),
-      player: ref("web", "player.js"),
+      runtime: ref("web", "runtime.js"),
+      player: ref("web", "web-player.js"),
       page: ref("web", "player.html"),
     },
     languages: {

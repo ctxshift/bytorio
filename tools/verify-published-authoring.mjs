@@ -8,6 +8,7 @@ import { promisify } from "node:util";
 import { requireCliHost } from "./host-platform.mjs";
 import { chromium } from "./browser-timing.mjs";
 import { repo } from "./toolchain.mjs";
+import { bindPlayer } from "./browser-player.mjs";
 
 const [installed] = process.argv.slice(2);
 if (!installed) {
@@ -84,7 +85,16 @@ try {
     });
     browser ??= await chromium.launch({ channel: process.env.PLAYER_BROWSER_CHANNEL || undefined });
     const page = await browser.newPage();
-    await page.goto(`${url}?smoke`);
+    const production = (await fetch(new URL("bootstrap.js", url))).ok;
+    if (production) {
+      await page.goto(url);
+      await bindPlayer(page);
+      await page.waitForFunction(() => window.hostedPlayer.runtime.getSnapshot().ready);
+      await page.getByRole("button", { name: "Play game", exact: true }).click();
+      await page.waitForFunction(() => window.hostedPlayer.runtime.getSnapshot().ticks > 5);
+      assert.equal(await page.evaluate(() => "playerStatus" in window), false);
+    }
+    await page.goto(`${url}${production ? "debug.html" : ""}?smoke`);
     await page.waitForFunction(() => playerStatus.ready || playerStatus.error);
     await page.click("#start");
     await page.waitForFunction(() => playerStatus.renderedTicks === 120 || playerStatus.error);

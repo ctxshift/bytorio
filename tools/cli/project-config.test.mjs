@@ -24,6 +24,10 @@ test("TOML config separates author settings from exact portable SDK pins", () =>
     'schema = 1\ntitle = "Game"\n[[content]]\nid = 1\npath = "assets/data.bin"\n',
   );
   assert.equal(config.language, "luau");
+  assert.equal(
+    parseProject('schema = 1\n[player.controls]\npreset="pointer"\n').player.controls.preset,
+    "pointer",
+  );
   assert.deepEqual(
     config.content.map(({ id, path }) => ({ id, path })),
     [{ id: 1, path: "assets/data.bin" }],

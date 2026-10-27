@@ -295,7 +295,7 @@ try {
               backend === "gpu"
                 ? "renderer=gpu&gpu-meshes&ssaa=1080p&smooth-pan"
                 : "renderer=cpu&ssaa=off";
-            const url = `${origin}/build/compact-3d/riverside/${language}/build/web/player.html?${query}`;
+            const url = `${origin}/build/compact-3d/riverside/${language}/build/web/debug.html?${query}`;
             if (cache !== "fresh-context") {
               await measure(page, url);
             }

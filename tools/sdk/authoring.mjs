@@ -11,6 +11,7 @@ import { decodeCartridge } from "../../runtime/odin/web/cartridge.js";
 import { branding } from "../branding.mjs";
 import { createScaffolder } from "./scaffold.mjs";
 import contract from "../../sdk/contract.json" with { type: "json" };
+import { normalizePlayerConfig } from "../../runtime/odin/web/player-config.js";
 
 export const authoringProtocol = 1;
 export const sdkContract = contract;
@@ -85,6 +86,10 @@ export async function createAuthoring({ sdk, check, log = console.log }) {
     }
     const project = await realpath(resolve(path));
     encodeSaveIdentity(value.save);
+    const player = normalizePlayerConfig({
+      title: value.title || branding.gameTitle,
+      ...value.player,
+    });
     const profile =
       value.sdk !== undefined
         ? contract.profiles.find((item) => item.sdk === value.sdk)
@@ -113,6 +118,7 @@ export async function createAuthoring({ sdk, check, log = console.log }) {
     }
     return {
       ...value,
+      player,
       sdk: profile.sdk,
       language,
       display,
@@ -351,20 +357,31 @@ export async function createAuthoring({ sdk, check, log = console.log }) {
         ) + "\n",
       );
       if (platform === "web") {
-        const html = await readFile(resolve(target, "player.html"), "utf8");
+        await writeFile(
+          resolve(target, "player-config.json"),
+          JSON.stringify(
+            { ...spec.player, cartridge: `./game.png?revision=${cartridgeRevision}` },
+            null,
+            2,
+          ) + "\n",
+        );
         const title = String(spec.title || branding.gameTitle)
           .replaceAll("&", "&amp;")
           .replaceAll("<", "&lt;")
           .replaceAll(">", "&gt;");
-        await writeFile(
-          resolve(target, "player.html"),
-          html
-            .replace(/<title>.*?<\/title>/, () => `<title>${title}</title>`)
-            .replace(
-              '<script type="module"',
-              `<script>globalThis.playerCartridge="./game.png?revision=${cartridgeRevision}"</script>\n<script type="module"`,
-            ),
-        );
+        for (const page of ["player.html", "debug.html"]) {
+          const html = await readFile(resolve(target, page), "utf8");
+          const titled = html.replace(/<title>.*?<\/title>/, () => `<title>${title}</title>`);
+          await writeFile(
+            resolve(target, page),
+            page === "debug.html"
+              ? titled.replace(
+                  '<script type="module"',
+                  `<script>globalThis.playerCartridge="./game.png?revision=${cartridgeRevision}"</script>\n<script type="module"`,
+                )
+              : titled,
+          );
+        }
       }
     }
     log(`Built ${spec.language}: ${relative(process.cwd(), spec.buildRoot)}`);

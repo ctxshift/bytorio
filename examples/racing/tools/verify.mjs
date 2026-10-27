@@ -222,7 +222,7 @@ try {
   });
   for (const language of ["odin", "luau"]) {
     await page.goto(
-      `http://127.0.0.1:${server.address().port}/player.html?fps=30${language === "luau" ? "&game=./racing.luau" : ""}`,
+      `http://127.0.0.1:${server.address().port}/debug.html?fps=30${language === "luau" ? "&game=./racing.luau" : ""}`,
     );
     await page.waitForFunction(() => playerStatus.ready || playerStatus.error);
     assert.equal(await page.evaluate(() => playerStatus.error), "");

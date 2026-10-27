@@ -28,9 +28,9 @@ function keys(value, allowed, name) {
     }
   }
 }
-function label(value, name) {
-  if (typeof value !== "string" || !value.trim() || value.length > 80) {
-    throw new TypeError(`${name} must be a nonempty label of at most 80 characters`);
+function label(value, name, maximum = 80) {
+  if (typeof value !== "string" || !value.trim() || value.length > maximum) {
+    throw new TypeError(`${name} must be a nonempty label of at most ${maximum} characters`);
   }
   return value;
 }
@@ -41,8 +41,18 @@ export function normalizePlayerConfig(value = {}) {
   if (value.diagnostics !== undefined && typeof value.diagnostics !== "boolean") {
     throw new TypeError("Player diagnostics must be boolean");
   }
+  if (
+    value.instructions !== undefined &&
+    (typeof value.instructions !== "string" || value.instructions.length > 1000)
+  ) {
+    throw new TypeError("Player instructions must be text of at most 1000 characters");
+  }
   const controls = value.controls ?? {};
-  keys(controls, ["preset", "visibility", "pointer", "overrides", "layout"], "controls");
+  keys(
+    controls,
+    ["preset", "visibility", "pointer", "keyboard", "gamepad", "overrides", "layout"],
+    "controls",
+  );
   const preset = controls.preset ?? "dpad";
   const visibility = controls.visibility ?? "auto";
   if (!["dpad", "pointer", "none"].includes(preset)) {
@@ -51,8 +61,10 @@ export function normalizePlayerConfig(value = {}) {
   if (!["auto", "always", "never"].includes(visibility)) {
     throw new TypeError("Controls visibility must be auto, always or never");
   }
-  if (controls.pointer !== undefined && typeof controls.pointer !== "boolean") {
-    throw new TypeError("Pointer controls must be boolean");
+  for (const name of ["pointer", "keyboard", "gamepad"]) {
+    if (controls[name] !== undefined && typeof controls[name] !== "boolean") {
+      throw new TypeError(`${name} controls must be boolean`);
+    }
   }
   if (
     controls.layout !== undefined &&
@@ -104,14 +116,15 @@ export function normalizePlayerConfig(value = {}) {
     throw new TypeError("Override refers to an unknown control ID");
   }
   return Object.freeze({
-    title: value.title === undefined ? "Game" : label(value.title, "Player title"),
-    instructions:
-      value.instructions === undefined ? "" : label(value.instructions, "Player instructions"),
+    title: value.title === undefined ? "Game" : label(value.title, "Player title", 256),
+    instructions: value.instructions ?? "",
     diagnostics: value.diagnostics === true,
     controls: Object.freeze({
       preset,
       visibility,
       pointer: controls.pointer !== false,
+      keyboard: controls.keyboard !== false,
+      gamepad: controls.gamepad !== false,
       layout: Object.freeze(buttons),
     }),
   });

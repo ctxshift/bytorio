@@ -18,7 +18,7 @@ try {
   for (const language of ["odin", "luau"]) {
     const base = `/build/compact-3d/riverside/${language}/build/web`;
     const page = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
-    await page.goto(`${origin}${base}/player.html?renderer=gpu&gpu-meshes&ssaa=1080p&smooth-pan`);
+    await page.goto(`${origin}${base}/debug.html?renderer=gpu&gpu-meshes&ssaa=1080p&smooth-pan`);
     const ready = async () => {
       await page.waitForFunction(() => window.playerStatus?.ready || window.playerStatus?.error);
       assert.equal(await page.evaluate(() => window.playerStatus.error), "");

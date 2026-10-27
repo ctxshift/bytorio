@@ -35,7 +35,7 @@ try {
         const page = await browser.newPage();
         const base = `/build/compact-3d/${language}/build/web`;
         await page.goto(
-          `http://127.0.0.1:${server.address().port}${base}/player.html?renderer=gpu&ssaa=${ssaa}&pixel-snap&smoke${residentMeshes ? "&gpu-meshes" : ""}`,
+          `http://127.0.0.1:${server.address().port}${base}/debug.html?renderer=gpu&ssaa=${ssaa}&pixel-snap&smoke${residentMeshes ? "&gpu-meshes" : ""}`,
         );
         await page.waitForFunction(() => window.playerStatus?.ready || window.playerStatus?.error);
         await page.locator("#start").click();
@@ -71,7 +71,7 @@ try {
     const page = await browser.newPage({ viewport: { width: 1920, height: 1400 } });
     const base = `/build/compact-3d/${language}/build/web`;
     await page.goto(
-      `http://127.0.0.1:${server.address().port}${base}/player.html?renderer=gpu&ssaa=1080p&smooth-pan`,
+      `http://127.0.0.1:${server.address().port}${base}/debug.html?renderer=gpu&ssaa=1080p&smooth-pan`,
     );
     await page.waitForFunction(() => window.playerStatus?.ready || window.playerStatus?.error);
     assert.equal(await page.evaluate(() => window.playerStatus.error), "");
@@ -274,7 +274,7 @@ try {
     }
   }
   const page = await browser.newPage();
-  await page.goto(`http://127.0.0.1:${server.address().port}/build/odin-player/web/player.html`);
+  await page.goto(`http://127.0.0.1:${server.address().port}/build/odin-player/web/debug.html`);
   await page.waitForFunction(() => window.playerStatus?.ready);
   report.browserFixtures = await page.evaluate(async () => {
     const { createGpu, normalizeGraphics } = await import("./gpu.js");
@@ -573,7 +573,7 @@ OffscreenCanvas.prototype.getContext=function(kind,...args){return kind==="webgl
         (await response.text());
       await route.fulfill({ response, body });
     });
-    const base = `http://127.0.0.1:${server.address().port}/build/odin-player/web/player.html`;
+    const base = `http://127.0.0.1:${server.address().port}/build/odin-player/web/debug.html`;
     await fallbackPage.goto(base + "?renderer=auto");
     await fallbackPage.waitForFunction(
       () => window.playerStatus?.ready || window.playerStatus?.error,

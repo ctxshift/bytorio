@@ -13,7 +13,9 @@ import {
 
 const webScripts = [
   "player.html",
-  "player.js",
+  "debug.html",
+  "debug-player.js",
+  "bootstrap.js",
   "runtime.js",
   "session.js",
   "input.js",

@@ -50,7 +50,14 @@ export function attachPlayerInput({ runtime, canvas, controls, config }) {
     runtime.setInput("keyboard", { buttons: mask >>> 0 });
   }
   listen(canvas, "keydown", (event) => {
-    if (!active() || !Object.hasOwn(keyMasks, event.code)) {
+    if (
+      !config.keyboard ||
+      !active() ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.altKey ||
+      !Object.hasOwn(keyMasks, event.code)
+    ) {
       return;
     }
     event.preventDefault();
@@ -183,6 +190,7 @@ export function attachPlayerInput({ runtime, canvas, controls, config }) {
       reset();
     }
   });
+  const unsubscribeError = runtime.on("error", reset);
   const media = scope.matchMedia("(any-pointer: coarse)");
   function visibility() {
     controls.hidden =
@@ -195,7 +203,7 @@ export function attachPlayerInput({ runtime, canvas, controls, config }) {
   visibility();
   let animation;
   function poll() {
-    if (active()) {
+    if (config.gamepad && active()) {
       const pad = [...(scope.navigator.getGamepads?.() || [])].find(
         (pad) => pad?.connected && pad.mapping === "standard",
       );
@@ -220,6 +228,7 @@ export function attachPlayerInput({ runtime, canvas, controls, config }) {
   animation = scope.requestAnimationFrame(poll);
   return () => {
     unsubscribe();
+    unsubscribeError();
     abort.abort();
     scope.cancelAnimationFrame(animation);
     reset();

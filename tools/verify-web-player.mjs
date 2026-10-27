@@ -6,6 +6,7 @@ import { once } from "node:events";
 import { createProject, buildProject } from "./sdk/project.mjs";
 import { chromium } from "./browser-timing.mjs";
 import { serve } from "./serve.mjs";
+import { bindPlayer } from "./browser-player.mjs";
 
 const root = resolve("build/web-player-verification", randomUUID());
 await mkdir(root, { recursive: true });
@@ -162,6 +163,23 @@ try {
   await page.waitForFunction(() => window.game.getSnapshot().y === 6);
   await page.evaluate(() => window.player.dispose());
   assert.equal(await page.locator("canvas").count(), 0);
+  const unwanted = [];
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname.endsWith("/must-not-fetch.png")) {
+      unwanted.push(request.url());
+    }
+  });
+  await page.goto(
+    `http://127.0.0.1:${server.address().port}/game/build/web/player.html?local&game=must-not-fetch.png`,
+  );
+  await bindPlayer(page);
+  assert.equal(await page.evaluate(() => window.hostedPlayer.runtime.state), "idle");
+  assert.deepEqual(unwanted, []);
+  await page.locator('input[type="file"]').setInputFiles(resolve(root, "game/build/game.png"));
+  await page.waitForFunction(() => window.hostedPlayer.runtime.getSnapshot().ready);
+  await page.getByRole("button", { name: "Play game", exact: true }).click();
+  await page.waitForFunction(() => window.hostedPlayer.runtime.getSnapshot().ticks > 5);
+  await page.evaluate(() => window.hostedPlayer.dispose());
   assert.deepEqual(errors, []);
   await context.close();
 } finally {

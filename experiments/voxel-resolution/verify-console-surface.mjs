@@ -19,7 +19,7 @@ try {
   for (const language of ["odin", "luau"]) {
     const base = `/build/compact-3d/riverside/${language}/build/web`;
     const page = await browser.newPage({ viewport: { width: 1920, height: 1400 } });
-    await page.goto(`${origin}${base}/player.html?renderer=gpu&surface-samples&smooth-pan`);
+    await page.goto(`${origin}${base}/debug.html?renderer=gpu&surface-samples&smooth-pan`);
     await page.waitForFunction(() => window.playerStatus?.ready || window.playerStatus?.error);
     assert.equal(await page.evaluate(() => window.playerStatus.error), "");
     assert(await page.locator("#graphics-surface").isChecked());
