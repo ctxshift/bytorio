@@ -10,6 +10,7 @@ import { compileCli } from "./compile-cli.mjs";
 import { requireCliHost } from "./host-platform.mjs";
 import { repo } from "./toolchain.mjs";
 import { produceHostSdk } from "./sdk/produce.mjs";
+import { assembleSdk } from "./sdk/assemble.mjs";
 import { chromium } from "./browser-timing.mjs";
 import { serve } from "./serve.mjs";
 
@@ -26,11 +27,23 @@ const server = createServer();
 const execute = promisify(execFile);
 let browser, website;
 try {
-  const { manifest, metadata, archives } = await produceHostSdk({
+  const produced = await produceHostSdk({
     version: "0.2.0-preview.1",
     cliVersionRange: ">=0.1.0-0 <1.0.0",
     output: resolve(sandbox, "SDK candidate"),
   });
+  const {
+    manifest,
+    metadata,
+    output: assembled,
+  } = await assembleSdk({
+    candidates: [{ host: host.id, directory: produced.output }],
+    canonicalHost: host.id,
+    output: resolve(sandbox, "assembled SDK release"),
+  });
+  const archives = new Map(
+    Object.values(manifest.components).map(({ asset }) => [asset, resolve(assembled, asset)]),
+  );
   await assert.rejects(
     produceHostSdk({
       version: manifest.version,

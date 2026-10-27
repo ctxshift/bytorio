@@ -27,6 +27,13 @@ Before publication, assemble the host components with one canonical set of
 shared payloads and qualify consumers against that assembled manifest. Do not
 assume independently produced common archives have identical bytes.
 
+`assemble:sdk-release` now merges verified host candidates, checks matching
+contracts and host ownership, selects canonical common bytes, and validates all
+published entrypoints and executable modes. It rejects conflicting assets or
+corrupt archives, reserves its output exclusively, and writes metadata last.
+The isolated SDK consumer test exercises this assembled output. Cross-host
+release qualification and publication still require workflow integration.
+
 The [backend qualification run](https://github.com/ctxshift/bytorio/actions/runs/40472926173)
 passed all 39 gates on Windows x64 and Apple Silicon, plus the Intel Mac CLI
 gate. The complete local 39-gate validation also passed at that functional
