@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { relative, resolve } from "node:path";
+import { isAbsolute, relative, resolve, sep } from "node:path";
 import { readGameProject, resolveGameProject } from "./project-config.mjs";
 import { loadReleasedAuthoring } from "./released-sdk.mjs";
 import { checkGame } from "../sdk/check.mjs";
@@ -26,6 +26,18 @@ export async function authorGame(action, directory, options) {
     target: targets.includes("native") ? "native" : "web",
   });
   const expected = revision(project);
+  if (options.output) {
+    const output = resolve(options.output);
+    for (const target of ["web", "native"]) {
+      const exportRoot = resolve(project.directory, "build", target);
+      const path = relative(exportRoot, output);
+      if (path && path !== ".." && !path.startsWith(".." + sep) && !isAbsolute(path)) {
+        throw new Error(
+          "Cartridge output cannot overwrite a player export; choose dist/game.png instead",
+        );
+      }
+    }
+  }
   const authoring = await loadReleasedAuthoring(project.release, {
     ...options,
     log: () => {},
@@ -62,7 +74,7 @@ export async function authorGame(action, directory, options) {
       );
       return { ...project, spec };
     }
-    const buildRoot = await publishBuild(project.directory, stage);
+    const { buildRoot, preservedTargets } = await publishBuild(project.directory, stage);
     published = true;
     if (action === "pack") {
       const cartridge = await copyCartridge(
@@ -70,13 +82,21 @@ export async function authorGame(action, directory, options) {
         options.output ?? resolve(buildRoot, "game.png"),
       );
       console.log(`Packed cartridge: ${relative(process.cwd(), cartridge)}`);
+      reportPreserved(preservedTargets);
       return { ...project, spec, buildRoot, cartridge };
     }
     console.log(`Built ${targets.join(" and ")}: ${relative(process.cwd(), buildRoot)}`);
+    reportPreserved(preservedTargets);
     return { ...project, spec, buildRoot };
   } finally {
     if (!published) {
       await removeGenerated(stage);
     }
+  }
+}
+
+function reportPreserved(targets) {
+  for (const target of targets) {
+    console.log(`Kept ${target} export unchanged; run byt build --target ${target} to update it.`);
   }
 }

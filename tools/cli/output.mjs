@@ -5,6 +5,7 @@ import {
   lstat,
   mkdir,
   mkdtemp,
+  open,
   readFile,
   readdir,
   rename,
@@ -13,8 +14,82 @@ import {
 } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { dirname, resolve, sep } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 
 const marker = ".bytorio-output.json";
+const playerTargets = ["web", "native"];
+const publicationTimeoutMs = 5000;
+const publicationRetryMs = 25;
+
+async function publicationLock(parent) {
+  const path = resolve(parent, "publish.lock");
+  const deadline = Date.now() + publicationTimeoutMs;
+  while (true) {
+    try {
+      const file = await open(path, "wx");
+      return async () => {
+        await file.close();
+        await rm(path);
+      };
+    } catch (error) {
+      if (error.code !== "EEXIST") {
+        throw error;
+      }
+      const info = await lstat(path).catch((error) => {
+        if (error.code !== "ENOENT") {
+          throw error;
+        }
+        return null;
+      });
+      if (info && !info.isFile()) {
+        throw new Error("Build publication lock cannot be a link or special file", {
+          cause: error,
+        });
+      }
+      if (Date.now() >= deadline) {
+        throw new Error(
+          "Another byt command is publishing this project; wait and retry. If no byt commands are running, remove .bytorio/staging/publish.lock and retry.",
+          { cause: error },
+        );
+      }
+      await delay(publicationRetryMs);
+    }
+  }
+}
+
+async function directoryExists(path) {
+  try {
+    if (!(await lstat(path)).isDirectory()) {
+      throw new Error("Player exports cannot contain links or special files");
+    }
+    return true;
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      return false;
+    }
+    throw error;
+  }
+}
+
+// Export files never alias the SDK cache. Hard links retain complete immutable
+// snapshots without copying large cartridges when another target is published.
+async function linkExport(source, destination) {
+  if (!(await lstat(source)).isDirectory()) {
+    throw new Error("Player exports cannot contain links or special files");
+  }
+  for (const entry of await readdir(source, { withFileTypes: true })) {
+    const input = resolve(source, entry.name);
+    const output = resolve(destination, entry.name);
+    if (entry.isDirectory()) {
+      await mkdir(output);
+      await linkExport(input, output);
+    } else if (entry.isFile()) {
+      await link(input, output);
+    } else {
+      throw new Error("Player exports cannot contain links or special files");
+    }
+  }
+}
 
 export async function projectDirectory(project, ...segments) {
   let path = project;
@@ -98,36 +173,58 @@ async function ownedBuild(path) {
 
 export async function publishBuild(project, stage) {
   const parent = resolve(project, ".bytorio/staging");
-  if (!stage.startsWith(parent + sep) || !(await lstat(stage)).isDirectory()) {
+  stage = resolve(stage);
+  if (dirname(stage) !== parent || !(await lstat(stage)).isDirectory()) {
     throw new Error("Only an owned staged build can be published");
   }
-  await writeFile(
-    resolve(stage, marker),
-    JSON.stringify({ schema: 1, generatedBy: "byt" }) + "\n",
-    {
-      flag: "wx",
-    },
-  );
-  const destination = resolve(project, "build");
-  const previous = (await ownedBuild(destination))
-    ? await mkdtemp(resolve(parent, "previous-"))
-    : null;
-  if (previous) {
-    await rename(destination, resolve(previous, "build"));
-  }
+  const unlock = await publicationLock(parent);
   try {
-    await rename(stage, destination);
-  } catch (error) {
+    await writeFile(
+      resolve(stage, marker),
+      JSON.stringify({ schema: 1, generatedBy: "byt" }) + "\n",
+      { flag: "wx" },
+    );
+    const destination = resolve(project, "build");
+    const exists = await ownedBuild(destination);
+    const preservedTargets = [];
+    if (exists) {
+      for (const target of playerTargets) {
+        if (await directoryExists(resolve(stage, target))) {
+          continue;
+        }
+        if (!(await directoryExists(resolve(destination, target)))) {
+          continue;
+        }
+        await mkdir(resolve(stage, target));
+        await linkExport(resolve(destination, target), resolve(stage, target));
+        preservedTargets.push(target);
+      }
+    }
+    const previous = exists ? await mkdtemp(resolve(parent, "previous-")) : null;
+    let moved = false;
+    try {
+      if (previous) {
+        await rename(destination, resolve(previous, "build"));
+        moved = true;
+      }
+      await rename(stage, destination);
+    } catch (error) {
+      if (moved) {
+        await rename(resolve(previous, "build"), destination);
+        moved = false;
+      }
+      if (previous && !moved) {
+        await removeGenerated(previous);
+      }
+      throw error;
+    }
     if (previous) {
-      await rename(resolve(previous, "build"), destination);
       await removeGenerated(previous);
     }
-    throw error;
+    return { buildRoot: destination, preservedTargets };
+  } finally {
+    await unlock();
   }
-  if (previous) {
-    await removeGenerated(previous);
-  }
-  return destination;
 }
 
 export async function copyCartridge(source, output) {
@@ -160,22 +257,8 @@ export async function copyCartridge(source, output) {
 export async function snapshotWeb(project, source) {
   const parent = await projectDirectory(project, ".bytorio", "sessions");
   const destination = await mkdtemp(resolve(parent, "web-"));
-  async function visit(from, to) {
-    for (const entry of await readdir(from, { withFileTypes: true })) {
-      const input = resolve(from, entry.name);
-      const output = resolve(to, entry.name);
-      if (entry.isDirectory()) {
-        await mkdir(output);
-        await visit(input, output);
-      } else if (entry.isFile()) {
-        await link(input, output);
-      } else {
-        throw new Error("Player snapshots cannot contain links or special files");
-      }
-    }
-  }
   try {
-    await visit(source, destination);
+    await linkExport(source, destination);
     return destination;
   } catch (error) {
     await removeGenerated(destination);

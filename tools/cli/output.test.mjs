@@ -1,6 +1,16 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
+import {
+  chmod,
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rm,
+  stat,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { authorOptions } from "./arguments.mjs";
@@ -121,6 +131,88 @@ test("immutable web snapshots survive replacement of public build outputs", asyn
     await publishBuild(root, replacement);
     assert.equal(await readFile(resolve(snapshot, "player.html"), "utf8"), "first page");
     assert.equal(await readFile(resolve(root, "build/web/player.html"), "utf8"), "second page");
+  }));
+
+async function exportStage(root, cartridge, targets) {
+  const stage = await createBuildStage(root);
+  await writeFile(resolve(stage, "game.png"), cartridge);
+  for (const [target, files] of Object.entries(targets)) {
+    await mkdir(resolve(stage, target));
+    await writeFile(resolve(stage, target, "game.png"), cartridge);
+    for (const [name, value] of Object.entries(files)) {
+      await writeFile(resolve(stage, target, name), value);
+    }
+  }
+  return stage;
+}
+
+test("pack and target changes retain complete independent player exports", async () =>
+  fixture(async (root) => {
+    const first = await exportStage(root, "first game", {
+      web: { "player.html": "old web player", "obsolete.js": "removed on rebuild" },
+      native: { player: "native player", "sdk.txt": "first SDK" },
+    });
+    await chmod(resolve(first, "native/player"), 0o755);
+    const nativeMode = (await stat(resolve(first, "native/player"))).mode;
+    await publishBuild(root, first);
+    const snapshot = await snapshotWeb(root, resolve(root, "build/web"));
+
+    const web = await exportStage(root, "web game", { web: { "player.html": "new web player" } });
+    const webResult = await publishBuild(root, web);
+    assert.deepEqual(webResult.preservedTargets, ["native"]);
+    assert.equal(await readFile(resolve(root, "build/native/game.png"), "utf8"), "first game");
+    assert.equal(await readFile(resolve(root, "build/native/sdk.txt"), "utf8"), "first SDK");
+    assert.equal((await stat(resolve(root, "build/native/player"))).mode, nativeMode);
+    assert.deepEqual(await readdir(resolve(root, "build/web")), ["game.png", "player.html"]);
+    assert.equal(await readFile(resolve(snapshot, "game.png"), "utf8"), "first game");
+
+    const native = await exportStage(root, "native game", {
+      native: { player: "new native player" },
+    });
+    assert.deepEqual((await publishBuild(root, native)).preservedTargets, ["web"]);
+    const pack = await exportStage(root, "packed game", {});
+    assert.deepEqual((await publishBuild(root, pack)).preservedTargets, ["web", "native"]);
+    assert.equal(await readFile(resolve(root, "build/game.png"), "utf8"), "packed game");
+    assert.equal(await readFile(resolve(root, "build/web/game.png"), "utf8"), "web game");
+    assert.equal(await readFile(resolve(root, "build/native/game.png"), "utf8"), "native game");
+    assert.equal(await readFile(resolve(root, "build/native/player"), "utf8"), "new native player");
+    assert.deepEqual(await readdir(resolve(root, ".bytorio/staging")), []);
+  }));
+
+test("concurrent target publications retain both completed exports", async () =>
+  fixture(async (root) => {
+    const web = await exportStage(root, "web game", { web: { "player.html": "web player" } });
+    const native = await exportStage(root, "native game", { native: { player: "native player" } });
+    await Promise.all([publishBuild(root, web), publishBuild(root, native)]);
+    assert.equal(await readFile(resolve(root, "build/web/game.png"), "utf8"), "web game");
+    assert.equal(await readFile(resolve(root, "build/native/game.png"), "utf8"), "native game");
+    assert.deepEqual(await readdir(resolve(root, ".bytorio/staging")), []);
+  }));
+
+test("preserving an export rejects junctions before changing the published build", async () =>
+  fixture(async (root) => {
+    await publishBuild(root, await exportStage(root, "original", { native: { player: "native" } }));
+    const outside = resolve(root, "outside");
+    await mkdir(outside);
+    await writeFile(resolve(outside, "notes.txt"), "outside data");
+    await symlink(
+      outside,
+      resolve(root, "build/native/assets"),
+      process.platform === "win32" ? "junction" : "dir",
+    );
+    const web = await exportStage(root, "new game", { web: { "player.html": "web" } });
+    await assert.rejects(publishBuild(root, web), /links or special files/);
+    assert.equal(await readFile(resolve(root, "build/game.png"), "utf8"), "original");
+    assert.equal(await readFile(resolve(outside, "notes.txt"), "utf8"), "outside data");
+    assert.deepEqual(await readdir(resolve(root, "build")), [
+      ".bytorio-output.json",
+      "game.png",
+      "native",
+    ]);
+    assert.equal(
+      (await readdir(resolve(root, ".bytorio/staging"))).includes("publish.lock"),
+      false,
+    );
   }));
 
 test("preview serves only the exported snapshot, streams binaries and cleans up", async () =>

@@ -316,6 +316,15 @@ or Bytorio release server at play time. Native exports include the player,
 required libraries and notices. Packaging must copy qualified prebuilt players
 without requiring the author to rebuild or re-sign them.
 
+Publishing a selected target replaces that target completely and preserves any
+other existing target unchanged, including its own cartridge and SDK player
+files. `pack` refreshes the root cartridge without removing player exports.
+The CLI identifies retained targets and prints the command to rebuild each one;
+it does not rebuild unrequested targets or silently pair an older player with a
+newer root cartridge. `build --target all` explicitly refreshes both exports.
+Failed publication retains the previous complete build. Concurrent publication
+is serialized per project so one command cannot lose another target's update.
+
 ## 8. Public browser runtime interface
 
 The following capabilities are requirements; JavaScript method and event names

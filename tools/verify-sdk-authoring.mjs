@@ -185,6 +185,53 @@ try {
     await invoke(language, "build", { offline: true, targets });
   }
   assert.equal(requests.length, builtRequests);
+  // Target changes and cartridge-only publication keep each older export whole.
+  const retentionProject = resolve(sandbox, "luau game");
+  const originalWeb = await readFile(resolve(retentionProject, "build/web/game.png"));
+  const originalNative = nativeSupported
+    ? await readFile(resolve(retentionProject, "build/native/game.png"))
+    : null;
+  const entry = resolve(retentionProject, "src/main.luau");
+  await writeFile(entry, (await readFile(entry, "utf8")) + "\n-- changed cartridge revision\n");
+  const webOnly = await invoke("luau", "build", { offline: true });
+  const updatedWeb = await readFile(resolve(retentionProject, "build/web/game.png"));
+  assert.notDeepEqual(updatedWeb, originalWeb);
+  if (nativeSupported) {
+    assert.match(webOnly.stdout, /Kept native export unchanged.*--target native/);
+    assert.deepEqual(
+      await readFile(resolve(retentionProject, "build/native/game.png")),
+      originalNative,
+    );
+    await execute(executable, ["build", retentionProject, "--offline", "--target", "native"], {
+      cwd: sandbox,
+      env: cliEnvironment,
+      windowsHide: true,
+      timeout: 120000,
+    });
+    assert.deepEqual(await readFile(resolve(retentionProject, "build/web/game.png")), updatedWeb);
+  }
+  const packed = await invoke("luau", "pack", { offline: true });
+  assert.match(packed.stdout, /Kept web export unchanged.*--target web/);
+  assert.deepEqual(await readFile(resolve(retentionProject, "build/web/game.png")), updatedWeb);
+  await assert.rejects(
+    execute(
+      executable,
+      [
+        "pack",
+        retentionProject,
+        "--offline",
+        "--output",
+        resolve(retentionProject, "build/web/game.png"),
+      ],
+      {
+        cwd: sandbox,
+        env: cliEnvironment,
+        windowsHide: true,
+        timeout: 30000,
+      },
+    ),
+    /cannot overwrite a player export/,
+  );
   // An unsuccessful edit must leave the last complete public export intact.
   const luau = resolve(sandbox, "luau game");
   const prior = await readFile(resolve(luau, "build/web/game.png"));
