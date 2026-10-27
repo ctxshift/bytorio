@@ -2,6 +2,9 @@ import { checkVersion } from "./cli/sdk-bundle.ts";
 import { createHash } from "node:crypto";
 import { cliPlatforms, hostPlatform } from "./host-platform.mjs";
 
+const developmentCliVersion = "0.2.0-preview.2";
+export const sdkCliVersionRange = ">=0.2.0-preview.2 <0.3.0";
+
 export function cliReleasePlatform(id) {
   if (!cliPlatforms.includes(id)) {
     throw new Error(`Unsupported CLI release platform: ${id}`);
@@ -22,10 +25,10 @@ export function releaseConfig(tag) {
 
 export function cliVersion(tag) {
   if (!tag) {
-    return "0.2.0-preview.1";
+    return developmentCliVersion;
   }
   const release = releaseConfig(tag);
-  return release.kind === "byt" ? release.version : "0.2.0-preview.1";
+  return release.kind === "byt" ? release.version : developmentCliVersion;
 }
 
 export function verifyReleaseAsset(release, manifest, bytes, platform = manifest.platform) {

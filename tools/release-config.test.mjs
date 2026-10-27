@@ -1,7 +1,14 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { test } from "node:test";
-import { cliVersion, releaseConfig, verifyReleaseAsset } from "./release-config.mjs";
+import {
+  cliVersion,
+  releaseConfig,
+  sdkCliVersionRange,
+  verifyReleaseAsset,
+} from "./release-config.mjs";
+import { sdkCompatibility } from "./cli/sdk-manifest.mjs";
+import { manifestFixture } from "./cli/fixtures/sdk-manifest.mjs";
 import { cliPlatforms } from "./host-platform.mjs";
 import { cliReleasePlatform } from "./release-config.mjs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -31,6 +38,22 @@ test("release tags select independent versions and prerelease status", () => {
   ]) {
     assert.throws(() => releaseConfig(tag));
   }
+});
+
+test("production-player SDK releases require a CLI that supports player project settings", () => {
+  const manifest = { ...manifestFixture(), cliVersionRange: sdkCliVersionRange };
+  const requirements = { host: "windows-x64", language: "luau", target: "web" };
+  assert.match(
+    sdkCompatibility(manifest, { ...requirements, cliVersion: "0.2.0-preview.1" }),
+    /SDK requires byt/,
+  );
+  for (const version of ["0.2.0-preview.2", cliVersion(), "0.2.0"]) {
+    assert.equal(sdkCompatibility(manifest, { ...requirements, cliVersion: version }), null);
+  }
+  assert.match(
+    sdkCompatibility(manifest, { ...requirements, cliVersion: "0.3.0" }),
+    /SDK requires byt/,
+  );
 });
 
 test("publication requires every tested CLI platform and verifies each binary", async () => {

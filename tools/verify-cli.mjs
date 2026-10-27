@@ -11,6 +11,7 @@ import { createProject } from "./sdk/project.mjs";
 import { manifestFixture } from "./cli/fixtures/sdk-manifest.mjs";
 import { repo } from "./toolchain.mjs";
 import { requireCliHost } from "./host-platform.mjs";
+import { cliVersion } from "./release-config.mjs";
 
 const temporaryRoot = resolve(tmpdir());
 const sandbox = await mkdtemp(resolve(temporaryRoot, "bytorio-cli-"));
@@ -113,9 +114,7 @@ try {
   await writeFile(resolve(sandbox, ".env"), "NODE_OPTIONS=--invalid-byt-option\n");
   await writeFile(resolve(sandbox, "bunfig.toml"), 'preload = ["./missing.js"]\n');
   assert.match((await invoke(["--help"])).stdout, /bytorio.toml/);
-  const expectedVersion = process.env.BYTORIO_RELEASE_TAG?.startsWith("byt-v")
-    ? process.env.BYTORIO_RELEASE_TAG.slice(5)
-    : "0.2.0-preview.1";
+  const expectedVersion = cliVersion(process.env.BYTORIO_RELEASE_TAG);
   assert.equal((await invoke(["--version"])).stdout.trim(), expectedVersion);
   const release = JSON.parse(await readFile(resolve(repo, "build/cli/release.json"), "utf8"));
   assert.equal(release.version, expectedVersion);

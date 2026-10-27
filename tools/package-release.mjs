@@ -45,7 +45,7 @@ const notes =
 await writeFile(
   resolve(output, "release-notes.md"),
   `${notes}\n\n` +
-    "The first source-free release uses the existing player. The embeddable runtime API, production shell and touch controls will follow.\n\n" +
+    "This preview supports the SDK's embeddable runtime, production web player and configurable touch controls. Web/native target changes and cartridge packing preserve existing exports for other targets and print their refresh commands. Cartridge output protection resolves filesystem aliases before checking managed exports. Existing games keep their SDK pin until `byt sdk upgrade` is run explicitly.\n\n" +
     "[Getting started](https://bytor.io/docs/docs/getting-started.html) explains installation and game authoring.\n\n" +
     `Source: tag \`${release.tag}\`. Windows and Apple Silicon run the full validation suite; Intel Mac runs the standalone CLI suite.\n`,
 );

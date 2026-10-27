@@ -4,10 +4,10 @@ Make games in Luau or Odin, run them in the native or browser player, and share
 them as PNG cartridges. **Start with [Getting started](../docs/getting-started.md)**
 for installation and your first playable game without a source checkout.
 
-The development SDK also provides an [embeddable web player](web-player.md) with
+The SDK also provides an [embeddable web player](web-player.md) with
 digital touch controls and a [browser runtime](web-runtime.md) for custom hosts.
-These APIs ship in the next distribution preview; existing SDK pins keep their
-current player until upgraded.
+These preview APIs are versioned with the SDK. Existing SDK pins keep their
+previous player until explicitly upgraded with `byt sdk upgrade`.
 
 ## Supported features
 

@@ -10,9 +10,9 @@ applies.
 
 ## Try the complete custom player
 
-The next CLI/SDK preview includes `custom-player.html` and `custom-player.js`
-in every web export. Older SDK pins keep their previous files; upgrade explicitly
-after that SDK is published. From your game directory:
+Current SDK previews include `custom-player.html` and `custom-player.js`
+in every web export. Older SDK pins keep their previous files; run
+`byt sdk upgrade` explicitly to select the newest compatible SDK. From your game directory:
 
 ```sh
 byt run --no-open

@@ -19,9 +19,9 @@ Earlier scaffolding-only releases cannot build or play games.
 | macOS Apple Silicon | Supported | Supported |
 | macOS Intel | Supported | Unavailable with the pinned Odin toolchain |
 
-Linux authoring packages are not available yet. This first source-free release
-uses the existing player. The public embeddable runtime API, production player
-shell and configurable touch controls are separate work.
+Linux authoring packages are not available yet. Current SDK previews include an
+embeddable browser runtime, production player and configurable touch controls.
+Older SDK pins keep their previous player until explicitly upgraded.
 
 ## Download the CLI
 
@@ -227,8 +227,9 @@ See [native player options and path rules](native-player.md).
 
 ## Embed and customize the web player
 
-The next CLI/SDK preview adds an embeddable production player and a separate runtime
-module. Existing SDK pins keep their previous player until explicitly upgraded.
+Current CLI/SDK previews include an embeddable production player and a separate
+runtime module. Existing SDK pins keep their previous player until explicitly
+upgraded with `byt sdk upgrade` inside the game directory.
 The player frames the game with Play/Pause, Mute and Fullscreen; Restart and Open
 cartridge are in its menu. Development diagnostics are off by default.
 

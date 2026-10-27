@@ -42,8 +42,8 @@ to use the published binary without a source toolchain.
 macOS using pinned Bun and TypeScript.
 It creates minimal TOML projects and provides check/build/pack/run/dev with
 SDK-managed tools and players. The source CLI retains contributor workflows for
-legacy `console.json` projects. See the [standalone plan](internal/standalone-authoring-plan.md)
-for the later public runtime and production-player work.
+legacy `console.json` projects. See the [standalone specification](internal/standalone-authoring-spec.md)
+for SDK distribution and the public runtime/player contracts.
 
 The [short mise setup](getting-started.md#install-with-mise) installs the published
 CLI without the contributor toolchain. An optional
