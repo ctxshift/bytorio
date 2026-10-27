@@ -199,6 +199,23 @@ and bounds must work within the standalone CLI without requiring an external
 archive utility. Preserve executable permissions, compatible loader paths,
 signatures and third-party notices.
 
+Components use gzip-compressed tar archives with an internal `sdk-component.json`
+inventory. A release descriptor records the archive size/SHA-256, inventory
+SHA-256, regular-file count and total expanded file bytes. The inventory binds
+each file's portable relative path, size, SHA-256 and executable mode, together
+with its required notice files. Payload bytes and signatures are copied intact;
+only ordinary file modes `0644` and `0755` are supported.
+
+The consumer audits the archive before creating an installation. It rejects
+links, special files, traversal, platform device names, duplicate/case-ambiguous
+paths, directory conflicts and excessive expansion. File writes are exclusive
+inside a newly created directory, and a failed verification removes that owned
+directory. The same integrity checks apply when reusing an installed component.
+The producer creates a portable deterministic archive and publishes it without
+overwriting an existing artifact. These contracts are tested both under Node
+and in a relocated compiled executable with no archiver or development tools
+available on PATH.
+
 ## 7. Commands and outputs
 
 | Command                             | Contract                                                                               |

@@ -57,5 +57,8 @@
     "playwright": "1.64.1",
     "prettier": "3.9.10",
     "typescript": "7.0.2"
+  },
+  "dependencies": {
+    "tar": "7.5.22"
   }
 }
