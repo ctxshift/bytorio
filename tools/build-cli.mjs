@@ -45,7 +45,7 @@ await writeFile(
     {
       version,
       platform: host.id,
-      status: "project-creation-preview",
+      status: "standalone-authoring-preview",
       executable: host.executable,
       asset: host.cliAsset,
       bytes: bytes.length,

@@ -68,7 +68,7 @@ async function inside(project, path) {
   }
   return result;
 }
-export async function createAuthoring({ sdk, check }) {
+export async function createAuthoring({ sdk, check, log = console.log }) {
   const selectedContract = JSON.parse(await readFile(await sdk.asset("sdk/contract.json"), "utf8"));
   assert.deepEqual(selectedContract, contract, "SDK authoring module and data contracts differ");
   const { syncEditor } = await createScaffolder({
@@ -127,10 +127,14 @@ export async function createAuthoring({ sdk, check }) {
       cover: value.cover ? await inside(project, value.cover) : null,
     };
   }
-  async function prepare(path, value) {
+  async function prepare(path, value, options = {}) {
     const spec = await manifest(path, value);
+    const buildRoot = resolve(options.buildRoot ?? resolve(spec.project, "build"));
+    if (buildRoot === spec.project || spec.project.startsWith(buildRoot + sep)) {
+      throw new Error("Build output cannot be the project directory or its ancestor");
+    }
     const { packet, palette } = await readGraphics(spec.assets);
-    const generated = resolve(spec.project, "build/generated");
+    const generated = resolve(buildRoot, "generated");
     await mkdir(generated, { recursive: true });
     if (spec.language === "luau") {
       await syncEditor(spec.project);
@@ -160,7 +164,7 @@ export async function createAuthoring({ sdk, check }) {
       // Remove only stale compiler inputs previously generated inside this project's build folder.
       const { rm } = await import("node:fs/promises");
       const destination = resolve(generated, "odin");
-      if (!destination.startsWith(resolve(spec.project, "build") + sep)) {
+      if (!destination.startsWith(buildRoot + sep)) {
         throw new Error("Invalid generated source directory");
       }
       await rm(destination, { recursive: true, force: true });
@@ -215,7 +219,7 @@ export async function createAuthoring({ sdk, check }) {
         }
       }
     }
-    return { ...spec, generated };
+    return { ...spec, generated, buildRoot };
   }
   async function projectCartridge(spec, coverPath = spec.cover) {
     if (spec.content !== undefined && !Array.isArray(spec.content)) {
@@ -264,11 +268,11 @@ export async function createAuthoring({ sdk, check }) {
       runtime: spec.checking.runtime,
     });
   }
-  async function checkProject(path, value) {
-    const spec = await prepare(path, value);
+  async function checkProject(path, value, options = {}) {
+    const spec = await prepare(path, value, options);
     spec.checking = await sdk.checking(spec.language);
     await smoke(spec);
-    console.log(`Checked ${spec.language} SDK ${spec.sdk}: types, assets, ABI and first frames.`);
+    log(`Checked ${spec.language} SDK ${spec.sdk}: types, assets, ABI and first frames.`);
     return spec;
   }
   async function buildProject(path, value, options) {
@@ -279,7 +283,7 @@ export async function createAuthoring({ sdk, check }) {
     ) {
       throw new Error("Choose explicit, unique web/native export targets");
     }
-    const spec = await checkProject(path, value),
+    const spec = await checkProject(path, value, options),
       luau = spec.language === "luau";
     const coverPath = options.cover ? resolve(options.cover) : spec.cover;
     const png = await projectCartridge(spec, coverPath);
@@ -291,9 +295,9 @@ export async function createAuthoring({ sdk, check }) {
       })
     ).instance.exports;
     decodeCartridge(runtime, png);
-    await writeFile(resolve(spec.project, "build/game.png"), png);
+    await writeFile(resolve(spec.buildRoot, "game.png"), png);
     for (const platform of options.targets) {
-      const target = resolve(spec.project, "build", platform);
+      const target = resolve(spec.buildRoot, platform);
       await mkdir(resolve(target, "licenses"), { recursive: true });
       await writeFile(resolve(target, "game.png"), png);
       await writeFile(
@@ -363,9 +367,7 @@ export async function createAuthoring({ sdk, check }) {
         );
       }
     }
-    console.log(
-      `Built ${spec.language}: ${relative(process.cwd(), resolve(spec.project, "build"))}`,
-    );
+    log(`Built ${spec.language}: ${relative(process.cwd(), spec.buildRoot)}`);
     return spec;
   }
 
@@ -377,14 +379,20 @@ export async function createAuthoring({ sdk, check }) {
       throw new Error("Output cannot overwrite the cover image");
     }
     const spec = await buildProject(path, value, { targets: [], ...options });
-    const source = resolve(spec.project, "build/game.png");
+    const source = resolve(spec.buildRoot, "game.png");
     const target = options.output ? resolve(options.output) : source;
     if (target !== source) {
       await mkdir(dirname(target), { recursive: true });
       await copyFile(source, target);
     }
-    console.log(`Packed cartridge: ${relative(process.cwd(), target)}`);
+    log(`Packed cartridge: ${relative(process.cwd(), target)}`);
     return { ...spec, cartridge: target };
   }
-  return { manifest, checkProject, buildProject, packProject };
+  return {
+    manifest,
+    checkProject,
+    buildProject,
+    packProject,
+    capabilities: { isolatedBuildRoot: true },
+  };
 }

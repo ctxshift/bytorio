@@ -186,8 +186,12 @@ try {
   ]) {
     await invoke(args, false);
   }
-  for (const action of ["check", "build", "run", "watch", "pack", "import"]) {
+  for (const action of ["dev", "watch", "import"]) {
     assert.match((await invoke([action, "luau game with spaces"], false)).stderr, /not available/);
+  }
+  for (const action of ["check", "build", "pack", "run"]) {
+    const failed = await invoke([action, "luau game with spaces", "--offline"], false);
+    assert.match(failed.stderr, /SDK component .*not cached/);
   }
   await writeFile(
     resolve(reportDirectory, "report.json"),

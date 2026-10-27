@@ -222,5 +222,5 @@ export async function loadReleasedAuthoring(release, options) {
     release.manifest.limits,
     "SDK authoring limits differ from release metadata",
   );
-  return authoring.createAuthoring({ sdk, check: options.check });
+  return authoring.createAuthoring({ sdk, check: options.check, log: options.log });
 }

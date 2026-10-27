@@ -2,11 +2,10 @@ import assert from "node:assert/strict";
 import { copyFile, mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { createServer } from "node:http";
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { promisify } from "node:util";
 import { tmpdir } from "node:os";
 import { resolve, sep } from "node:path";
-import { compileCli } from "./compile-cli.mjs";
 import { requireCliHost } from "./host-platform.mjs";
 import { repo } from "./toolchain.mjs";
 import { produceHostSdk } from "./sdk/produce.mjs";
@@ -18,14 +17,13 @@ const host = requireCliHost();
 const output = resolve(repo, "build/sdk-authoring-verification");
 await mkdir(output, { recursive: true });
 await rm(resolve(output, "report.json"), { force: true });
-const built = resolve(output, host.executable);
-compileCli(["tools/cli/authoring-probe.mjs"], built);
+const built = resolve(repo, "build/cli", host.executable);
 const temporaryRoot = resolve(tmpdir());
 const sandbox = await mkdtemp(resolve(temporaryRoot, "byt-authoring-consumer-"));
 assert.ok(sandbox.startsWith(temporaryRoot + sep));
 const server = createServer();
 const execute = promisify(execFile);
-let browser, website;
+let browser, website, running;
 try {
   const produced = await produceHostSdk({
     version: "0.2.0-preview.1",
@@ -69,11 +67,6 @@ try {
   const executable = resolve(sandbox, host.executable);
   await copyFile(built, executable);
   const cache = resolve(sandbox, "shared SDK cache");
-  const options = {
-    cache,
-    releaseRoot: `http://127.0.0.1:${server.address().port}`,
-    expectedSha256: metadataSha256,
-  };
   const environment = Object.fromEntries(
     Object.entries(process.env).filter(
       ([name]) => !/^(path|mise.*|node.*|bun.*|odin.*|validation_.*)$/i.test(name),
@@ -81,33 +74,42 @@ try {
   );
   environment.PATH = "";
   environment.ODIN_ROOT = resolve(sandbox, "unrelated compiler root");
-  const requestPath = resolve(sandbox, "request.json");
+  environment.BYTORIO_CACHE_DIR = cache;
+  environment.BYTORIO_SDK_RELEASE_ROOT = `http://127.0.0.1:${server.address().port}`;
+  const cliEnvironment = {
+    ...environment,
+    SDL_VIDEODRIVER: "dummy",
+    SDL_AUDIODRIVER: "dummy",
+    SDL_RENDER_DRIVER: "software",
+  };
   async function invoke(language, action, { offline = false, targets = ["web"] } = {}) {
-    await writeFile(
-      requestPath,
-      JSON.stringify({
-        action,
-        version: manifest.version,
-        project: resolve(sandbox, `${language} game`),
-        config: { language },
-        targets,
-        options: { ...options, offline },
-      }),
-    );
-    const result = await execute(executable, [requestPath], {
+    const args = [action, resolve(sandbox, `${language} game`)];
+    if (offline) {
+      args.push("--offline");
+    }
+    if (action === "build" && targets.length > 1) {
+      args.push("--target", "all");
+    }
+    const result = await execute(executable, args, {
       cwd: sandbox,
-      env: environment,
+      env: cliEnvironment,
       windowsHide: true,
       timeout: 120000,
       maxBuffer: 1024 * 1024,
     });
-    assert.match(result.stdout, /Standalone SDK authoring passed/);
+    assert.match(result.stdout, /Checked|Built|Packed/);
+    return result;
   }
   for (const language of ["luau", "odin"]) {
     const project = resolve(sandbox, `${language} game`);
-    await mkdir(resolve(project, "src"), { recursive: true });
-    await writeFile(resolve(project, `src/main.${language}`), manifest.starters[language].source);
+    await execute(executable, ["new", project, "--language", language, "--sdk", manifest.version], {
+      cwd: sandbox,
+      env: cliEnvironment,
+      windowsHide: true,
+      timeout: 30000,
+    });
   }
+  assert.ok(!requests.some((path) => path.endsWith(".tar.gz")), "New downloaded SDK payloads");
   await invoke("luau", "check");
   assert.ok(
     !requests.some((path) => path.endsWith(manifest.components.web.asset)),
@@ -136,6 +138,75 @@ try {
     await invoke(language, "build", { offline: true, targets: ["web", "native"] });
   }
   assert.equal(requests.length, builtRequests);
+  // An unsuccessful edit must leave the last complete public export intact.
+  const luau = resolve(sandbox, "luau game");
+  const prior = await readFile(resolve(luau, "build/web/game.png"));
+  await writeFile(resolve(luau, "src/main.luau"), "this is not valid Luau !");
+  await assert.rejects(invoke("luau", "build", { offline: true }));
+  assert.deepEqual(await readFile(resolve(luau, "build/web/game.png")), prior);
+  await writeFile(resolve(luau, "src/main.luau"), manifest.starters.luau.source);
+  running = spawn(executable, ["run", luau, "--offline", "--no-open"], {
+    cwd: sandbox,
+    env: cliEnvironment,
+    windowsHide: true,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  const playerUrl = await new Promise((done, reject) => {
+    let stdout = "",
+      stderr = "";
+    const timer = setTimeout(() => reject(new Error(`CLI run did not start: ${stderr}`)), 60000);
+    running.stderr.on("data", (chunk) => {
+      stderr += chunk;
+    });
+    running.stdout.on("data", (chunk) => {
+      stdout += chunk;
+      const match = /Player: (http:\/\/127\.0\.0\.1:\d+\/)/.exec(stdout);
+      if (match) {
+        clearTimeout(timer);
+        done(match[1]);
+      }
+    });
+    running.once("error", (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+    running.once("exit", () => {
+      clearTimeout(timer);
+      reject(new Error(`CLI run exited: ${stderr}`));
+    });
+  });
+  browser = await chromium.launch({ channel: process.env.PLAYER_BROWSER_CHANNEL || undefined });
+  const preview = await browser.newPage();
+  await preview.goto(`${playerUrl}?smoke`);
+  await preview.waitForFunction(() => playerStatus.ready || playerStatus.error);
+  await preview.click("#start");
+  await preview.waitForFunction(() => playerStatus.renderedTicks === 120 || playerStatus.error);
+  assert.equal(await preview.evaluate(() => playerStatus.error), "");
+  await preview.close();
+  const stopped = new Promise((done) => running.once("exit", done));
+  running.kill("SIGTERM");
+  await stopped;
+  running = null;
+  // Run exported native cartridges through the public CLI's explicit target.
+  for (const language of ["luau", "odin"]) {
+    const result = await execute(
+      executable,
+      [
+        "run",
+        resolve(sandbox, `${language} game`),
+        "--offline",
+        "--target",
+        "native",
+        "--",
+        "--smoke",
+        "--no-executor-cache",
+      ],
+      { cwd: sandbox, env: cliEnvironment, windowsHide: true, timeout: 60000 },
+    );
+    const frame = JSON.parse(result.stdout.trim().split(/\r?\n/).at(-1));
+    assert.equal(frame.ticks, 120);
+    await invoke(language, "build", { offline: true, targets: ["web", "native"] });
+  }
   await mkdir(resolve(sandbox, "site/nested"), { recursive: true });
   for (const language of ["luau", "odin"]) {
     const project = resolve(sandbox, `${language} game`);
@@ -146,7 +217,6 @@ try {
   await rm(cache, { recursive: true, force: true });
   website = serve(resolve(sandbox, "site"), 0);
   await new Promise((done) => website.once("listening", done));
-  browser = await chromium.launch({ channel: process.env.PLAYER_BROWSER_CHANNEL || undefined });
   const played = {};
   for (const language of ["luau", "odin"]) {
     const page = await browser.newPage();
@@ -204,6 +274,10 @@ try {
         builtRequests,
         offlinePack: true,
         offlineBuild: true,
+        publicCli: true,
+        browserRun: true,
+        nativeRun: true,
+        failedBuildPreservesOutput: true,
         relocatedPlaybackWithoutCache: true,
         played,
       },
@@ -212,9 +286,10 @@ try {
     ) + "\n",
   );
   console.log(
-    "Standalone SDK authoring passed: managed Luau/Odin tools, offline check/build/pack and relocated native/browser play without cache.",
+    "Standalone SDK authoring passed: public new/check/build/pack/run, managed Luau/Odin tools, offline reuse and relocated native/browser play without cache.",
   );
 } finally {
+  running?.kill("SIGKILL");
   await browser?.close();
   await new Promise((done) => (website ? website.close(done) : done()));
   server.closeAllConnections();

@@ -5,6 +5,10 @@ import { resolve } from "node:path";
 import { hostPlatform } from "../host-platform.mjs";
 import { resolveDistribution } from "./distribution.mjs";
 import { assertNewProject, createGameProject, selectProjectSdk } from "./project-config.mjs";
+import { authorOptions } from "./arguments.mjs";
+import { authorGame } from "./author.mjs";
+import { playGame } from "./play.mjs";
+import { runCheckProcess } from "../sdk/check-process.mjs";
 
 type Language = "luau" | "odin";
 
@@ -12,13 +16,17 @@ const help = `${branding.name} CLI ${version}
 
 Usage: byt new <directory> [--language luau|odin] [--sdk <version>] [--offline]
        byt sdk install <version> [--offline]
+       byt check [directory] [--offline]
+       byt build [directory] [--target web|native|all] [--offline]
+       byt pack [directory] [--output game.png] [--cover cover.png] [--offline]
+       byt run [directory] [--target web|native] [--port 0] [--no-open] [--offline]
        byt --help
        byt --version
 
 New games use bytorio.toml and bytorio.lock.toml, with Luau by default.
 The newest compatible installed SDK is preferred; previews are eligible.
 Players and tools are downloaded only when needed.
-Other authoring commands are being connected in this development build.`;
+Build defaults to web. Run opens a browser and builds once; Ctrl+C stops it.`;
 
 function sdkOptions(offline: boolean) {
   return {
@@ -28,10 +36,20 @@ function sdkOptions(offline: boolean) {
     cache: process.env.BYTORIO_CACHE_DIR,
     releaseRoot: process.env.BYTORIO_SDK_RELEASE_ROOT,
     catalogueRoot: process.env.BYTORIO_SDK_CATALOGUE_URL,
+    onProgress(event: { phase: string; id?: string; total?: number }) {
+      if (event.id && ["start", "repair"].includes(event.phase)) {
+        const size = event.total ? ` (${(event.total / 1048576).toFixed(1)} MiB)` : "";
+        console.log(`Downloading SDK ${event.id}${size}...`);
+      }
+    },
   };
 }
 
 async function main(args: string[]): Promise<void> {
+  if (args[0] === "--sdk-check" && args.length === 1) {
+    await runCheckProcess();
+    return;
+  }
   if (args.length === 0 || (args.length === 1 && ["--help", "help"].includes(args[0]))) {
     console.log(help);
     return;
@@ -40,10 +58,23 @@ async function main(args: string[]): Promise<void> {
     console.log(version);
     return;
   }
-  if (["check", "build", "run", "watch", "pack", "import"].includes(args[0])) {
-    throw new Error(
-      `${args[0]} is not available in this standalone preview. Use the source CLI until managed toolchains and player bundles are implemented.`,
-    );
+  if (args.length === 2 && args[1] === "--help") {
+    console.log(help);
+    return;
+  }
+  if (["check", "build", "pack", "run"].includes(args[0])) {
+    const command = args[0];
+    const parsed = authorOptions(args.slice(1), command);
+    const options = { ...sdkOptions(parsed.offline), ...parsed };
+    if (command === "run") {
+      await playGame(parsed.directory, options);
+    } else {
+      await authorGame(command, parsed.directory, options);
+    }
+    return;
+  }
+  if (["dev", "watch", "import"].includes(args[0])) {
+    throw new Error(`${args[0]} is not available in this development build.`);
   }
   if (args[0] === "sdk") {
     if (

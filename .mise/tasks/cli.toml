@@ -4,7 +4,7 @@ run = "node tools/build-cli.mjs"
 
 ["test:cli"]
 description = "Verify the compiled CLI without a checkout or tools on PATH"
-run = ["node tools/build-cli.mjs", "node tools/build-sdk-release.mjs", "node tools/verify-cli.mjs", "node --test tools/cli/sdk-bundle.test.mjs tools/cli/sdk-manifest.test.mjs tools/cli/sdk-registry.test.mjs tools/cli/component-cache.test.mjs tools/release-config.test.mjs tools/sdk/component.test.mjs tools/sdk/assemble.test.mjs tools/cli/project-config.test.mjs", "node tools/verify-sdk-component.mjs"]
+run = ["node tools/build-cli.mjs", "node tools/build-sdk-release.mjs", "node tools/verify-cli.mjs", "node --test tools/cli/sdk-bundle.test.mjs tools/cli/sdk-manifest.test.mjs tools/cli/sdk-registry.test.mjs tools/cli/component-cache.test.mjs tools/release-config.test.mjs tools/sdk/component.test.mjs tools/sdk/assemble.test.mjs tools/cli/project-config.test.mjs tools/cli/output.test.mjs", "node tools/verify-sdk-component.mjs"]
 
 ["build:sdk-release"]
 description = "Package a versioned SDK for a GitHub release"
@@ -27,7 +27,7 @@ run = ["node --test tools/sdk/check.test.mjs tools/sdk/bundle-format.test.mjs", 
 ["test:sdk-authoring"]
 description = "Build and play from a versioned SDK without checkout or global tools"
 depends = ["build:odin", "deps:luau"]
-run = ["node --test tools/cli/released-sdk.test.mjs tools/sdk/compiler.test.mjs", "node tools/verify-sdk-authoring.mjs"]
+run = ["node tools/build-cli.mjs", "node --test tools/cli/released-sdk.test.mjs tools/sdk/compiler.test.mjs", "node tools/verify-sdk-authoring.mjs"]
 
 ["package:release"]
 description = "Package tested CLI or SDK assets for BYTORIO_RELEASE_TAG"
