@@ -2,7 +2,7 @@ import { readFile, writeFile, mkdir, readdir, copyFile, realpath, stat } from "n
 import { resolve, dirname, relative, sep } from "node:path";
 import { timedSpawnSync as spawnSync } from "../command-timing.mjs";
 import { fileURLToPath } from "node:url";
-import { Worker } from "node:worker_threads";
+import { checkGame } from "./check.mjs";
 import { createHash } from "node:crypto";
 import { readGraphics } from "./assets.mjs";
 import { bundleLuau, odinEntry } from "./bundle.mjs";
@@ -247,50 +247,16 @@ async function projectCartridge(spec, coverPath = spec.cover) {
 async function smoke(spec) {
   const luau = spec.language === "luau";
   const cartridge = await projectCartridge(spec);
-  await new Promise((done, reject) => {
-    const worker = new Worker(new URL("./smoke-worker.mjs", import.meta.url), {
-      workerData: {
-        cartridge,
-        game: luau
-          ? resolve(repo, "build/luau-executor/luau-executor.wasm")
-          : resolve(spec.generated, "game.wasm"),
-        source: luau ? resolve(spec.generated, "game.luau") : null,
-        runtime: resolve(repo, "build/odin-player/web/runtime.wasm"),
-      },
-    });
-    let settled = false,
-      timer;
-    const finish = (error) => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      clearTimeout(timer);
-      worker.terminate();
-      if (error) {
-        reject(error);
-      } else {
-        done();
-      }
-    };
-    timer = setTimeout(() => finish(new Error("SDK check timed out while loading")), 10000);
-    worker.on("message", (message) => {
-      if (message.type === "executing") {
-        clearTimeout(timer);
-        timer = setTimeout(
-          () => finish(new Error("Game stopped responding during SDK check")),
-          1000,
-        );
-      } else {
-        finish(message.type === "error" ? new Error(message.message) : null);
-      }
-    });
-    worker.on("error", finish);
-    worker.on("exit", (code) => {
-      if (!settled) {
-        finish(new Error(`SDK check worker exited (${code})`));
-      }
-    });
+  const cartridgePath = resolve(spec.generated, "check.png");
+  await writeFile(cartridgePath, cartridge);
+  await checkGame({
+    worker: fileURLToPath(new URL("./smoke-worker.mjs", import.meta.url)),
+    cartridge: cartridgePath,
+    game: luau
+      ? resolve(repo, "build/luau-executor/luau-executor.wasm")
+      : resolve(spec.generated, "game.wasm"),
+    source: luau ? resolve(spec.generated, "game.luau") : null,
+    runtime: resolve(repo, "build/odin-player/web/runtime.wasm"),
   });
 }
 export async function checkProject(path) {

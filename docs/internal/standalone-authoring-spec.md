@@ -175,6 +175,19 @@ Luau authoring must not install Odin to compile the player or Luau executor.
 An Odin build obtains its compatible compiler and any necessary linker/support
 files through managed dependencies.
 
+Standalone game checking uses a child process supervised by the CLI. The child
+loads the selected SDK's bundled check worker and prebuilt Wasm files; it needs
+no separately installed JavaScript runtime. The CLI enforces separate loading
+and execution deadlines and terminates the child on completion, failure or
+interruption. Worker termination alone is insufficient: the pinned Bun runtime
+on Windows cannot interrupt a worker stuck inside guest Wasm execution.
+
+The checking process exchanges bounded progress/error messages and receives
+paths to verified SDK payloads and the generated cartridge. Cartridge contents
+are read from disk rather than expanded into JSON messages. The worker and its
+policy imports belong to the SDK payload, so a CLI update cannot silently apply
+newer validation policies to an older game's SDK.
+
 Cache entries must be verified before use, published atomically, and safe under
 concurrent requests. Partial or corrupt downloads must not become usable SDKs.
 Downloading a component must not execute arbitrary SDK installation hooks.

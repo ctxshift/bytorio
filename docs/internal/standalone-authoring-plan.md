@@ -26,7 +26,7 @@ Documentation work alone does not require rebuilding the runtime.
 | `tools/sdk/scaffold.mjs`                            | Generates config, assets, editor settings and SDK editor copies                             | Reduce primary project files and use selected-SDK starter/default metadata              |
 | `tools/sdk/project.mjs`                             | Reads repo SDK/contracts, invokes mise player/executor builds and resolves global tools     | Consume an explicit resolved SDK and toolchain; remove production checkout dependencies |
 | `tools/sdk/bundle.mjs`                              | Reads repo contracts/generated constants and invokes source formatting                      | Read selected-SDK policy and preserve deterministic bundling without hidden host tools  |
-| `tools/sdk/smoke-worker.mjs`                        | Node Worker, loose module URLs and repo-built runtime assets                                | Prove and package the standalone checking path                                          |
+| `tools/sdk/check.mjs` and `smoke-worker.mjs`        | Supervised check process with explicit worker, cartridge and Wasm paths                     | Resolve worker and policy payloads from the selected SDK                                |
 | `tools/player-export.mjs`                           | Builds/stages repo-relative player inventories and invokes author-side signing              | Split release production from copying verified, relocatable SDK payloads                |
 | `runtime/odin/web/player.js`                        | Mixes page UI, input, audio startup, scheduling and worker ownership                        | Extract the public browser runtime; build the default player on it                      |
 | `runtime/odin/web/worker.js` and supporting scripts | Existing execution, rendering, audio, content and host behavior                             | Preserve internals/contracts while exposing a supported runtime interface               |
@@ -62,6 +62,16 @@ Dependencies: none.
 Exit: reviewed schema/interface drafts, explicit support gaps, a packaged-checking
 proof, and named acceptance tests for each slice. Do not rename config fields or
 silently map legacy `console.json.sdk` values to distribution releases.
+
+The packaged-checking qualification is `mise run validate test:cli-worker`.
+It relocates a compiled executable and SDK-style worker/Wasm payloads outside
+the checkout, clears PATH and runtime/tool environment variables, and exercises
+real Odin/Luau games, malformed guests and an infinite Wasm loop. It also checks
+the contributor adapter against the same payloads. This gate requires the
+contributor build tools only to produce its fixture payloads; the relocated
+consumer process uses none of them. It runs in the full Windows/Apple Silicon
+gates. Intel Mac qualification must consume prebuilt SDK payloads separately,
+because that host cannot produce the Odin fixtures with the pinned toolchain.
 
 ## Milestone 1: versioned SDK components, cache and minimal creation
 

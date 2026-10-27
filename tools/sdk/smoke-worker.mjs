@@ -20,7 +20,7 @@ try {
   inspectGuest(bytes, undefined, { luauExecutor: !!workerData.source });
   const runtime = (await WebAssembly.instantiate(await readFile(workerData.runtime), imports))
     .instance.exports;
-  decodeCartridge(runtime, workerData.cartridge);
+  decodeCartridge(runtime, await readFile(workerData.cartridge));
   let game = null;
   const textSession = createTextInputSession(() => game);
   game = (

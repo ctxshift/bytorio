@@ -2,7 +2,8 @@ import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { createHash } from "node:crypto";
 import { branding } from "./branding.mjs";
-import { repo, run, tool } from "./toolchain.mjs";
+import { repo, run } from "./toolchain.mjs";
+import { compileCli } from "./compile-cli.mjs";
 import { cliVersion } from "./release-config.mjs";
 import { requireCliHost } from "./host-platform.mjs";
 
@@ -36,21 +37,7 @@ run(process.execPath, [
   "tools/cli/tsconfig.json",
 ]);
 const executable = resolve(output, host.executable);
-run(tool("bun"), [
-  "build",
-  "--compile",
-  "--no-compile-autoload-dotenv",
-  "--no-compile-autoload-bunfig",
-  "--no-compile-autoload-tsconfig",
-  "--no-compile-autoload-package-json",
-  "tools/cli/main.ts",
-  "--outfile",
-  executable,
-]);
-if (process.platform === "darwin") {
-  run("codesign", ["--force", "--sign", "-", executable]);
-  run("codesign", ["--verify", "--strict", executable]);
-}
+compileCli(["tools/cli/main.ts"], executable);
 const bytes = await readFile(executable);
 await writeFile(
   resolve(output, "release.json"),
