@@ -1,12 +1,9 @@
-import { PREVIEW_SAMPLE_RATE, resourceSchema as audioLimits } from "./constants.js";
 import { PLAYER_TITLE } from "./constants.js";
-import { prepareExecutor } from "./executor-cache.js";
 import { normalizeGraphics } from "./gpu.js";
 import * as controls from "./constants.js";
-import { FrameClock, parseFrameRate } from "./frame-clock.js";
-import { createTextInputOverlay } from "./text-input.js";
+import { parseFrameRate } from "./frame-clock.js";
+import { createSession } from "./session.js";
 const canvas = document.getElementById("canvas");
-const display = canvas.getContext("2d", { alpha: false });
 const button = document.getElementById("start");
 const status = document.getElementById("status");
 const parameters = new URLSearchParams(location.search);
@@ -14,7 +11,7 @@ if (document.title === "Game player") {
   document.title = PLAYER_TITLE;
 }
 const smoke = parameters.has("smoke");
-let clock = new FrameClock();
+
 let renderFps = 60;
 let timingError = "";
 try {
@@ -40,18 +37,14 @@ function changeFrameRate() {
     return;
   }
   frameRateCap.disabled = renderFps <= 0;
-  clock.nextDraw = clock.elapsed;
+  session.runtime.setFrameRate(frameRateSetting());
   const url = new URL(location.href);
   url.searchParams.set("fps", String(frameRateSetting()));
   history.replaceState(null, "", url);
-  globalThis.playerStatus.renderFps = frameRateSetting();
 }
 frameRateControl.addEventListener("change", changeFrameRate);
 frameRateCap.addEventListener("change", changeFrameRate);
-let statsStarted = performance.now();
-let statsFrames = 0;
-let statsUploads = 0;
-let frameTimer;
+
 const mib = (bytes) => (bytes / 1048576).toFixed(2);
 let graphics = { backend: "cpu", ssaa: "off", pixelSnap: false, smoothPan: false };
 try {
@@ -121,488 +114,84 @@ document.getElementById("graphics-apply").addEventListener("click", () => {
   } catch {
     /* Session settings still apply. */
   }
-  load(started).catch((error) => fail(error.message));
+  load(session.runtime.state === "running").catch((error) => fail(error.message));
 });
+
 const keys = new Set();
 const pointer = { pointer: false, hover: false, right: false, x: 0, y: 0 };
 let wheelDirection = 0;
-let worker,
-  watchdog,
-  pending = false,
-  started = false,
-  autoStart = false;
+let selection = 0;
 let selectedCartridge = null;
-let startRequest = 0;
-let mixerNode = null;
-let mixerLoading = null;
-let mixerGeneration = 0;
-const mixerPackets = [];
-const textInput = createTextInputOverlay({
+const session = createSession({
   canvas,
-  logicalSize: () => [
-    globalThis.playerStatus.width || canvas.width,
-    globalThis.playerStatus.height || canvas.height,
-  ],
-  send: (update) => worker?.postMessage({ type: "text-input", update }),
-  onEditing: (active) => {
-    if (!active) {
-      return;
-    }
+  smoke,
+  graphics,
+  frameRate: frameRateSetting(),
+  readInput: input,
+  resetInput() {
     keys.clear();
     pointer.pointer = pointer.right = pointer.hover = false;
     wheelDirection = 0;
   },
-});
-
-async function ensureMixer() {
-  if (mixerNode || !globalThis.playerAudio.lowEnabled) {
-    return;
-  }
-  if (mixerLoading) {
-    return mixerLoading;
-  }
-  const current = generation;
-  mixerLoading = (async () => {
-    const context = globalThis.playerAudio.context;
-    await context.audioWorklet.addModule("./audio-worklet.js");
-    const response = await fetch("./audio.wasm");
-    if (!response.ok) {
-      throw new Error("Cannot load shared audio mixer.");
+  presentationSize: displayPixels,
+  inspect({ status: state, audio }) {
+    globalThis.playerStatus = state;
+    globalThis.playerAudio = audio;
+    status.textContent =
+      state.error ||
+      (state.state === "loading"
+        ? "Loading game…"
+        : globalThis.playerInstructions || "Arrows / WASD: move · Space / tap: sound");
+    button.disabled = state.state === "loading";
+    button.textContent =
+      state.state === "failed"
+        ? "Restart game"
+        : state.state === "running"
+          ? "Game running"
+          : "Start game";
+    if (state.title) {
+      document.title = state.title;
     }
-    const module = await WebAssembly.compile(await response.arrayBuffer());
-    if (current !== generation || !worker || !globalThis.playerStatus.ready) {
-      return;
+    if (state.graphics) {
+      document.getElementById("graphics-status").textContent =
+        "Active renderer: " +
+        state.graphics.effective +
+        (state.graphics.fallback ? " · " + state.graphics.fallback : "");
     }
-    const node = new AudioWorkletNode(context, "console-pcm-mixer", {
-      numberOfInputs: 0,
-      numberOfOutputs: 1,
-      outputChannelCount: [2],
-      processorOptions: { module, waitForProducer: true },
-    });
-    mixerNode = node;
-    mixerGeneration = current;
-    const channel = new MessageChannel();
-    node.port.postMessage({ type: "worker-port", port: channel.port1 }, [channel.port1]);
-    worker.postMessage({ type: "audio-connect", port: channel.port2 }, [channel.port2]);
-    node.port.onmessage = ({ data }) => {
-      if (data.type === "closed") {
-        node.port.close();
-        return;
-      }
-      if (current !== generation) {
-        return;
-      }
-      if (data.type === "error") {
-        fail(data.error);
-      } else if (data.type === "recycle") {
-        worker.postMessage({ type: "audio-recycle", id: data.id, buffer: data.buffer }, [
-          data.buffer,
-        ]);
-      } else if (data.type === "feedback") {
-        const view = new DataView(data.buffer, 0, data.bytes);
-        const wide = (at) => view.getUint32(at, true) + view.getUint32(at + 4, true) * 2 ** 32;
-        globalThis.playerAudio.mixerStatus = {
-          frame: wide(16),
-          epoch: view.getUint32(12, true),
-          lateEvents: wide(32),
-          underrunFrames: wide(40),
-          rejectedWrites: wide(48),
-          completed: wide(56),
-          deviceRate: context.sampleRate,
-          leadFrames: audioLimits.audioLeadFrames,
-          baseLatency: context.baseLatency,
-          outputLatency: context.outputLatency ?? null,
-        };
-        worker.postMessage(
-          { type: "audio-feedback", id: data.id, buffer: data.buffer, bytes: data.bytes },
-          [data.buffer],
-        );
-      }
-    };
-    node.onprocessorerror = () => {
-      if (current === generation && mixerNode === node) {
-        fail("AudioWorklet mixer failed.");
-      }
-    };
-    for (const packet of mixerPackets.splice(0)) {
-      node.port.postMessage({ ...packet, type: "packet" }, [packet.buffer]);
+    if (state.metrics) {
+      document.getElementById("performance").textContent =
+        "Render " +
+        state.metrics.renderMs.toFixed(1) +
+        " ms · GPU meshes " +
+        mib(state.metrics.gpuCacheBytes) +
+        " MiB";
     }
-    node.connect(context.destination);
-  })();
-  try {
-    await mixerLoading;
-  } finally {
-    mixerLoading = null;
-  }
-}
-
-function closeMixer() {
-  mixerGeneration = 0;
-  if (mixerNode) {
-    mixerNode.port.postMessage({ type: "close" });
-    mixerNode.disconnect();
-    mixerNode = null;
-  }
-  mixerPackets.length = 0;
-  globalThis.playerAudio.lowEnabled = false;
-  globalThis.playerAudio.mixerStatus = null;
-}
-let selection = 0;
-let previous = performance.now(),
-  generation = 0,
-  soundsPlayed = 0;
-globalThis.playerStatus = { ready: false, error: "", ticks: 0 };
-
-globalThis.playerAudio = {
-  context: null,
-  buffer: null,
-  played: 0,
-  ended: 0,
-  peak: 0,
-  source: null,
-  play() {
-    if (!this.buffer || this.context?.state !== "running") {
-      return;
-    }
-    if (this.source) {
-      this.source.onended = null;
-      this.source.stop();
-    }
-    const source = this.context.createBufferSource();
-    source.buffer = this.buffer;
-    source.connect(this.context.destination);
-    source.onended = () => {
-      this.ended++;
-      if (this.source === source) {
-        this.source = null;
-      }
-    };
-    source.start();
-    this.source = source;
-    this.played++;
+    resize();
   },
-};
-
-function stopOutput() {
-  startRequest++;
-  keys.clear();
-  pointer.pointer = false;
-  pointer.right = false;
-  pointer.hover = false;
-  wheelDirection = 0;
-  const audio = globalThis.playerAudio;
-  if (audio.source) {
-    audio.source.onended = null;
-    audio.source.stop();
-    audio.source = null;
-  }
-}
-
+});
+globalThis.playerStatus = session.runtime.getSnapshot();
+globalThis.playerAudio = session.inspect().audio;
 function fail(message) {
-  textInput.close();
-  clearTimeout(watchdog);
-  worker?.terminate();
-  stopOutput();
-  closeMixer();
-  worker = null;
-  pending = started = false;
-  globalThis.playerStatus = { ...globalThis.playerStatus, ready: false, error: message };
+  globalThis.playerStatus = { ...globalThis.playerStatus, error: message, ready: false };
   status.textContent = message;
-  button.textContent = "Restart game";
   button.disabled = false;
 }
-
-function armWatchdog(delay) {
-  clearTimeout(watchdog);
-  watchdog = setTimeout(() => fail("Game stopped responding. Restart to try again."), delay);
-}
-
-function maybePlay() {
-  if (started && globalThis.playerStatus.sounds !== soundsPlayed) {
-    globalThis.playerAudio.play();
-    soundsPlayed = globalThis.playerStatus.sounds;
-  }
-}
-
 async function start() {
-  const request = ++startRequest;
-  const audio = globalThis.playerAudio;
-  if (!audio.context) {
-    audio.context = new AudioContext();
+  if (!session.runtime.getSnapshot().ready) {
+    await load();
   }
-  await audio.context.resume();
-  if (audio.context.state !== "running") {
-    throw new Error("Audio could not start. Try again.");
-  }
-  if (globalThis.playerStatus.error) {
-    load(true);
-    return;
-  }
-  if (!globalThis.playerStatus.ready) {
-    return;
-  }
-  if (!audio.buffer) {
-    audio.buffer = audio.context.createBuffer(1, audio.samples.length, PREVIEW_SAMPLE_RATE);
-    audio.buffer.copyToChannel(audio.samples, 0);
-  }
-  await ensureMixer();
-  // No simulation may produce audio commands until its consumer exists. A
-  // blur, reload or failure while loading also cancels this start request.
-  if (request !== startRequest || !globalThis.playerStatus.ready) {
-    return;
-  }
-  started = true;
-  mixerNode?.port.postMessage({ type: "pause", paused: false });
-  previous = performance.now();
-  clock = new FrameClock();
-  button.textContent = "Resume game";
+  await session.runtime.play();
   canvas.focus();
-  maybePlay();
 }
-
-async function load(restart = false) {
-  if (parameters.has("local") && !selectedCartridge) {
-    status.textContent = "Choose a PNG cartridge from your device to begin.";
-    button.disabled = true;
-    return;
-  }
-  if (!display || display.isContextLost?.()) {
-    fail("Display context unavailable. Restore the display and restart the game.");
-    return;
-  }
-  const currentGeneration = ++generation;
-  textInput.close();
-  worker?.terminate();
-  stopOutput();
-  closeMixer();
-  pending = started = false;
-  autoStart = restart;
-  let loading = true;
-  soundsPlayed = 0;
-  globalThis.playerAudio.buffer = null;
-  globalThis.playerStatus = { ready: false, error: "", ticks: 0 };
-  status.textContent = `Loading ${PLAYER_TITLE}…`;
-  button.disabled = true;
-  worker = new Worker("./worker.js", { type: "module" });
-  armWatchdog(10000);
-  worker.onerror = (event) => {
-    event.preventDefault();
-    if (currentGeneration === generation) {
-      fail(event.message || "Player worker failed.");
-    }
-  };
-  worker.onmessage = ({ data }) => {
-    if (currentGeneration !== generation) {
-      return;
-    }
-    if (data.type === "text-state") {
-      textInput.configure(data.state);
-      return;
-    }
-    if (data.type === "loading" && loading) {
-      armWatchdog(10000);
-      const downloaded = `${mib(data.received)} MiB`;
-      const total = data.total ? ` / ${mib(data.total)} MiB` : "";
-      status.textContent = `Loading ${PLAYER_TITLE}… ${downloaded}${total}`;
-      return;
-    }
-    if (data.type === "audio-status") {
-      const context = globalThis.playerAudio.context;
-      globalThis.playerAudio.mixerStatus = {
-        ...data.status,
-        deviceRate: context?.sampleRate,
-        leadFrames: audioLimits.audioLeadFrames,
-        baseLatency: context?.baseLatency,
-        outputLatency: context?.outputLatency ?? null,
-      };
-      return;
-    }
-    if (data.type === "audio-packet") {
-      if (mixerNode && mixerGeneration === generation) {
-        mixerNode.port.postMessage({ ...data, type: "packet" }, [data.buffer]);
-      } else {
-        if (mixerPackets.length >= audioLimits.maxAudioTransfers) {
-          fail("Initial audio schedule exceeds transfer credits.");
-          return;
-        }
-        mixerPackets.push(data);
-      }
-      return;
-    }
-    if (data.type === "audio-feedback-recycle") {
-      mixerNode?.port.postMessage({ type: "feedback-recycle", id: data.id, buffer: data.buffer }, [
-        data.buffer,
-      ]);
-      return;
-    }
-    if (data.type === "executor") {
-      armWatchdog(10000);
-      prepareExecutor("./luau-executor.wasm")
-        .then((executor) => {
-          if (currentGeneration === generation) {
-            worker.postMessage({ type: "executor", executor });
-          }
-        })
-        .catch((error) => {
-          if (currentGeneration === generation) {
-            fail(error.message);
-          }
-        });
-      return;
-    }
-    if (data.type === "executing") {
-      loading = false;
-      armWatchdog(1000);
-      return;
-    }
-    clearTimeout(watchdog);
-    pending = false;
-    if (data.type === "error") {
-      fail(data.error);
-      return;
-    }
-    if (data.type === "stepped") {
-      globalThis.playerStatus.ticks = data.ticks;
-      if (data.audioEnabled) {
-        globalThis.playerAudio.lowEnabled = true;
-        if (started) {
-          ensureMixer().catch((error) => fail(error.message));
-        }
-      }
-      requestFrame(performance.now());
-      return;
-    }
-    if (data.type === "ready") {
-      loading = false;
-      if (data.title) {
-        document.title = data.title;
-      }
-      const audio = globalThis.playerAudio;
-      audio.samples = new Float32Array(data.sample);
-      audio.peak = audio.samples.reduce((peak, value) => Math.max(peak, Math.abs(value)), 0);
-      button.disabled = false;
-      button.textContent = "Start game";
-    }
-    if (data.type !== "ready" && data.type !== "frame") {
-      fail("Invalid player response.");
-      return;
-    }
-    if (data.audioEnabled) {
-      globalThis.playerAudio.lowEnabled = true;
-      if (started) {
-        ensureMixer().catch((error) => fail(error.message));
-      }
-    }
-    const imageWidth = data.presentationWidth || data.width,
-      imageHeight = data.presentationHeight || data.height;
-    if (canvas.width !== imageWidth || canvas.height !== imageHeight) {
-      canvas.width = imageWidth;
-      canvas.height = imageHeight;
-      resize();
-    }
-    if (data.bitmap) {
-      display.drawImage(data.bitmap, 0, 0);
-      data.bitmap.close();
-    } else {
-      display.putImageData(
-        new ImageData(new Uint8ClampedArray(data.pixels), imageWidth, imageHeight),
-        0,
-        0,
-      );
-    }
-    const { ticks, sounds, spriteX, spriteY, x, y, hash, width, height } = data;
-    if (data.metrics) {
-      const now = performance.now();
-      statsFrames++;
-      statsUploads += data.metrics.gpuUploadBytes;
-      const elapsed = now - statsStarted;
-      if (elapsed >= 500 || data.type === "ready") {
-        const m = data.metrics;
-        document.getElementById("performance").textContent =
-          `${started && elapsed >= 500 ? ((statsFrames * 1000) / elapsed).toFixed(1) : "—"} FPS delivered · render ${m.renderMs.toFixed(1)} ms\n` +
-          `GPU uploads ${mib((statsUploads * 1000) / Math.max(1, elapsed))} MiB/s · mesh uploads ${m.meshUploads}\n` +
-          `GPU meshes ${mib(m.gpuCacheBytes)} MiB · textures ${mib(m.gpuTextureBytes)} MiB (est.)\n` +
-          `GPU snapshots ${mib(m.gpuFrameBytes)} MiB (included above) · read back ${mib(m.gpuSnapshotReadbackBytes)} MiB total\n` +
-          `Wasm guest ${mib(m.memory.currentLinear)} MiB · runtime ${mib(m.memory.runtimeLinear)} MiB\n` +
-          `Resources ${mib(m.resourceBytes)} MiB · CPU quality ${mib(m.cpuQualityBytes)} MiB (overlaps runtime)`;
-        statsStarted = now;
-        statsFrames = 0;
-        statsUploads = 0;
-      }
-    }
-    globalThis.playerStatus = {
-      ...globalThis.playerStatus,
-      ready: true,
-      error: "",
-      ticks,
-      renderedTicks: ticks,
-      sounds,
-      spriteX,
-      spriteY,
-      x,
-      y,
-      hash,
-      width,
-      height,
-      smoothPresentation: data.smoothPresentation,
-      presentationWidth: imageWidth,
-      presentationHeight: imageHeight,
-      metrics: data.metrics,
-      renderFps: frameRateSetting(),
-      simulationHz: 60,
-      frames: (globalThis.playerStatus.frames || 0) + 1,
-    };
-    resize();
-    if (data.startup) {
-      globalThis.playerStatus.startup = data.startup;
-    }
-    if (data.graphics) {
-      globalThis.playerStatus.graphics = data.graphics;
-      document.getElementById("graphics-status").textContent =
-        `Active renderer: ${data.graphics.effective}${data.graphics.fallback ? ` · ${data.graphics.fallback}` : ""}`;
-    }
-    if (graphics.smoothPan && !data.smoothPresentation) {
-      document.getElementById("graphics-status").textContent =
-        "Smooth pan inactive: needs an enlarged single orthographic screen batch with opaque HUD draws.";
-    }
-    if (data.memory) {
-      globalThis.playerStatus.memory = data.memory;
-    }
-    status.textContent =
-      globalThis.playerInstructions || "Arrows / WASD: move · Space / tap: sound";
-    maybePlay();
-    if (autoStart) {
-      autoStart = false;
-      start().catch((error) => fail(error.message));
-    }
-    requestFrame(performance.now());
-  };
-  try {
-    const gameUrl = parameters.get("game") || globalThis.playerCartridge || "./game.wasm";
-    const executor =
-      !selectedCartridge && new URL(gameUrl, location.href).pathname.endsWith(".luau")
-        ? await prepareExecutor("./luau-executor.wasm")
-        : null;
-    if (currentGeneration !== generation) {
-      return;
-    }
-    worker.postMessage({
-      type: "load",
-      gameUrl,
-      progress: true,
-      smoke,
-      executor,
-      cartridge: selectedCartridge,
-      graphics,
-      presentationSize: displayPixels(),
-    });
-  } catch (error) {
-    if (currentGeneration === generation) {
-      fail(error.message || String(error));
-    }
+async function load(resume = false) {
+  await session.runtime.load(
+    selectedCartridge || parameters.get("game") || globalThis.playerCartridge || "./game.wasm",
+    { graphics },
+  );
+  if (resume) {
+    await start();
   }
 }
-
 async function openCartridge(file) {
   if (!file) {
     return;
@@ -636,7 +225,7 @@ window.addEventListener("drop", (event) => {
 });
 
 function input(consumeWheel = true) {
-  if (textInput.editing()) {
+  if (session.runtime.getSnapshot().textEditing) {
     return { buttons: 0, pointer: false, x: 0, y: 0 };
   }
   let buttons = 0;
@@ -736,70 +325,6 @@ function input(consumeWheel = true) {
   };
 }
 
-function requestFrame(now = performance.now(), displayOpportunity = false) {
-  clearTimeout(frameTimer);
-  frameTimer = undefined;
-  // A response can arrive after the timestamp of an already queued RAF.
-  const current = Math.max(now, previous);
-  const delta = Math.min((current - previous) / 1000, 0.1);
-  previous = current;
-  if (started && worker && !document.hidden && !(smoke && globalThis.playerStatus.ticks >= 120)) {
-    clock.advance(delta);
-    // Bundle updates with the display callback in native mode. A tick timer
-    // competing with RAF could otherwise occupy the Worker at every refresh.
-    if (!smoke && renderFps === 0 && !displayOpportunity) {
-      return;
-    }
-    if (!pending) {
-      const { steps, render } = smoke
-        ? { steps: 1, render: true }
-        : clock.take(renderFps, displayOpportunity);
-      if (steps === 0 && !render) {
-        frameTimer = setTimeout(requestFrame, clock.delay(renderFps));
-        return;
-      }
-      pending = true;
-      armWatchdog(1000);
-      worker.postMessage({
-        type: "step",
-        diagnostics: false,
-        steps,
-        render,
-        input: input(steps > 0),
-        presentationSize: displayPixels(),
-      });
-    }
-  }
-}
-function animate(now) {
-  requestFrame(now, true);
-  requestAnimationFrame(animate);
-}
-
-function resetInput() {
-  startRequest++;
-  clearTimeout(frameTimer);
-  frameTimer = undefined;
-  keys.clear();
-  pointer.pointer = false;
-  pointer.right = false;
-  pointer.hover = false;
-  wheelDirection = 0;
-  clock = new FrameClock();
-}
-window.addEventListener("blur", () => {
-  resetInput();
-  started = false;
-  mixerNode?.port.postMessage({ type: "pause", paused: true });
-});
-document.addEventListener("visibilitychange", () => {
-  resetInput();
-  previous = performance.now();
-  if (document.hidden) {
-    started = false;
-    mixerNode?.port.postMessage({ type: "pause", paused: true });
-  }
-});
 window.addEventListener("keydown", (event) => {
   if (document.activeElement !== canvas) {
     return;
@@ -893,7 +418,6 @@ function resize() {
   const scale = available >= 1 ? Math.floor(available) : Math.max(0.25, available);
   canvas.style.width = `${(width * scale) / density}px`;
   canvas.style.height = `${(height * scale) / density}px`;
-  textInput.reposition();
 }
 function displayPixels() {
   const full = document.fullscreenElement === document.getElementById("screen");
@@ -920,6 +444,5 @@ resize();
 if (graphicsError || timingError) {
   fail(graphicsError || timingError);
 } else {
-  load();
+  load().catch((error) => fail(error.message));
 }
-requestAnimationFrame(animate);

@@ -110,6 +110,9 @@ outputs = [
   "build/odin-player/web/licenses/odin.txt",
   "build/odin-player/web/player.html",
   "build/odin-player/web/player.js",
+  "build/odin-player/web/runtime.js",
+  "build/odin-player/web/session.js",
+  "build/odin-player/web/input.js",
   "build/odin-player/web/policy.js",
   "build/odin-player/web/runtime-gpu.wasm",
   "build/odin-player/web/runtime.wasm",
@@ -256,6 +259,7 @@ run = [
   {task = "test:validation"},
   {task = "test:build-tasks"},
   {task = "test:player-export"},
+  {task = "test:web-runtime"},
   {task = "test:native-platform"},
     {task = "test:cli"},
   {task = "test:cli-worker"},
@@ -304,6 +308,11 @@ run = ["node --test tools/macos-loader.test.mjs", "node tools/verify-native-plat
 [tasks."test:player-export"]
 description = "Verify complete player exports and missing-dependency failures"
 run = "node --test tools/player-export.test.mjs"
+
+[tasks."test:web-runtime"]
+description = "Verify the public embeddable runtime with independent browser sessions"
+depends = ["build:odin", "deps:luau"]
+run = "node tools/verify-web-runtime.mjs"
 
 [tasks."test:drawing"]
 run = "node experiments/luau-executor/verify-drawing.mjs"

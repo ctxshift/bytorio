@@ -37,6 +37,7 @@ let startup;
 let resourceTrace = false;
 let initialMemory;
 let executorRequest;
+let closing = false;
 const audioTransfers = Array.from({ length: audioLimits.maxAudioTransfers }, () => ({
   buffer: null,
   busy: false,
@@ -299,6 +300,18 @@ function frame(present = true, diagnostics = true) {
 
 self.onmessage = async ({ data }) => {
   try {
+    if (data.type === "close") {
+      closing = true;
+      closeOgg();
+      textSession?.close();
+      audioPort?.close();
+      await saveSlot?.settled();
+      saveSlot?.close();
+      gpu?.close();
+      self.postMessage({ type: "closed" });
+      return;
+    }
+    if (closing) return;
     if (data.type === "audio-connect") {
       audioConnected = true;
       audioPort?.close();
@@ -426,7 +439,9 @@ self.onmessage = async ({ data }) => {
             : fetchBytes(url, undefined, reportProgress)),
         fetchBytes(gpu ? "./runtime-gpu.wasm" : "./runtime.wasm", undefined, reportProgress),
       ]);
+      if (closing) return;
       runtime = (await WebAssembly.instantiate(runtimeBytes, imports)).instance.exports;
+      if (closing) return;
       if (
         !gpu &&
         runtime.runtime_cpu_configure(
@@ -476,6 +491,7 @@ self.onmessage = async ({ data }) => {
       const gameModule = inspectGuest(gameBytes, executor?.module, { luauExecutor: !!source });
       const compiled = performance.now();
       await saveSlot?.settled();
+      if (closing) return;
       saveSlot?.close();
       game = undefined;
       const identity = cartridge
@@ -486,6 +502,10 @@ self.onmessage = async ({ data }) => {
           )
         : input;
       saveSlot = await openSaveSlot(identity, () => game, cartridge);
+      if (closing) {
+        saveSlot.close();
+        return;
+      }
       textSession?.close();
       textSession = createTextInputSession(() => game, {
         onConfigure: (state) => self.postMessage({ type: "text-state", state }),
@@ -500,6 +520,7 @@ self.onmessage = async ({ data }) => {
           },
         })
       ).exports;
+      if (closing) return;
       const instantiated = performance.now();
       initialMemory = game.memory.buffer.byteLength;
       runtime.runtime_init();

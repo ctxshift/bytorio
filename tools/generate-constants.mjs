@@ -190,7 +190,7 @@ const common = {
     ...Object.values(contract.extendedButtons),
   ].reduce((mask, bit) => (mask | bit) >>> 0, 0),
   ...Object.fromEntries(
-    Object.entries(contract.extendedButtons).map(([name, bit]) => [
+    Object.entries({ ...contract.buttons, ...contract.extendedButtons }).map(([name, bit]) => [
       `BUTTON_${name.toUpperCase()}`,
       bit,
     ]),

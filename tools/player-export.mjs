@@ -14,6 +14,9 @@ import {
 const webScripts = [
   "player.html",
   "player.js",
+  "runtime.js",
+  "session.js",
+  "input.js",
   "worker.js",
   "policy.js",
   "audio-worklet.js",
