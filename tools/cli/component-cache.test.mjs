@@ -91,23 +91,34 @@ test("components download lazily, share by digest and reuse offline without netw
     assert.equal(await readFile(resolve(cached.directory, "tool"), "utf8"), "SDK tool bytes\n");
   }));
 
-test("concurrent installations publish only complete verified instances", async () =>
-  fixture(async ({ component, cache, count }) => {
-    const results = await Promise.all(
-      Array.from({ length: 4 }, () => resolveComponent(component, { cache })),
-    );
-    assert.ok(count() >= 1 && count() <= 4);
-    for (const result of results) {
-      assert.equal(await readFile(resolve(result.directory, "tool"), "utf8"), "SDK tool bytes\n");
-    }
-    const installed = await resolveComponent(component, { cache, offline: true });
-    assert.ok(results.some((result) => result.directory === installed.directory));
-    const entries = await readdir(resolve(cache, "sdk/components", component.descriptor.sha256));
-    assert.ok(
-      !entries.some((name) => name.startsWith(".install-")),
-      "Acquisition left staging directories",
-    );
-  }));
+test("concurrent installations publish only complete verified instances", async () => {
+  for (let attempt = 0; attempt < 20; attempt++) {
+    await fixture(async ({ component, cache, count }) => {
+      const settled = await Promise.allSettled(
+        Array.from({ length: 4 }, () => resolveComponent(component, { cache })),
+      );
+      const failures = settled.filter((result) => result.status === "rejected");
+      if (failures.length) {
+        throw new AggregateError(
+          failures.map((result) => result.reason),
+          "Concurrent SDK acquisition failed",
+        );
+      }
+      const results = settled.map((result) => result.value);
+      assert.ok(count() >= 1 && count() <= 4);
+      for (const result of results) {
+        assert.equal(await readFile(resolve(result.directory, "tool"), "utf8"), "SDK tool bytes\n");
+      }
+      const installed = await resolveComponent(component, { cache, offline: true });
+      assert.ok(results.some((result) => result.directory === installed.directory));
+      const entries = await readdir(resolve(cache, "sdk/components", component.descriptor.sha256));
+      assert.ok(
+        !entries.some((name) => name.startsWith(".install-")),
+        "Acquisition left staging directories",
+      );
+    });
+  }
+});
 
 test("corruption repairs atomically without moving a previous reader's instance", async () =>
   fixture(async ({ component, cache, count }) => {
@@ -127,6 +138,27 @@ test("corruption repairs atomically without moving a previous reader's instance"
     assert.notEqual(repaired.directory, replacement.directory);
     assert.equal(await readFile(resolve(repaired.directory, "tool"), "utf8"), "SDK tool bytes\n");
     assert.equal(count(), 3);
+  }));
+
+test("concurrent repairs reuse a complete winner and preserve previous readers", async () =>
+  fixture(async ({ component, cache }) => {
+    const previous = await resolveComponent(component, { cache });
+    const pointer = resolve(cache, "sdk/components", component.descriptor.sha256, "current.json");
+    for (let attempt = 0; attempt < 5; attempt++) {
+      await writeFile(pointer, "corrupt record");
+      const settled = await Promise.allSettled(
+        Array.from({ length: 4 }, () => resolveComponent(component, { cache })),
+      );
+      for (const result of settled) {
+        assert.equal(result.status, "fulfilled", result.reason?.stack);
+        assert.equal(
+          await readFile(resolve(result.value.directory, "tool"), "utf8"),
+          "SDK tool bytes\n",
+        );
+      }
+      assert.equal(await readFile(resolve(previous.directory, "tool"), "utf8"), "SDK tool bytes\n");
+      await resolveComponent(component, { cache, offline: true });
+    }
   }));
 
 test("failed, oversized, truncated and stalled downloads never register a component", async () =>

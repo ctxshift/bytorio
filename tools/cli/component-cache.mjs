@@ -1,10 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { createWriteStream } from "node:fs";
-import { lstat, mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { link, lstat, mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
+import { setTimeout as delay } from "node:timers/promises";
 import { componentDescriptor, unpackComponent, verifyComponent } from "../sdk/component.mjs";
 
 const instancePattern = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
@@ -86,6 +87,42 @@ async function downloadComponent(url, path, descriptor, { timeoutMs = 60000, onP
   }
 }
 
+async function publishComponent(pointer, parent, descriptor) {
+  const target = resolve(parent, "current.json");
+  try {
+    // Cold installs race to create the record, without replacing another writer.
+    await link(pointer, target);
+    return null;
+  } catch (error) {
+    if (error.code !== "EEXIST") {
+      throw error;
+    }
+  }
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const winner = await cachedComponent(parent, descriptor);
+      if (winner) {
+        return winner;
+      }
+    } catch {
+      // Only an invalid record needs replacement. Recheck after any file lock.
+    }
+    try {
+      await rename(pointer, target);
+      return null;
+    } catch (error) {
+      if (
+        process.platform !== "win32" ||
+        attempt >= 5 ||
+        !["EPERM", "EACCES", "EBUSY"].includes(error.code)
+      ) {
+        throw error;
+      }
+      await delay(10 * (attempt + 1));
+    }
+  }
+}
+
 export async function resolveComponent({ id, url, descriptor }, options = {}) {
   componentDescriptor(descriptor);
   if (typeof id !== "string" || !/^[a-z0-9][a-z0-9-]{0,63}$/.test(id)) {
@@ -138,7 +175,10 @@ export async function resolveComponent({ id, url, descriptor }, options = {}) {
     );
     // Switching this small record is atomic. Existing readers keep their concrete
     // instance path, including during concurrent acquisition or corruption repair.
-    await rename(pointer, resolve(parent, "current.json"));
+    const winner = await publishComponent(pointer, parent, descriptor);
+    if (winner) {
+      return winner;
+    }
     published = true;
     options.onProgress?.({ id, phase: "ready", total: descriptor.bytes });
     return { directory: installed, inventory };

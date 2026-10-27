@@ -207,10 +207,14 @@ test("catalogue discovery checks later pages and concurrent metadata installatio
     const selected = await selectSdkRelease(requirements, options);
     assert.equal(selected.manifest.version, "0.2.0");
     release("0.3.0");
-    const installed = await Promise.all([
+    const settled = await Promise.allSettled([
       resolveSdkRelease("0.3.0", options),
       resolveSdkRelease("0.3.0", options),
     ]);
+    for (const result of settled) {
+      assert.equal(result.status, "fulfilled", result.reason?.stack);
+    }
+    const installed = settled.map((result) => result.value);
     assert.equal(installed[0].sha256, installed[1].sha256);
     assert.deepEqual(await readdir(resolve(options.cache, "sdk/releases/0.3.0")), ["entry.json"]);
   }));

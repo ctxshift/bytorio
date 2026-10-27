@@ -82,9 +82,10 @@ try {
   };
   const cache = resolve(sandbox, "shared cache");
   await writeFile(request, JSON.stringify({ operation: "resolve", component, options: { cache } }));
-  const installations = await Promise.all([invoke(), invoke()]);
+  const installations = await Promise.allSettled([invoke(), invoke()]);
   for (const installation of installations) {
-    const result = JSON.parse(installation.stdout);
+    assert.equal(installation.status, "fulfilled", installation.reason?.stack);
+    const result = JSON.parse(installation.value.stdout);
     assert.ok(result.directory.startsWith(sandbox + sep));
     assert.deepEqual(await readFile(resolve(result.directory, "tool")), binary);
   }
