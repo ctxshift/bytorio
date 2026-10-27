@@ -3,12 +3,12 @@ import { basename, resolve } from "node:path";
 import { branding } from "../branding.mjs";
 import { requireNativeHost } from "../host-platform.mjs";
 import { exportExecutor, exportPlayer } from "../player-export.mjs";
-import { repo, run, tool } from "../toolchain.mjs";
+import { repo, run, tool, toolRoot } from "../toolchain.mjs";
 import { packComponent } from "./component.mjs";
 import { parseSdkManifest, sdkReleaseVersion } from "../cli/sdk-manifest.mjs";
 
 // Produce a host-qualified candidate. Publishing and cross-host assembly are separate steps.
-export async function produceLuauWebSdk({ version, cliVersionRange, output }) {
+export async function produceHostSdk({ version, cliVersionRange, output }) {
   sdkReleaseVersion(version);
   const host = requireNativeHost();
   if (!output) {
@@ -18,6 +18,12 @@ export async function produceLuauWebSdk({ version, cliVersionRange, output }) {
   const contract = JSON.parse(await readFile(resolve(repo, "sdk/contract.json"), "utf8"));
   const analyzer = basename(tool("luau-analyze"));
   const toolsId = `luau-${host.id}`;
+  const odinId = `odin-${host.id}`;
+  const nativeId = `native-${host.id}`;
+  const compiler = basename(tool("odin"));
+  if (!run(tool("odin"), ["version"]).includes("84bc3fc")) {
+    throw new Error("Odin dev-2026-10 (84bc3fc) is required to produce this SDK");
+  }
   const manifest = {
     schema: 2,
     version,
@@ -38,13 +44,23 @@ export async function produceLuauWebSdk({ version, cliVersionRange, output }) {
           branding.starterMessage,
         ),
       },
+      odin: {
+        entry: "src/main.odin",
+        source: (await readFile(resolve(repo, "sdk/templates/main.odin"), "utf8")).replaceAll(
+          "__STARTER_MESSAGE__",
+          branding.starterMessage,
+        ),
+      },
     },
     components: {},
     authoring: ref("core", "authoring.mjs"),
     contract: ref("core", "sdk/contract.json"),
     check: {
       runtime: ref("checks", "runtime.wasm"),
-      workers: { luau: ref("checks", "check-worker.mjs") },
+      workers: {
+        luau: ref("checks", "check-worker.mjs"),
+        odin: ref("checks", "check-worker.mjs"),
+      },
       luauExecutor: ref("executor", "luau-executor.wasm"),
     },
     // The candidate still uses the legacy shell until the public runtime extraction lands.
@@ -58,8 +74,12 @@ export async function produceLuauWebSdk({ version, cliVersionRange, output }) {
         libraries: ref("core", "sdk/luau"),
         hosts: { [host.id]: { analyzer: ref(toolsId, analyzer) } },
       },
+      odin: {
+        libraries: ref("core", "sdk/odin"),
+        hosts: { [host.id]: { compiler: ref(odinId, compiler) } },
+      },
     },
-    native: {},
+    native: { [host.id]: ref(nativeId, host.player) },
   };
   // Validate caller metadata before reserving the output or invoking a build.
   const placeholder = {
@@ -71,7 +91,7 @@ export async function produceLuauWebSdk({ version, cliVersionRange, output }) {
     sha256: "0".repeat(64),
     inventorySha256: "0".repeat(64),
   };
-  const ids = ["core", toolsId, "checks", "executor", "web"];
+  const ids = ["core", toolsId, odinId, "checks", "executor", "web", nativeId];
   manifest.components = Object.fromEntries(ids.map((id) => [id, placeholder]));
   parseSdkManifest(Buffer.from(JSON.stringify(manifest)), version);
 
@@ -84,6 +104,21 @@ export async function produceLuauWebSdk({ version, cliVersionRange, output }) {
     }
     const core = resolve(payloads, "core");
     await cp(resolve(repo, "sdk"), resolve(core, "sdk"), { recursive: true });
+    // SDK libraries share these implementation packages with the runtime.
+    // Preserve their relative imports without shipping the contributor checkout.
+    for (const name of [
+      "abi",
+      "audio",
+      "cartridge",
+      "core",
+      "graphics",
+      "resource_protocol",
+      "resources",
+    ]) {
+      await cp(resolve(repo, "runtime/odin", name), resolve(core, "runtime/odin", name), {
+        recursive: true,
+      });
+    }
     run(tool("bun"), [
       "build",
       "--target=bun",
@@ -115,10 +150,27 @@ export async function produceLuauWebSdk({ version, cliVersionRange, output }) {
       resolve(repo, "build/luau-executor/_deps/luau-src/LICENSE.txt"),
       resolve(payloads, toolsId, "licenses/luau.txt"),
     );
+    const compilerRoot = toolRoot("odin");
+    const compilerTarget = resolve(payloads, odinId);
+    for (const entry of await readdir(compilerRoot, { withFileTypes: true })) {
+      if (entry.isFile() || ["base", "core", "shared", "vendor"].includes(entry.name)) {
+        await cp(resolve(compilerRoot, entry.name), resolve(compilerTarget, entry.name), {
+          recursive: true,
+        });
+      }
+    }
+    const linker = `bin/wasm-ld${host.windows ? ".exe" : ""}`;
+    await mkdir(resolve(compilerTarget, "bin"));
+    await copyFile(resolve(compilerRoot, linker), resolve(compilerTarget, linker));
     await exportPlayer({
       platform: "web",
       source: resolve(repo, "build/odin-player/web"),
       target: resolve(payloads, "web"),
+    });
+    await exportPlayer({
+      platform: "native",
+      source: resolve(repo, "build/odin-player/native"),
+      target: resolve(payloads, nativeId),
     });
     const webNotices = (await readdir(resolve(payloads, "web/licenses"))).map(
       (name) => `licenses/${name}`,
@@ -126,9 +178,18 @@ export async function produceLuauWebSdk({ version, cliVersionRange, output }) {
     const notices = {
       core: ["sdk/NOTICE"],
       [toolsId]: ["licenses/luau.txt"],
+      [odinId]: ["LICENSE", "base/runtime/LICENSE-compiler-rt.txt"],
       checks: ["licenses/odin.txt"],
       executor: executor.notices,
       web: webNotices,
+      [nativeId]: (await readdir(resolve(payloads, nativeId, "licenses"))).map(
+        (name) => `licenses/${name}`,
+      ),
+    };
+    const executables = {
+      [toolsId]: [analyzer],
+      [odinId]: [compiler, linker],
+      [nativeId]: [host.player, ...(!host.windows ? [host.sdlLibrary] : [])],
     };
     const archives = new Map();
     for (const id of ids) {
@@ -140,7 +201,7 @@ export async function produceLuauWebSdk({ version, cliVersionRange, output }) {
           root: resolve(payloads, id),
           archive,
           notices: notices[id],
-          executables: id === toolsId ? [analyzer] : [],
+          executables: executables[id] ?? [],
         })),
       };
       archives.set(asset, archive);

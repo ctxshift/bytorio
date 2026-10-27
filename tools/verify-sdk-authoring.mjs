@@ -9,13 +9,14 @@ import { resolve, sep } from "node:path";
 import { compileCli } from "./compile-cli.mjs";
 import { requireCliHost } from "./host-platform.mjs";
 import { repo } from "./toolchain.mjs";
-import { produceLuauWebSdk } from "./sdk/produce.mjs";
+import { produceHostSdk } from "./sdk/produce.mjs";
 import { chromium } from "./browser-timing.mjs";
 import { serve } from "./serve.mjs";
 
 const host = requireCliHost();
 const output = resolve(repo, "build/sdk-authoring-verification");
 await mkdir(output, { recursive: true });
+await rm(resolve(output, "report.json"), { force: true });
 const built = resolve(output, host.executable);
 compileCli(["tools/cli/authoring-probe.mjs"], built);
 const temporaryRoot = resolve(tmpdir());
@@ -25,13 +26,13 @@ const server = createServer();
 const execute = promisify(execFile);
 let browser, website;
 try {
-  const { manifest, metadata, archives } = await produceLuauWebSdk({
+  const { manifest, metadata, archives } = await produceHostSdk({
     version: "0.2.0-preview.1",
     cliVersionRange: ">=0.1.0-0 <1.0.0",
     output: resolve(sandbox, "SDK candidate"),
   });
   await assert.rejects(
-    produceLuauWebSdk({
+    produceHostSdk({
       version: manifest.version,
       cliVersionRange: manifest.cliVersionRange,
       output: resolve(sandbox, "SDK candidate"),
@@ -54,9 +55,6 @@ try {
   await new Promise((done) => server.listen(0, "127.0.0.1", done));
   const executable = resolve(sandbox, host.executable);
   await copyFile(built, executable);
-  const project = resolve(sandbox, "minimal game");
-  await mkdir(resolve(project, "src"), { recursive: true });
-  await writeFile(resolve(project, "src/main.luau"), manifest.starters.luau.source);
   const cache = resolve(sandbox, "shared SDK cache");
   const options = {
     cache,
@@ -65,19 +63,20 @@ try {
   };
   const environment = Object.fromEntries(
     Object.entries(process.env).filter(
-      ([name]) => !/^(path|mise.*|node.*|bun.*|validation_.*)$/i.test(name),
+      ([name]) => !/^(path|mise.*|node.*|bun.*|odin.*|validation_.*)$/i.test(name),
     ),
   );
   environment.PATH = "";
   const requestPath = resolve(sandbox, "request.json");
-  async function invoke(action, offline = false) {
+  async function invoke(language, action, { offline = false, targets = ["web"] } = {}) {
     await writeFile(
       requestPath,
       JSON.stringify({
         action,
         version: manifest.version,
-        project,
-        config: { sdkRelease: manifest.version },
+        project: resolve(sandbox, `${language} game`),
+        config: { language },
+        targets,
         options: { ...options, offline },
       }),
     );
@@ -85,43 +84,99 @@ try {
       cwd: sandbox,
       env: environment,
       windowsHide: true,
-      timeout: 60000,
+      timeout: 120000,
       maxBuffer: 1024 * 1024,
     });
     assert.match(result.stdout, /Standalone SDK authoring passed/);
   }
-  await invoke("check");
+  for (const language of ["luau", "odin"]) {
+    const project = resolve(sandbox, `${language} game`);
+    await mkdir(resolve(project, "src"), { recursive: true });
+    await writeFile(resolve(project, `src/main.${language}`), manifest.starters[language].source);
+  }
+  await invoke("luau", "check");
   assert.ok(
     !requests.some((path) => path.endsWith(manifest.components.web.asset)),
     "Checking downloaded the web player",
   );
+  const odinId = `odin-${host.id}`;
+  const nativeId = `native-${host.id}`;
+  assert.ok(!requests.some((path) => path.endsWith(manifest.components[odinId].asset)));
+  assert.ok(!requests.some((path) => path.endsWith(manifest.components[nativeId].asset)));
   const checkedRequests = requests.length;
-  await invoke("pack", true);
+  await invoke("luau", "pack", { offline: true });
   assert.equal(requests.length, checkedRequests);
-  await invoke("build");
+  await invoke("luau", "build");
   assert.equal(requests.filter((path) => path.endsWith(manifest.components.web.asset)).length, 1);
+  assert.ok(!requests.some((path) => path.endsWith(manifest.components[odinId].asset)));
+  assert.ok(!requests.some((path) => path.endsWith(manifest.components[nativeId].asset)));
+  await invoke("odin", "check");
+  const odinCheckedRequests = requests.length;
+  await invoke("odin", "pack", { offline: true });
+  assert.equal(requests.length, odinCheckedRequests);
+  for (const language of ["luau", "odin"]) {
+    await invoke(language, "build", { targets: ["web", "native"] });
+  }
   const builtRequests = requests.length;
-  await invoke("build", true);
+  for (const language of ["luau", "odin"]) {
+    await invoke(language, "build", { offline: true, targets: ["web", "native"] });
+  }
   assert.equal(requests.length, builtRequests);
-  const relocated = resolve(sandbox, "site/nested/game");
   await mkdir(resolve(sandbox, "site/nested"), { recursive: true });
-  await rename(resolve(project, "build/web"), relocated);
+  for (const language of ["luau", "odin"]) {
+    const project = resolve(sandbox, `${language} game`);
+    await rename(resolve(project, "build/web"), resolve(sandbox, `site/nested/${language}`));
+    await rename(resolve(project, "build/native"), resolve(sandbox, `${language} native export`));
+  }
   assert.ok(cache.startsWith(sandbox + sep));
   await rm(cache, { recursive: true, force: true });
   website = serve(resolve(sandbox, "site"), 0);
   await new Promise((done) => website.once("listening", done));
   browser = await chromium.launch({ channel: process.env.PLAYER_BROWSER_CHANNEL || undefined });
-  const page = await browser.newPage();
-  await page.goto(`http://127.0.0.1:${website.address().port}/nested/game/player.html`);
-  await page.waitForFunction(() => playerStatus.ready || playerStatus.error);
-  await page.click("#start");
-  await page.waitForFunction(() => playerStatus.ticks >= 3 || playerStatus.error);
-  const played = await page.evaluate(() => ({
-    error: playerStatus.error,
-    ticks: playerStatus.ticks,
-  }));
-  assert.equal(played.error, "");
-  assert.ok(played.ticks >= 3);
+  const played = {};
+  for (const language of ["luau", "odin"]) {
+    const page = await browser.newPage();
+    await page.goto(
+      `http://127.0.0.1:${website.address().port}/nested/${language}/player.html?smoke`,
+    );
+    await page.waitForFunction(() => playerStatus.ready || playerStatus.error);
+    await page.click("#start");
+    await page.waitForFunction(() => playerStatus.renderedTicks === 120 || playerStatus.error);
+    const web = await page.evaluate(() => ({
+      error: playerStatus.error,
+      ticks: playerStatus.ticks,
+      hash: playerStatus.hash,
+    }));
+    assert.equal(web.error, "");
+    assert.equal(web.ticks, 120);
+    await page.close();
+    const target = resolve(sandbox, `${language} native export`);
+    const result = await execute(resolve(target, host.player), ["--smoke", "--no-executor-cache"], {
+      cwd: sandbox,
+      env: {
+        ...environment,
+        SDL_VIDEODRIVER: "dummy",
+        SDL_AUDIODRIVER: "dummy",
+        SDL_RENDER_DRIVER: "software",
+      },
+      windowsHide: true,
+      timeout: 60000,
+    });
+    const native = JSON.parse(result.stdout);
+    assert.equal(native.ticks, 120);
+    assert.ok(native.audioQueuedFrames > 0);
+    assert.equal(native.hash, web.hash, `${language} relocated native/web starter image`);
+    if (process.platform === "darwin") {
+      for (const name of [host.player, host.sdlLibrary]) {
+        await execute("/usr/bin/codesign", ["--verify", "--strict", resolve(target, name)], {
+          cwd: sandbox,
+          env: environment,
+          timeout: 30000,
+        });
+      }
+    }
+    played[language] = { web, native };
+  }
   await writeFile(
     resolve(output, "report.json"),
     JSON.stringify(
@@ -143,7 +198,7 @@ try {
     ) + "\n",
   );
   console.log(
-    "Standalone SDK authoring passed: real managed Luau check/build/pack, offline reuse and relocated browser play without cache.",
+    "Standalone SDK authoring passed: managed Luau/Odin tools, offline check/build/pack and relocated native/browser play without cache.",
   );
 } finally {
   await browser?.close();

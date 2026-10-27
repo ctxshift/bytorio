@@ -19,7 +19,9 @@ try {
     } else if (request.action === "pack") {
       await authoring.packProject(request.project, request.config);
     } else {
-      await authoring.buildProject(request.project, request.config, { targets: ["web"] });
+      await authoring.buildProject(request.project, request.config, {
+        targets: request.targets ?? ["web"],
+      });
     }
     console.log("Standalone SDK authoring passed");
   }
