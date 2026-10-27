@@ -535,6 +535,7 @@ async function load(restart = false) {
       ready: true,
       error: "",
       ticks,
+      renderedTicks: ticks,
       sounds,
       spriteX,
       spriteY,
