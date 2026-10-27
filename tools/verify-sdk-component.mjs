@@ -9,6 +9,7 @@ import { compileCli } from "./compile-cli.mjs";
 import { requireCliHost } from "./host-platform.mjs";
 import { repo } from "./toolchain.mjs";
 import { packComponent } from "./sdk/component.mjs";
+import { manifestFixture } from "./cli/fixtures/sdk-manifest.mjs";
 
 const output = resolve(repo, "build/sdk-component-verification");
 await mkdir(output, { recursive: true });
@@ -94,6 +95,32 @@ try {
   const repaired = JSON.parse((await invoke()).stdout);
   assert.notEqual(repaired.directory, cached.directory);
   assert.deepEqual(await readFile(resolve(repaired.directory, "tool")), binary);
+  const requirements = {
+    cliVersion: "0.1.0-preview.7",
+    language: "luau",
+    host: "macos-x64",
+    target: "web",
+  };
+  await writeFile(
+    request,
+    JSON.stringify({ operation: "manifest", manifest: manifestFixture(), requirements }),
+  );
+  assert.deepEqual(JSON.parse((await invoke()).stdout), {
+    version: "0.2.0-preview.1",
+    profile: "resource-av-1",
+  });
+  await writeFile(
+    request,
+    JSON.stringify({
+      operation: "manifest",
+      manifest: manifestFixture(),
+      requirements: { ...requirements, language: "odin" },
+    }),
+  );
+  await assert.rejects(
+    invoke(),
+    (error) => error.code === 1 && /odin authoring on macos-x64/.test(error.stderr),
+  );
   await writeFile(
     resolve(output, "report.json"),
     JSON.stringify(
@@ -111,6 +138,7 @@ try {
           "concurrent acquisition",
           "offline reuse",
           "corruption repair",
+          "SDK metadata and compatibility",
         ],
       },
       null,

@@ -169,6 +169,24 @@ The manifest must describe:
 - Native player payloads and language tools by host/target capability.
 - Each payload's identity, URL, size, digest, unpacking bounds and notices.
 
+Distribution protocol 2 uses a bounded JSON release manifest with an exact
+SemVer `version`, `cliProtocol` and `cliVersionRange`. The distribution identity
+does not change the cartridge API versions recorded in `profiles`. Component
+references name a component and a portable path inside it. The manifest includes
+small `starters`, SDK-owned `defaults`, the authoring/contract entrypoints,
+language libraries and host tools, check workers/runtime, public web modules
+and page, and available native players. Component assets are release-local
+archive filenames with their immutable descriptors.
+
+Compatibility checks require the selected language's tools on the author's host,
+the CLI's supported protocol/version range, and the requested player target.
+Absent Intel Mac Odin tools or native payloads are explicit capability gaps.
+SDK candidates are ordered by SemVer precedence with duplicate/invalid release
+identities excluded; the caller must provide prerelease eligibility explicitly.
+Published SDK identities omit SemVer build metadata to avoid equal-precedence
+release aliases. A schema-1 text-only bundle cannot satisfy this full-authoring
+contract, while the existing explicit legacy scaffold path remains available.
+
 Download only components needed for the selected operation, language and target.
 Browser development must not fetch native players or other hosts' compilers.
 Luau authoring must not install Odin to compile the player or Luau executor.
