@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve, sep } from "node:path";
-import { spawnSync } from "node:child_process";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { createServer } from "node:http";
 import { compileCli } from "./compile-cli.mjs";
 import { requireCliHost } from "./host-platform.mjs";
 import { repo } from "./toolchain.mjs";
@@ -16,6 +18,8 @@ compileCli(["tools/cli/component-probe.mjs"], built);
 const temporaryRoot = resolve(tmpdir());
 const sandbox = await mkdtemp(resolve(temporaryRoot, "byt-component-consumer-"));
 assert.ok(sandbox.startsWith(temporaryRoot + sep));
+const server = createServer();
+const execute = promisify(execFile);
 try {
   const executable = resolve(sandbox, host.executable);
   await copyFile(built, executable);
@@ -31,6 +35,7 @@ try {
     executables: ["tool"],
     notices: ["licenses/sdk.txt"],
   });
+  const archiveBytes = await readFile(archive);
   const destination = resolve(sandbox, "installed");
   const request = resolve(sandbox, "request.json");
   await writeFile(request, JSON.stringify({ archive, destination, descriptor }));
@@ -39,23 +44,56 @@ try {
   );
   environment.PATH = "";
   const invoke = () =>
-    spawnSync(executable, [request], {
+    execute(executable, [request], {
       cwd: sandbox,
       env: environment,
       encoding: "utf8",
       windowsHide: true,
       timeout: 30000,
     });
-  const success = invoke();
-  assert.ifError(success.error);
-  assert.equal(success.status, 0, success.stderr);
+  const success = await invoke();
   assert.deepEqual(JSON.parse(success.stdout), { files: 2, notices: ["licenses/sdk.txt"] });
   assert.deepEqual(await readFile(resolve(destination, "tool")), binary);
   await writeFile(archive, "corrupt archive");
-  const failure = invoke();
-  assert.ifError(failure.error);
-  assert.equal(failure.status, 1, failure.stderr);
-  assert.match(failure.stderr, /checksum or size mismatch/);
+  await assert.rejects(
+    invoke(),
+    (error) => error.code === 1 && /checksum or size mismatch/.test(error.stderr),
+  );
+  let requests = 0;
+  server.on("request", (request, response) => {
+    requests++;
+    response.end(archiveBytes);
+  });
+  await new Promise((done) => server.listen(0, "127.0.0.1", done));
+  const component = {
+    id: "sdk-core",
+    descriptor,
+    url: `http://127.0.0.1:${server.address().port}/component.tar.gz`,
+  };
+  const cache = resolve(sandbox, "shared cache");
+  await writeFile(request, JSON.stringify({ operation: "resolve", component, options: { cache } }));
+  const installations = await Promise.all([invoke(), invoke()]);
+  for (const installation of installations) {
+    const result = JSON.parse(installation.stdout);
+    assert.ok(result.directory.startsWith(sandbox + sep));
+    assert.deepEqual(await readFile(resolve(result.directory, "tool")), binary);
+  }
+  const onlineRequests = requests;
+  await writeFile(
+    request,
+    JSON.stringify({ operation: "resolve", component, options: { cache, offline: true } }),
+  );
+  const cached = JSON.parse((await invoke()).stdout);
+  assert.equal(requests, onlineRequests);
+  await writeFile(resolve(cached.directory, "tool"), "corrupt payload");
+  await assert.rejects(
+    invoke(),
+    (error) => error.code === 1 && /corrupt.*online/.test(error.stderr),
+  );
+  await writeFile(request, JSON.stringify({ operation: "resolve", component, options: { cache } }));
+  const repaired = JSON.parse((await invoke()).stdout);
+  assert.notEqual(repaired.directory, cached.directory);
+  assert.deepEqual(await readFile(resolve(repaired.directory, "tool")), binary);
   await writeFile(
     resolve(output, "report.json"),
     JSON.stringify(
@@ -64,7 +102,16 @@ try {
         platform: host.id,
         isolatedCwd: true,
         emptyPath: true,
-        checks: ["binary payload", "notices", "archive integrity", "no external archiver"],
+        checks: [
+          "binary payload",
+          "notices",
+          "archive integrity",
+          "no external archiver",
+          "HTTP acquisition",
+          "concurrent acquisition",
+          "offline reuse",
+          "corruption repair",
+        ],
       },
       null,
       2,
@@ -72,5 +119,7 @@ try {
   );
   console.log("Compiled SDK component extraction passed with an isolated cwd and empty PATH.");
 } finally {
+  server.closeAllConnections();
+  await new Promise((done) => server.close(done));
   await rm(sandbox, { recursive: true, force: true });
 }

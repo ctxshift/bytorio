@@ -216,6 +216,16 @@ overwriting an existing artifact. These contracts are tested both under Node
 and in a relocated compiled executable with no archiver or development tools
 available on PATH.
 
+The shared component cache indexes payloads by archive digest. Each complete
+installation has an immutable instance directory and an atomically switched
+cache record. Concurrent downloads may reuse a verified winner; repair publishes
+a fresh instance without moving or deleting paths already returned to another
+reader. Unregistered staging directories are never usable installations.
+Offline use revalidates cached files and reports missing or corrupt components;
+online use can reacquire and repair them without substituting another SDK.
+Cache records contain relative instance identities. Project pins and dependency
+records contain release/component identities, independently of cache locations.
+
 ## 7. Commands and outputs
 
 | Command                             | Contract                                                                               |
