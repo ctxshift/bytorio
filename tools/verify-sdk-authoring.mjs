@@ -1,19 +1,15 @@
 import assert from "node:assert/strict";
-import { copyFile, cp, mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { createServer } from "node:http";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { tmpdir } from "node:os";
-import { basename, resolve, sep } from "node:path";
+import { resolve, sep } from "node:path";
 import { compileCli } from "./compile-cli.mjs";
 import { requireCliHost } from "./host-platform.mjs";
-import { repo, run, tool } from "./toolchain.mjs";
-import { branding } from "./branding.mjs";
-import { exportExecutor, exportPlayer } from "./player-export.mjs";
-import { packComponent } from "./sdk/component.mjs";
-import { parseSdkManifest } from "./cli/sdk-manifest.mjs";
-import { manifestFixture } from "./cli/fixtures/sdk-manifest.mjs";
+import { repo } from "./toolchain.mjs";
+import { produceLuauWebSdk } from "./sdk/produce.mjs";
 import { chromium } from "./browser-timing.mjs";
 import { serve } from "./serve.mjs";
 
@@ -29,106 +25,19 @@ const server = createServer();
 const execute = promisify(execFile);
 let browser, website;
 try {
-  const payloads = resolve(sandbox, "producer payloads");
-  const archives = new Map();
-  const descriptors = {};
-  const ref = (component, path) => ({ component, path });
-  const contract = JSON.parse(await readFile(resolve(repo, "sdk/contract.json"), "utf8"));
-  const manifest = manifestFixture("0.2.0-preview.1");
-  manifest.profiles = contract.profiles;
-  manifest.limits = contract.limits;
-  manifest.native = {};
-  const analyzer = basename(tool("luau-analyze"));
-  manifest.languages = {
-    luau: {
-      libraries: ref("core", "sdk/luau"),
-      hosts: { [host.id]: { analyzer: ref("tools", analyzer) } },
-    },
-  };
-  manifest.check = {
-    runtime: ref("checks", "runtime.wasm"),
-    workers: { luau: ref("checks", "check-worker.mjs") },
-    luauExecutor: ref("executor", "luau-executor.wasm"),
-  };
-  manifest.web = {
-    runtime: ref("web", "player.js"),
-    player: ref("web", "player.js"),
-    page: ref("web", "player.html"),
-  };
-  manifest.starters = {
-    luau: {
-      entry: "src/main.luau",
-      source: (await readFile(resolve(repo, "sdk/templates/main.luau"), "utf8")).replaceAll(
-        "__STARTER_MESSAGE__",
-        branding.starterMessage,
-      ),
-    },
-  };
-
-  for (const id of ["core", "tools", "checks", "executor", "web"]) {
-    await mkdir(resolve(payloads, id), { recursive: true });
-  }
-  const core = resolve(payloads, "core");
-  await cp(resolve(repo, "sdk"), resolve(core, "sdk"), { recursive: true });
-  run(tool("bun"), [
-    "build",
-    "--target=bun",
-    "tools/sdk/authoring.mjs",
-    "--outfile",
-    resolve(core, "authoring.mjs"),
-  ]);
-  const checks = resolve(payloads, "checks");
-  await copyFile(
-    resolve(repo, "build/odin-player/web/runtime.wasm"),
-    resolve(checks, "runtime.wasm"),
-  );
-  await mkdir(resolve(checks, "licenses"));
-  await copyFile(
-    resolve(repo, "build/odin-player/web/licenses/odin.txt"),
-    resolve(checks, "licenses/odin.txt"),
-  );
-  run(tool("bun"), [
-    "build",
-    "--target=bun",
-    "tools/sdk/smoke-worker.mjs",
-    "--outfile",
-    resolve(checks, "check-worker.mjs"),
-  ]);
-  const executor = await exportExecutor({ target: resolve(payloads, "executor") });
-  await copyFile(tool("luau-analyze"), resolve(payloads, "tools", analyzer));
-  await mkdir(resolve(payloads, "tools/licenses"));
-  await copyFile(
-    resolve(repo, "build/luau-executor/_deps/luau-src/LICENSE.txt"),
-    resolve(payloads, "tools/licenses/luau.txt"),
-  );
-  await exportPlayer({
-    platform: "web",
-    source: resolve(repo, "build/odin-player/web"),
-    target: resolve(payloads, "web"),
-    luau: false,
+  const { manifest, metadata, archives } = await produceLuauWebSdk({
+    version: "0.2.0-preview.1",
+    cliVersionRange: ">=0.1.0-0 <1.0.0",
+    output: resolve(sandbox, "SDK candidate"),
   });
-  const notices = {
-    core: ["sdk/NOTICE"],
-    tools: ["licenses/luau.txt"],
-    checks: ["licenses/odin.txt"],
-    executor: executor.notices,
-    web: ["licenses/odin.txt", "licenses/vorbis.txt"],
-  };
-  for (const id of Object.keys(notices)) {
-    const asset = `sdk-${id}.tar.gz`;
-    const archive = resolve(sandbox, asset);
-    const descriptor = await packComponent({
-      root: resolve(payloads, id),
-      archive,
-      notices: notices[id],
-      executables: id === "tools" ? [analyzer] : [],
-    });
-    descriptors[id] = { asset, ...descriptor };
-    archives.set(asset, archive);
-  }
-  manifest.components = descriptors;
-  const metadata = Buffer.from(JSON.stringify(manifest));
-  parseSdkManifest(metadata, manifest.version);
+  await assert.rejects(
+    produceLuauWebSdk({
+      version: manifest.version,
+      cliVersionRange: manifest.cliVersionRange,
+      output: resolve(sandbox, "SDK candidate"),
+    }),
+    { code: "EEXIST" },
+  );
   const metadataSha256 = createHash("sha256").update(metadata).digest("hex");
   const requests = [];
   server.on("request", async (request, response) => {
@@ -183,14 +92,14 @@ try {
   }
   await invoke("check");
   assert.ok(
-    !requests.some((path) => path.endsWith("sdk-web.tar.gz")),
+    !requests.some((path) => path.endsWith(manifest.components.web.asset)),
     "Checking downloaded the web player",
   );
   const checkedRequests = requests.length;
   await invoke("pack", true);
   assert.equal(requests.length, checkedRequests);
   await invoke("build");
-  assert.equal(requests.filter((path) => path.endsWith("sdk-web.tar.gz")).length, 1);
+  assert.equal(requests.filter((path) => path.endsWith(manifest.components.web.asset)).length, 1);
   const builtRequests = requests.length;
   await invoke("build", true);
   assert.equal(requests.length, builtRequests);

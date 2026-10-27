@@ -33,6 +33,7 @@ Documentation work alone does not require rebuilding the runtime.
 | `runtime/odin/web/worker.js` and supporting scripts | Existing execution, rendering, audio, content and host behavior                             | Preserve internals/contracts while exposing a supported runtime interface               |
 | `site/` and example staging                         | Customize copied player markup and host controls                                            | Consume the public modules/configuration rather than private markup rewriting           |
 | `tools/build-sdk-release.mjs` and release workflow  | Publish source-library SDK bundles and standalone CLI previews                              | Produce, qualify and publish version-matched runtime/player/tool components             |
+| `tools/sdk/produce.mjs` and `build:sdk-components` | Produce real host-specific Luau/web component candidates with explicit CLI compatibility | Add cross-host assembly, managed Odin/native payloads and release publication after qualification |
 
 This is an implementation map, not a requirement to retain every filename.
 Audit imports, generated constants, `repo`/cwd assumptions, tool discovery,
@@ -97,6 +98,16 @@ Exit: relocated compiled CLI creates both language projects using local HTTP
 release fixtures and cached real bundles, selects correctly with multiple
 installed SDKs, and performs no player/compiler downloads during creation.
 Tests cover explicit versions, no-compatible-SDK cases and offline reuse.
+
+`mise run build:sdk-components <version> '<CLI SemVer range>'` produces a
+host-specific Luau/web candidate under `build/sdk-components`. It includes the
+real SDK-owned authoring bundle, analyzer, check worker/runtime, executor and
+legacy player assets. The consumer qualification uses this same producer and
+archive inventory. It refuses an existing output directory and writes its
+validated manifest only after all components are complete. This is an internal
+candidate path; the published protocol-1 release workflow remains unchanged.
+The candidate does not establish the public runtime interface or advertise
+native/Odin authoring support.
 
 ## Milestone 2: first complete standalone Luau/browser slice
 

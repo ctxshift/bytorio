@@ -10,6 +10,11 @@ run = ["node tools/build-cli.mjs", "node tools/verify-cli.mjs", "node tools/buil
 description = "Package a versioned SDK for a GitHub release"
 run = "node tools/build-sdk-release.mjs"
 
+["build:sdk-components"]
+description = "Produce a Luau/web SDK candidate with an explicit version and CLI compatibility range"
+depends = ["build:odin", "deps:luau"]
+run = "node tools/build-sdk-components.mjs"
+
 ["test:cli-worker"]
 description = "Qualify compiled Worker/Wasm checking without a checkout or global tools"
 depends = ["deps:player:web-cpu", "deps:luau"]
