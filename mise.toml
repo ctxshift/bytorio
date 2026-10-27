@@ -113,6 +113,9 @@ outputs = [
   "build/odin-player/web/runtime.js",
   "build/odin-player/web/session.js",
   "build/odin-player/web/input.js",
+  "build/odin-player/web/web-player.js",
+  "build/odin-player/web/player-input.js",
+  "build/odin-player/web/player-config.js",
   "build/odin-player/web/policy.js",
   "build/odin-player/web/runtime-gpu.wasm",
   "build/odin-player/web/runtime.wasm",
@@ -260,6 +263,7 @@ run = [
   {task = "test:build-tasks"},
   {task = "test:player-export"},
   {task = "test:web-runtime"},
+  {task = "test:web-player"},
   {task = "test:native-platform"},
     {task = "test:cli"},
   {task = "test:cli-worker"},
@@ -313,6 +317,11 @@ run = "node --test tools/player-export.test.mjs"
 description = "Verify the public embeddable runtime with independent browser sessions"
 depends = ["build:odin", "deps:luau"]
 run = "node tools/verify-web-runtime.mjs"
+
+[tasks."test:web-player"]
+description = "Verify production mounts, touch layouts and input ownership"
+depends = ["build:odin", "deps:luau"]
+run = ["node --test tools/player-input.test.mjs", "node tools/verify-web-player.mjs"]
 
 [tasks."test:drawing"]
 run = "node experiments/luau-executor/verify-drawing.mjs"

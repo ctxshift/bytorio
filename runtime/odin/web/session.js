@@ -656,7 +656,7 @@ export function createSession({
       ? { buttons: 0, pointer: false, x: 0, y: 0 }
       : readInput
         ? readInput(steps > 0)
-        : inputs.sample(view.width, view.height);
+        : inputs.sample(view.width, view.height, steps > 0);
     worker.postMessage({
       type: "step",
       diagnostics,
@@ -726,6 +726,10 @@ export function createSession({
     setInput(source, value) {
       assertAlive();
       inputs.set(source, value);
+    },
+    pulseInput(bindings) {
+      assertAlive();
+      inputs.pulse(bindings);
     },
     clearInput() {
       assertAlive();

@@ -44,6 +44,8 @@ This is a preview API, versioned with the SDK and its matching players:
   presses outside the logical image are ignored. `clearInput()` releases all.
 - `setMuted(boolean)` controls this session's gain. `setFrameRate(number |
   "native" | "uncapped")` changes presentation cadence, preserving 60 Hz updates.
+- `pulseInput(buttons)` queues bindings for the next simulation update, surviving
+  presentation-only frames. Use it for wheel events or accessible button activation.
 - `state` and `getSnapshot()` expose immutable state. `on(type, listener)` returns
   an unsubscribe function; events are `state`, `progress`, `frame`, `audio`, and
   `error`. Listeners receive snapshots. `ticks` is the latest simulation tick;

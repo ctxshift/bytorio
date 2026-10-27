@@ -28,7 +28,11 @@ export function buttonMask(bindings = []) {
 
 export function createInputState() {
   const sources = new Map();
+  let pulses = 0;
   return {
+    pulse(bindings) {
+      pulses |= buttonMask(bindings);
+    },
     set(source, value) {
       if (typeof source !== "string" || !source || source.length > 128) {
         throw new TypeError("Input source must be a nonempty string of at most 128 characters");
@@ -72,9 +76,13 @@ export function createInputState() {
     },
     clear() {
       sources.clear();
+      pulses = 0;
     },
-    sample(width, height) {
-      let mask = 0;
+    sample(width, height, consume = true) {
+      let mask = pulses;
+      if (consume) {
+        pulses = 0;
+      }
       let point = null;
       for (const value of sources.values()) {
         mask |= value.mask;
