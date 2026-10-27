@@ -165,14 +165,19 @@ try {
     ...globalThis.playerStatus,
     time: performance.now(),
   }));
-  await page.waitForFunction(
-    (tick) => globalThis.playerStatus.ticks >= tick + 60,
+  const pacingSample = await page.waitForFunction(
+    (tick) => {
+      const status = globalThis.playerStatus;
+      return status.ticks >= tick + 60 ? { ...status, time: performance.now() } : false;
+    },
     pacingStart.ticks,
+    { polling: 5 },
   );
-  const pacingEnd = await page.evaluate(() => ({
-    ...globalThis.playerStatus,
-    time: performance.now(),
-  }));
+  // Keep collection deliberately late: the endpoint must be captured in the
+  // browser when the condition succeeds, rather than by a later controller RPC.
+  await page.waitForTimeout(150);
+  const pacingEnd = await pacingSample.jsonValue();
+  await pacingSample.dispose();
   const delivered = pacingEnd.frames - pacingStart.frames;
   const updates = pacingEnd.ticks - pacingStart.ticks;
   assert(updates >= 60 && updates <= 65);
