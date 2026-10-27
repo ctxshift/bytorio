@@ -286,7 +286,7 @@ export function encodeCartridge({
     image.subarray(end),
   ]);
   if (png.length - (contentBytes ? contentBytes.length + 12 : 0) > PNG_LIMIT) {
-    throw new Error("PNG cartridge exceeds the 2 MiB preview limit");
+    throw new Error(`PNG cartridge exceeds base size limit (${PNG_LIMIT} bytes)`);
   }
   return png;
 }

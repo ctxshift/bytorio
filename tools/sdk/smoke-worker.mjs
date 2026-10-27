@@ -17,7 +17,7 @@ import {
 try {
   const imports = { env: { sin: Math.sin } };
   const bytes = await readFile(workerData.game);
-  inspectGuest(bytes);
+  inspectGuest(bytes, undefined, { luauExecutor: !!workerData.source });
   const runtime = (await WebAssembly.instantiate(await readFile(workerData.runtime), imports))
     .instance.exports;
   decodeCartridge(runtime, workerData.cartridge);

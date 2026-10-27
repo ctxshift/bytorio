@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.24)
 project(luau_executor_prototype LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
+set(console_contract "${CMAKE_CURRENT_SOURCE_DIR}/../../sdk/contract.json")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${console_contract}")
+file(READ "${console_contract}" console_contract_json)
+string(JSON luau_initial_memory GET "${console_contract_json}" limits luauInitialMemoryBytes)
+string(JSON luau_maximum_memory GET "${console_contract_json}" limits luauMemoryBytes)
 set(LUAU_BUILD_CLI OFF CACHE BOOL "" FORCE)
 set(LUAU_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(LUAU_BUILD_WEB OFF CACHE BOOL "" FORCE)
@@ -15,5 +20,5 @@ endforeach()
 set_target_properties(luau_executor PROPERTIES OUTPUT_NAME "luau-executor" SUFFIX ".wasm")
 target_link_options(luau_executor PRIVATE -O3 -fwasm-exceptions --no-entry
     -sSTANDALONE_WASM=1 -sWASM_LEGACY_EXCEPTIONS=0 -sFILESYSTEM=0
-    -sALLOW_MEMORY_GROWTH=1 -sINITIAL_MEMORY=4194304 -sMAXIMUM_MEMORY=8388608
+    -sALLOW_MEMORY_GROWTH=1 -sINITIAL_MEMORY=${luau_initial_memory} -sMAXIMUM_MEMORY=${luau_maximum_memory}
     -sSTACK_SIZE=262144 -sMALLOC=emmalloc -sERROR_ON_UNDEFINED_SYMBOLS=1)

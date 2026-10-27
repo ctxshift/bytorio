@@ -15,7 +15,14 @@ import {
   CONTENT_LIMIT,
   PNG_LIMIT,
 } from "./sdk/cartridge.mjs";
-import { MAX_GAME_BYTES, MAX_CONTENT_READ_BYTES } from "../runtime/odin/web/constants.js";
+import {
+  MAX_GAME_BYTES,
+  MAX_CONTENT_READ_BYTES,
+  MAX_MEMORY_BYTES,
+  MAX_LUAU_SOURCE_BYTES,
+  MAX_LUAU_HEAP_BYTES,
+  MAX_LUAU_MEMORY_BYTES,
+} from "../runtime/odin/web/constants.js";
 import { decodeCartridge, contentImports } from "../runtime/odin/web/cartridge.js";
 import { chromium } from "./browser-timing.mjs";
 import { serve } from "./serve.mjs";
@@ -30,9 +37,13 @@ const projects = {};
 const images = {};
 const reports = {};
 assert.equal(CONTENT_LIMIT, 512 * 1024 * 1024);
-assert.equal(PNG_LIMIT, 2 * 1024 * 1024);
-assert.equal(MAX_GAME_BYTES, 1024 * 1024);
+assert.equal(PNG_LIMIT, 10 * 1024 * 1024);
+assert.equal(MAX_GAME_BYTES, 8 * 1024 * 1024);
 assert.equal(MAX_CONTENT_READ_BYTES, 1024 * 1024);
+assert.equal(MAX_MEMORY_BYTES, 8 * 1024 * 1024);
+assert.equal(MAX_LUAU_SOURCE_BYTES, 8 * 1024 * 1024);
+assert.equal(MAX_LUAU_MEMORY_BYTES, 64 * 1024 * 1024);
+assert.equal(MAX_LUAU_HEAP_BYTES, 4 * 1024 * 1024);
 function native(project, path, expected = 0) {
   const result = spawnSync(resolve(project, "build/native", nativePlayer), [path, "--smoke"], {
     encoding: "utf8",

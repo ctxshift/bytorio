@@ -77,7 +77,7 @@ and waveform controls. Their checked-in sources live under
 New CLI projects request SDK 0.2.0 and `profile: "resource-av-1"`. Existing
 `sdk: "0.1.0"` manifests remain supported. Declaring a contradictory profile is
 an error. `build` and `pack` produce the same self-contained PNG on both hosts.
-The PNG container remains version 1 with its 32-byte header and **2 MiB** base
+The PNG container remains version 1 with its 32-byte header and **10 MiB** base
 envelope limit; optional [indexed content](indexed-content.md) has a separate
 capacity bound. Distributions include `profile.json`,
 the public profile and wire schema alongside their player, licenses and modules.

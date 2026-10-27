@@ -473,7 +473,7 @@ self.onmessage = async ({ data }) => {
       }
       const fetched = performance.now();
       self.postMessage({ type: "executing" });
-      const gameModule = inspectGuest(gameBytes, executor?.module);
+      const gameModule = inspectGuest(gameBytes, executor?.module, { luauExecutor: !!source });
       const compiled = performance.now();
       await saveSlot?.settled();
       saveSlot?.close();

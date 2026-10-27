@@ -135,6 +135,7 @@ const common = {
   MAX_TEXT_BYTES: contract.limits.textBytes,
   MAX_GRAPHICS_BYTES: contract.limits.graphicsBytes,
   MAX_LUAU_SOURCE_BYTES: contract.limits.luauSourceBytes,
+  MAX_LUAU_MEMORY_BYTES: contract.limits.luauMemoryBytes,
   MAX_LUAU_HEAP_BYTES: contract.limits.luauHeapBytes,
   U32_MAX: 2 ** 32 - 1,
   U32_MODULUS: 2 ** 32,

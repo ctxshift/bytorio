@@ -29,6 +29,7 @@ assert.deepEqual(
   [advertised.sdkWord, advertised.abi, advertised.protocol, advertised.features],
 );
 assert.equal(profile.targets.guestMemoryBytes, contract.limits.guestMemoryBytes);
+assert.equal(profile.targets.luauMemoryBytes, contract.limits.luauMemoryBytes);
 assert.equal(profile.targets.luauHeapBytes, contract.limits.luauHeapBytes);
 for (const [target, constant] of Object.entries({
   resourceSlots: "maxSlots",
@@ -237,7 +238,9 @@ try {
           async ({ code, source }) => {
             const policy = await import("./policy.js");
             try {
-              const module = policy.inspectGuest(new Uint8Array(code));
+              const module = policy.inspectGuest(new Uint8Array(code), undefined, {
+                luauExecutor: !!source,
+              });
               const game = (
                 await WebAssembly.instantiate(module, {
                   env: {

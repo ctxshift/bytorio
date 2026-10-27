@@ -255,7 +255,8 @@ load :: proc(
     game.engine = wasm_engine_new_with_config(config)
     game.store = wasmtime_store_new(game.engine, nil, nil)
     game.ctx = wasmtime_store_context(game.store)
-    wasmtime_store_limiter(game.store, abi.MAX_MEMORY_BYTES, 1024, 1, 1, 1)
+    memory_limit := i64(abi.MAX_LUAU_MEMORY_BYTES if game.has_source else abi.MAX_MEMORY_BYTES)
+    wasmtime_store_limiter(game.store, memory_limit, 1024, 1, 1, 1)
     compile_start := time.tick_now()
     if !check(
         game,
@@ -383,11 +384,17 @@ load :: proc(
     defer wasm_memorytype_delete(memory_type)
     maximum: u64
     if !wasmtime_memorytype_maximum(memory_type, &maximum) ||
-       maximum > abi.MAX_MEMORY_BYTES / abi.WASM_PAGE_BYTES ||
+       maximum > u64(memory_limit / abi.WASM_PAGE_BYTES) ||
        wasmtime_memorytype_is64(memory_type) ||
        wasmtime_memorytype_isshared(memory_type) ||
        wasmtime_memorytype_page_size(memory_type) != abi.WASM_PAGE_BYTES {
-        return fail(game, "game memory must declare an 8 MiB maximum or less")
+        return fail(
+            game,
+            fmt.tprintf(
+                "game memory must declare a %d MiB maximum or less",
+                memory_limit / (1024 * 1024),
+            ),
+        )
     }
     extension: Extern
     if wasmtime_instance_export_get(
@@ -421,14 +428,16 @@ load :: proc(
     }
     initialize_start := time.tick_now()
     if game.has_source {
-        if len(source) > 256 * 1024 {
+        if len(source) > abi.MAX_LUAU_SOURCE_BYTES {
 
             return fail(game, "Luau source exceeds prototype limit")
         }
         capacity, offset, setter: Func
         result: [1]Val
+        allocate := has_export(game, "game_source_allocate")
+        buffer_name := "game_source_allocate" if allocate else "game_source_buffer"
         if !function(game, "game_source_capacity", &capacity) ||
-           !function(game, "game_source_buffer", &offset) ||
+           !function(game, buffer_name, &offset) ||
            !function(game, "game_source_size", &setter) {
 
             return false
@@ -441,7 +450,8 @@ load :: proc(
 
             return fail(game, "source exceeds executor capacity")
         }
-        if !call(game, &offset, nil, result[:]) {
+        allocation_args := [1]Val{{kind = 0, of = {i32 = i32(len(source))}}}
+        if !call(game, &offset, allocation_args[:] if allocate else nil, result[:]) {
 
             return false
         }
@@ -449,6 +459,7 @@ load :: proc(
 
             return fail(game, "invalid source buffer")
         }
+        if allocate && result[0].of.i32 == 0 { return fail(game, "cannot allocate source buffer") }
         start := uint(u32(result[0].of.i32))
         memory_size := wasmtime_memory_data_size(game.ctx, &game.memory)
         if start > memory_size || uint(len(source)) > memory_size - start {

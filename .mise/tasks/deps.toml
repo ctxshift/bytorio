@@ -1,6 +1,6 @@
 ["deps:luau:configure"]
 description = "Configure the Luau Wasm executor with pinned Emscripten"
-sources = ["experiments/luau-executor/CMakeLists.txt", ".mise/toolchain.toml", ".mise/tasks/deps.toml"]
+sources = ["experiments/luau-executor/CMakeLists.txt", "sdk/contract.json", ".mise/toolchain.toml", ".mise/tasks/deps.toml"]
 outputs = ["build/luau-executor/CMakeCache.txt", "build/luau-executor/build.ninja", "build/luau-executor/compile_commands.json", "build/luau-executor/_deps/luau-src/LICENSE.txt"]
 run = "emcmake cmake --fresh -S experiments/luau-executor -B build/luau-executor -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DFETCHCONTENT_SOURCE_DIR_LUAU="
 
