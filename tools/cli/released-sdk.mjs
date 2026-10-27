@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { chmod, copyFile, lstat, mkdir } from "node:fs/promises";
-import { posix, resolve, sep } from "node:path";
+import { dirname, posix, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { componentPath, validateComponentPaths } from "../sdk/component.mjs";
 import { hostPlatform } from "../host-platform.mjs";
@@ -90,6 +90,19 @@ export function createReleasedSdk(release, options = {}) {
       return reference(tools?.[language === "luau" ? "analyzer" : "compiler"], {
         executable: true,
       });
+    },
+    async environment(language) {
+      if (language !== "odin") {
+        return {};
+      }
+      const tools = manifest.languages.odin?.hosts[host];
+      const [compiler, linker] = await Promise.all([
+        reference(tools?.compiler, { executable: true }),
+        reference(tools?.linker, { executable: true }),
+      ]);
+      // Odin uses its root on Windows and searches PATH for wasm-ld on macOS.
+      // Neither lookup may select a globally installed toolchain.
+      return { ODIN_ROOT: dirname(compiler), PATH: dirname(linker) };
     },
     async checking(language) {
       const [runtime, worker, executor] = await Promise.all([

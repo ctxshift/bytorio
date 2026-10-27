@@ -67,6 +67,7 @@ try {
     ),
   );
   environment.PATH = "";
+  environment.ODIN_ROOT = resolve(sandbox, "unrelated compiler root");
   const requestPath = resolve(sandbox, "request.json");
   async function invoke(language, action, { offline = false, targets = ["web"] } = {}) {
     await writeFile(

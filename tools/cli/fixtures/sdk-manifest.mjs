@@ -61,8 +61,11 @@ export function manifestFixture(version = "0.2.0-preview.1") {
       odin: {
         libraries: reference("sdk/odin"),
         hosts: {
-          "windows-x64": { compiler: reference("odin.exe") },
-          "macos-arm64": { compiler: reference("odin") },
+          "windows-x64": {
+            compiler: reference("odin.exe"),
+            linker: reference("bin/wasm-ld.exe"),
+          },
+          "macos-arm64": { compiler: reference("odin"), linker: reference("bin/wasm-ld") },
         },
       },
     },

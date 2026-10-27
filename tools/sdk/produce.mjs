@@ -3,7 +3,7 @@ import { basename, resolve } from "node:path";
 import { branding } from "../branding.mjs";
 import { requireNativeHost } from "../host-platform.mjs";
 import { exportExecutor, exportPlayer } from "../player-export.mjs";
-import { repo, run, tool, toolRoot } from "../toolchain.mjs";
+import { emscriptenRoot, repo, run, tool, toolRoot } from "../toolchain.mjs";
 import { packComponent } from "./component.mjs";
 import { parseSdkManifest, sdkReleaseVersion } from "../cli/sdk-manifest.mjs";
 
@@ -76,7 +76,12 @@ export async function produceHostSdk({ version, cliVersionRange, output }) {
       },
       odin: {
         libraries: ref("core", "sdk/odin"),
-        hosts: { [host.id]: { compiler: ref(odinId, compiler) } },
+        hosts: {
+          [host.id]: {
+            compiler: ref(odinId, compiler),
+            linker: ref(odinId, `bin/wasm-ld${host.windows ? ".exe" : ""}`),
+          },
+        },
       },
     },
     native: { [host.id]: ref(nativeId, host.player) },
@@ -161,7 +166,15 @@ export async function produceHostSdk({ version, cliVersionRange, output }) {
     }
     const linker = `bin/wasm-ld${host.windows ? ".exe" : ""}`;
     await mkdir(resolve(compilerTarget, "bin"));
-    await copyFile(resolve(compilerRoot, linker), resolve(compilerTarget, linker));
+    const linkerSource = host.windows
+      ? resolve(compilerRoot, linker)
+      : resolve(emscriptenRoot(), "../bin/wasm-ld");
+    await copyFile(linkerSource, resolve(compilerTarget, linker));
+    await mkdir(resolve(compilerTarget, "licenses"));
+    await copyFile(
+      resolve(emscriptenRoot(), "system/lib/compiler-rt/LICENSE.TXT"),
+      resolve(compilerTarget, "licenses/llvm.txt"),
+    );
     await exportPlayer({
       platform: "web",
       source: resolve(repo, "build/odin-player/web"),
@@ -178,7 +191,7 @@ export async function produceHostSdk({ version, cliVersionRange, output }) {
     const notices = {
       core: ["sdk/NOTICE"],
       [toolsId]: ["licenses/luau.txt"],
-      [odinId]: ["LICENSE", "base/runtime/LICENSE-compiler-rt.txt"],
+      [odinId]: ["LICENSE", "base/runtime/LICENSE-compiler-rt.txt", "licenses/llvm.txt"],
       checks: ["licenses/odin.txt"],
       executor: executor.notices,
       web: webNotices,

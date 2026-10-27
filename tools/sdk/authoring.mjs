@@ -197,7 +197,10 @@ export async function createAuthoring({ sdk, check }) {
           `-out:${resolve(generated, "game.wasm")}`,
           `-extra-linker-flags:--max-memory=${contract.limits.guestMemoryBytes}`,
         ],
-        { cwd: spec.project },
+        {
+          cwd: spec.project,
+          env: { ...process.env, ...(await sdk.environment?.("odin")) },
+        },
       );
       const bytes = await readFile(resolve(generated, "game.wasm"));
       inspectGuest(bytes);

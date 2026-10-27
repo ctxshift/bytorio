@@ -84,6 +84,32 @@ test("released native players copy exact bytes and modes without signing or sour
     );
   }));
 
+test("Odin uses its managed root and linker without inheriting a global PATH", async () =>
+  fixture(async ({ host, manifest, add, sdk }) => {
+    await add("odin", { compiler: "compiler", "bin/wasm-ld": "linker" }, [
+      "compiler",
+      "bin/wasm-ld",
+    ]);
+    manifest.languages = {
+      odin: {
+        hosts: {
+          [host]: {
+            compiler: { component: "odin", path: "compiler" },
+            linker: { component: "odin", path: "bin/wasm-ld" },
+          },
+        },
+      },
+    };
+    const adapter = sdk();
+    const compiler = await adapter.tool("odin");
+    const environment = await adapter.environment("odin");
+    assert.equal(environment.ODIN_ROOT, resolve(compiler, ".."));
+    assert.equal(environment.PATH, resolve(compiler, "../bin"));
+    assert.deepEqual(await adapter.environment("luau"), {});
+    delete manifest.languages.odin.hosts[host].linker;
+    await assert.rejects(adapter.environment("odin"), /missing a required capability/);
+  }));
+
 test("player payloads cannot overwrite game outputs or merge conflicting files", async () =>
   fixture(async ({ root, host, manifest, add, sdk }) => {
     await add("reserved", { player: "binary", "GAME.PNG": "placeholder" }, ["player"]);

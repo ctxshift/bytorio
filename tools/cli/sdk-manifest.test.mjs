@@ -138,6 +138,9 @@ test("manifests reject incomplete capabilities, unsafe payload references and un
       delete manifest.languages.odin.hosts["windows-x64"].compiler;
     },
     (manifest) => {
+      delete manifest.languages.odin.hosts["macos-arm64"].linker;
+    },
+    (manifest) => {
       manifest.languages.luau.hosts["invalid-host"] = {};
     },
     (manifest) => {

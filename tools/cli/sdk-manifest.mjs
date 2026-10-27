@@ -228,6 +228,10 @@ export function parseSdkManifest(bytes, expectedVersion) {
         Object.hasOwn(tools, language === "luau" ? "analyzer" : "compiler"),
         `missing ${language} host tool`,
       );
+      requireValue(
+        language !== "odin" || Object.hasOwn(tools, "linker"),
+        "missing Odin Wasm linker",
+      );
       for (const [name, tool] of Object.entries(tools)) {
         requireValue(idPattern.test(name), "invalid tool identifier");
         reference(tool, components, `${language} ${host} ${name}`);

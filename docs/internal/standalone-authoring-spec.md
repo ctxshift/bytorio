@@ -193,6 +193,14 @@ Luau authoring must not install Odin to compile the player or Luau executor.
 An Odin build obtains its compatible compiler and any necessary linker/support
 files through managed dependencies.
 
+Odin host metadata declares both the compiler and Wasm linker. The released
+adapter sets the compiler child process's `ODIN_ROOT` and linker-only `PATH`
+to verified component directories, overriding unrelated global installations.
+Windows uses the linker bundled with the pinned Odin distribution; macOS uses
+the linker from the pinned Emscripten producer toolchain. Game authors install
+neither Emscripten nor a system LLVM linker. Compiler/linker notices travel with
+the component, and clean consumer tests qualify their exact packaged bytes.
+
 Standalone game checking uses a child process supervised by the CLI. The child
 loads the selected SDK's bundled check worker and prebuilt Wasm files; it needs
 no separately installed JavaScript runtime. The CLI enforces separate loading
