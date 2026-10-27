@@ -8,6 +8,55 @@ the module, while cartridge URLs resolve against the embedding document. Game
 URLs must share the host origin. The guest's import and resource sandbox still
 applies.
 
+## Try the complete custom player
+
+The next CLI/SDK preview includes `custom-player.html` and `custom-player.js`
+in every web export. Older SDK pins keep their previous files; upgrade explicitly
+after that SDK is published. From your game directory:
+
+```sh
+byt run --no-open
+```
+
+Keep that terminal running. Use the host and port from the printed Player URL
+and open `/custom-player.html`. For example, if the CLI prints
+`http://127.0.0.1:54321/`, open
+`http://127.0.0.1:54321/custom-player.html`. This uses `run`, the one-shot build
+and server; the custom example does not install `dev`'s automatic reload client.
+Choose Play, then use arrows/WASD, Space, the Action button, or tap/drag the canvas.
+The example supplies its own keyboard/pointer adapters, Play/Pause, Mute, Restart,
+PNG file loading, error feedback and asynchronous disposal. It imports only
+`runtime.js`; the stock shell and its bootstrap are not required.
+
+The exported layout is:
+
+```text
+build/web/
+  custom-player.html    # editable page, canvas, styles and controls
+  custom-player.js      # runtime-only host and input adapters
+  game.png
+  runtime.js
+  session.js
+  worker.js
+  runtime.wasm
+  runtime-gpu.wasm
+  audio.wasm
+  ...                  # keep ALL remaining export files and subdirectories
+```
+
+Copy the **whole** `build/web/` directory into your website before customizing
+the two example files. Do not edit them inside `build/`, where the next web build
+replaces them. They can be renamed to `index.html` and `player.js`; update the
+HTML's script URL accordingly. Host your copy with static HTTP(S), serving Wasm
+as `application/wasm`; `file:` URLs do not work. No Bytorio source checkout,
+Node.js or framework is needed to deploy it. For an existing site, import
+`createRuntime` from the copied runtime directory and supply your own canvas.
+Keep the accompanying SDK files together; you need not load the stock-player
+modules. The source pair also lives in `sdk/examples/custom-player/` inside the SDK's
+core files; use the exported pair for its ready-to-serve filenames and dependencies.
+
+## Minimal API example
+
 ```html
 <canvas id="game" width="640" height="360"></canvas>
 <button id="play">Play</button>
@@ -17,12 +66,40 @@ applies.
   const game = createRuntime({ canvas: document.querySelector("#game") });
   await game.load("./game.png");
   document.querySelector("#play").onclick = () => game.play();
-  // Your input adapter owns each source; releasing one leaves the others held.
+  // Replace these calls with your own input adapter.
   game.setInput("custom-controls", { buttons: ["right", "action"] });
   game.setInput("custom-controls", null);
   // Await game.dispose() before removing/reusing the canvas.
 </script>
 ```
+
+Use the complete example above for error handling and listener cleanup.
+
+## Input and lifecycle
+
+Held input is sampled on simulation updates. A synthetic keydown/keyup pair
+entirely between updates can be missed; rendering more often does not change the
+60 Hz simulation. In browser tests, hold keys until an observed simulation update
+has consumed them instead of sending an instantaneous `press()`.
+For discrete UI activations or wheel events, use `pulseInput(["action"])` so the
+binding reaches the next update. For continuous movement, use `setInput` on
+keydown/up. Bind only while the game has focus, let Tab reach surrounding UI,
+and respect `getSnapshot().textEditing` while the runtime's text editor is active.
+
+Name independent sources, such as `keyboard` and `touch`: releasing one must not
+release another. Convert pointer coordinates from the canvas's CSS bounds to
+`getSnapshot().width` and `.height`, the logical game dimensions. Release held
+input and pointer capture on cancellation, focus loss, pause and disposal.
+The example demonstrates these adapters; it intentionally has no D-pad overlay.
+Use the [stock player](web-player.md) for configurable mobile controls.
+
+Await rejected operations in your own UI and show errors with a retry/open path.
+Call `play()` from a user gesture for browser audio permissions. Blur/hidden-page
+transitions pause the runtime; offer Play to resume. Before removing the host,
+abort its DOM listeners and await `dispose()`; the runtime owns its own workers,
+audio and event subscriptions, while your host owns its UI listeners.
+
+## API reference
 
 This is a preview API, versioned with the SDK and its matching players:
 

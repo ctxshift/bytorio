@@ -53,7 +53,14 @@ test("browser export contains the dependencies requested by its scripts", async 
   await put(options.source, "licenses/extra.txt", "additional notice");
   await put(options.target, "game.png", "caller cartridge");
   await exportPlayer(options);
-  for (const name of ["runtime-gpu.wasm", "frame-clock.js", "gpu.js", "licenses/odin.txt"]) {
+  for (const name of [
+    "runtime-gpu.wasm",
+    "frame-clock.js",
+    "gpu.js",
+    "licenses/odin.txt",
+    "custom-player.html",
+    "custom-player.js",
+  ]) {
     assert.deepEqual(
       await readFile(join(options.target, name)),
       await readFile(join(options.source, name)),

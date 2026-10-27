@@ -269,7 +269,23 @@ native window were closed. No product source was modified to make scenarios pass
 After stopping the SDK fixture, `check --offline` and `build --target all
 --offline` still succeeded, leaving both final player exports available for review.
 
-## Limits
+## Follow-up resolutions
+
+The subsequent CLI fix preserves unselected web/native exports and prints their
+update commands. `pack` keeps both exports. Each retained target keeps its own
+cartridge and matching SDK files; the audit's whole-build replacement observation
+above describes the earlier implementation. The compiled SDK consumer check now
+exercises target switching and packaging retention.
+
+The [getting-started guide](../getting-started.md) explains stale retained exports
+and failed-development-build feedback. [Native player guidance](../native-player.md)
+and CLI help explain argument forwarding and path resolution. The
+[runtime guide](../../sdk/web-runtime.md) documents input sampling and the complete
+runtime-only custom host now included in web exports. Play/Start game wording
+distinguishes the upcoming player from older SDK pins. Browser error overlays
+and native window-title polish remain suggestions, not changes in this follow-up.
+
+## Audit limits
 
 This audit ran the Luau path on Windows x64 and desktop Chrome. It did not test
 Odin authoring, macOS, Safari, physical phones/tablets, touch hardware, gamepads,

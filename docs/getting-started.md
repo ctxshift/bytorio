@@ -141,8 +141,9 @@ newest compatible installed SDK; if none is installed, it discovers the newest
 compatible release, including previews. Only metadata downloads at this stage.
 
 `run` checks and builds the game, downloads required SDK components on first
-use, serves it locally and opens a browser tab. Choose **Start game** to enable
-sound. Use arrow keys to move and Space for a sound. Ctrl+C stops the server.
+use, serves it locally and opens a browser tab. Choose **Play** (**Start game**
+in older SDK players) to enable sound. Use arrow keys to move and Space for a
+sound. Ctrl+C stops the server.
 `run` builds once. For Odin on Windows or Apple Silicon:
 
 ```sh
@@ -162,7 +163,9 @@ Open `src/main.luau`. The starter returns `init`, `update(dt)` and `draw`
 callbacks. Change the background color in `draw` or movement speed in `update`,
 then save. `dev` rebuilds and reloads the browser. Failed builds print diagnostics
 and preserve the last working game; fix the source and save again to recover.
-The current player may require **Start game** again after reloading for audio.
+Choose **Play** again after reloading if audio needs a user gesture. Older SDK
+players label this **Start game**. Watch the terminal while iterating: if a build
+fails, the browser still shows the last successful version, not the failed edit.
 
 The first check/build generates ignored SDK editor files and build output.
 They are not extra authored project requirements. See [graphics](../sdk/graphics.md),
@@ -197,6 +200,30 @@ byt build --target all
 
 Share the entire `build/native/` folder for a standalone native game. Native
 exports target the authoring host. Plain `build` remains web only.
+
+Each command replaces only the target it builds. A web-only build keeps an
+existing native export unchanged and prints how to update it:
+
+```text
+Kept native export unchanged; run byt build --target native to update it.
+```
+
+That retained export still contains its previous game and matching player;
+it may be older than your latest edits. Use `byt build --target all` to refresh
+both. `pack` updates the root cartridge and keeps both existing player exports.
+`run` and `dev` follow the same target rules. Author files outside `build/`:
+it is generated output, and rebuilding a selected target replaces that entire
+target directory. `--output` paths are relative to your terminal's working
+directory; use a path such as `dist/my-game.png`, outside `build/web/` and
+`build/native/`.
+
+To pass native player options, put them after `--`:
+
+```sh
+byt run --target native -- --fps native
+```
+
+See [native player options and path rules](native-player.md).
 
 ## Embed and customize the web player
 
@@ -273,7 +300,9 @@ An uncached target or tool needs an online download first. `byt sdk install
 | Offline component is missing | Run the same command online once, then retry offline. |
 | Existing `build` directory is not owned by byt | Move authored files out; byt refuses to overwrite them. |
 | Missing SDK lock file | Run `byt sdk upgrade` inside the game. |
-| Browser audio is silent | Choose **Start game** and check audio permissions. |
+| Browser audio is silent | Choose **Play** (**Start game** in older SDK players) and check audio permissions. |
+| Browser still shows the old game after an edit | Check the `byt dev` terminal for a failed build; fix the error and save again. |
+| Another command is publishing | Wait for it to finish. After an interrupted command, only if no `byt` commands are running, remove `.bytorio/staging/publish.lock` inside the project and retry. |
 
 ## Work on Bytorio itself
 

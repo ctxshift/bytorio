@@ -27,6 +27,7 @@ Usage: byt new <directory> [--language luau|odin] [--sdk <version>] [--offline]
        byt build [directory] [--target web|native|all] [--offline]
        byt pack [directory] [--output game.png] [--cover cover.png] [--offline]
        byt run [directory] [--target web|native] [--port 0] [--no-open] [--offline]
+       byt run [directory] --target native [--offline] -- [player arguments...]
        byt dev [directory] [--port 0] [--no-open] [--offline]
        byt --help
        byt --version
@@ -35,7 +36,8 @@ Usage: byt new <directory> [--language luau|odin] [--sdk <version>] [--offline]
 New games use bytorio.toml and bytorio.lock.toml, with Luau by default.
 The newest compatible installed SDK is preferred; previews are eligible.
 Players and tools are downloaded only when needed.
-Build defaults to web. Run opens a browser and builds once; Ctrl+C stops it.`;
+Build defaults to web. Run opens a browser and builds once; Ctrl+C stops it.
+Native player arguments after -- use build/native as their working directory.`;
 
 function sdkOptions(offline: boolean) {
   return {

@@ -56,6 +56,8 @@ function supportFiles(platform) {
   if (platform === "web") {
     return [
       ...webScripts.map((name) => [name, "web", name]),
+      ["custom-player.html", "example", "index.html"],
+      ["custom-player.js", "example", "player.js"],
       ["vorbis.js", "vorbis", "vorbis.js"],
       ["vorbis.wasm", "vorbis", "vorbis.wasm"],
       ["licenses/vorbis.txt", "vorbis", "libvorbis-1.3.7/COPYING"],
@@ -118,6 +120,7 @@ export async function stagePlayerSupport({
 }) {
   const roots = {
     web: resolve(repo, "runtime/odin/web"),
+    example: resolve(repo, "sdk/examples/custom-player"),
     shaders: resolve(repo, "runtime/odin/gpu"),
     compiler: compilerRoot,
     sdl3: sdlRoot,

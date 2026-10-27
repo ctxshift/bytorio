@@ -72,7 +72,7 @@ mise run build:odin
 mise exec -- npm run serve
 ```
 
-Open `http://127.0.0.1:8080/player.html` and click **Start game**. Native:
+Open `http://127.0.0.1:8080/player.html` and click **Play**. Native:
 `./build/odin-player/native/player.exe` on Windows or
 `./build/odin-player/native/player` on macOS.
 

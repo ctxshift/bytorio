@@ -355,6 +355,17 @@ try {
     await page.waitForFunction(() => window.hostedPlayer.runtime.getSnapshot().ticks > 5);
     assert.equal(await page.evaluate(() => "playerStatus" in window), false);
     await page.goto(
+      `http://127.0.0.1:${website.address().port}/nested/${language}/custom-player.html`,
+    );
+    await page.evaluate(async () => {
+      window.customHost = await import("./custom-player.js");
+      await window.customHost.ready;
+    });
+    await page.waitForFunction(() => window.customHost.runtime.getSnapshot().ready);
+    await page.getByRole("button", { name: "Play", exact: true }).click();
+    await page.waitForFunction(() => window.customHost.runtime.getSnapshot().ticks > 5);
+    await page.evaluate(() => window.customHost.dispose());
+    await page.goto(
       `http://127.0.0.1:${website.address().port}/nested/${language}/debug.html?smoke`,
     );
     await page.waitForFunction(() => playerStatus.ready || playerStatus.error);

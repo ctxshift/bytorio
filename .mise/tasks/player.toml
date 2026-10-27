@@ -143,6 +143,7 @@ depends = ["deps:vorbis"]
 sources = [
   "runtime/odin/web/*.js",
   "runtime/odin/web/*.html",
+  "sdk/examples/custom-player/**",
   "runtime/odin/gpu/*.vert",
   "runtime/odin/gpu/*.frag",
   "tools/stage-player.mjs",
@@ -154,6 +155,8 @@ sources = [
 ]
 outputs = [
   "build/odin-player/web/player.html",
+  "build/odin-player/web/custom-player.html",
+  "build/odin-player/web/custom-player.js",
   "build/odin-player/web/debug-player.js",
   "build/odin-player/web/debug.html",
   "build/odin-player/web/bootstrap.js",
