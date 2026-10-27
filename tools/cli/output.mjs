@@ -8,18 +8,54 @@ import {
   open,
   readFile,
   readdir,
+  realpath,
   rename,
   rm,
   writeFile,
 } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
-import { dirname, resolve, sep } from "node:path";
+import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 
 const marker = ".bytorio-output.json";
 const playerTargets = ["web", "native"];
 const publicationTimeoutMs = 5000;
 const publicationRetryMs = 25;
+
+// New output directories do not exist yet. Resolve their nearest existing
+// ancestor so filesystem aliases cannot hide a destination inside an export.
+async function canonicalDestination(path) {
+  path = resolve(path);
+  const suffix = [];
+  while (true) {
+    try {
+      return resolve(await realpath(path), ...suffix);
+    } catch (error) {
+      const parent = dirname(path);
+      if (error.code !== "ENOENT" || parent === path) {
+        throw error;
+      }
+      suffix.unshift(basename(path));
+      path = parent;
+    }
+  }
+}
+
+export async function assertCartridgeOutput(project, output) {
+  project = await realpath(project);
+  const paths = [resolve(output), await canonicalDestination(output)];
+  for (const target of playerTargets) {
+    const exportRoot = resolve(project, "build", target);
+    for (const destination of paths) {
+      const path = relative(exportRoot, destination);
+      if (path !== ".." && !path.startsWith(".." + sep) && !isAbsolute(path)) {
+        throw new Error(
+          "Cartridge output cannot overwrite a player export; choose dist/game.png instead",
+        );
+      }
+    }
+  }
+}
 
 async function publicationLock(parent) {
   const path = resolve(parent, "publish.lock");

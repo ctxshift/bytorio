@@ -1,9 +1,15 @@
 import { createHash } from "node:crypto";
-import { isAbsolute, relative, resolve, sep } from "node:path";
+import { relative, resolve } from "node:path";
 import { readGameProject, resolveGameProject } from "./project-config.mjs";
 import { loadReleasedAuthoring } from "./released-sdk.mjs";
 import { checkGame } from "../sdk/check.mjs";
-import { copyCartridge, createBuildStage, publishBuild, removeGenerated } from "./output.mjs";
+import {
+  assertCartridgeOutput,
+  copyCartridge,
+  createBuildStage,
+  publishBuild,
+  removeGenerated,
+} from "./output.mjs";
 
 function revision(project) {
   return createHash("sha256")
@@ -27,16 +33,7 @@ export async function authorGame(action, directory, options) {
   });
   const expected = revision(project);
   if (options.output) {
-    const output = resolve(options.output);
-    for (const target of ["web", "native"]) {
-      const exportRoot = resolve(project.directory, "build", target);
-      const path = relative(exportRoot, output);
-      if (path && path !== ".." && !path.startsWith(".." + sep) && !isAbsolute(path)) {
-        throw new Error(
-          "Cartridge output cannot overwrite a player export; choose dist/game.png instead",
-        );
-      }
-    }
+    await assertCartridgeOutput(project.directory, options.output);
   }
   const authoring = await loadReleasedAuthoring(project.release, {
     ...options,

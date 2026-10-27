@@ -6,6 +6,7 @@ import {
   mkdtemp,
   readFile,
   readdir,
+  realpath,
   rm,
   stat,
   symlink,
@@ -14,7 +15,13 @@ import {
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { authorOptions } from "./arguments.mjs";
-import { createBuildStage, publishBuild, removeGenerated, snapshotWeb } from "./output.mjs";
+import {
+  assertCartridgeOutput,
+  createBuildStage,
+  publishBuild,
+  removeGenerated,
+  snapshotWeb,
+} from "./output.mjs";
 import { startPreview } from "./preview.mjs";
 import { createScaffolder } from "../sdk/scaffold.mjs";
 import { repo } from "../toolchain.mjs";
@@ -99,6 +106,33 @@ async function fixture(run) {
     await removeGenerated(root);
   }
 }
+
+test("cartridge output protection resolves aliases and nonexistent destination suffixes", async () =>
+  fixture(async (root) => {
+    const project = resolve(root, "game");
+    const alias = resolve(root, "alias");
+    for (const target of ["web", "native"]) {
+      await mkdir(resolve(project, "build", target), { recursive: true });
+      await writeFile(resolve(project, "build", target, "game.png"), "retained cartridge");
+    }
+    await symlink(project, alias, process.platform === "win32" ? "junction" : "dir");
+    const canonical = await realpath(project);
+    for (const target of ["web", "native"]) {
+      for (const file of ["game.png", "new/nested/cartridge.png"]) {
+        await assert.rejects(
+          assertCartridgeOutput(canonical, resolve(alias, "build", target, file)),
+          /cannot overwrite a player export/,
+        );
+      }
+      assert.equal(
+        await readFile(resolve(project, "build", target, "game.png"), "utf8"),
+        "retained cartridge",
+      );
+    }
+    await assertCartridgeOutput(canonical, resolve(alias, "dist/deep/game.png"));
+    await assertCartridgeOutput(canonical, resolve(alias, "build/game.png"));
+    assert.deepEqual(await readdir(project), ["build"]);
+  }));
 
 test("publication preserves unrelated build folders and replaces complete owned exports", async () =>
   fixture(async (root) => {

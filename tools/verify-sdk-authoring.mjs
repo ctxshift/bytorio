@@ -1,5 +1,14 @@
 import assert from "node:assert/strict";
-import { copyFile, mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
+import {
+  copyFile,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rename,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { createServer } from "node:http";
 import { execFile, spawn } from "node:child_process";
@@ -228,6 +237,27 @@ try {
         env: cliEnvironment,
         windowsHide: true,
         timeout: 30000,
+      },
+    ),
+    /cannot overwrite a player export/,
+  );
+  const outputAlias = resolve(sandbox, "output alias");
+  await symlink(retentionProject, outputAlias, process.platform === "win32" ? "junction" : "dir");
+  await assert.rejects(
+    execute(
+      executable,
+      [
+        "pack",
+        retentionProject,
+        "--offline",
+        "--output",
+        resolve(outputAlias, "build/web/new/game.png"),
+      ],
+      {
+        cwd: sandbox,
+        env: cliEnvironment,
+        windowsHide: true,
+        timeout: 120000,
       },
     ),
     /cannot overwrite a player export/,
