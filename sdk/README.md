@@ -131,6 +131,11 @@ describes both SDK read APIs, byte limits and the immutable cartridge index.
 
 ## Project structure and lifecycle
 
+Use `byt cover art/sticker.png --output art/cover.png` to fit square game artwork
+onto the standard cartridge shell. The resulting blank cartridge can be used
+with `byt pack --cover art/cover.png`. See [standard cartridge artwork](../docs/png-cartridges.md#standard-cartridge-artwork)
+for options, reproducibility and the distinction between blank and packed cartridges.
+
 `bytorio.toml` declares title, language, optional profile, entry path, asset path, optional PNG cover path and
 initial display. Supported displays are `[640,360]` and `[320,180]`. Paths are
 relative to the project and may not escape it. Without an `assets` override the

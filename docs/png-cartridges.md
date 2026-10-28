@@ -11,6 +11,50 @@ Luau executor, renderer and audio; these are runtime components, not game data.
 
 ## Package and play
 
+### Standard cartridge artwork
+
+Create a **blank cartridge** from a square sticker, then pack the game into it:
+
+```text
+byt cover art/sticker.png --output art/cover.png --language luau --display 640x360
+byt pack . --cover art/cover.png --output dist/my-game.png
+```
+
+`cover` works offline without a game project or SDK download. The standalone CLI
+embeds the same shell and logo used by the website and vector lettering, so no image editor,
+system font or native imaging library is needed. Language defaults to `luau` and
+display to `640x360`; use `--language odin` and/or `--display 320x180` as appropriate.
+These markings describe the intended game; they do not change its manifest.
+
+The sticker must be a square, static, noninterlaced 8-bit RGB or RGBA PNG, from
+1×1 through 4096×4096 and at most 32 MiB. Around 1024×1024 is recommended.
+Export indexed, grayscale, 16-bit or interlaced source art as RGB/RGBA first.
+Packed cartridges cannot be used as stickers. The complete square is scaled up
+or down without cropping, using bilinear sampling with premultiplied alpha;
+transparent sticker pixels reveal the shell.
+
+Layout v1 produces an 839×1024 transparent PNG. The 554×554 sticker begins at
+(148, 158), aligned with the shell's inner vertical rails. Above the sticker,
+smooth geometric vector strokes read, for example, `LUAU / 640 x 360`.
+The actual Bytorio wordmark sits below the sticker, with the fox and red backing
+excluded from its mask. Both markings use dark-gray recessed faces, upper-left
+inner shadows and subtle lower-right highlights to look molded into the plastic.
+The shell, logo mask, layout, resampling, vector alphabet and PNG encoder are bundled
+with the CLI. Identical input bytes and options produce identical output bytes
+with the same CLI release. Pin the CLI version when reproducing cover builds.
+
+Output paths are relative to the working directory. Existing output files are
+protected; use `--force` to replace an earlier cover. The input sticker, links,
+directories and packed cartridges cannot be overwritten. To use the blank
+cartridge automatically for subsequent builds, set `cover = "art/cover.png"`
+in `bytorio.toml`. `pack --cover` remains a one-off override.
+
+Packing creates a **packed cartridge**; publishing means distributing it to
+players. See the [glossary](../GLOSSARY.md) for these terms. `byt cover` and
+`byt pack` do not upload anything.
+
+### Pack and run
+
 With `byt` installed, from the folder containing your game project:
 
 ```text

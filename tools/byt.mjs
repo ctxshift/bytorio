@@ -14,6 +14,8 @@ import { parseFrameRate } from "../runtime/odin/web/frame-clock.js";
 import { branding } from "./branding.mjs";
 import { nativePlayer } from "./toolchain.mjs";
 import { importModel } from "./sdk/import-model.mjs";
+import { readFile } from "node:fs/promises";
+import { coverOptions, createCover } from "./cli/cover.mjs";
 
 const MAX_TCP_PORT = 65535;
 
@@ -25,11 +27,18 @@ const help = [
   `       ${branding.command} check|build <directory>`,
   `       ${branding.command} import <model.gltf|model.glb> --output <generated-directory>`,
   `       ${branding.command} pack <directory> [--output game.png] [--cover cover.png]`,
+  `       ${branding.command} cover <sticker.png> --output <cover.png> [--language luau|odin] [--display 640x360|320x180] [--force]`,
   `       ${branding.command} run|watch <directory> [--web|--native] [--port 8080] [--fps 60|144|native|uncapped]`,
 ].join("\n");
 try {
   if (action === "--help" || action === "help" || !action) {
     console.log(help);
+  } else if (action === "cover") {
+    const output = await createCover(coverOptions(process.argv.slice(3)), {
+      shell: await readFile(new URL("../site/assets/brand/cartridge.png", import.meta.url)),
+      logo: await readFile(new URL("../site/assets/brand/logo.png", import.meta.url)),
+    });
+    console.log(`Created blank cartridge: ${output}`);
   } else {
     if (!path) {
       throw new Error(help);

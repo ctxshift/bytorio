@@ -45,6 +45,7 @@ const notes =
 await writeFile(
   resolve(output, "release-notes.md"),
   `${notes}\n\n` +
+    "New: `byt cover sticker.png --output cover.png` creates a standardized blank cartridge from a square PNG. The shell, Bytorio wordmark and smooth molded lettering are bundled in the CLI; no installed fonts or SDK are needed. Stickers scale to fit the label region. Use `--language luau|odin` and `--display 640x360|320x180` to select the top marking, then `byt pack . --cover cover.png --output game.png` to embed the playable game in a packed cartridge.\n\n" +
     "This preview supports the SDK's embeddable runtime, production web player and configurable touch controls. Web/native target changes and cartridge packing preserve existing exports for other targets and print their refresh commands. Cartridge output protection resolves filesystem aliases before checking managed exports. Existing games keep their SDK pin until `byt sdk upgrade` is run explicitly.\n\n" +
     "[Getting started](https://bytor.io/docs/docs/getting-started.html) explains installation and game authoring.\n\n" +
     `Source: tag \`${release.tag}\`. Windows and Apple Silicon run the full validation suite; Intel Mac runs the standalone CLI suite.\n`,

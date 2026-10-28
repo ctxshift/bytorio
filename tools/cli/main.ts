@@ -1,5 +1,5 @@
 import { createScaffolder } from "../sdk/scaffold.mjs";
-import { branding, version, notices } from "../../build/cli/assets";
+import { branding, version, notices, coverShell, coverLogo } from "../../build/cli/assets";
 import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { hostPlatform } from "../host-platform.mjs";
@@ -15,6 +15,7 @@ import { authorGame } from "./author.mjs";
 import { playGame } from "./play.mjs";
 import { developGame } from "./dev.mjs";
 import { runCheckProcess } from "../sdk/check-process.mjs";
+import { coverOptions, createCover } from "./cover.mjs";
 
 type Language = "luau" | "odin";
 
@@ -26,6 +27,7 @@ Usage: byt new <directory> [--language luau|odin] [--sdk <version>] [--offline]
        byt check [directory] [--offline]
        byt build [directory] [--target web|native|all] [--offline]
        byt pack [directory] [--output game.png] [--cover cover.png] [--offline]
+       byt cover <sticker.png> --output <cover.png> [--language luau|odin] [--display 640x360|320x180] [--force]
        byt run [directory] [--target web|native] [--port 0] [--no-open] [--offline]
        byt run [directory] --target native [--offline] -- [player arguments...]
        byt dev [directory] [--port 0] [--no-open] [--offline]
@@ -36,6 +38,7 @@ Usage: byt new <directory> [--language luau|odin] [--sdk <version>] [--offline]
 New games use bytorio.toml and bytorio.lock.toml, with Luau by default.
 The newest compatible installed SDK is preferred; previews are eligible.
 Players and tools are downloaded only when needed.
+Cover creates a blank cartridge offline; pack embeds the game into a packed cartridge.
 Build defaults to web. Run opens a browser and builds once; Ctrl+C stops it.
 Native player arguments after -- use build/native as their working directory.`;
 
@@ -92,6 +95,15 @@ async function main(args: string[]): Promise<void> {
   }
   if (["watch", "import"].includes(args[0])) {
     throw new Error(`${args[0]} is not available in this development build.`);
+  }
+  if (args[0] === "cover") {
+    const output = await createCover(coverOptions(args.slice(1)), {
+      shell: Buffer.from(coverShell, "base64"),
+      logo: Buffer.from(coverLogo, "base64"),
+    });
+    console.log(`Created blank cartridge: ${output}`);
+    console.log("Use byt pack --cover <cover.png> to embed your game.");
+    return;
   }
   if (args[0] === "sdk") {
     if (args[1] === "upgrade") {

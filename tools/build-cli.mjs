@@ -26,9 +26,15 @@ const assets = Object.fromEntries(
   ),
 );
 const version = cliVersion(process.env.BYTORIO_RELEASE_TAG);
+const coverShell = (await readFile(resolve(repo, "site/assets/brand/cartridge.png"))).toString(
+  "base64",
+);
+const coverLogo = (await readFile(resolve(repo, "site/assets/brand/logo.png"))).toString("base64");
 await writeFile(
   resolve(output, "assets.ts"),
   `export const assets: Record<string, string> = ${JSON.stringify(assets)};\n` +
+    `export const coverShell = ${JSON.stringify(coverShell)};\n` +
+    `export const coverLogo = ${JSON.stringify(coverLogo)};\n` +
     `export const branding = ${JSON.stringify(branding)};\n` +
     `export const version = ${JSON.stringify(version)};\n` +
     `export const notices = ${JSON.stringify(await dependencyNotices())};\n`,

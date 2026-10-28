@@ -12,6 +12,8 @@ import { manifestFixture } from "./cli/fixtures/sdk-manifest.mjs";
 import { repo } from "./toolchain.mjs";
 import { requireCliHost } from "./host-platform.mjs";
 import { cliVersion } from "./release-config.mjs";
+import { composeCover, decodeCoverPng } from "./cli/cover.mjs";
+import { defaultCover, chunks } from "./sdk/cartridge.mjs";
 
 const temporaryRoot = resolve(tmpdir());
 const sandbox = await mkdtemp(resolve(temporaryRoot, "bytorio-cli-"));
@@ -114,6 +116,40 @@ try {
   await writeFile(resolve(sandbox, ".env"), "NODE_OPTIONS=--invalid-byt-option\n");
   await writeFile(resolve(sandbox, "bunfig.toml"), 'preload = ["./missing.js"]\n');
   assert.match((await invoke(["--help"])).stdout, /bytorio.toml/);
+  // The relocated executable must compose artwork with an empty PATH/cache and
+  // no source checkout, SDK, system font, network request or image converter.
+  const coverAssets = JSON.parse(await readFile(resolve(repo, "sdk/templates/assets.json")));
+  const sticker = defaultCover({ title: "Cover test", language: "luau", assets: coverAssets });
+  await writeFile(resolve(sandbox, "sticker.png"), sticker);
+  const coverRequests = requests.length;
+  const coverArgs = [
+    "cover",
+    "sticker.png",
+    "--output",
+    "cover.png",
+    "--language",
+    "odin",
+    "--display",
+    "320x180",
+  ];
+  assert.match((await invoke(coverArgs)).stdout, /blank cartridge/);
+  const cover = await readFile(resolve(sandbox, "cover.png"));
+  const sourceCover = composeCover(
+    sticker,
+    {
+      shell: await readFile(resolve(repo, "site/assets/brand/cartridge.png")),
+      logo: await readFile(resolve(repo, "site/assets/brand/logo.png")),
+    },
+    { language: "odin", display: "320x180" },
+  );
+  // Node and the compiled Bun executable use different zlib versions. Their
+  // pixels must match; repeated runs of the same executable must match bytes.
+  assert.ok(decodeCoverPng(cover).pixels.equals(decodeCoverPng(sourceCover).pixels));
+  assert.ok(!chunks(cover).some((part) => part.type === "caRt"));
+  assert.match((await invoke(coverArgs, false)).stderr, /output exists/);
+  await invoke([...coverArgs, "--force"]);
+  assert.ok((await readFile(resolve(sandbox, "cover.png"))).equals(cover));
+  assert.equal(requests.length, coverRequests, "Cover generation accessed SDK network");
   const expectedVersion = cliVersion(process.env.BYTORIO_RELEASE_TAG);
   assert.equal((await invoke(["--version"])).stdout.trim(), expectedVersion);
   const release = JSON.parse(await readFile(resolve(repo, "build/cli/release.json"), "utf8"));

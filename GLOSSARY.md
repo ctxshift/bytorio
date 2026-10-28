@@ -58,6 +58,32 @@ _Avoid_: Screenshot, cover image (when referring to the complete cartridge)
 The visible image of a PNG cartridge, distinct from the game program and assets
 packaged with it.
 
+**Cartridge shell**:
+The standard reusable image of the cartridge casing, shared by the website and
+the CLI's cover compositor.
+
+**Sticker**:
+Square game artwork placed within the shell's fixed label region. The sticker
+does not include the shell or the generated platform, language and display markings.
+
+**Blank cartridge**:
+Artwork consisting of the shell, fitted sticker and molded markings, without a game
+payload. Created by `byt cover`; it is a cover image, not yet playable.
+_Avoid_: Empty game, unloaded cartridge
+
+**Packed cartridge**:
+A playable PNG cartridge containing cover art and the complete game payload,
+created by `byt pack` or a player build. Packing preserves the cover's pixels.
+_Avoid_: Burned cartridge, loaded cartridge (when describing packaging)
+
+**Packing**:
+Embedding the built game payload into a PNG cover. This is a local preparation
+step; it does not upload or publish the game to a service.
+
+**Publishing**:
+Making a packed cartridge available to players, for example by sharing the PNG
+or hosting a player export. A packed cartridge need not have been published.
+
 **Cartridge payload**:
 The game program and packaged data carried by a cartridge, distinct from its
 visible cover art and the player that runs it.
