@@ -1343,3 +1343,21 @@ footer > span {
   max-height: 76px;
   object-fit: contain;
 }
+
+.cartridge-art {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+html.game-fill-window {
+  overflow: hidden;
+}
+html.game-fill-window #player-slot iframe {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  width: 100vw;
+  height: 100dvh;
+  border: 0;
+  border-radius: 0;
+}

@@ -59,26 +59,35 @@ if (search) {
 
 const launchScreen = document.querySelector(".launch-screen");
 if (launchScreen) {
-  const language = document.querySelector("#language");
   const slot = document.querySelector("#player-slot");
   const restart = document.querySelector("#restart");
-  const download = document.querySelector("#download");
   const status = document.querySelector("#play-status");
   const { game, cartridge, gpu } = launchScreen.dataset;
-  let launched = false;
   let timer;
+  window.addEventListener("message", (event) => {
+    const frame = slot.querySelector("iframe");
+    if (
+      event.origin !== location.origin ||
+      event.source !== frame?.contentWindow ||
+      event.data?.type !== "bytorio:fill-window" ||
+      typeof event.data.enabled !== "boolean"
+    ) {
+      return;
+    }
+    document.documentElement.classList.toggle("game-fill-window", event.data.enabled);
+  });
   function load() {
     clearTimeout(timer);
+    document.documentElement.classList.remove("game-fill-window");
     if (gpu === "true" && !navigator.gpu) {
       status.textContent =
         "This game requires a GPU-capable browser. Try a supported desktop browser.";
       return;
     }
-    launched = true;
     const frame = document.createElement("iframe");
     frame.title = `${game} game player`;
     frame.allow = "autoplay; fullscreen";
-    frame.src = `${root}games/${game}/player.html?game=./${cartridge}-${language.value}.png&renderer=cpu&ssaa=off`;
+    frame.src = `${root}games/${game}/player.html?game=./${cartridge}-luau.png&renderer=cpu&ssaa=off`;
     status.textContent = "Loading cartridge…";
     frame.addEventListener("load", () => {
       const deadline = Date.now() + 60000;
@@ -88,7 +97,7 @@ if (launchScreen) {
           status.textContent = `The player could not start: ${state.error}. Use Restart game to retry.`;
         } else if (state?.ready) {
           status.textContent =
-            "Ready. Press Start game for sound. Touch controls are below the display.";
+            "Ready. Press Play for sound. Touch controls are available in the player.";
         } else if (Date.now() > deadline) {
           status.textContent =
             "The player is taking longer than expected. Use Restart game to retry.";
@@ -105,12 +114,6 @@ if (launchScreen) {
   }
   document.querySelector("#launch").addEventListener("click", load);
   restart.addEventListener("click", load);
-  language.addEventListener("change", () => {
-    download.href = `${root}games/${game}/${cartridge}-${language.value}.png`;
-    if (launched) {
-      load();
-    }
-  });
 }
 
 const gameFilters = document.querySelectorAll("[data-filter]");

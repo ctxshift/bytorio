@@ -9,16 +9,29 @@ import { escape, shell, home, showcase, gamePage } from "../site/templates.mjs";
 
 // Sequential builds keep compiler jobs from competing with browser checks.
 if (!process.argv.includes("--staged")) {
-  for (const task of ["//examples/rpg:build", "//examples/racing:build"]) {
-    console.log(`Preparing showcase: ${task}`);
-    run(process.env.MISE_BIN || "mise", ["run", task], { timeout: 1800000 });
+  for (const game of games) {
+    const checkout = resolve(repo, game.build);
+    await mkdir(checkout, { recursive: true });
+    if (!existsSync(resolve(checkout, ".git"))) {
+      run("git", ["init", checkout]);
+    }
+    run("git", ["fetch", "--depth=1", game.repository, game.revision], { cwd: checkout });
+    run("git", ["checkout", "--detach", "FETCH_HEAD"], { cwd: checkout });
+    const mise = process.env.MISE_BIN || "mise";
+    console.log(`Preparing showcase: ${game.title} at ${game.revision}`);
+    run(mise, ["trust"], { cwd: checkout });
+    run(mise, ["install"], { cwd: checkout, timeout: 1800000 });
+    run(mise, ["exec", "--", "byt", "build", "--target", "web"], {
+      cwd: checkout,
+      timeout: 1800000,
+    });
   }
 }
 
 const output = resolve(repo, "build/site");
 await mkdir(output, { recursive: true });
 // These generated trees must not retain pages removed from the public catalog.
-for (const directory of ["docs", "source"]) {
+for (const directory of ["docs", "source", "games", "showcase"]) {
   await rm(resolve(output, directory), { recursive: true, force: true });
 }
 async function emit(path, content) {
@@ -32,31 +45,35 @@ for (const file of ["site.css", "site.js"]) {
   await cp(resolve(repo, "site", file), resolve(output, file));
 }
 for (const game of games) {
-  const source = resolve(repo, game.build, "web");
-  for (const language of ["luau", "odin"]) {
-    if (!existsSync(resolve(source, `${game.cartridge}-${language}.png`))) {
-      throw new Error(
-        `Missing ${game.title} ${language} cartridge. Run mise run build:site first.`,
-      );
-    }
+  const source = resolve(repo, game.build, "build/web");
+  if (!existsSync(resolve(source, "game.png"))) {
+    throw new Error(`Missing ${game.title} cartridge. Run mise run build:site first.`);
   }
   const target = resolve(output, "games", game.id);
   await cp(source, target, { recursive: true });
+  await cp(resolve(source, "game.png"), resolve(target, `${game.cartridge}-luau.png`));
+  await cp(
+    resolve(repo, game.build, "art", `${game.id}-cover.png`),
+    resolve(output, "assets", `${game.id}-cartridge.png`),
+  );
   // Configure the SDK player through its public configuration contract.
-  const player = await readFile(resolve(repo, "runtime/odin/web/player.html"), "utf8");
+  const player = await readFile(resolve(source, "player.html"), "utf8");
   await writeFile(
     resolve(target, "player.html"),
     player
       .replace("<title>Game player</title>", `<title>${escape(game.title)} · Bytorio</title>`)
-      .replace("</head>", '<link rel="stylesheet" href="./showcase-player.css"></head>'),
+      .replace("</head>", '<link rel="stylesheet" href="./showcase-player.css"></head>')
+      .replace("</body>", '<script type="module" src="./showcase-status.js"></script></body>'),
   );
+  await cp(resolve(repo, "site/player-host.js"), resolve(target, "showcase-status.js"));
   await writeFile(
     resolve(target, "player-config.json"),
     JSON.stringify(
       {
         title: game.title,
+        cartridge: `./${game.cartridge}-luau.png`,
         instructions: game.controls,
-        controls: { visibility: "always", overrides: { action: { label: game.action } } },
+        controls: { visibility: "auto", overrides: { action: { label: game.action } } },
       },
       null,
       2,

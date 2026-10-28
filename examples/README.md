@@ -1,5 +1,21 @@
 # Example projects
 
+## Demo games
+
+For complete games built with the standalone CLI and SDK, start with these
+public Luau projects:
+
+- [Willow Junction](https://github.com/ctxshift/willow-junction): a cozy
+  isometric train station with routing, decorations and lo-fi synth music.
+- [Abyssal Salvage](https://github.com/ctxshift/abyssal-salvage): isometric
+  deep-sea survival with salvage upgrades, sunken wrecks and a leviathan.
+
+Follow each repository's README to install its pinned tools and run
+`mise run play`. These games live in separate repositories and do not require
+the Bytorio contributor toolchain.
+
+## SDK examples in this repository
+
 Each directory is a nested mise project. Its `mise.toml` owns build, startup,
 generation and game-specific measurement tasks. Language variants, shared art,
 launchers and tools live beside that configuration. Generated exports and game

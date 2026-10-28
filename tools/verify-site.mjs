@@ -34,6 +34,13 @@ async function checkLinks(directory) {
   }
 }
 await checkLinks(output);
+for (const game of games) {
+  assert.deepEqual(
+    await readFile(resolve(output, "assets", `${game.id}-cartridge.png`)),
+    await readFile(resolve(repo, game.build, "art", `${game.id}-cover.png`)),
+    "Published cartridge artwork matches the game's repository exactly",
+  );
+}
 report.checks.push("All generated local page and asset links resolve");
 const searchIndex = JSON.parse(await readFile(resolve(output, "search.json"), "utf8"));
 assert.ok(searchIndex.some(({ url }) => url === "docs/sdk/README.html"));
@@ -78,8 +85,8 @@ try {
   report.checks.push("Full-text search, no-results state, clearing search");
   await page.goto(`${base}/showcase/`);
   for (const [label, expected] of [
-    ["Racing", "Copper Circuit"],
-    ["Adventure", "Mossglen"],
+    ["Cozy", "Willow Junction"],
+    ["Survival", "Abyssal Salvage"],
   ]) {
     const filter = page.getByRole("button", { name: label, exact: true });
     await filter.click();
@@ -91,6 +98,35 @@ try {
   assert.equal(await page.locator(".game-card:visible").count(), games.length);
   report.checks.push("Game category filters select and restore playable cartridges");
   await page.screenshot({ path: resolve(artifacts, "showcase-desktop.png"), fullPage: true });
+  for (const game of games) {
+    await page.goto(`${base}/showcase/${game.id}/`);
+    await page.locator("#launch").click();
+    const frame = await (await page.locator("iframe").elementHandle()).contentFrame();
+    await bindPlayer(frame);
+    await frame.waitForFunction(() => window.hostedPlayer.runtime.getSnapshot().ready);
+    assert.equal(await frame.locator(".touch-controls").isVisible(), false);
+    assert.equal(await frame.locator(".player.fill-window").count(), 0);
+    await frame.getByRole("button", { name: "Fill window", exact: true }).click();
+    await page.waitForFunction(() =>
+      document.documentElement.classList.contains("game-fill-window"),
+    );
+    const bounds = await page.locator("iframe").boundingBox();
+    assert.deepEqual(bounds, { x: 0, y: 0, width: 1440, height: 1000 });
+    await frame.getByRole("button", { name: "Exit fill window", exact: true }).click();
+    await page.waitForFunction(
+      () => !document.documentElement.classList.contains("game-fill-window"),
+    );
+    assert.ok((await page.locator("iframe").boundingBox()).width < 1440);
+    await frame.getByRole("button", { name: "Fill window", exact: true }).click();
+    await frame.locator("canvas").focus();
+    await page.keyboard.press("Escape");
+    await page.waitForFunction(
+      () => !document.documentElement.classList.contains("game-fill-window"),
+    );
+  }
+  report.checks.push(
+    "Repository cartridge art, desktop controls hidden, browser-wide Fill Window and restore",
+  );
   await page.close();
 
   const context = await browser.newContext({
@@ -115,10 +151,7 @@ try {
     await mobile.goto(`${base}/showcase/${game.id}/`);
     assert.equal(await mobile.locator("iframe").count(), 0, "Player must be lazy loaded");
     await mobile.locator("#launch").click();
-    for (const language of ["luau", "odin"]) {
-      if (language === "odin") {
-        await mobile.locator("#language").selectOption(language);
-      }
+    for (const language of ["luau"]) {
       const frame = await (await mobile.locator("iframe").elementHandle()).contentFrame();
       await bindPlayer(frame);
       await frame.waitForFunction(() => window.hostedPlayer.runtime.getSnapshot().ready, null, {
@@ -130,8 +163,26 @@ try {
       );
       await frame.getByRole("button", { name: "Play game", exact: true }).click();
       await frame.waitForFunction(() => window.hostedPlayer.runtime.getSnapshot().ticks > 5);
-      if (game.id === "copper-circuit") {
-        await frame.waitForFunction(() => window.hostedPlayer.runtime.getSnapshot().ticks > 190);
+      assert.equal(await frame.locator(".player.fill-window").count(), 1);
+      await mobile.waitForFunction(() =>
+        document.documentElement.classList.contains("game-fill-window"),
+      );
+      assert.deepEqual(await mobile.locator("iframe").boundingBox(), {
+        x: 0,
+        y: 0,
+        width: 390,
+        height: 844,
+      });
+      assert.equal(await frame.locator(".touch-controls").isVisible(), true);
+      const pad = await frame.locator('[data-control="down"]').boundingBox();
+      const viewport = await frame.locator(".viewport").boundingBox();
+      assert.ok(
+        viewport.y + viewport.height - pad.y - pad.height > viewport.height * 0.15,
+        "Fill-window controls sit above the bottom edge",
+      );
+      if (game.id === "abyssal-salvage") {
+        await frame.locator("canvas").focus();
+        await mobile.keyboard.press("Space", { delay: 120 });
       }
       const initial = await frame.evaluate(async () => ({
         spawnPixels: Array.from(
@@ -143,9 +194,7 @@ try {
         hash: window.hostedPlayer.runtime.getSnapshot().hash,
         ticks: window.hostedPlayer.runtime.getSnapshot().ticks,
       }));
-      const direction = frame.locator(
-        `[data-control="${game.id === "mossglen" ? "right" : "up"}"]`,
-      );
+      const direction = frame.locator('[data-control="right"]');
       const action = frame.locator('[data-control="action"]');
       await direction.scrollIntoViewIfNeeded();
       const d = await direction.boundingBox();
@@ -177,15 +226,6 @@ try {
         hash: window.hostedPlayer.runtime.getSnapshot().hash,
       }));
       assert.notEqual(after.hash, initial.hash, "Touch input changes rendered gameplay");
-      if (game.id === "mossglen") {
-        // The RPG starts at tile (5, 6), drawn at (80, 88). The public player
-        // diagnostics do not expose cartridge-owned RPG coordinates.
-        assert.notDeepEqual(
-          after.spawnPixels,
-          initial.spawnPixels,
-          "Touch direction moves the RPG sprite away from its spawn tile",
-        );
-      }
       await session.send("Input.dispatchTouchEvent", {
         type: "touchStart",
         touchPoints: [
@@ -221,6 +261,12 @@ try {
       });
     }
     await mobile.screenshot({ path: resolve(artifacts, `${game.id}-mobile.png`), fullPage: true });
+    const active = await (await mobile.locator("iframe").elementHandle()).contentFrame();
+    await active.getByRole("button", { name: "Show player controls", exact: true }).click();
+    await active.getByRole("button", { name: "Exit fill window", exact: true }).click();
+    await mobile.waitForFunction(
+      () => !document.documentElement.classList.contains("game-fill-window"),
+    );
     await mobile.locator("#restart").click();
     const restarted = await (await mobile.locator("iframe").elementHandle()).contentFrame();
     await bindPlayer(restarted);
@@ -231,7 +277,7 @@ try {
   assert.deepEqual(errors, [], "No page script errors");
   report.status = "passed";
   console.log(
-    `Site passed: ${report.pages} pages, search, mobile layout, four playable cartridges, multitouch and cancellation.`,
+    `Site passed: ${report.pages} pages, search, mobile layout, two playable cartridges, multitouch and cancellation.`,
   );
 } catch (error) {
   report.status = "failed";

@@ -14,8 +14,15 @@ mise run build:site
 mise run serve:site
 ```
 
-Open `http://127.0.0.1:8088/`. `build:site` sequentially builds the RPG and racing
-exports, then produces `build/site/`. `build:site:pages` regenerates only the site
+Open `http://127.0.0.1:8088/`. `build:site` fetches the pinned public revisions of
+[Willow Junction](https://github.com/ctxshift/willow-junction) and
+[Abyssal Salvage](https://github.com/ctxshift/abyssal-salvage), installs their pinned
+tools with mise, and sequentially builds their web exports into ignored
+`build/showcase-sources/` checkouts before producing `build/site/`.
+The repository URLs and immutable revisions live in `site/catalog.mjs`; update
+the revision deliberately when publishing a new game version. Network access
+is required to fetch sources and any missing tools or SDK components.
+`build:site:pages` regenerates only the site
 from existing exports for faster content and styling iterations. It fails if
 either demo cartridge is absent. It does not verify that staged exports are fresh;
 use the complete build for releases. Deploy the contents of `build/site/` to an
@@ -90,18 +97,30 @@ then rebuild the pages. The capture task requires the project's Playwright brows
 
 The showcase ships the same Wasm runtimes and PNG cartridges as the console
 exports, with licenses retained. Game pages load the player only after a visitor
-chooses **Load game**. **Start game** unlocks audio. Both Luau and Odin variants are
-available; switching language or restarting starts a new session. Download links
+chooses **Load game**. **Play** unlocks audio. Both showcase games use Luau;
+restarting starts a new session. Download links
 provide the original PNG cartridge without image transformations.
 
+Touch controls use the player's automatic touch-device detection and stay hidden
+on desktop mouse/keyboard devices. The player starts embedded on desktop.
+Fill Window expands its iframe across the browser viewport; exiting the mode
+or pressing Escape restores the page layout. Touch devices start in fill-window
+mode with raised controls. This does not request operating-system fullscreen.
+The same-origin host bridge accepts mode changes only from the active game iframe.
+
+The cartridge shelf uses each pinned game's `art/<game-id>-cover.png` unchanged.
+Gameplay captures remain separate preview images; the shelf does not composite
+screenshots or replacement text onto a generic shell.
+
 The website adds presentation CSS and touch controls to a copy of the canonical
-player markup, without editing the runtime. Pointer capture supports simultaneous
+player markup from each game's pinned SDK export, without editing the runtime.
+Pointer capture supports simultaneous
 direction and action touches. Pointer cancellation, lost capture, blur, and page
 visibility changes release held controls. The controls remain inside the fullscreen
 container. Keyboard users can navigate away with Tab; arrow keys are consumed only
 while the game canvas has focus. The console's existing gamepad input is retained.
 
-Copper Circuit and Mossglen use the CPU renderer, require no WebGPU, and are
+Willow Junction and Abyssal Salvage use the CPU renderer, require no WebGPU, and are
 intended for desktop and mobile browsers with WebAssembly. Performance depends
 on the device. GPU-specific demos should be added only with their actual backend
 capability check and a clear unsupported-browser fallback; they are not part of
@@ -116,7 +135,7 @@ mise run validate
 ```
 
 The site check builds pages from staged exports, checks local links, searches the
-documentation, verifies responsive layout, starts both languages of both games,
+documentation, verifies responsive layout, starts both Luau games,
 and exercises touch input and cancellation in mobile browser emulation. Reports
 and screenshots remain under ignored `build/site-verification/`. Full project
 validation retains the existing console conformance gates and includes the site

@@ -10,22 +10,26 @@ Think pixel-art adventures, arcade racers, little puzzles, and experiments that
 start with “what if?” Bytorio focuses on 2D games, with experimental 3D tools to
 explore when you're ready.
 
-**[Play some games](https://bytor.io/showcase/)** ·
+**[Explore the demo games](#try-it-first)** ·
 **[Get started](https://bytor.io/docs/docs/getting-started.html)** ·
 **[Browse the docs](https://bytor.io/docs/)**
 
 ## Try it first
 
-You don't need to install the development tools to play:
+Explore two complete Luau games built with the standalone Bytorio CLI and SDK:
 
-- **[Copper Circuit](https://bytor.io/showcase/copper-circuit/)** — race six
-  rivals, find your line, and use your boost to reach the finish.
-- **[Mossglen: The Sunleaf](https://bytor.io/showcase/mossglen/)** — explore a
-  village, take on a quest, and battle a slime.
+- **[Willow Junction](https://github.com/ctxshift/willow-junction)** — route
+  trains, welcome passengers, and decorate a cozy isometric station to lo-fi
+  synth music, with no failure timer.
+- **[Abyssal Salvage](https://github.com/ctxshift/abyssal-salvage)** — explore
+  sunken wrecks, collect upgrades, survive the leviathan, and return to your
+  submarine in an isometric deep-sea survival game.
 
-Choose **Load game**, then **Start game** to enable sound. Use your keyboard or
-on-screen touch controls. Both games include Luau and Odin versions, so you can
-see how the same idea works in either language.
+Each repository includes the source and instructions to run the game. Clone a
+game repository, install [mise](https://mise.jdx.dev/), then run `mise trust`,
+`mise install`, and `mise run play` from its directory. Click **Play** in the
+browser to enable audio. The first build downloads the game's pinned SDK tools
+and player; no Bytorio source checkout or contributor toolchain is needed.
 
 ## Make your first game
 
@@ -52,7 +56,7 @@ No source checkout or contributor toolchain is required. Follow the [Mac install
 for Apple Silicon or Intel, or [install with mise](docs/getting-started.md#install-with-mise).
 Luau/browser authoring supports Windows x64 and both Mac architectures; Odin and
 native players support Windows and Apple Silicon.
-You can play the browser demos without that setup.
+The demo repositories above provide their own pinned setup and play commands.
 
 For mise, add `"github:ctxshift/bytorio" = "byt-v<version>"` under `[tools]`,
 using the full tag from your chosen CLI release. The
