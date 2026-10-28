@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bytorio Cartridge Art"
+  short_description: "Create game stickers and standard Bytorio cartridges"
+  default_prompt: "Use $bytorio-cartridge-art to create artwork for this game and compose its standard Bytorio cartridge cover."
