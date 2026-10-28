@@ -52,6 +52,12 @@ try {
   await page.goto(`http://127.0.0.1:${server.address().port}/index.html`);
   await page.waitForFunction(() => !!window.player);
   await page.evaluate(() => window.player.ready);
+  for (const label of ["Play game", "Mute", "Fill window", "Fullscreen"]) {
+    const button = page.getByRole("button", { name: label, exact: true, includeHidden: true });
+    assert.equal(await button.locator("svg").count(), 1);
+    assert.equal((await button.textContent()).trim(), "");
+    assert.equal(await button.getAttribute("title"), label);
+  }
   assert.equal(await page.evaluate(() => "playerStatus" in window), false);
   assert.equal(
     await page.locator("#outside").evaluate((element) => getComputedStyle(element).color),
@@ -133,8 +139,38 @@ try {
   await page.screenshot({ path: resolve(root, "mobile.png"), fullPage: true });
   await page.setViewportSize({ width: 844, height: 390 });
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  await page.getByRole("button", { name: "Fill window", exact: true }).click();
+  assert.equal(await page.evaluate(() => document.fullscreenElement), null);
+  await expectFullscreenFit(page);
+  const overlay = await page.locator(".touch-controls").evaluate((controls) => {
+    const viewport = controls.parentElement.getBoundingClientRect();
+    const bounds = controls.getBoundingClientRect();
+    return getComputedStyle(controls).position === "absolute" && bounds.bottom <= viewport.bottom;
+  });
+  assert.equal(overlay, true);
+  const shiftedRight = await page.getByRole("button", { name: "Right", exact: true }).boundingBox();
+  assert.ok(shiftedRight.y > 390 * 0.65 && shiftedRight.y + shiftedRight.height < 390 * 0.85);
+  const alignedAction = await page.getByRole("button", { name: "Jump", exact: true }).boundingBox();
+  assert.ok(
+    Math.abs(alignedAction.y + alignedAction.height - shiftedRight.y - shiftedRight.height) < 1,
+  );
+  const beforeOverlayInput = await page.evaluate(() => window.game.getSnapshot().x);
+  await session.send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: [point(shiftedRight, 5)],
+  });
+  await page.waitForFunction(
+    (before) => window.game.getSnapshot().x > before + 4,
+    beforeOverlayInput,
+  );
+  await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await page.screenshot({ path: resolve(root, "mobile-fill-window.png") });
+  await page.getByRole("button", { name: "Show player controls", exact: true }).click();
+  await page.getByRole("button", { name: "Exit fill window", exact: true }).click();
+  await page.getByLabel("More player options").click();
   await page.getByRole("button", { name: "Fullscreen", exact: true }).click();
   await page.waitForFunction(() => !!document.fullscreenElement);
+  await expectFullscreenFit(page);
   assert.equal(await page.getByRole("button", { name: "Right", exact: true }).isVisible(), true);
   await page.evaluate(() => document.exitFullscreen());
   await canvas.focus();
@@ -179,9 +215,36 @@ try {
   await page.waitForFunction(() => window.hostedPlayer.runtime.getSnapshot().ready);
   await page.getByRole("button", { name: "Play game", exact: true }).click();
   await page.waitForFunction(() => window.hostedPlayer.runtime.getSnapshot().ticks > 5);
+  await expectFullscreenFit(page, "[data-bytorio-player]");
+  assert.equal(await page.evaluate(() => document.fullscreenElement), null);
   await page.evaluate(() => window.hostedPlayer.dispose());
   assert.deepEqual(errors, []);
   await context.close();
+  const desktop = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  await desktop.goto(`http://127.0.0.1:${server.address().port}/index.html`);
+  await desktop.evaluate(() => window.player.ready);
+  await desktop.getByRole("button", { name: "Play game", exact: true }).click();
+  await desktop.getByRole("button", { name: "Fill window", exact: true }).click();
+  assert.equal(await desktop.evaluate(() => document.fullscreenElement), null);
+  await expectFullscreenFit(desktop);
+  assert.ok((await desktop.locator("canvas").boundingBox()).width > 640);
+  await desktop.setViewportSize({ width: 1200, height: 500 });
+  await expectFullscreenFit(desktop);
+  const fullscreenCanvas = await desktop.locator("canvas").boundingBox();
+  await desktop.mouse.move(
+    fullscreenCanvas.x + fullscreenCanvas.width * 0.25,
+    fullscreenCanvas.y + fullscreenCanvas.height * 0.5,
+  );
+  await desktop.mouse.down();
+  await desktop.waitForFunction(() => Math.abs(window.game.getSnapshot().x - 152) < 2, null, {
+    timeout: 5000,
+  });
+  await desktop.mouse.up();
+  await desktop.screenshot({ path: resolve(root, "desktop-fullscreen.png") });
+  await desktop.getByRole("button", { name: "Show player controls", exact: true }).click();
+  await desktop.getByRole("button", { name: "Exit fill window", exact: true }).click();
+  assert.ok((await desktop.locator("canvas").boundingBox()).width <= 720);
+  await desktop.close();
 } finally {
   await browser.close();
   await new Promise((done) => server.close(done));
@@ -189,3 +252,26 @@ try {
 console.log(
   `Production player passed: scoped UI, public runtime, touch chords and same-button ownership, cancellation, pointer drag, mute/pause, orientation/fullscreen and disposal. Evidence: ${root}`,
 );
+
+async function expectFullscreenFit(page, host = "#game") {
+  await page.waitForFunction(
+    (selector) => {
+      const root = document.querySelector(selector).firstElementChild.shadowRoot;
+      const canvas = root.querySelector("canvas");
+      const viewport = root.querySelector(".viewport");
+      const style = getComputedStyle(viewport);
+      const width =
+        viewport.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+      const height =
+        viewport.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+      const scale = Math.min(width / canvas.width, height / canvas.height);
+      const bounds = canvas.getBoundingClientRect();
+      return (
+        Math.abs(bounds.width - canvas.width * scale) < 1 &&
+        Math.abs(bounds.height - canvas.height * scale) < 1
+      );
+    },
+    host,
+    { timeout: 5000 },
+  );
+}

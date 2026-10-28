@@ -6,7 +6,7 @@ const mounts = new WeakSet();
 const styles = `
 :host {display:block; color-scheme:dark; color:var(--byt-color,#e9edf3); font:14px/1.4 system-ui,sans-serif; --accent:var(--byt-accent,#80dac3)}
 * {box-sizing:border-box}
-.player {width:100%; margin:auto; border:1px solid var(--byt-border,#394251); border-radius:14px; overflow:hidden; background:var(--byt-background,#161c27)}
+.player {position:relative; width:100%; margin:auto; border:1px solid var(--byt-border,#394251); border-radius:14px; overflow:hidden; background:var(--byt-background,#161c27)}
 .viewport {position:relative; display:grid; place-items:center; background:#080b12; padding:8px; overflow:hidden}
 canvas {display:block; width:100%; height:auto; max-width:100%; image-rendering:pixelated; touch-action:none; outline:none; background:#080b12}
 canvas:focus-visible {outline:2px solid var(--accent); outline-offset:-2px}
@@ -16,7 +16,9 @@ button,summary {font:inherit; color:inherit; border:1px solid transparent; borde
 button:hover,summary:hover {background:#ffffff12}
 button:focus-visible,summary:focus-visible {outline:2px solid var(--accent); outline-offset:-2px}
 button:disabled {opacity:.45; cursor:default}
-.play {background:var(--accent); color:#101d20; font-weight:650; min-width:84px}
+.play {background:var(--accent); color:#101d20; font-weight:650; min-width:44px}
+button svg {display:block; width:22px; height:22px; margin:auto; pointer-events:none}
+.chrome-toggle {display:none}
 .play:hover {filter:brightness(1.08); background:var(--accent)}
 [hidden] {display:none!important}
 .menu {position:relative}
@@ -27,19 +29,51 @@ button:disabled {opacity:.45; cursor:default}
 .status,.instructions {margin:0; padding:0 16px 10px; color:#abb9ca; overflow-wrap:anywhere}
 .status:empty,.instructions:empty {display:none}
 .status[data-error] {color:#ffb4ab}
-.touch-controls {display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); grid-auto-rows:48px; gap:5px; padding:10px 12px; touch-action:none; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none}
-.touch-key {border:1px solid var(--byt-border,#526078); background:#273247; padding:0 4px; min-height:44px; min-width:0; font-size:20px; touch-action:none}
-.touch-key[data-control=action] {border-color:var(--accent); color:var(--accent)}
-.touch-key.pressed,.touch-key:active {background:var(--accent); color:#101d20}
+.touch-controls {position:absolute; z-index:2; bottom:max(12px,env(safe-area-inset-bottom)); left:max(12px,env(safe-area-inset-left)); right:max(12px,env(safe-area-inset-right)); display:grid; grid-template-columns:repeat(6,minmax(0,28px)) repeat(4,minmax(0,1fr)) repeat(2,minmax(0,28px)); grid-auto-rows:48px; gap:4px; pointer-events:none; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none}
+.touch-key {pointer-events:auto; border:1px solid #ffffff26; border-radius:16px; background:#18233138; color:#ffffff80; padding:0 4px; min-height:44px; min-width:0; font-size:22px; touch-action:none; text-shadow:0 1px 3px #0006}
+.touch-key[data-control=action] {border-color:#80dac34d; color:#80dac399}
+.touch-key:hover {background:#27324750}
+.touch-key.pressed,.touch-key:active {background:#80dac370; color:#101d20}
 .diagnostics {margin:0 10px 10px; color:#abb9ca}
 pre {overflow:auto; max-height:200px; font-size:12px}
-.player:fullscreen {width:100%; height:100%; border:0; border-radius:0; display:flex; flex-direction:column; justify-content:center; padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
-.player:fullscreen .viewport {flex:1; min-height:0}
-.player:fullscreen canvas {width:auto; max-height:100%; object-fit:contain}
-.player:fullscreen .touch-controls {width:100%; max-width:720px; align-self:center}
+.player.fill-window {position:fixed; inset:0; z-index:1000; width:100%; height:100dvh}
+.player:is(:fullscreen,.fill-window) {border:0; border-radius:0; background:#080b12}
+.player:is(:fullscreen,.fill-window) .viewport {width:100%; height:100%; padding:0; container-type:size}
+.player:is(:fullscreen,.fill-window) canvas {width:min(100cqw, calc(100cqh * var(--display-aspect))); height:auto}
+.player:is(:fullscreen,.fill-window) .touch-key:is([data-control=up],[data-control=left],[data-control=down],[data-control=right],[data-control=action]) {transform:translateY(min(0px, calc(14px - 20cqh)))}
+.player:is(:fullscreen,.fill-window) .toolbar {position:absolute; z-index:3; top:0; left:0; right:0; border:0; background:linear-gradient(#080b12bb,transparent); padding:max(4px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) 12px max(8px,env(safe-area-inset-left)); flex-wrap:nowrap}
+.player:is(:fullscreen,.fill-window) .toolbar .play {background:#18233199; color:var(--accent)}
+.player:is(:fullscreen,.fill-window)[data-running=true]:not(.chrome-open) .toolbar {display:none}
+.player:is(:fullscreen,.fill-window)[data-running=true] .chrome-toggle {display:block; position:absolute; z-index:4; top:max(4px,env(safe-area-inset-top)); right:max(8px,env(safe-area-inset-right)); background:#18233170; color:#ffffffb0}
+.player:is(:fullscreen,.fill-window)[data-running=true] .toolbar {padding-right:60px}
+.player:is(:fullscreen,.fill-window) .menu-items {top:100%; bottom:auto}
+.player:is(:fullscreen,.fill-window) .status {position:absolute; top:70px; left:10%; right:10%; text-align:center; background:#080b12bb; border-radius:8px; padding:8px; pointer-events:none}
+.player:is(:fullscreen,.fill-window) .instructions {display:none}
+.player:is(:fullscreen,.fill-window) .diagnostics {position:absolute; top:100px; background:#080b12dd; z-index:4}
 @media(max-width:480px) {.toolbar {gap:0; padding:4px}.toolbar button {padding:8px}.title {font-size:12px}.viewport {padding:4px}}
+@media(max-width:600px) {.player:is(:fullscreen,.fill-window) .title {display:none}.player:is(:fullscreen,.fill-window) .toolbar {justify-content:space-between; font-size:12px}}
 @media(prefers-reduced-motion:no-preference) {button {transition:background-color .1s}}
 `;
+
+const icons = {
+  play: '<path d="m8 5 11 7-11 7z"/>',
+  pause: '<path d="M8 5v14M16 5v14"/>',
+  volume: '<path d="M11 5 6 9H3v6h3l5 4zM15 8a6 6 0 0 1 0 8M18 5a10 10 0 0 1 0 14"/>',
+  muted: '<path d="M11 5 6 9H3v6h3l5 4zM16 9l6 6m0-6-6 6"/>',
+  expand: '<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/>',
+  restore: '<path d="M3 8h5V3m8 0v5h5M8 21v-5H3m13 5v-5h5"/>',
+  fullscreen: '<path d="M9 3H3v6m0-6 7 7m5-7h6v6m0-6-7 7M3 15v6h6m-6 0 7-7m11 1v6h-6m6 0-7-7"/>',
+  controls: '<path d="M4 6h16M4 12h16M4 18h16M8 3v6m8 0v6m-6 0v6"/>',
+};
+
+function buttonIcon(button, icon, label) {
+  if (button.dataset.icon !== icon) {
+    button.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[icon]}</svg>`;
+    button.dataset.icon = icon;
+  }
+  button.setAttribute("aria-label", label);
+  button.title = label;
+}
 
 // UI state and DOM belong to this mount; game execution is exclusively public runtime calls.
 export function mountPlayer(
@@ -51,6 +85,7 @@ export function mountPlayer(
     controls,
     diagnostics = false,
     toolbar = true,
+    fillWindow = false,
     graphics,
     frameRate = 60,
     audioContext,
@@ -61,6 +96,9 @@ export function mountPlayer(
   }
   if (typeof toolbar !== "boolean") {
     throw new TypeError("Toolbar must be boolean");
+  }
+  if (typeof fillWindow !== "boolean") {
+    throw new TypeError("Fill window must be boolean");
   }
   const config = normalizePlayerConfig({
     ...(title === undefined ? {} : { title }),
@@ -73,14 +111,17 @@ export function mountPlayer(
   const root = container.attachShadow({ mode: "open" });
   root.innerHTML = `<style>${styles}</style>
 <section class="player" part="player" aria-label="Game player">
-  <div class="viewport" part="viewport"><canvas width="640" height="360" tabindex="0" aria-label="Game display" part="canvas"></canvas></div>
-  <div class="touch-controls" part="controls" role="group" aria-label="On-screen controls"></div>
+  <button class="chrome-toggle" type="button" aria-expanded="false"></button>
+  <div class="viewport" part="viewport"><canvas width="640" height="360" tabindex="0" aria-label="Game display" part="canvas"></canvas>
+    <div class="touch-controls" part="controls" role="group" aria-label="On-screen controls"></div>
+  </div>
   <div class="toolbar" part="toolbar" role="group" aria-label="Playback controls">
     <button class="play" type="button">Play</button><span class="title"></span>
     <button class="mute" type="button" aria-pressed="false">Mute</button>
-    <button class="fullscreen" type="button">Fullscreen</button>
+    <button class="fill" type="button" aria-pressed="false">Fill window</button>
     <details class="menu"><summary aria-label="More player options">•••</summary><div class="menu-items">
       <button class="restart" type="button">Restart game</button><button class="open" type="button">Open cartridge…</button>
+      <button class="fullscreen" type="button">Fullscreen</button>
     </div></details>
   </div>
   <p class="status" role="status" aria-live="polite"></p><p class="instructions"></p>
@@ -95,6 +136,17 @@ export function mountPlayer(
   const play = find(".play");
   const mute = find(".mute");
   const fullscreen = find(".fullscreen");
+  const fill = find(".fill");
+  const chromeToggle = find(".chrome-toggle");
+  chromeToggle.hidden = !toolbar;
+  buttonIcon(chromeToggle, "controls", "Show player controls");
+  buttonIcon(fullscreen, "fullscreen", "Fullscreen");
+  function setFillWindow(value) {
+    region.classList.toggle("fill-window", value);
+    buttonIcon(fill, value ? "restore" : "expand", value ? "Exit fill window" : "Fill window");
+    fill.setAttribute("aria-pressed", String(value));
+  }
+  setFillWindow(fillWindow);
   const details = find(".diagnostics");
   find(".toolbar").hidden = !toolbar;
   find(".instructions").textContent = config.instructions;
@@ -149,21 +201,22 @@ export function mountPlayer(
     const loading = state.state === "loading";
     const failed = state.state === "failed";
     play.disabled = loading || (!state.ready && !failed);
-    play.textContent = loading
-      ? "Loading…"
-      : failed
-        ? "Retry"
-        : state.state === "running"
-          ? "Pause"
-          : "Play";
-    play.setAttribute(
-      "aria-label",
-      failed ? "Retry game" : state.state === "running" ? "Pause game" : "Play game",
+    region.dataset.running = String(state.state === "running");
+    buttonIcon(
+      play,
+      state.state === "running" ? "pause" : "play",
+      loading
+        ? "Loading game"
+        : failed
+          ? "Retry game"
+          : state.state === "running"
+            ? "Pause game"
+            : "Play game",
     );
     find(".title").textContent = title ?? state.title ?? config.title;
     find(".restart").disabled = !state.ready;
     mute.setAttribute("aria-pressed", String(state.audio.muted));
-    mute.textContent = state.audio.muted ? "Unmute" : "Mute";
+    buttonIcon(mute, state.audio.muted ? "muted" : "volume", state.audio.muted ? "Unmute" : "Mute");
     status.toggleAttribute("data-error", failed);
     status.textContent = failed
       ? state.error
@@ -175,6 +228,7 @@ export function mountPlayer(
             ? "Open a PNG cartridge to begin."
             : "";
     canvas.style.imageRendering = state.smoothPresentation ? "auto" : "pixelated";
+    canvas.style.setProperty("--display-aspect", String(canvas.width / canvas.height));
     if (config.diagnostics && details.open) {
       find("pre").textContent = JSON.stringify(
         {
@@ -223,7 +277,19 @@ export function mountPlayer(
     }
   });
   listen(mute, "click", () => runtime.setMuted(!runtime.getSnapshot().audio.muted));
+  listen(chromeToggle, "click", () => {
+    const open = region.classList.toggle("chrome-open");
+    chromeToggle.setAttribute("aria-expanded", String(open));
+    buttonIcon(chromeToggle, "controls", open ? "Hide player controls" : "Show player controls");
+  });
+  listen(fill, "click", () => setFillWindow(!region.classList.contains("fill-window")));
+  listen(region, "keydown", (event) => {
+    if (event.key === "Escape" && !document.fullscreenElement) {
+      setFillWindow(false);
+    }
+  });
   listen(fullscreen, "click", () => {
+    find(".menu").open = false;
     if (document.fullscreenElement) {
       document.exitFullscreen().catch(showError);
     } else {
@@ -231,7 +297,11 @@ export function mountPlayer(
     }
   });
   listen(document, "fullscreenchange", () => {
-    fullscreen.textContent = root.fullscreenElement ? "Exit fullscreen" : "Fullscreen";
+    buttonIcon(
+      fullscreen,
+      root.fullscreenElement ? "restore" : "fullscreen",
+      root.fullscreenElement ? "Exit fullscreen" : "Fullscreen",
+    );
   });
   listen(find(".restart"), "click", () => {
     find(".menu").open = false;

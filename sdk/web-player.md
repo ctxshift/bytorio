@@ -23,10 +23,17 @@ your site. Import the player module and mount it into any element:
 </script>
 ```
 
-The compact toolbar supplies Play/Pause, Mute, Fullscreen, and a menu for Restart
-and Open cartridge. Loading, errors and retry stay inside the mount. Styles are
+The compact toolbar supplies Play/Pause, Mute, Fill window, and a menu for Restart,
+Open cartridge and true browser Fullscreen. Fill window expands inside the browser
+viewport without taking over the monitor, so it also works in desktop mobile
+emulation. Exit fill window or Escape restores the embedded size. Loading, errors
+and retry stay inside the mount. Styles are
 scoped to the player. `diagnostics: true` adds a separate collapsible diagnostics
 panel; it is off by default. Audio starts from a Play gesture.
+
+Playback, sound and display actions use icons with accessible names and hover
+tooltips. During viewport-filling play, the toolbar collapses behind the player
+controls icon so it does not cover the game's HUD. It stays visible when paused.
 
 `mountPlayer(element, options)` returns `{ runtime, ready, load, dispose, element }`.
 `ready` rejects on initial load failure and the player displays the error.
@@ -37,6 +44,9 @@ standalone `player.html?local` page provides the same mode, even if a game URL o
 generated cartridge is configured.
 
 `toolbar: false` lets you supply your own toolbar through `player.runtime`.
+`fillWindow: true` starts the mount in the viewport-filling mode. The standalone
+page enables it automatically on coarse-pointer devices; `player.html?fill-window`
+also enables it for desktop testing. Embedded mounts keep their host size by default.
 `controls: { preset: "none", pointer: false }` disables the built-in game-surface
 pointer and on-screen buttons, leaving your own input adapters available.
 For an entirely custom player, import `runtime.js` directly. Worker messages and
@@ -58,7 +68,11 @@ tap/drag for any preset. Analog sticks and gestures are outside this release.
 Buttons support simultaneous contacts, held directions plus actions, cancellation
 and independent keyboard/touch holds. Canvas coordinates scale to the game's
 logical resolution. Blur, hidden pages, pause, reload and disposal release input.
-Fullscreen contains the game, toolbar and touch controls.
+Touch buttons are translucent overlays anchored near the bottom corners, with
+uncovered space passing pointer input through to the game. They do not reserve
+a separate panel below the canvas. Fill window and Fullscreen fit the game's
+aspect ratio to the viewport, with toolbar and controls overlaid and safe-area
+insets respected. The internal rendering resolution stays unchanged.
 
 Use `overrides` keyed by preset ID (`up`, `left`, `down`, `right`, `action`) to
 change `label`, `symbol`, `bindings` or layout. Or supply a complete `layout`:

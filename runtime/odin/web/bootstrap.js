@@ -31,6 +31,7 @@ export const player = mountPlayer(document.querySelector("[data-bytorio-player]"
     : parameters.get("game") || config.cartridge || globalThis.playerCartridge || "./game.wasm",
   graphics,
   frameRate: parameters.get("fps") || 60,
+  fillWindow: parameters.has("fill-window") || matchMedia("(any-pointer: coarse)").matches,
 });
 player.runtime.on("frame", (state) => {
   if (state.title) {
