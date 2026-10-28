@@ -120,6 +120,95 @@ try {
     "true",
   );
   await session.send("Input.dispatchTouchEvent", { type: "touchCancel", touchPoints: [] });
+  const upControl = page.getByRole("button", { name: "Up", exact: true });
+  for (const [key, label] of [
+    ["ArrowUp", "Up"],
+    ["KeyW", "Up"],
+    ["ArrowDown", "Down"],
+    ["KeyS", "Down"],
+    ["ArrowLeft", "Left"],
+    ["KeyA", "Left"],
+    ["ArrowRight", "Right"],
+    ["KeyD", "Right"],
+    ["Space", "Jump"],
+  ]) {
+    await page.locator("canvas").focus();
+    await page.keyboard.down(key);
+    assert.equal(
+      await page.getByRole("button", { name: label, exact: true }).getAttribute("aria-pressed"),
+      "true",
+    );
+    await page.keyboard.up(key);
+    assert.equal(await page.locator(".touch-key.pressed").count(), 0);
+  }
+  await page.keyboard.down("KeyW");
+  await page.keyboard.down("ArrowUp");
+  await page.keyboard.up("KeyW");
+  assert.equal(await upControl.getAttribute("aria-pressed"), "true");
+  await page.keyboard.up("ArrowUp");
+  for (const releaseKeyboardFirst of [true, false]) {
+    await page.keyboard.down("KeyD");
+    await session.send("Input.dispatchTouchEvent", {
+      type: "touchStart",
+      touchPoints: [direction],
+    });
+    if (releaseKeyboardFirst) {
+      await page.keyboard.up("KeyD");
+    } else {
+      await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    }
+    assert.equal(
+      await page.getByRole("button", { name: "Right", exact: true }).getAttribute("aria-pressed"),
+      "true",
+    );
+    if (releaseKeyboardFirst) {
+      await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    } else {
+      await page.keyboard.up("KeyD");
+    }
+    assert.equal(await page.locator(".touch-key.pressed").count(), 0);
+  }
+  await page.evaluate(() => window.game.setInput("external-test", { buttons: ["move_left"] }));
+  await page.waitForFunction(
+    () =>
+      document
+        .querySelector("#game")
+        .firstElementChild.shadowRoot.querySelector('[data-control="left"]')
+        .getAttribute("aria-pressed") === "true",
+  );
+  await page.evaluate(() => window.game.clearInput());
+  await page.waitForFunction(
+    () =>
+      document.querySelector("#game").firstElementChild.shadowRoot.querySelectorAll(".pressed")
+        .length === 0,
+  );
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "getGamepads", {
+      configurable: true,
+      value: () => [
+        {
+          connected: true,
+          mapping: "standard",
+          buttons: Array.from({ length: 16 }, (_, index) => ({
+            pressed: index === 14 || index === 0,
+          })),
+        },
+      ],
+    });
+  });
+  await page.waitForFunction(
+    () =>
+      document.querySelector("#game").firstElementChild.shadowRoot.querySelectorAll(".pressed")
+        .length === 2,
+  );
+  await page.evaluate(() => {
+    delete navigator.getGamepads;
+  });
+  await page.waitForFunction(
+    () =>
+      document.querySelector("#game").firstElementChild.shadowRoot.querySelectorAll(".pressed")
+        .length === 0,
+  );
   await page.getByRole("button", { name: "Mute", exact: true }).click();
   assert.equal(await page.evaluate(() => window.game.getSnapshot().audio.muted), true);
   await page.getByRole("button", { name: "Pause game", exact: true }).click();

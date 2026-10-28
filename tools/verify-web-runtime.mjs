@@ -64,6 +64,12 @@ try {
     window.sessions[0].setInput("touch", { buttons: ["right"] });
     window.sessions[0].setInput("keyboard", null);
   });
+  assert.equal(
+    await page.evaluate(
+      () => window.sessions[0].getSnapshot().input.buttons === window.bindings.right,
+    ),
+    true,
+  );
   await page.waitForFunction((x) => window.sessions[0].getSnapshot().x > x + 12, before[0]);
   assert.equal(await page.evaluate(() => window.sessions[1].getSnapshot().x), before[1]);
   await page.evaluate(() => window.sessions[0].clearInput());
@@ -76,6 +82,7 @@ try {
   await page.waitForFunction((tick) => window.sessions[1].getSnapshot().ticks > tick + 8, stopped);
   const paused = await page.evaluate(() => window.sessions[0].getSnapshot());
   assert.equal(paused.state, "paused");
+  assert.equal(paused.input.buttons, 0);
   assert.ok(paused.ticks <= stopped + 6, "only an already submitted step may complete after pause");
   assert.ok(paused.renderedTicks <= paused.ticks);
   assert.equal(

@@ -36,6 +36,22 @@ export function attachPlayerInput({ runtime, canvas, controls, config }) {
   const heldKeys = new Set();
   const heldControls = new Map();
   const pointers = new Set();
+  const indicators = config.layout.map((item) => ({
+    bindings: item.bindings,
+    element: controls.querySelector(`[data-control="${item.id}"]`),
+  }));
+  function reflectButtons() {
+    const mask = runtime.getSnapshot().input.buttons;
+    for (const { bindings, element } of indicators) {
+      const pressed = (mask & bindings) !== 0;
+      element.classList.toggle("pressed", pressed);
+      element.setAttribute("aria-pressed", String(pressed));
+    }
+  }
+  function setInput(source, value) {
+    runtime.setInput(source, value);
+    reflectButtons();
+  }
   const active = () =>
     canvas.getRootNode().activeElement === canvas &&
     runtime.state === "running" &&
@@ -47,7 +63,7 @@ export function attachPlayerInput({ runtime, canvas, controls, config }) {
     for (const key of heldKeys) {
       mask |= keyMasks[key];
     }
-    runtime.setInput("keyboard", { buttons: mask >>> 0 });
+    setInput("keyboard", { buttons: mask >>> 0 });
   }
   listen(canvas, "keydown", (event) => {
     if (
@@ -71,8 +87,8 @@ export function attachPlayerInput({ runtime, canvas, controls, config }) {
   });
   listen(canvas, "blur", () => {
     heldKeys.clear();
-    runtime.setInput("keyboard", null);
-    runtime.setInput("gamepad", null);
+    setInput("keyboard", null);
+    setInput("gamepad", null);
   });
   function pointer(event) {
     if (!config.pointer || runtime.state !== "running" || runtime.getSnapshot().textEditing) {
@@ -141,10 +157,7 @@ export function attachPlayerInput({ runtime, canvas, controls, config }) {
       return;
     }
     heldControls.delete(pointerId);
-    runtime.setInput(`control:${pointerId}`, null);
-    const pressed = [...heldControls.values()].some((value) => value === control);
-    control.classList.toggle("pressed", pressed);
-    control.setAttribute("aria-pressed", String(pressed));
+    setInput(`control:${pointerId}`, null);
   }
   for (const item of config.layout) {
     const control = controls.querySelector(`[data-control="${item.id}"]`);
@@ -156,9 +169,7 @@ export function attachPlayerInput({ runtime, canvas, controls, config }) {
       canvas.focus({ preventScroll: true });
       control.setPointerCapture(event.pointerId);
       heldControls.set(event.pointerId, control);
-      runtime.setInput(`control:${event.pointerId}`, { buttons: item.bindings });
-      control.classList.add("pressed");
-      control.setAttribute("aria-pressed", "true");
+      setInput(`control:${event.pointerId}`, { buttons: item.bindings });
     });
     for (const name of ["pointerup", "pointercancel", "lostpointercapture"]) {
       listen(control, name, (event) => releaseControl(event.pointerId));
@@ -167,6 +178,7 @@ export function attachPlayerInput({ runtime, canvas, controls, config }) {
     listen(control, "click", (event) => {
       if (event.detail === 0 && runtime.state === "running" && !runtime.getSnapshot().textEditing) {
         runtime.pulseInput(item.bindings);
+        reflectButtons();
       }
     });
   }
@@ -179,8 +191,8 @@ export function attachPlayerInput({ runtime, canvas, controls, config }) {
       runtime.setInput(`pointer:${id}`, null);
     }
     pointers.clear();
-    runtime.setInput("keyboard", null);
-    runtime.setInput("gamepad", null);
+    setInput("keyboard", null);
+    setInput("gamepad", null);
   }
   const unsubscribe = runtime.on("state", (state) => {
     if (state.state === "disposed") {
@@ -223,6 +235,7 @@ export function attachPlayerInput({ runtime, canvas, controls, config }) {
       }
       runtime.setInput("gamepad", { buttons: mask >>> 0 });
     }
+    reflectButtons();
     animation = scope.requestAnimationFrame(poll);
   }
   animation = scope.requestAnimationFrame(poll);

@@ -30,10 +30,10 @@ button svg {display:block; width:22px; height:22px; margin:auto; pointer-events:
 .status:empty,.instructions:empty {display:none}
 .status[data-error] {color:#ffb4ab}
 .touch-controls {position:absolute; z-index:2; bottom:max(12px,env(safe-area-inset-bottom)); left:max(12px,env(safe-area-inset-left)); right:max(12px,env(safe-area-inset-right)); display:grid; grid-template-columns:repeat(6,minmax(0,28px)) repeat(4,minmax(0,1fr)) repeat(2,minmax(0,28px)); grid-auto-rows:48px; gap:4px; pointer-events:none; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none}
-.touch-key {pointer-events:auto; border:1px solid #ffffff26; border-radius:16px; background:#18233138; color:#ffffff80; padding:0 4px; min-height:44px; min-width:0; font-size:22px; touch-action:none; text-shadow:0 1px 3px #0006}
+.touch-key {pointer-events:auto; appearance:none; -webkit-tap-highlight-color:transparent; border:1px solid #ffffff26; border-radius:16px; background:#18233138; color:#ffffff80; padding:0 4px; min-height:44px; min-width:0; font-size:22px; touch-action:none; text-shadow:0 1px 3px #0006}
 .touch-key[data-control=action] {border-color:#80dac34d; color:#80dac399}
 .touch-key:hover {background:#27324750}
-.touch-key.pressed,.touch-key:active {background:#80dac370; color:#101d20}
+.touch-key.pressed {background:#31455550}
 .diagnostics {margin:0 10px 10px; color:#abb9ca}
 pre {overflow:auto; max-height:200px; font-size:12px}
 .player.fill-window {position:fixed; inset:0; z-index:1000; width:100%; height:100dvh}

@@ -77,6 +77,11 @@ Use the complete example above for error handling and listener cleanup.
 
 ## Input and lifecycle
 
+`getSnapshot().input.buttons` is the combined button mask from all active sources,
+including pending pulses. Reading it does not consume pulses. It is zero while
+paused or editing text. Use this mask for input indicators instead of tracking
+keyboard, touch and gamepad highlights independently.
+
 Held input is sampled on simulation updates. A synthetic keydown/keyup pair
 entirely between updates can be missed; rendering more often does not change the
 60 Hz simulation. In browser tests, hold keys until an observed simulation update
@@ -104,7 +109,7 @@ audio and event subscriptions, while your host owns its UI listeners.
 This is a preview API, versioned with the SDK and its matching players:
 
 - `createRuntime({ canvas, frameRate = 60, graphics = {}, diagnostics = false,
-  audioContext })` reserves one canvas per session. An optional caller-owned
+audioContext })` reserves one canvas per session. An optional caller-owned
   AudioContext is reused and never closed by the runtime. Otherwise a session
   creates its own context on `play()` and closes it on disposal.
 - `load(url | File | Blob | ArrayBuffer | ArrayBufferView, { graphics }?)`
@@ -120,7 +125,7 @@ This is a preview API, versioned with the SDK and its matching players:
   and `hover` booleans. Inputs are combined across at most 64 sources; pointer
   presses outside the logical image are ignored. `clearInput()` releases all.
 - `setMuted(boolean)` controls this session's gain. `setFrameRate(number |
-  "native" | "uncapped")` changes presentation cadence, preserving 60 Hz updates.
+"native" | "uncapped")` changes presentation cadence, preserving 60 Hz updates.
 - `pulseInput(buttons)` queues bindings for the next simulation update, surviving
   presentation-only frames. Use it for wheel events or accessible button activation.
 - `state` and `getSnapshot()` expose immutable state. `on(type, listener)` returns

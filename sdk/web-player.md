@@ -68,6 +68,9 @@ tap/drag for any preset. Analog sticks and gestures are outside this release.
 Buttons support simultaneous contacts, held directions plus actions, cancellation
 and independent keyboard/touch holds. Canvas coordinates scale to the game's
 logical resolution. Blur, hidden pages, pause, reload and disposal release input.
+Button highlights and `aria-pressed` reflect the runtime's combined input mask:
+any active binding assigned to a button lights it, regardless of input source.
+Releasing one source does not clear another source's held highlight.
 Touch buttons are translucent overlays anchored near the bottom corners, with
 uncovered space passing pointer input through to the game. They do not reserve
 a separate panel below the canvas. Fill window and Fullscreen fit the game's

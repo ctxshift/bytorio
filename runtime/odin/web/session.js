@@ -245,6 +245,12 @@ export function createSession({
   function snapshot() {
     return freeze({
       ...view,
+      input: {
+        buttons:
+          view.state === "running" && !textInput.editing()
+            ? inputs.sample(view.width, view.height, false).buttons
+            : 0,
+      },
       audio: {
         muted: audio.muted === true,
         contextState: audio.context?.state ?? "uninitialized",
