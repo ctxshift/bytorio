@@ -1,7 +1,7 @@
-import { mkdir, readFile, utimes, writeFile } from "node:fs/promises";
+import { mkdir, utimes } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { createHash } from "node:crypto";
+import { downloadDependency } from "./dependency-download.mjs";
 import { repo, run, tool } from "./toolchain.mjs";
 import { resourceSchema as limits } from "../runtime/odin/web/constants.js";
 
@@ -48,23 +48,11 @@ for (const [name, version, hash] of [
   ["libvorbis", "1.3.7", "b33cc4934322bcbf6efcbacf49e3ca01aadbea4114ec9589d1b1e9d20f72954b"],
 ]) {
   const archive = resolve(root, `${name}-${version}.tar.xz`);
-  if (!existsSync(archive)) {
-    const response = await fetch(
-      `https://downloads.xiph.org/releases/${name === "libogg" ? "ogg" : "vorbis"}/${name}-${version}.tar.xz`,
-      { signal: AbortSignal.timeout(120000) },
-    );
-    if (!response.ok) {
-      throw new Error(`Vorbis download failed: ${response.status}`);
-    }
-    await writeFile(archive, Buffer.from(await response.arrayBuffer()));
-  }
-  if (
-    createHash("sha256")
-      .update(await readFile(archive))
-      .digest("hex") !== hash
-  ) {
-    throw new Error(`Invalid ${name} archive hash`);
-  }
+  await downloadDependency(
+    `https://downloads.xiph.org/releases/${name === "libogg" ? "ogg" : "vorbis"}/${name}-${version}.tar.xz`,
+    archive,
+    hash,
+  );
   const source = resolve(root, `${name}-${version}`);
   if (!existsSync(source)) {
     run("tar", ["-xf", archive, "-C", root]);

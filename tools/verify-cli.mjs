@@ -39,6 +39,12 @@ for (const version of ["0.2.0-preview.1", "0.3.0-preview.1"]) {
   metadata.set(version, Buffer.from(JSON.stringify(manifest)));
 }
 listing.push({ tag_name: "sdk-v0.2.0-preview.1", draft: false, prerelease: true });
+listing.push({
+  tag_name: "byt-v0.2.0-preview.3",
+  draft: false,
+  prerelease: true,
+  published_at: "2026-01-03T00:00:00Z",
+});
 const legacyVersion = "0.1.0-preview.1";
 const legacyRoot = resolve(repo, "build/sdk-release", legacyVersion);
 const legacyMetadata = await readFile(resolve(legacyRoot, "sdk-release.json"));
@@ -116,6 +122,11 @@ try {
   await writeFile(resolve(sandbox, ".env"), "NODE_OPTIONS=--invalid-byt-option\n");
   await writeFile(resolve(sandbox, "bunfig.toml"), 'preload = ["./missing.js"]\n');
   assert.match((await invoke(["--help"])).stdout, /bytorio.toml/);
+  const discovered = JSON.parse((await invoke(["releases"])).stdout);
+  assert.equal(discovered.cli.version, "0.2.0-preview.3");
+  assert.equal(discovered.sdk.version, "0.2.0-preview.1");
+  assert.equal(discovered.cli.publishedAt, "2026-01-03T00:00:00Z");
+  assert.match((await invoke(["releases", "--offline"], false)).stderr, /Expected byt releases/);
   // The relocated executable must compose artwork with an empty PATH/cache and
   // no source checkout, SDK, system font, network request or image converter.
   const coverAssets = JSON.parse(await readFile(resolve(repo, "sdk/templates/assets.json")));

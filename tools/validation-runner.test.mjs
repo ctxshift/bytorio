@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { runStep, sourceState, validate } from "./validation-runner.mjs";
 import { timedSpawnSync } from "./command-timing.mjs";
+import { validationControl } from "./validation-control.mjs";
 
 test("command timings retain failed status and original output", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "validation-timing-"));
@@ -182,6 +183,25 @@ test("stops on failure and rejects results from changing sources", async () => {
   assert.equal(stale.status, "stale");
   assert.equal(stale.sourceChanged, true);
   assert.equal(stale.steps[0].exitCode, 0);
+
+  const cancelled = await validate({
+    ...options,
+    execute: async (step) => {
+      const id = step.log.split(/[\\/]/).at(-2);
+      const status = await validationControl(cwd, id, true);
+      assert.equal(status.currentTask, "first");
+      assert.equal(status.cancellationRequested, true);
+      return runStep({
+        ...step,
+        executable: process.execPath,
+        args: ["-e", "setInterval(() => {}, 1000)"],
+      });
+    },
+  });
+  assert.equal(cancelled.status, "interrupted");
+  assert.equal(cancelled.steps.length, 1);
+  assert.equal(cancelled.steps[0].interrupted, true);
+  await assert.rejects(validationControl(cwd, "../outside", true), /directory name/);
 
   await assert.rejects(validate({ ...options, tasks: ["validate"] }), /non-recursive/);
   for (const task of [

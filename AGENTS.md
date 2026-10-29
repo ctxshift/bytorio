@@ -16,18 +16,15 @@ feature's contract and acceptance criteria.
   Do not repair source layout with ad hoc regular-expression formatters.
 - Put shared protocol values in the existing schemas and regenerate them. Name
   constants by meaning; identical numbers do not necessarily share a meaning.
-- Run focused `mise run validate <task...>` checks during iteration and let mise
-  reuse compiled artifacts. For check selection, dependency changes or suspected
-  stale outputs, follow [cache decisions](docs/development.md#iteration-and-cache-decisions).
-  Choose final local checks by behavioral risk, not file extension. Changes very
-  unlikely to affect functionality or performance, such as release titles, display
-  copy, comments, documentation and formatting, need only diff review and relevant
-  focused checks, even inside source files. For meaningful changes to runtime
-  behavior, performance, compatibility, test expectations, dependencies, builds or
-  code generation, finish edits and run `mise run validate` before completion.
-  See [checks](docs/development.md#checks) for the boundary. Keep CI's complete
-  gates unchanged; low-risk work can finish after focused local checks without
-  waiting for CI unless requested.
+- During iteration, run the smallest affected checks. For visual changes, show
+  the actual preview and check the requested behavior before completion validation.
+  Follow [preview-first](docs/development.md#preview-first) for staged exports and
+  [checks](docs/development.md#checks) for scope selection, committed changes and
+  cancellation. Local completion uses affected checks; shared or unclassified code
+  selects full validation. CI and release workflows retain their complete gates.
+- Let mise reuse compiled artifacts; follow
+  [cache decisions](docs/development.md#iteration-and-cache-decisions) when changing
+  dependencies or diagnosing stale outputs.
 - Read the runner's report and the failing task's retained log. A stale,
   interrupted or failed report is not a pass. Do not overlap benchmark runs with
   heavy builds/tests or repeatedly read unchanged logs.

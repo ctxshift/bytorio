@@ -129,12 +129,23 @@ selection, assets, versions and publication behavior stay unchanged. Check
 formatting, syntax or links as applicable; verify changed external metadata and
 rebuild/inspect affected website pages when published there.
 
-For meaningful changes to runtime behavior, performance, compatibility, test
-expectations, dependencies, build behavior or code generation, finish edits and
-run `mise run validate` for the complete quality and conformance gates before
-completion. Assess executable examples, generated inputs and documents consumed
-by tests or generators by their actual impact. If the impact is unclear, inspect
-the consumers and broaden validation to cover the uncertainty.
+For local completion, run `mise run validate --plan` to inspect the affected
+selection, then `mise run validate`. The default compares the working tree with
+HEAD, including staged, unstaged, deleted and nonignored untracked files. For work
+already committed, use `mise run validate --base <starting-commit>`; a clean tree
+against HEAD selects no checks and is not a validation pass. Record the starting
+commit when beginning a task and keep that base through its completion.
+
+The conservative mapping lives in `tools/validation-scope.mjs`. Site, browser
+player UI, cover-generation and Markdown changes select relevant integration
+checks first, followed by lint and formatting. Shared runtime, protocols, build
+configuration, dependencies and unclassified code select the complete gate.
+Renames consider both paths. The plan and source fingerprints are retained in
+the validation report. This is an explicit allowlist, not a dependency graph:
+inspect consumers when changing executable documentation or extending a scope.
+Run `mise run validate --full` when shared behavior or uncertain impact needs
+complete coverage. Changes that only affect copy, comments or formatting may
+still use the focused checks described above after reviewing their actual impact.
 
 For focused checks, pass task names, for example
 `mise run validate test:validation` or
@@ -143,6 +154,12 @@ individual `test:*` tasks remain available with their original coverage. CI keep
 running the complete configured gates on pushes and pull requests, including main.
 Low-risk work can finish after focused local checks without waiting for CI unless
 requested; report those checks and any pending CI separately.
+
+Scoped behavioral changes can also finish after their selected checks pass;
+full local validation is not required simply because a source file changed.
+Use explicit tasks during iteration; reserve completion validation for the
+settled implementation. Repeatedly starting the full suite while adjusting a
+preview wastes runs and produces reports for superseded states.
 
 The runner executes tasks sequentially and stops at the first failure. It prints
 one start/result line per task and retains complete output in unique
@@ -153,12 +170,19 @@ are included through the fingerprinted `.mise/toolchain.toml` and task files.
 Logs may contain local diagnostic paths; they remain ignored build artifacts.
 
 A failed launch or a 30-minute task deadline fails validation. A detected source
-change marks an otherwise successful run `stale` and returns a nonzero status.
+change stops validation at the task boundary, marks the run `stale` and returns
+a nonzero status.
 Finish edits before final validation; inspect the changed scope and rerun its
 affected gates. Fingerprints are taken at task boundaries, not continuously, and
 do not cover ignored files or external configuration. They are provenance, not a
 build cache or proof that every byte stayed unchanged during execution. A report
-left `running` after interruption is incomplete and must not be treated as passed.
+left `running` after abrupt termination is incomplete and must not be treated as passed.
+Use `mise run validate --status <run-directory-name>` for a compact status and
+`mise run validate --cancel <run-directory-name>` to request cancellation. The
+owning runner stops its active child process tree and records `interrupted`;
+check status again to confirm completion. Cancellation does not kill an arbitrary
+PID. A dead owner is reported as `incomplete`; a live PID alone is not proof of
+progress. Ctrl+C also records interruption when the runner can handle the signal.
 Do not benchmark concurrently with heavy builds or tests.
 
 Hardware GPU checks and riverside interactive controls have separate opt-in
@@ -282,6 +306,64 @@ sample per variant, checking quest/defeat replays, native/browser parity, audio,
 diagnostics, and executor cache behavior. `bench:unified` uses the same harness
 with multiple samples for performance measurement. Old C++-specific CTest and
 `test:web` commands no longer exist.
+
+## Preview-first
+
+For artwork, layout and interaction changes:
+
+1. Build or stage the affected preview and run its focused check. For the website,
+   use `mise run build:site:pages` with existing exports and `mise run serve:site`.
+   Run `mise run build:site` when game revisions, SDK pins or exports need rebuilding.
+   `test:site` prepares missing exports on a clean checkout and reuses matching
+   revision/content receipts on later runs; it still executes every site assertion.
+2. Inspect the actual user-facing page, including embedded players. Check desktop
+   and touch layouts, requested artwork, fill-window resize and restoration. The
+   existing `test:site` verifies repository cover bytes, mobile-only controls and
+   parent-viewport expansion; `test:web-player` exercises the source player.
+3. Show the preview while iteration continues. Apply further requests and repeat
+   only affected checks. This does not introduce an approval requirement: once
+   the requested implementation is settled, run the completion scope once.
+4. If new edits supersede an active completion run, cancel it through `validate`
+   and restart only the checks needed for the final state. Preserve its report.
+
+For new games requesting the latest release, use `byt releases` (includes
+previews) or `byt releases --stable`. It reads the release catalogue and reports
+the highest published SemVer and publication date independently for CLI and SDK;
+it does not claim those two releases are mutually compatible. SDK selection still
+enforces compatibility. Avoid treating an installed version or a cached web page
+as the current release. Install the chosen CLI, create/upgrade with an explicit
+SDK version, and retain the resulting lockfile.
+
+Before diagnosing an old player UI, run `byt inspect <game-directory>` or
+`byt inspect <game-directory> --export <web-export-directory> --offline` when the
+pinned SDK is already cached. It compares the actual exported SDK web files with
+the verified component inventory and reports the SDK pin, modified and missing
+files, allowing the generated page titles and debug cartridge revision. Differences
+may be local overrides, site wrappers or stale exports; the
+command does not overwrite them. Configuration and extra host files remain outside
+that comparison. Verify the served URL points at the inspected export. Source
+player tests and showcase tests against a released SDK cover different artifacts.
+
+Contributor builds expose these commands through `mise run build:cli`, then
+`build/cli/byt` (`byt.exe` on Windows). Older published CLIs do not have them yet.
+
+## Release validation and downloads
+
+CI and tagged releases still run full validation on Windows and Apple Silicon,
+plus the Intel CLI checks and existing packaged-asset qualification. New branch
+pushes supersede older runs of that branch. A tagged release also requests
+cancellation of an active default-branch push for the exact same commit in
+`build.yml`, provided it has no associated pull request. PR runs, other commits,
+other branches and release runs are excluded. Cancellation errors leave the
+duplicate running and do not block release validation. A superseded branch run
+is cancelled, not passed; consult the tagged workflow for its validation result.
+No validation result is reused across tags or release configurations.
+
+CI caches only the pinned Ogg/Vorbis and SDL source archives. Every use verifies
+SHA-256, and downloads publish their cache file only after verification. Transient
+connection failures and selected retryable HTTP statuses get at most three
+attempts with bounded timeouts/backoff; permanent and checksum failures stop
+immediately. Build outputs and test results are not restored by this cache.
 
 ## Iteration and cache decisions
 

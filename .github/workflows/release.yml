@@ -14,6 +14,23 @@ permissions:
   contents: read
 
 jobs:
+  supersede-branch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Supersede duplicate default-branch validation for this exact commit
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node tools/release-ci.mjs
+
   build:
     strategy:
       fail-fast: false
@@ -44,6 +61,13 @@ jobs:
           version: 2026.10.15
           install_args: ${{ matrix.tools }}
       - run: npm ci
+      - name: Cache checksum-verified dependency archives
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/vorbis/*.tar.xz
+            build/sdl3/*.tar.gz
+          key: dependency-archives-v1-${{ runner.os }}-${{ hashFiles('tools/vorbis-build.mjs', 'tools/sdl3-build.mjs', 'tools/dependency-download.mjs') }}
       - name: Validate tagged source and binary
         run: mise run validate ${{ matrix.validation }}
       - name: Package release assets

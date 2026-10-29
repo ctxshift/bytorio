@@ -16,12 +16,15 @@ import { playGame } from "./play.mjs";
 import { developGame } from "./dev.mjs";
 import { runCheckProcess } from "../sdk/check-process.mjs";
 import { coverOptions, createCover } from "./cover.mjs";
+import { inspectPreview, latestReleases } from "./inspect.mjs";
 
 type Language = "luau" | "odin";
 
 const help = `${branding.name} CLI ${version}
 
 Usage: byt new <directory> [--language luau|odin] [--sdk <version>] [--offline]
+       byt releases [--stable]
+       byt inspect [directory] [--export <web-directory>] [--offline]
        byt sdk install <version> [--offline]
        byt sdk upgrade [directory] [--sdk <version>] [--offline]
        byt check [directory] [--offline]
@@ -78,6 +81,37 @@ async function main(args: string[]): Promise<void> {
   }
   if (args.length === 2 && args[1] === "--help") {
     console.log(help);
+    return;
+  }
+  if (args[0] === "releases") {
+    if (args.length > 2 || (args[1] && args[1] !== "--stable"))
+      throw new Error("Expected byt releases [--stable]");
+    console.log(
+      JSON.stringify(
+        await latestReleases({ ...sdkOptions(false), allowPrerelease: args[1] !== "--stable" }),
+        null,
+        2,
+      ),
+    );
+    return;
+  }
+  if (args[0] === "inspect") {
+    const rest = args.slice(1);
+    let directory = ".";
+    let destination;
+    let offline = false;
+    if (rest[0] && !rest[0].startsWith("--")) directory = rest.shift()!;
+    while (rest.length) {
+      const flag = rest.shift();
+      if (flag === "--offline" && !offline) offline = true;
+      else if (flag === "--export" && !destination && rest[0] && !rest[0].startsWith("--"))
+        destination = rest.shift();
+      else
+        throw new Error("Expected byt inspect [directory] [--export <web-directory>] [--offline]");
+    }
+    const result = await inspectPreview(directory, { ...sdkOptions(offline), export: destination });
+    console.log(JSON.stringify(result, null, 2));
+    if (result.status !== "matches-pinned-sdk") process.exitCode = 1;
     return;
   }
   if (["check", "build", "pack", "run", "dev"].includes(args[0])) {

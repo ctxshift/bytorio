@@ -6,6 +6,10 @@ on:
       - "**"
   pull_request:
 
+concurrency:
+  group: build-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -51,6 +55,13 @@ jobs:
           version: 2026.10.15
           install_args: ${{ matrix.tools }}
       - run: npm ci
+      - name: Cache checksum-verified dependency archives
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/vorbis/*.tar.xz
+            build/sdl3/*.tar.gz
+          key: dependency-archives-v1-${{ runner.os }}-${{ hashFiles('tools/vorbis-build.mjs', 'tools/sdl3-build.mjs', 'tools/dependency-download.mjs') }}
       - name: Run quality, conformance, drawing and cache gates
         run: mise run validate ${{ matrix.validation }}
       - name: Retain validation logs separately

@@ -1,6 +1,6 @@
 import { spawn, spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { closeSync, lstatSync, openSync, readFileSync, readlinkSync } from "node:fs";
+import { closeSync, existsSync, lstatSync, openSync, readFileSync, readlinkSync } from "node:fs";
 import { mkdir, rename, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
@@ -43,13 +43,22 @@ export function sourceState(cwd) {
   };
 }
 
-export async function runStep({ executable, args, cwd, log, timeoutMs, env = process.env }) {
+export async function runStep({
+  executable,
+  args,
+  cwd,
+  log,
+  timeoutMs,
+  env = process.env,
+  signal,
+}) {
   const started = Date.now();
   const fd = openSync(log, "w");
   let timer;
   let timedOut = false;
   let launchError;
   let interrupted = false;
+  let stopped = false;
   let interrupt;
   try {
     const child = spawn(executable, args, {
@@ -60,9 +69,10 @@ export async function runStep({ executable, args, cwd, log, timeoutMs, env = pro
       detached: process.platform !== "win32",
     });
     function stop() {
-      if (!child.pid) {
+      if (!child.pid || stopped) {
         return;
       }
+      stopped = true;
       if (process.platform === "win32") {
         const result = spawnSync("taskkill", ["/PID", String(child.pid), "/T", "/F"], {
           windowsHide: true,
@@ -87,6 +97,10 @@ export async function runStep({ executable, args, cwd, log, timeoutMs, env = pro
     };
     process.once("SIGINT", interrupt);
     process.once("SIGTERM", interrupt);
+    signal?.addEventListener("abort", interrupt, { once: true });
+    if (signal?.aborted) {
+      interrupt();
+    }
     timer = setTimeout(() => {
       timedOut = true;
       stop();
@@ -111,6 +125,7 @@ export async function runStep({ executable, args, cwd, log, timeoutMs, env = pro
     if (interrupt) {
       process.removeListener("SIGINT", interrupt);
       process.removeListener("SIGTERM", interrupt);
+      signal?.removeEventListener("abort", interrupt);
     }
     closeSync(fd);
   }
@@ -123,6 +138,7 @@ export async function validate({
   timeoutMs = 30 * 60 * 1000,
   notify = console.log,
   execute = runStep,
+  selection = null,
 }) {
   if (
     !tasks.length ||
@@ -143,6 +159,8 @@ export async function validate({
     startedAt: new Date().toISOString(),
     node: process.version,
     platform: process.platform,
+    pid: process.pid,
+    selection,
     source: sourceState(cwd),
     unitTests: `${directory}/unit-tests`,
     status: "running",
@@ -155,11 +173,30 @@ export async function validate({
   }
   await save();
   notify(`Validation report: ${directory}/report.json`);
+  const controller = new AbortController();
+  const interrupt = () => controller.abort();
+  process.once("SIGINT", interrupt);
+  process.once("SIGTERM", interrupt);
+  const cancellation = setInterval(() => {
+    if (existsSync(resolve(cwd, directory, "cancel"))) {
+      controller.abort();
+    }
+  }, 250);
   try {
     for (const [index, task] of tasks.entries()) {
+      if (controller.signal.aborted) {
+        report.status = "interrupted";
+        break;
+      }
+      report.currentTask = task;
+      await save();
       const log = `${directory}/${String(index + 1).padStart(2, "0")}-${task.replaceAll(/[^a-zA-Z0-9_-]/g, "-")}.log`;
       notify(`[${index + 1}/${tasks.length}] ${task}`);
       const before = sourceState(cwd);
+      if (before.fingerprint !== report.source.fingerprint) {
+        report.status = "stale";
+        break;
+      }
       const commands = log.replace(/\.log$/, ".commands.jsonl");
       const browser = log.replace(/\.log$/, ".browser.jsonl");
       await writeFile(resolve(cwd, commands), "");
@@ -170,6 +207,7 @@ export async function validate({
         cwd,
         log: resolve(cwd, log),
         timeoutMs,
+        signal: controller.signal,
         env: {
           ...process.env,
           VALIDATION_COMMAND_TIMINGS: resolve(cwd, commands),
@@ -192,7 +230,11 @@ export async function validate({
       );
       await save();
       if (result.exitCode !== 0) {
-        report.status = "failed";
+        report.status = result.interrupted ? "interrupted" : "failed";
+        break;
+      }
+      if (after.fingerprint !== report.source.fingerprint) {
+        report.status = "stale";
         break;
       }
     }
@@ -210,7 +252,12 @@ export async function validate({
   } catch (error) {
     report.status = "failed";
     report.error = error.message;
+  } finally {
+    clearInterval(cancellation);
+    process.removeListener("SIGINT", interrupt);
+    process.removeListener("SIGTERM", interrupt);
   }
+  report.currentTask = null;
   report.finishedAt = new Date().toISOString();
   await save();
   notify(`Validation ${report.status}: ${directory}/report.json`);

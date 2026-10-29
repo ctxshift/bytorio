@@ -7,6 +7,7 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { manifestFixture } from "./fixtures/sdk-manifest.mjs";
 import { resolveSdkRelease, selectSdkRelease } from "./sdk-registry.mjs";
+import { latestReleases, comparePlayerFiles, comparablePlayerBytes } from "./inspect.mjs";
 
 const requirements = {
   cliVersion: "0.1.0-preview.7",
@@ -87,6 +88,67 @@ test("newest compatible installed SDK wins before any network lookup or payload 
     );
     assert.ok(requests.every((url) => url.endsWith("sdk-release.json")));
   }));
+
+test("release discovery uses the complete catalogue, previews and semantic ordering", async () =>
+  fixture(async ({ options, catalogue, requests, release }) => {
+    release("0.2.0-preview.2");
+    release("0.2.0-preview.10", () => {}, { published_at: "2026-01-02T00:00:00Z" });
+    release("0.1.0");
+    release("9.0.0", () => {}, { draft: true });
+    catalogue.push(
+      {
+        tag_name: "byt-v0.2.0-preview.3",
+        draft: false,
+        prerelease: true,
+        published_at: "2026-01-03T00:00:00Z",
+      },
+      { tag_name: "byt-v0.1.0", draft: false, prerelease: false },
+    );
+    const latest = await latestReleases(options);
+    assert.equal(latest.sdk.version, "0.2.0-preview.10");
+    assert.equal(latest.cli.version, "0.2.0-preview.3");
+    assert.equal(latest.cli.publishedAt, "2026-01-03T00:00:00Z");
+    assert.equal(
+      (await latestReleases({ ...options, allowPrerelease: false })).sdk.version,
+      "0.1.0",
+    );
+    assert.ok(requests.every((url) => url.startsWith("/releases?")));
+  }));
+
+test("preview comparison distinguishes exact player bytes, overrides and missing exports", async () => {
+  const root = await mkdtemp(resolve(tmpdir(), "byt-preview-inspect-"));
+  try {
+    const bytes = Buffer.from("released player");
+    const files = [{ path: "player.js", sha256: createHash("sha256").update(bytes).digest("hex") }];
+    assert.deepEqual((await comparePlayerFiles(root, files)).missing, ["player.js"]);
+    await writeFile(resolve(root, "player.js"), bytes);
+    assert.equal((await comparePlayerFiles(root, files)).status, "matches-pinned-sdk");
+    await writeFile(resolve(root, "player.js"), "local override");
+    assert.deepEqual((await comparePlayerFiles(root, files)).modified, ["player.js"]);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("preview inspection permits generated titles and debug revisions, but catches host overrides", () => {
+  const original = Buffer.from(
+    '<title>Game player</title>\n<script type="module" src="./bootstrap.js"></script>',
+  );
+  const generated = Buffer.from(
+    '<title>My game</title>\n<script>globalThis.playerCartridge="./game.png?revision=abc123"</script>\n<script type="module" src="./bootstrap.js"></script>',
+  );
+  assert.deepEqual(
+    comparablePlayerBytes("debug.html", generated),
+    comparablePlayerBytes("debug.html", original),
+  );
+  assert.notDeepEqual(
+    comparablePlayerBytes(
+      "debug.html",
+      Buffer.from(generated.toString().replace("bootstrap.js", "override.js")),
+    ),
+    comparablePlayerBytes("debug.html", original),
+  );
+});
 
 test("empty-cache discovery orders by SemVer, skips incompatible and legacy releases and registers only the winner", async () =>
   fixture(async ({ options, requests, release, manifests }) => {

@@ -196,6 +196,24 @@ try {
   assert.equal(requests.length, builtRequests);
   // Target changes and cartridge-only publication keep each older export whole.
   const retentionProject = resolve(sandbox, "luau game");
+  const inspectArgs = ["inspect", retentionProject, "--offline"];
+  const inspectOptions = { cwd: sandbox, env: cliEnvironment, windowsHide: true, timeout: 30000 };
+  const inspected = JSON.parse((await execute(executable, inspectArgs, inspectOptions)).stdout);
+  assert.equal(inspected.sdk, manifest.version);
+  assert.equal(inspected.status, "matches-pinned-sdk");
+  const playerFile = resolve(retentionProject, "build/web/web-player.js");
+  const releasedPlayer = await readFile(playerFile);
+  await writeFile(
+    playerFile,
+    Buffer.concat([releasedPlayer, Buffer.from("\n// local preview override\n")]),
+  );
+  await assert.rejects(execute(executable, inspectArgs, inspectOptions), (error) => {
+    const result = JSON.parse(error.stdout);
+    assert.equal(result.status, "differs-from-pinned-sdk");
+    assert.ok(result.modified.includes("web-player.js"));
+    return true;
+  });
+  await writeFile(playerFile, releasedPlayer);
   const originalWeb = await readFile(resolve(retentionProject, "build/web/game.png"));
   const originalNative = nativeSupported
     ? await readFile(resolve(retentionProject, "build/native/game.png"))

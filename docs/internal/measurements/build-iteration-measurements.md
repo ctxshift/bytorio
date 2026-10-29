@@ -74,7 +74,7 @@ source detection, and affected-artifact checks against the real mise scheduler
 using inexpensive substitute commands. It also checks the aggregate inventory
 so a new leaf input cannot silently bypass the warm-build shortcut.
 
-Run `mise run validate` for complete lint, formatting, generated-code and
+Run `mise run validate --full` for complete lint, formatting, generated-code and
 conformance checks, and `mise run validate test:textured3d:gpu` for the additional
 native/browser GPU qualification. Test results are not reused across invocations. Production
 optimization flags, fault fixtures, assertions and native/browser combinations

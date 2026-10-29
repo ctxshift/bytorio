@@ -112,10 +112,23 @@ try {
     );
     const bounds = await page.locator("iframe").boundingBox();
     assert.deepEqual(bounds, { x: 0, y: 0, width: 1440, height: 1000 });
+    await page.setViewportSize({ width: 1100, height: 720 });
+    await page.waitForFunction(() => {
+      const bounds = document.querySelector("iframe").getBoundingClientRect();
+      return bounds.width === innerWidth && bounds.height === innerHeight;
+    });
+    assert.deepEqual(await page.locator("iframe").boundingBox(), {
+      x: 0,
+      y: 0,
+      width: 1100,
+      height: 720,
+    });
+    await page.setViewportSize({ width: 1440, height: 1000 });
     await frame.getByRole("button", { name: "Exit fill window", exact: true }).click();
     await page.waitForFunction(
       () => !document.documentElement.classList.contains("game-fill-window"),
     );
+    assert.equal(await frame.locator(".touch-controls").isVisible(), false);
     assert.ok((await page.locator("iframe").boundingBox()).width < 1440);
     await frame.getByRole("button", { name: "Fill window", exact: true }).click();
     await frame.locator("canvas").focus();
@@ -267,6 +280,8 @@ try {
     await mobile.waitForFunction(
       () => !document.documentElement.classList.contains("game-fill-window"),
     );
+    assert.ok((await mobile.locator("iframe").boundingBox()).height < 844);
+    assert.equal(await active.locator(".touch-controls").isVisible(), true);
     await mobile.locator("#restart").click();
     const restarted = await (await mobile.locator("iframe").elementHandle()).contentFrame();
     await bindPlayer(restarted);

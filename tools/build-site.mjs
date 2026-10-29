@@ -3,29 +3,14 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, posix, resolve } from "node:path";
 import { execFileSync } from "node:child_process";
 import { Marked } from "marked";
-import { repo, run } from "./toolchain.mjs";
+import { repo } from "./toolchain.mjs";
+import { prepareShowcase } from "./showcase-exports.mjs";
 import { games, sections, publicDocuments } from "../site/catalog.mjs";
 import { escape, shell, home, showcase, gamePage } from "../site/templates.mjs";
 
 // Sequential builds keep compiler jobs from competing with browser checks.
 if (!process.argv.includes("--staged")) {
-  for (const game of games) {
-    const checkout = resolve(repo, game.build);
-    await mkdir(checkout, { recursive: true });
-    if (!existsSync(resolve(checkout, ".git"))) {
-      run("git", ["init", checkout]);
-    }
-    run("git", ["fetch", "--depth=1", game.repository, game.revision], { cwd: checkout });
-    run("git", ["checkout", "--detach", "FETCH_HEAD"], { cwd: checkout });
-    const mise = process.env.MISE_BIN || "mise";
-    console.log(`Preparing showcase: ${game.title} at ${game.revision}`);
-    run(mise, ["trust"], { cwd: checkout });
-    run(mise, ["install"], { cwd: checkout, timeout: 1800000 });
-    run(mise, ["exec", "--", "byt", "build", "--target", "web"], {
-      cwd: checkout,
-      timeout: 1800000,
-    });
-  }
+  await prepareShowcase({ force: true });
 }
 
 const output = resolve(repo, "build/site");

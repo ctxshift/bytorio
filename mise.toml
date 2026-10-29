@@ -131,6 +131,7 @@ sources = [
   "runtime/vorbis/**",
   "tools/vorbis-build.mjs",
   "tools/sdl3-build.mjs",
+  "tools/dependency-download.mjs",
   ".mise/tasks/player.toml",
   ".mise/toolchain.toml",
   "examples/hello/odin/**/*.odin",
@@ -307,7 +308,7 @@ run = "node tools/validate.mjs"
 
 [tasks."test:validation"]
 description = "Test validation failure reporting, deadlines and source tracking"
-run = "node --test tools/validation-runner.test.mjs tools/frame-clock.test.mjs tools/odin-unit-tests.test.mjs tools/browser-timing.test.mjs tools/host-platform.test.mjs tools/srgb.test.mjs"
+run = "node --test tools/validation-runner.test.mjs tools/validation-scope.test.mjs tools/dependency-download.test.mjs tools/release-ci.test.mjs tools/showcase-exports.test.mjs tools/frame-clock.test.mjs tools/odin-unit-tests.test.mjs tools/browser-timing.test.mjs tools/host-platform.test.mjs tools/srgb.test.mjs"
 
 [tasks."test:native-platform"]
 description = "Verify native filesystem behavior and relocated player dependencies"
@@ -398,7 +399,7 @@ run = "node tools/capture-site.mjs"
 
 [tasks."test:site"]
 description = "Check website links, search, responsive layout and playable touch controls"
-run = ["node tools/build-site.mjs --staged", "node tools/verify-site.mjs"]
+run = ["node tools/showcase-exports.mjs", "node tools/build-site.mjs --staged", "node tools/verify-site.mjs"]
 
 [tasks."test:cli-install"]
 description = "Install a published CLI with mise and verify locks and offline SDK use (network required)"

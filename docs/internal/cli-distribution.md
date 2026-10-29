@@ -186,7 +186,7 @@ after downloading the build artifact. Only that job has release write permission
 it uses GitHub's temporary token, not a stored personal access token.
 
 To inspect packaging locally, set `BYTORIO_RELEASE_TAG` to the intended tag, run
-`mise run validate`, then `mise run package:release`. That task only writes and
+`mise run validate --full`, then `mise run package:release`. That task only writes and
 verifies `build/releases/<tag>/`; it does not publish. Do not run the publisher
 without `--check` unless you intend to publish an existing remote tag.
 

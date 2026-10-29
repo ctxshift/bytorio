@@ -131,12 +131,16 @@ still need live testing before claiming device certification.
 
 ```text
 mise run validate test:site
-mise run validate
+mise run validate --plan
 ```
 
-The site check builds pages from staged exports, checks local links, searches the
+The site check prepares missing or changed pinned game exports, builds pages,
+checks local links, searches the
 documentation, verifies responsive layout, starts both Luau games,
 and exercises touch input and cancellation in mobile browser emulation. Reports
-and screenshots remain under ignored `build/site-verification/`. Full project
-validation retains the existing console conformance gates and includes the site
-check. Building the console exports is required before a standalone focused run.
+and screenshots remain under ignored `build/site-verification/`. Matching export
+receipts avoid game rebuilds; every run still checks the site. A clean checkout
+needs network access to fetch the pinned game sources and SDK components.
+Use the [preview-first workflow](development.md#preview-first) during iteration
+and affected validation for local completion. Full CI retains console conformance
+and this site check.

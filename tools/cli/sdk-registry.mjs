@@ -212,8 +212,8 @@ async function installedVersions(options) {
   }
 }
 
-async function availableVersions(options) {
-  const versions = new Map();
+export async function publishedReleases(options = {}) {
+  const catalogue = [];
   for (let page = 1; page <= 20; page++) {
     const url = new URL(options.catalogueRoot ?? catalogueRoot);
     url.searchParams.set("per_page", "100");
@@ -224,25 +224,31 @@ async function availableVersions(options) {
     if (!Array.isArray(releases) || releases.length > 100) {
       throw new Error("Invalid SDK release catalogue");
     }
-    for (const release of releases) {
-      if (
-        release?.draft === false &&
-        (options.allowPrerelease || release.prerelease === false) &&
-        typeof release.tag_name === "string" &&
-        release.tag_name.startsWith("sdk-v")
-      ) {
-        const version = release.tag_name.slice(5);
-        versions.set(version, Boolean(release.prerelease) || versions.get(version) === true);
-      }
-    }
+    catalogue.push(...releases.filter((release) => release?.draft === false));
     if (releases.length < 100) {
-      return orderedSdkVersions([...versions.keys()], options).map((version) => ({
-        version,
-        prerelease: versions.get(version) || version.includes("-"),
-      }));
+      return catalogue;
     }
   }
   throw new Error("SDK release catalogue exceeds page limit; select an exact SDK with --sdk");
+}
+
+async function availableVersions(options) {
+  const versions = new Map();
+  for (const release of await publishedReleases(options)) {
+    if (
+      release?.draft === false &&
+      (options.allowPrerelease || release.prerelease === false) &&
+      typeof release.tag_name === "string" &&
+      release.tag_name.startsWith("sdk-v")
+    ) {
+      const version = release.tag_name.slice(5);
+      versions.set(version, Boolean(release.prerelease) || versions.get(version) === true);
+    }
+  }
+  return orderedSdkVersions([...versions.keys()], options).map((version) => ({
+    version,
+    prerelease: versions.get(version) || version.includes("-"),
+  }));
 }
 
 export async function selectSdkRelease(requirements, options) {
